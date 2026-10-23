@@ -1218,6 +1218,45 @@ describe('ChatView edit mode', () => {
     });
   });
 
+  it('sends an edit cancelled during the budget check as that edit, so it is handed back', async () => {
+    shown = [olderRow];
+    let current: ReturnType<typeof renderChat> | undefined;
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: jest
+        .fn()
+        .mockImplementation(async (message: {text: string}) => {
+          if (message.text === 'Older row, rewritten' && current) {
+            chatSessionStore.exitEditMode();
+            await act(async () => {
+              current!.screen.rerender(
+                current!.element({messages: [...shown]}),
+              );
+            });
+          }
+          return fitsPlan;
+        }),
+    });
+    current = chat;
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    chat.type('Older row, rewritten');
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => ({message, sessionId: 'session-1'}),
+    );
+
+    await act(async () => {
+      chat.pressSend();
+    });
+    rerender(chat);
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'Older row, rewritten'}),
+      {replaceFromId: 'older-row'},
+    );
+    expect(store.isEditMode).toBe(false);
+    expect(chat.input().props.value).toBe('Older row, rewritten');
+  });
+
   it('clears the composer when edit mode ends from outside', async () => {
     shown = [olderRow];
     const chat = renderChat({messages: shown});

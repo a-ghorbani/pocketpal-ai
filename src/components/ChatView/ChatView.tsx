@@ -858,6 +858,7 @@ export const ChatView = observer(
         if (chatSessionStore.isStopping) {
           return;
         }
+        const editing = chatSessionStore.editingMessageId ?? undefined;
         if (evaluateSendBudget && hasDocuments(messages, message)) {
           if (budgetCheckRef.current) {
             return;
@@ -867,7 +868,7 @@ export const ChatView = observer(
           let verdict: BudgetVerdict;
           try {
             ({verdict} = await evaluateSendBudget(message, {
-              excludeFromId: chatSessionStore.editingMessageId ?? undefined,
+              excludeFromId: editing,
             }));
           } finally {
             budgetCheckRef.current = false;
@@ -880,10 +881,7 @@ export const ChatView = observer(
             return;
           }
         }
-        await dispatchSend(message, {
-          clear,
-          replaceFromId: chatSessionStore.editingMessageId ?? undefined,
-        });
+        await dispatchSend(message, {clear, replaceFromId: editing});
       },
       [dispatchSend, evaluateSendBudget, messages],
     );
