@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "온디바이스 AI를 한 걸음 더.",
-    "subline": "기기가 어디까지 할 수 있는지 시험해 볼 수 있는 추가 도구, 그리고 PocketPal을 무료 오픈소스로 유지하는 작업을 후원하는 방법입니다.",
-    "unsupportedSubline": "Plus 기능은 아직 이 기기에서 실행되지 않습니다. 그래도 PocketPal을 후원할 수 있고, 나중에 이 기기에서 지원되는 기능도 모두 포함됩니다.",
-    "thanksHeadline": "온디바이스 AI를 함께 발전시켜 주셔서 감사합니다.",
-    "thanksSubline": "이 기기에서 Plus 잠금이 해제되었습니다. 새로운 Plus 기능은 여기에 자동으로 추가됩니다.",
+    "subline": "Plus는 PocketPal을 무료 오픈소스로 유지해 줍니다. 추가 기능은 저희의 감사 표시입니다.",
+    "unsupportedSubline": "Plus 기능은 아직 이 기기에서 실행되지 않습니다. 그래도 PocketPal을 후원할 수 있습니다.",
+    "thanksHeadline": "PocketPal을 계속 이어갈 수 있게 해 주셔서 감사합니다.",
+    "thanksSubline": "이 기기에서 Plus 잠금이 해제되었습니다.",
     "features": {
       "handsFreeVoice": "핸즈프리 음성",
       "localApiServer": "로컬 API 서버"
