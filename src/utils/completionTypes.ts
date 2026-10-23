@@ -40,7 +40,8 @@ const RUN_KEYS: (keyof ApiCompletionParams)[] = [
 
 const isApiCompletionKey = (key: string): boolean =>
   !(APP_ONLY_KEYS as string[]).includes(key) &&
-  (key in defaultCompletionParams || (RUN_KEYS as string[]).includes(key));
+  (Object.prototype.hasOwnProperty.call(defaultCompletionParams, key) ||
+    (RUN_KEYS as string[]).includes(key));
 
 export function toApiCompletionParams(
   params: CompletionParams,

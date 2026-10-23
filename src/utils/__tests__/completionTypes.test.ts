@@ -116,6 +116,17 @@ describe('toApiCompletionParams', () => {
     expect(result.temperature).toBe(defaultCompletionParams.temperature);
   });
 
+  it('drops Object.prototype names from JSON-parsed settings', () => {
+    const settings = JSON.parse(
+      '{"temperature": 0.5, "__proto__": {"media_paths": ["/x"]}, "constructor": 1, "toString": 2, "valueOf": 3, "hasOwnProperty": 4}',
+    );
+
+    const result = toApiCompletionParams(settings);
+
+    expect(Object.keys(result)).toEqual(['temperature']);
+    expect(result).not.toHaveProperty('media_paths');
+  });
+
   it('sends an image message to llama.rn and nothing from stored settings', async () => {
     const context = new (LlamaContext as any)(mockLlamaContextParams);
     context.completion.mockResolvedValue({text: '', timings: {}});
