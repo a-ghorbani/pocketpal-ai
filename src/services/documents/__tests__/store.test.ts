@@ -188,6 +188,34 @@ describe('importDocument', () => {
     expect(keepCopy).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['application/pdf', 'pdf', 'source.pdf'],
+    ['text/plain', 'text', 'source.txt'],
+    ['text/markdown; charset=utf-8', 'text', 'source.txt'],
+    ['application/json', 'text', 'source.txt'],
+  ])(
+    'classifies a name without an extension by its type %s',
+    async (type, kind, fileName) => {
+      pdfPages = ['only page'];
+      const ref = ready(
+        await importDocument(
+          picked('Scan', kind === 'pdf' ? '%PDF' : 'hi', {type}),
+        ),
+      );
+      expect(ref.kind).toBe(kind);
+      expect(ref.name).toBe('Scan');
+      expect(keepCopy.mock.calls[0][0].files[0].fileName).toBe(fileName);
+    },
+  );
+
+  it('refuses a name without an extension whose type is not a document', async () => {
+    const result = await importDocument(
+      picked('Photo', 'x', {type: 'image/heic'}),
+    );
+    expect(result).toEqual({status: 'refused', reason: 'unsupported_type'});
+    expect(keepCopy).not.toHaveBeenCalled();
+  });
+
   it('refuses a file over 25 MB', async () => {
     const result = await importDocument(
       picked('big.pdf', 'x', {size: 26 * 1024 * 1024}),

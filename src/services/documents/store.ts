@@ -34,6 +34,7 @@ export interface PickedDocument {
   uri: string;
   name: string | null;
   size: number | null;
+  type?: string | null;
   isVirtual?: boolean | null;
   convertibleToMimeTypes?: Array<{mimeType: string}> | null;
 }
@@ -59,6 +60,17 @@ export const TEXT_EXTENSIONS: ReadonlySet<string> = new Set([
   'svelte', 'gradle', 'properties', 'cfg', 'conf', 'tex', 'rst', 'adoc',
   'org', 'srt', 'vtt',
 ]); // prettier-ignore
+
+const TEXT_MIME_TYPES: ReadonlySet<string> = new Set([
+  'application/json',
+  'application/xml',
+  'application/yaml',
+  'application/x-yaml',
+  'application/toml',
+  'application/javascript',
+  'application/x-sh',
+  'application/sql',
+]);
 
 const NUL_PROBE_BYTES = 8192;
 
@@ -108,6 +120,14 @@ export const releaseImportHold = (id: string): void => {
 const extensionOf = (name: string): string => {
   const dot = name.lastIndexOf('.');
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
+};
+
+const extensionForType = (type: string | null | undefined): string => {
+  const mime = type?.split(';')[0].trim().toLowerCase() ?? '';
+  if (mime === 'application/pdf') {
+    return 'pdf';
+  }
+  return mime.startsWith('text/') || TEXT_MIME_TYPES.has(mime) ? 'txt' : '';
 };
 
 const classify = (extension: string): DocumentKind => {
@@ -301,7 +321,7 @@ export const importDocument = async (
     const stagedName = virtual
       ? `${displayName.replace(/\.[^.]*$/, '')}.${virtual.extension}`
       : displayName;
-    const extension = extensionOf(stagedName);
+    const extension = extensionOf(stagedName) || extensionForType(picked.type);
     const kind = classify(extension);
 
     await RNFS.mkdir(assertContained(docDir(id)));
