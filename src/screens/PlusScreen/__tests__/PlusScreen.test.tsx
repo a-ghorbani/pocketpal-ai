@@ -335,6 +335,33 @@ describe('PlusScreen', () => {
       });
     });
 
+    it('on a supported phone, shows hands-free voice as Off when turned off in Settings', () => {
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = false;
+      });
+      const {getByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceTurned off in Settings.Off',
+      );
+      expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
+        'Turned off in Settings.',
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = null;
+      });
+    });
+
+    it('on a supported phone, shows hands-free voice as Ready by default', () => {
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceReady',
+      );
+      expect(queryByTestId('plus-feature-note-handsFreeVoice')).toBeNull();
+    });
+
     it('shows Ready, Needs N GB and Coming soon', () => {
       mockFeatures = fakePlusFeatures([
         {id: 'open', shipped: true},

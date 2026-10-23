@@ -371,7 +371,9 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
                     <Text
                       testID={`plus-feature-note-${row.id}`}
                       style={styles.featureNote}>
-                      {copy.optInNote}
+                      {row.reason === 'offInSettings'
+                        ? copy.offInSettingsNote
+                        : copy.optInNote}
                     </Text>
                   )}
                 </View>

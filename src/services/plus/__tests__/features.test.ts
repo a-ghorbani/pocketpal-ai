@@ -37,10 +37,10 @@ describe('Plus feature status', () => {
       PLUS_FEATURES,
       GB8,
       NONE,
-      new Set(['handsFreeVoice']),
+      new Map([['handsFreeVoice', 'belowGate']]),
     );
     expect(rows).toEqual([
-      {id: 'handsFreeVoice', status: 'optIn'},
+      {id: 'handsFreeVoice', status: 'optIn', reason: 'belowGate'},
       {id: 'localApiServer', status: 'soon'},
     ]);
     expect(anyRunnable(rows)).toBe(true);
@@ -51,7 +51,11 @@ describe('Plus feature status', () => {
       {id: 'later', shipped: false},
       {id: 'big', shipped: true, minRamGb: 16},
     ]);
-    expect(featureRows(table, GB8, NONE, new Set(['later', 'big']))).toEqual([
+    const optIn = new Map([
+      ['later', 'belowGate'],
+      ['big', 'belowGate'],
+    ] as const);
+    expect(featureRows(table, GB8, NONE, optIn)).toEqual([
       {id: 'later', status: 'soon'},
       {id: 'big', status: {needsGb: 16}},
     ]);

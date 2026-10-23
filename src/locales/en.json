@@ -1784,6 +1784,7 @@
     "comingSoon": "Coming soon",
     "optIn": "Off",
     "optInNote": "Off on this phone. Turn it on in Settings if you're brave.",
+    "offInSettingsNote": "Turned off in Settings.",
     "speedLine": "Speed depends on your phone and model.",
     "inDevelopment": "Features in development may change or not ship.",
     "chatStaysFree": "Plus is optional. Chatting stays free.",
