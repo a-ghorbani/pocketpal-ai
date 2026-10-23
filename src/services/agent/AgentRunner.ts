@@ -17,6 +17,8 @@ import type {TalentResult} from '../talents/types';
 
 export const DEFAULT_MAX_TURNS = 5;
 
+const MAX_IN_FLIGHT_TOOL_CALLS = 4;
+
 const BUDGET_EXHAUSTED_NUDGE =
   '(Tool budget exhausted. Answer now using only the information gathered above; if it is insufficient, say what is missing.)';
 
@@ -120,11 +122,19 @@ function normalizeToolCallIds(
   }));
 }
 
-/**
- * Execute one tool call and produce an `AgentToolOutcome`. Errors are
- * captured as `result.type === 'error'`; the outcome is always
- * produced (never thrown) so the loop stays driven by the iterator.
- */
+const NO_FUNCTION_NAME = 'Unknown talent (no function name)';
+
+function cancelledOutcome(call: AgentToolCall): AgentToolOutcome {
+  const toolName = call.function?.name ?? '';
+  const summary = `${toolName || NO_FUNCTION_NAME}: cancelled`;
+  return {
+    callId: call.id,
+    toolName,
+    result: {type: 'error', summary, errorMessage: 'cancelled'},
+    responseContent: summary,
+  };
+}
+
 async function executeOne(
   call: AgentToolCall,
   allowedTalentNames: string[],
@@ -137,7 +147,7 @@ async function executeOne(
   if (!fnName || !allowedTalentNames.includes(fnName)) {
     const summary = fnName
       ? `Talent "${fnName}" is not enabled for this Pal`
-      : 'Unknown talent (no function name)';
+      : NO_FUNCTION_NAME;
     const result: TalentResult = {
       type: 'error',
       summary,
@@ -265,12 +275,19 @@ export async function* runAgent(
   // as long as a completion it started is unsettled.
   const stopEngine = () => stopQuietly(() => engine.stopCompletion?.());
   let unsettledCompletion: Promise<void> | null = null;
+  const started: Promise<AgentToolOutcome>[] = [];
+  const toolController = new AbortController();
   const onAbort = () => {
+    toolController.abort();
     if (unsettledCompletion) {
       stopEngine();
     }
   };
   signal?.addEventListener('abort', onAbort, {once: true});
+  if (signal?.aborted) {
+    toolController.abort();
+  }
+  const toolSignal = signal ? toolController.signal : undefined;
 
   let messages = initialParams.messages;
   let turn = 0;
@@ -443,20 +460,56 @@ export async function* runAgent(
         break;
       }
 
-      const outcomes: AgentToolOutcome[] = [];
       for (const call of calls) {
         yield {type: 'tool_call_started', call};
-        const outcome = await executeOne(
-          call,
-          allowedTalentNames,
-          talentLookup,
-          signal,
-        );
+      }
+      const slots = calls.map(() => {
+        let resolve!: (outcome: AgentToolOutcome) => void;
+        let reject!: (error: unknown) => void;
+        const promise = new Promise<AgentToolOutcome>((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        promise.catch(() => {});
+        return {promise, resolve, reject};
+      });
+      let next = 0;
+      let running = 0;
+      const pump = () => {
+        while (next < calls.length) {
+          if (toolController.signal.aborted) {
+            for (; next < calls.length; next += 1) {
+              slots[next].resolve(cancelledOutcome(calls[next]));
+            }
+            return;
+          }
+          if (running >= MAX_IN_FLIGHT_TOOL_CALLS) {
+            return;
+          }
+          const slot = slots[next];
+          const pending = executeOne(
+            calls[next],
+            allowedTalentNames,
+            talentLookup,
+            toolSignal,
+          );
+          next += 1;
+          running += 1;
+          started.push(pending);
+          pending.then(slot.resolve, slot.reject).then(() => {
+            running -= 1;
+            pump();
+          });
+        }
+      };
+      pump();
+      const outcomes: AgentToolOutcome[] = [];
+      for (const slot of slots) {
+        const outcome = await slot.promise;
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
 
-      // Tools cancel themselves via ctx.signal; the runner only stops at the turn boundary.
       if (signal?.aborted) {
         break;
       }
@@ -512,8 +565,10 @@ export async function* runAgent(
     };
     yield {type: 'run_finished', result};
   } catch (error) {
+    toolController.abort();
     yield {type: 'run_failed', error: error as Error};
   } finally {
+    toolController.abort();
     signal?.removeEventListener('abort', onAbort);
     if (unsettledCompletion) {
       if (!signal?.aborted) {
@@ -521,5 +576,6 @@ export async function* runAgent(
       }
       await unsettledCompletion;
     }
+    await Promise.allSettled(started);
   }
 }

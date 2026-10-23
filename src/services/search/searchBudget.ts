@@ -137,7 +137,7 @@ export const budgetPage = (
 const MAX_CACHE_ENTRIES = 50;
 const searchCache = new Map<string, SearchHit[]>();
 
-const cacheKey = (
+export const cacheKey = (
   providerId: SearchProviderId,
   query: string,
   maxResults: number,

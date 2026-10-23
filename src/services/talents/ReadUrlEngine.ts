@@ -5,6 +5,7 @@ import {
   ToolDefinition,
 } from './types';
 import type {SearchAccess} from './searchAccess';
+import {SEARCH_NOT_SET_UP_MESSAGE} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
@@ -57,11 +58,10 @@ export class ReadUrlEngine implements TalentEngine {
     }
 
     if (!this.access.canSearch()) {
-      const provider = this.access.getActiveProvider();
       return {
         type: 'error',
-        summary: `read_url: ${provider.id} not enabled`,
-        errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
+        summary: `read_url: ${SEARCH_NOT_SET_UP_MESSAGE}`,
+        errorMessage: SEARCH_NOT_SET_UP_MESSAGE,
       };
     }
 

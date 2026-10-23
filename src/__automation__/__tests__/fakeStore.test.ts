@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {fakeStore, FAKE_STORE_KEY} from '../fakeStore';
 import {getApiBase} from '../../services/palshub/apiBase';
+import {PLUS_KEY} from '../../store/PurchaseStore';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const values = new Map<string, string>();
@@ -10,6 +11,9 @@ jest.mock('@react-native-async-storage/async-storage', () => {
     getItem: jest.fn(async (key: string) => values.get(key) ?? null),
     setItem: jest.fn(async (key: string, value: string) => {
       values.set(key, value);
+    }),
+    removeItem: jest.fn(async (key: string) => {
+      values.delete(key);
     }),
     clear: jest.fn(async () => values.clear()),
   };
@@ -42,6 +46,14 @@ describe('fakeStore', () => {
     );
     await fakeStore.restore();
     expect(getApiBase()).toBe('http://127.0.0.1:9999');
+  });
+
+  it('clears the saved Plus unlock on reset', async () => {
+    await AsyncStorage.setItem(PLUS_KEY, '{"productId":"plus.1"}');
+
+    await fakeStore.run('reset');
+
+    await expect(AsyncStorage.getItem(PLUS_KEY)).resolves.toBeNull();
   });
 
   it('serves only scripted products with their price strings', async () => {

@@ -51,6 +51,39 @@ describe('BraveProvider', () => {
     expect(init.headers['X-Subscription-Token']).toBe('secret');
   });
 
+  it('retries a 429 once the shortest rate-limit window resets', async () => {
+    jest.useFakeTimers();
+    try {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: {
+            get: (name: string) =>
+              name.toLowerCase() === 'x-ratelimit-reset' ? '1, 1419704' : null,
+          },
+        })
+        .mockReturnValueOnce(
+          okJson({
+            type: 'search',
+            web: {results: [{title: 'Result', url: 'https://example.com/a'}]},
+          }),
+        );
+
+      const search = new BraveProvider(() => 'key').search('q', {
+        maxResults: 5,
+      });
+      await jest.advanceTimersByTimeAsync(999);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1);
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      await expect(search).resolves.toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('has no native read (falls back to default reader)', () => {
     const provider: SearchProvider = new BraveProvider(() => 'key');
     expect(provider.read).toBeUndefined();

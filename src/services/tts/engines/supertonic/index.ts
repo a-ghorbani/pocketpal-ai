@@ -19,7 +19,8 @@ import {
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {
-  Engine,
+  NeuralEngine,
+  StreamOptions,
   StreamingHandle,
   SupertonicSteps,
   Voice,
@@ -56,7 +57,7 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
  * `Speech.initialize()` on first play; subsequent plays reuse the
  * initialized engine.
  */
-export class SupertonicEngine implements Engine {
+export class SupertonicEngine implements NeuralEngine {
   readonly id = 'supertonic' as const;
 
   /** Root directory: parent of the Supertonic model directory. Used for the iOS backup-exclusion mkdir. */
@@ -337,14 +338,19 @@ export class SupertonicEngine implements Engine {
   playStreaming(
     voice: Voice,
     waitFor?: Promise<void>,
-    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
+    opts?: StreamOptions & {
+      language?: SupertonicLanguage;
+      inferenceSteps?: SupertonicSteps;
+    },
   ): StreamingHandle {
+    const {language, inferenceSteps, ...streamOpts} = opts ?? {};
     return createEngineStreamingHandle(
       this,
       voice.id,
       {
-        language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
-        ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
+        ...streamOpts,
+        language: language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+        ...(inferenceSteps ? {inferenceSteps} : {}),
       },
       waitFor,
     );

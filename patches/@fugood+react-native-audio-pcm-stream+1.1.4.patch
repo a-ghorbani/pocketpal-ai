@@ -1,0 +1,15 @@
+diff --git a/node_modules/@fugood/react-native-audio-pcm-stream/ios/RNLiveAudioStream.m b/node_modules/@fugood/react-native-audio-pcm-stream/ios/RNLiveAudioStream.m
+index a5365d5..d6a67fe 100644
+--- a/node_modules/@fugood/react-native-audio-pcm-stream/ios/RNLiveAudioStream.m
++++ b/node_modules/@fugood/react-native-audio-pcm-stream/ios/RNLiveAudioStream.m
+@@ -42,6 +42,10 @@ RCT_EXPORT_METHOD(start) {
+         RCTLog(@"[RNLiveAudioStream] Problem setting up AVAudioSession category and mode. Error: %@", error);
+         return;
+     }
++    if (![audioSession setActive:YES error:&error]) {
++        RCTLog(@"[RNLiveAudioStream] Problem activating AVAudioSession. Error: %@", error);
++        return;
++    }
+ 
+     _recordState.mIsRunning = true;
+ 

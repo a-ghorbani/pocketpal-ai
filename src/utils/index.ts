@@ -5,7 +5,6 @@ import _ from 'lodash';
 import dayjs from 'dayjs';
 import {MD3Theme} from 'react-native-paper';
 import DeviceInfo from 'react-native-device-info';
-import Blob from 'react-native/Libraries/Blob/Blob';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {l10n} from '../locales';

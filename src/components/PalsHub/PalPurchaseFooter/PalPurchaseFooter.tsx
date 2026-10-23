@@ -1,9 +1,10 @@
 import React, {useContext, useEffect, useRef, useState} from 'react';
-import {Alert, Linking, View} from 'react-native';
+import {Alert, View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {ActivityIndicator, Button, Text} from 'react-native-paper';
 
+import {LicenseNotice} from '../../LicenseNotice';
 import {useTheme} from '../../../hooks';
 import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
@@ -18,8 +19,6 @@ import {UndeliverableText} from '../UndeliverableText';
 import {createStyles} from './styles';
 
 const TERMS_OF_SALE_URL = 'https://palshub.ai/legal/terms-of-sale';
-const APPLE_MEDIA_TERMS_URL =
-  'https://www.apple.com/legal/internet-services/itunes/us/terms.html';
 
 interface PalPurchaseFooterProps {
   pal: PalsHubPal;
@@ -124,24 +123,20 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
     const buyButton = (
       <>
         {purchaseStore.showsLicenseNotice && (
-          <Text testID="purchase-license-notice" style={styles.status}>
-            {copy.licenseNotice}{' '}
-            <Text
-              testID="purchase-terms-of-sale-link"
-              accessibilityRole="link"
-              style={styles.link}
-              onPress={() => Linking.openURL(TERMS_OF_SALE_URL)}>
-              {copy.termsOfSale}
-            </Text>
-            {' · '}
-            <Text
-              testID="purchase-apple-terms-link"
-              accessibilityRole="link"
-              style={styles.link}
-              onPress={() => Linking.openURL(APPLE_MEDIA_TERMS_URL)}>
-              {copy.appleMediaTerms}
-            </Text>
-          </Text>
+          <LicenseNotice
+            TextComponent={Text}
+            testID="purchase-license-notice"
+            style={styles.status}
+            linkStyle={styles.link}
+            notice={copy.licenseNotice}
+            firstLink={{
+              label: copy.termsOfSale,
+              url: TERMS_OF_SALE_URL,
+              testID: 'purchase-terms-of-sale-link',
+            }}
+            appleTermsLabel={copy.appleMediaTerms}
+            appleTermsTestID="purchase-apple-terms-link"
+          />
         )}
         <Button
           testID="buy-button"

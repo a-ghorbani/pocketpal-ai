@@ -1,5 +1,6 @@
 module.exports = {
-  preset: 'react-native',
+  preset: '@react-native/jest-preset',
+  resolver: '<rootDir>/jest/resolver.js',
   collectCoverage: !process.env.REASSURE_OUTPUT_FILE,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
@@ -33,9 +34,15 @@ module.exports = {
   ],
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
   moduleNameMapper: {
+    '^react-native-paper$': '<rootDir>/node_modules/react-native-paper/src',
     '@react-native-async-storage/async-storage':
       '<rootDir>/__mocks__/external/@react-native-async-storage/async-storage.js',
     'llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',
+    'whisper.rn': '<rootDir>/__mocks__/external/whisper.rn.ts',
+    '@fugood/react-native-audio-pcm-stream':
+      '<rootDir>/__mocks__/external/react-native-audio-pcm-stream.ts',
+    'react-native-permissions':
+      '<rootDir>/__mocks__/external/react-native-permissions.ts',
     'react-native-webview':
       '<rootDir>/__mocks__/external/react-native-webview.ts',
     'react-dom': '<rootDir>/__mocks__/external/react-dom.js',
@@ -84,8 +91,10 @@ module.exports = {
     '@env': '<rootDir>/__mocks__/external/@env.js',
     '@gorhom/bottom-sheet':
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
-    '@pocketpalai/react-native-speech':
+    '^@pocketpalai/react-native-speech$':
       '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech.ts',
+    '^@pocketpalai/react-native-speech-phonon$':
+      '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech-phonon.ts',
     '^react-native-iap$': '<rootDir>/__mocks__/external/react-native-iap.ts',
   },
 };

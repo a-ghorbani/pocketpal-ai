@@ -40,7 +40,8 @@ import {
   removeThinkingParts,
   visibleStepContent,
 } from '../utils/chat';
-import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
+import {acquireKeepAwake} from '../utils/keepAwake';
+import {vtrace} from '../utils/voiceTrace';
 import {
   toApiCompletionParams,
   ApiCompletionParams,
@@ -78,6 +79,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled,
   l10n,
   currentMessages,
+  spoken,
 }: {
   imageUris: string[];
   message: MessageType.PartialText;
@@ -88,6 +90,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled: boolean;
   l10n: any;
   currentMessages: MessageType.Any[];
+  spoken: boolean;
 }) => {
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
@@ -168,6 +171,8 @@ const prepareCompletion = async ({
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
+    // A spoken reply must start talking at once, not after a reasoning pass.
+    ...(spoken ? {enable_thinking: false, reasoning: {enabled: false}} : {}),
     messages,
     stop: stopWords,
   };
@@ -227,6 +232,7 @@ const prepareCompletion = async ({
       // run_finished (success/maxTurns) or at the abort catch path with
       // partial content.
       multimodal: hasImages,
+      ...(spoken ? {spoken: true} : {}),
     },
   };
 
@@ -248,7 +254,7 @@ const prepareCompletion = async ({
 // forward only the new substring.
 // Carried in ctx so a single run keeps a coherent audio stream.
 type TtsRunState = {
-  // Snapshot of autoSpeakEnabled at run start; gates the per-chunk
+  // Snapshot of ttsStore.streamsReplies at run start; gates the per-chunk
   // TTS hook. Per-run so mid-stream toggles don't flicker audio.
   enabled: boolean;
   started: boolean;
@@ -394,6 +400,7 @@ async function applyEventToStore(
     hasImages: boolean;
     isMultimodalEnabled: boolean;
     tts: TtsRunState;
+    stopped: boolean;
   },
 ): Promise<void> {
   switch (event.type) {
@@ -510,6 +517,15 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
+      vtrace('run.done', {
+        stopped: ctx.stopped,
+        tokens: finalResult.tokens_predicted,
+        chars: finalResult.content?.length,
+        eos: finalResult.stopped_eos,
+        limit: finalResult.stopped_limit,
+        word: finalResult.stopped_word,
+        interrupted: finalResult.interrupted,
+      });
       const snapshot = deriveSnapshotFromResult(
         finalResult,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
@@ -546,7 +562,22 @@ async function applyEventToStore(
       }
       // Fire TTS auto-speak after the final text is observable. Store
       // enforces auto-speak / voice / idempotency gating internally.
+      // A stopped run ends on whatever step it reached, often a tool-call
+      // step, so it speaks nothing more; a stop that bypassed
+      // handleStopPress (model switch, video Pal) still left its stream open.
       // Wrapped defensively — UI-path errors must not bubble.
+      if (ctx.stopped) {
+        const playback = ttsStore.playbackState;
+        if (
+          playback.mode === 'streaming' &&
+          playback.messageId === ctx.messageId
+        ) {
+          ttsStore.stop('run_stopped').catch(ttsErr => {
+            console.warn('[useChatSession] TTS stop on abort failed:', ttsErr);
+          });
+        }
+        return;
+      }
       try {
         ttsStore.onAssistantMessageComplete(
           ctx.messageId,
@@ -594,6 +625,14 @@ export type UndoneSend = {
   sessionId: string;
 };
 
+export type SendOptions = {
+  /** The message was spoken in voice mode: both rows are marked, and the
+   * reply runs with thinking off. */
+  spoken?: boolean;
+  /** Receives the assistant turn's id as soon as its row exists. */
+  onTurnCreated?: (turnId: string) => void;
+};
+
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
     createdAt: number;
@@ -612,6 +651,7 @@ export const useChatSession = (
   // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
   const leaseRef = useRef<GenerationLease | null>(null);
+  const stopsBeforeLease = useRef(0);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -632,8 +672,10 @@ export const useChatSession = (
 
   const handleSendPress = async (
     message: MessageType.PartialText,
+    opts: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
     const sentFrom = chatSessionStore.activeSessionId;
+    const stopsAtSend = stopsBeforeLease.current;
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
@@ -649,9 +691,15 @@ export const useChatSession = (
       return;
     }
     leaseRef.current = lease;
+    const stopsWhileWaiting = stopsBeforeLease.current - stopsAtSend;
+    vtrace('lease.grant', {spoken: !!opts.spoken, stopsWhileWaiting});
+    if (stopsWhileWaiting !== 0) {
+      lease.abort();
+    }
 
     // Run UI clears on abort, not on drain.
     let uiStopped = false;
+    let releaseAwake: (() => void) | undefined;
     const uiStop = () => {
       if (uiStopped) {
         return;
@@ -662,11 +710,7 @@ export const useChatSession = (
       chatSessionStore.setIsGenerating(false);
       chatSessionStore.setAgentUiState(initialAgentUiState);
       chatSessionStore.setToolCallTokenCount(0);
-      try {
-        deactivateKeepAwake();
-      } catch (error) {
-        console.error('Failed to deactivate keep awake after chat:', error);
-      }
+      releaseAwake?.();
     };
     if (lease.signal.aborted) {
       uiStop();
@@ -675,9 +719,14 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, lease, {
+      return await sendUnderLease(message, lease, opts, {
         stop: uiStop,
         isStopped: () => uiStopped,
+        holdAwake: () => {
+          if (!uiStopped) {
+            releaseAwake ??= acquireKeepAwake();
+          }
+        },
       });
     } finally {
       lease.signal.removeEventListener('abort', uiStop);
@@ -692,7 +741,12 @@ export const useChatSession = (
   const sendUnderLease = async (
     message: MessageType.PartialText,
     lease: GenerationLease,
-    runUi: {stop: () => void; isStopped: () => boolean},
+    opts: SendOptions,
+    runUi: {
+      stop: () => void;
+      isStopped: () => boolean;
+      holdAwake: () => void;
+    },
   ): Promise<UndoneSend | undefined> => {
     const engine = lease.engine;
     const contextId = modelStore.contextId;
@@ -720,6 +774,7 @@ export const useChatSession = (
         conversationId: conversationIdRef.current,
         copyable: true,
         multimodal: hasImages,
+        ...(opts.spoken ? {spoken: true} : {}),
       },
     };
     const wasUntitled =
@@ -731,11 +786,7 @@ export const useChatSession = (
       modelStore.setInferencing(true);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(true);
-      try {
-        activateKeepAwake();
-      } catch (error) {
-        console.error('Failed to activate keep awake during chat:', error);
-      }
+      runUi.holdAwake();
     }
 
     const activeSession = chatSessionStore.sessions.find(
@@ -760,9 +811,11 @@ export const useChatSession = (
       isMultimodalEnabled,
       l10n,
       currentMessages,
+      spoken: !!opts.spoken,
     });
 
     currentMessageInfo.current = messageInfo;
+    opts.onTurnCreated?.(messageInfo.id);
 
     // Allowed talent names for this Pal. The runner rejects any
     // tool call whose function.name isn't in this list.
@@ -783,7 +836,7 @@ export const useChatSession = (
     const tools =
       (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
     const tts: TtsRunState = {
-      enabled: ttsStore.autoSpeakEnabled,
+      enabled: ttsStore.streamsReplies,
       started: false,
       mayEcho: tools.length > 0,
       prevContent: '',
@@ -898,6 +951,7 @@ export const useChatSession = (
           hasImages,
           isMultimodalEnabled,
           tts,
+          stopped: lease.signal.aborted,
         });
 
         if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {
@@ -911,6 +965,7 @@ export const useChatSession = (
       }
     } catch (error) {
       console.error('Completion error:', error);
+      vtrace('run.error', {aborted: lease.signal.aborted});
       // Send stays blocked until an undone turn's rows are gone.
       if (!(error instanceof RemoteModelRequestWithdrawnError)) {
         runUi.stop();
@@ -918,7 +973,7 @@ export const useChatSession = (
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.
-      ttsStore.stop().catch(ttsErr => {
+      ttsStore.stop('run_error').catch(ttsErr => {
         console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
       });
 
@@ -1084,10 +1139,18 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    leaseRef.current?.abort();
+    vtrace('stopPress', {
+      lease: !!leaseRef.current,
+      stopsBeforeLease: stopsBeforeLease.current,
+    });
+    if (leaseRef.current) {
+      leaseRef.current.abort();
+    } else {
+      stopsBeforeLease.current += 1;
+    }
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop.
-    ttsStore.stop().catch(err => {
+    ttsStore.stop('stop_press').catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);
     });
   };

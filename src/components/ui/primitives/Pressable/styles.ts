@@ -36,7 +36,7 @@ export const createStateLayerStyle = (
   }
 
   return {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: stateLayerColor,
     opacity,
   } as const;

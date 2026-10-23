@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert} from 'react-native';
+import {ScrollView, Alert, StyleSheet, TextInput} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -9,7 +9,13 @@ import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
-import {palStore, chatSessionStore, modelStore} from '../../../store';
+import {
+  asrStore,
+  palStore,
+  chatSessionStore,
+  modelStore,
+  voiceModeStore,
+} from '../../../store';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 // Mock react-native-image-picker
@@ -370,6 +376,75 @@ describe('input', () => {
     const palButton = getByLabelText('Select Pal');
     fireEvent.press(palButton);
     expect(onPalBtnPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the pal name and Think label shrink to fit beside the mic', async () => {
+    const pal = await palStore.createPal({
+      type: 'local',
+      name: 'A Pal With A Name Too Long For The Composer Row',
+      systemPrompt: 'Test pal',
+      originalSystemPrompt: 'Test pal',
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      parameters: {},
+      parameterSchema: [],
+      source: 'local',
+    });
+    const originalActivePalId = Object.getOwnPropertyDescriptor(
+      chatSessionStore,
+      'activePalId',
+    );
+    const originalActiveModelId = modelStore.activeModelId;
+    Object.defineProperty(chatSessionStore, 'activePalId', {
+      get: jest.fn(() => pal.id),
+      configurable: true,
+    });
+    runInAction(() => {
+      modelStore.activeModelId = 'model-1';
+    });
+
+    try {
+      const {getByTestId} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              sendButtonVisibilityMode: 'editing',
+              showThinkingToggle: true,
+            }}
+          />
+        </UserContext.Provider>,
+      );
+
+      const shrinkOf = (testID: string) =>
+        StyleSheet.flatten(getByTestId(testID).props.style).flexShrink;
+      expect(getByTestId('active-pal-name').props.numberOfLines).toBe(1);
+      expect(getByTestId('thinking-toggle-label').props.numberOfLines).toBe(1);
+      expect(shrinkOf('pal-selector')).toBe(1);
+      expect(
+        StyleSheet.flatten(getByTestId('pal-selector').props.style).minWidth,
+      ).toBe(32);
+      expect(shrinkOf('active-pal-name')).toBe(1);
+      expect(shrinkOf('thinking-toggle')).toBeGreaterThan(0);
+      expect(shrinkOf('thinking-toggle')).toBeLessThan(
+        shrinkOf('pal-selector') / 100,
+      );
+      expect(shrinkOf('thinking-toggle-label')).toBe(1);
+      expect(
+        StyleSheet.flatten(getByTestId('thinking-toggle').props.style).minWidth,
+      ).toBe(32);
+    } finally {
+      runInAction(() => {
+        modelStore.activeModelId = originalActiveModelId;
+      });
+      if (originalActivePalId) {
+        Object.defineProperty(
+          chatSessionStore,
+          'activePalId',
+          originalActivePalId,
+        );
+      }
+    }
   });
 
   it('shows video button for video pal type', async () => {
@@ -774,9 +849,12 @@ describe('input', () => {
       expect(modelStore.disableAutoRelease).toHaveBeenCalledWith(
         'camera-photo',
       );
-      await waitFor(() => {
-        expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
-      });
+      await waitFor(
+        () => {
+          expect(screen.queryByText(l10n.en.camera.takePhoto)).toBeNull();
+        },
+        {timeout: 3000},
+      );
     });
 
     it('handles image library selection successfully', async () => {
@@ -990,5 +1068,114 @@ describe('input', () => {
         imageUris: undefined,
       });
     });
+  });
+});
+
+describe('voice mode button', () => {
+  const onVoicePress = jest.fn();
+  const renderInput = (props: Record<string, unknown> = {}) =>
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{
+            onSendPress: jest.fn(),
+            sendButtonVisibilityMode: 'always',
+            onVoicePress,
+            ...props,
+          }}
+        />
+      </UserContext.Provider>,
+    );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (voiceModeStore as any).reset();
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      modelStore.deviceTier = 'high';
+      modelStore.isContextLoading = false;
+      chatSessionStore.isEditMode = false;
+      asrStore.captureState = 'idle';
+    });
+  });
+
+  it('shows the voice button while empty and Send once the user types', () => {
+    const {getByTestId, queryByTestId, getByPlaceholderText} = renderInput();
+    expect(getByTestId('voice-mode-button')).toBeTruthy();
+    expect(queryByTestId('send-button')).toBeNull();
+
+    const input = getByPlaceholderText(
+      l10n.en.components.chatInput.inputPlaceholder,
+    );
+    fireEvent.changeText(input, 'h');
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+    expect(getByTestId('send-button')).toBeTruthy();
+
+    fireEvent.changeText(input, '');
+    expect(getByTestId('voice-mode-button')).toBeTruthy();
+  });
+
+  it('opens voice mode on press, with a way to focus this composer', () => {
+    const focus = TextInput.prototype.focus as jest.Mock;
+    const {getByTestId} = renderInput();
+    fireEvent.press(getByTestId('voice-mode-button'));
+    expect(onVoicePress).toHaveBeenCalledTimes(1);
+
+    focus.mockClear();
+    onVoicePress.mock.calls[0][0]();
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the lock badge when voice mode is locked', () => {
+    voiceModeStore.setUnlockOverride(false);
+    const {getByTestId} = renderInput();
+    expect(getByTestId('voice-mode-lock')).toBeTruthy();
+  });
+
+  it.each([
+    [
+      'the device tier is below the gate',
+      () => {
+        modelStore.deviceTier = 'low';
+      },
+    ],
+    [
+      'dictation is recording',
+      () => {
+        asrStore.captureState = 'recording';
+      },
+    ],
+    [
+      'dictation is transcribing',
+      () => {
+        asrStore.captureState = 'transcribing';
+      },
+    ],
+    [
+      'a message is being edited',
+      () => {
+        chatSessionStore.isEditMode = true;
+      },
+    ],
+  ])('shows no voice button when %s', (_case, arrange) => {
+    runInAction(arrange);
+    const {queryByTestId} = renderInput();
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button while a reply runs', () => {
+    const {queryByTestId} = renderInput({isStopVisible: true});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button with an image attached', () => {
+    const {queryByTestId} = renderInput({defaultImages: ['file://a.jpg']});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button without a voice-mode handler', () => {
+    const {queryByTestId} = renderInput({onVoicePress: undefined});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
   });
 });

@@ -1,12 +1,11 @@
 diff --git a/node_modules/react-native-paper/src/components/Menu/Menu.tsx b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
-index 55922c1..fbd3834 100644
+index 669656c..dfe71ed 100644
 --- a/node_modules/react-native-paper/src/components/Menu/Menu.tsx
 +++ b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
-@@ -303,6 +303,12 @@ const Menu = ({
+@@ -303,6 +303,11 @@ const Menu = ({
    );
  
    const show = React.useCallback(async () => {
-+    // Reset animation values to ensure clean state (fixes menu not reopening after item selection)
 +    scaleAnimationRef.current.stopAnimation();
 +    opacityAnimationRef.current.stopAnimation();
 +    scaleAnimationRef.current.setValue({ x: 0, y: 0 });
@@ -15,7 +14,7 @@ index 55922c1..fbd3834 100644
      const windowLayoutResult = Dimensions.get('window');
      const [menuLayoutResult, anchorLayoutResult] = await Promise.all([
        measureMenuLayout(),
-@@ -340,12 +346,13 @@ const Menu = ({
+@@ -340,11 +345,12 @@ const Menu = ({
      });
  
      setWindowLayout({
@@ -25,14 +24,13 @@ index 55922c1..fbd3834 100644
      });
  
      attachListeners();
-     const { animation } = theme;
 +    await new Promise(resolve => setTimeout(resolve, 1));
-     Animated.parallel([
-       Animated.timing(scaleAnimationRef.current, {
-         toValue: { x: menuLayoutResult.width, y: menuLayoutResult.height },
-@@ -365,13 +372,17 @@ const Menu = ({
+     requestAnimationFrame(() => {
+       const { animation } = theme;
+       Animated.parallel([
+@@ -365,23 +371,29 @@ const Menu = ({
          prevRendered.current = true;
-       }
+       });
      });
 -  }, [anchor, attachListeners, measureAnchorLayout, theme]);
 +  }, [anchor, attachListeners, insets.bottom, measureAnchorLayout, theme]);
@@ -40,7 +38,6 @@ index 55922c1..fbd3834 100644
 -  const hide = React.useCallback(() => {
 +  const hide = React.useCallback((callback?: () => unknown) => {
      removeListeners();
-+    // Stop any running animations and reset state immediately
 +    scaleAnimationRef.current.stopAnimation();
 +    opacityAnimationRef.current.stopAnimation();
 +    scaleAnimationRef.current.setValue({ x: 0, y: 0 });
@@ -51,24 +48,34 @@ index 55922c1..fbd3834 100644
      Animated.timing(opacityAnimationRef.current, {
        toValue: 0,
        duration: ANIMATION_DURATION * animation.scale,
-@@ -383,6 +394,7 @@ const Menu = ({
-         setRendered(false);
-         prevRendered.current = false;
-         focusFirstDOMNode(anchorRef.current);
+       easing: EASING,
+       useNativeDriver: true,
+-    }).start(() => {
+-      setMenuLayout({ width: 0, height: 0 });
+-      setRendered(false);
+-      prevRendered.current = false;
+-      focusFirstDOMNode(anchorRef.current);
++    }).start(({ finished }) => {
++      if (finished) {
++        setMenuLayout({ width: 0, height: 0 });
++        setRendered(false);
++        prevRendered.current = false;
++        focusFirstDOMNode(anchorRef.current);
 +        callback?.();
-       }
++      }
      });
    }, [removeListeners, theme]);
-@@ -640,7 +652,7 @@ const Menu = ({
+ 
+@@ -646,7 +658,7 @@ const Menu = ({
            <Pressable
              accessibilityLabel={overlayAccessibilityLabel}
              accessibilityRole="button"
 -            onPress={onDismiss}
 +            onPress={() => hide(onDismiss)}
+             pointerEvents={visible ? 'auto' : 'none'}
              style={styles.pressableOverlay}
            />
-           <View
-@@ -651,7 +663,7 @@ const Menu = ({
+@@ -658,7 +670,7 @@ const Menu = ({
              accessibilityViewIsModal={visible}
              style={[styles.wrapper, positionStyle, style]}
              pointerEvents={pointerEvents}

@@ -1,5 +1,6 @@
 import Speech from '@pocketpalai/react-native-speech';
 
+import {PhononEngine} from '../engines/phonon';
 import {ttsRuntime} from '../runtime';
 import type {Engine, EngineId} from '../types';
 
@@ -55,6 +56,20 @@ describe('ttsRuntime', () => {
     expect(kitten.loadInto).toHaveBeenCalledTimes(1);
     expect(releaseMock).toHaveBeenCalledTimes(1);
     expect(ttsRuntime.getActiveEngineId()).toBe('kitten');
+  });
+
+  it('releases Kitten once and initializes Phonon when switching to a Phonon voice', async () => {
+    const kitten = makeEngine('kitten');
+
+    await ttsRuntime.acquire(kitten, async () => undefined);
+    await ttsRuntime.acquire(new PhononEngine(), async () => undefined);
+
+    expect(releaseMock).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({engine: 'phonon'}),
+    );
+    expect(ttsRuntime.getActiveEngineId()).toBe('phonon');
   });
 
   it('A → B → A re-initializes A (closes the per-wrapper-flag bug)', async () => {

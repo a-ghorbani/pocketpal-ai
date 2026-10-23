@@ -1,5 +1,10 @@
 import React from 'react';
-import {Dimensions, Keyboard, TextInput as NativeTextInput} from 'react-native';
+import {
+  Dimensions,
+  Keyboard,
+  TextInput as NativeTextInput,
+  type TextInputInstance,
+} from 'react-native';
 import {
   BottomSheetTextInput,
   useBottomSheetInternal,
@@ -104,7 +109,12 @@ describe('TextInput sheet registration', () => {
     const {UNSAFE_queryByType, getByTestId} = render(
       <TextInput
         testID="x"
-        render={props => <NativeTextInput {...props} testID="custom" />}
+        render={props => (
+          <NativeTextInput
+            {...(props as React.ComponentProps<typeof NativeTextInput>)}
+            testID="custom"
+          />
+        )}
       />,
     );
 
@@ -215,7 +225,7 @@ describe('SheetAwareNativeInput keyboard registration', () => {
     });
 
     it('fills an object ref, then clears it at unmount', () => {
-      const objectRef = React.createRef<NativeTextInput>();
+      const objectRef = React.createRef<TextInputInstance>();
       const {unmount} = render(<SheetAwareNativeInput ref={objectRef} />);
 
       expect(objectRef.current).toEqual(

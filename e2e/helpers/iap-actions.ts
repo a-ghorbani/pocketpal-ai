@@ -8,12 +8,15 @@
  * The verbs are listed in src/__automation__/README.md.
  */
 
+import * as path from 'path';
+
 import {adb as runAdb} from './bench-runner';
 import {byTestId} from './selectors';
 import {withBridgeElements} from './automation-bridge';
 import {IAP_MOCK_PORT} from './iapMockServer';
 
 declare const driver: WebdriverIO.Browser;
+declare const browser: WebdriverIO.Browser;
 
 export const IOS_BUNDLE_ID = 'ai.pocketpal';
 export const ANDROID_PACKAGE = 'com.pocketpalai.e2e';
@@ -78,6 +81,47 @@ export async function relaunchApp(): Promise<void> {
   await driver.pause(800);
   await driver.activateApp(appId());
   await iapCommand(`api::${mockBase()}`);
+}
+
+/** Uninstall and reinstall the app under test: a fresh install with no app data. */
+export async function reinstallApp(): Promise<void> {
+  const appPath = (browser.requestedCapabilities as any)['appium:app'];
+  await (driver as any).removeApp(appId());
+  await (driver as any).installApp(path.resolve(appPath));
+  await (driver as any).activateApp(appId());
+}
+
+export const PLUS_PRODUCTS: Record<string, string> = {
+  'plus.1': '$4.99',
+  'plus.2': '$9.99',
+  'plus.3': '$24.99',
+  'plus.4': '$49.99',
+};
+
+/**
+ * Launch state for one Plus test: store reset, one Plus feature marked
+ * shipped (a reset clears it), the four Plus products, then a relaunch.
+ */
+export async function openPlusWith(
+  navigate: () => Promise<void>,
+  options: {
+    next?: string;
+    unavailable?: boolean;
+    before?: string[];
+    ship?: string;
+  } = {},
+): Promise<void> {
+  await iapCommand('reset');
+  await iapCommand(`plus_ship::${options.ship ?? 'handsFreeVoice'}`);
+  await configureFakeStore({products: PLUS_PRODUCTS, next: options.next});
+  if (options.unavailable) {
+    await iapCommand('unavailable');
+  }
+  for (const command of options.before ?? []) {
+    await iapCommand(command);
+  }
+  await relaunchApp();
+  await navigate();
 }
 
 /** Launch state for one IAP test: mock listing this Pal, store reset, Pals open. */

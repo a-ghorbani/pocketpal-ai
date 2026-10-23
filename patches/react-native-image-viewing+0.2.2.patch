@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-image-viewing/dist/components/Modal/Modal.android.js b/node_modules/react-native-image-viewing/dist/components/Modal/Modal.android.js
+index 0afe4fd..033ebac 100644
+--- a/node_modules/react-native-image-viewing/dist/components/Modal/Modal.android.js
++++ b/node_modules/react-native-image-viewing/dist/components/Modal/Modal.android.js
+@@ -33,7 +33,7 @@ const Modal = ({ visible, children, presentationStyle, onRequestClose }) => {
+ };
+ const styles = StyleSheet.create({
+     root: {
+-        ...StyleSheet.absoluteFillObject,
++        ...StyleSheet.absoluteFill,
+         zIndex: 1000,
+         backgroundColor: "transparent"
+     },

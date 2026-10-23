@@ -18,11 +18,10 @@
  *   yarn e2e:android --spec onboarding --skip-build
  */
 
-import * as path from 'path';
-
 import {ChatPage} from '../../pages/ChatPage';
 import {OnboardingPage} from '../../pages/OnboardingPage';
 import {byTestId} from '../../helpers/selectors';
+import {appId, reinstallApp} from '../../helpers/iap-actions';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -37,17 +36,6 @@ const PIP_BALANCED_MODEL_ID =
   'lmstudio-community/gemma-3-1b-it-GGUF/gemma-3-1b-it-Q8_0.gguf';
 const CODIE_BALANCED_MODEL_ID =
   'lmstudio-community/Qwen3.5-2B-GGUF/Qwen3.5-2B-Q4_K_M.gguf';
-
-const getAppId = (): string =>
-  (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
-
-const reinstallApp = async (): Promise<void> => {
-  const appId = getAppId();
-  const appPath = (browser.requestedCapabilities as any)['appium:app'];
-  await (driver as any).removeApp(appId);
-  await (driver as any).installApp(path.resolve(appPath));
-  await (driver as any).activateApp(appId);
-};
 
 const isDisplayedSafe = async (testId: string): Promise<boolean> =>
   browser
@@ -102,9 +90,9 @@ describe('Onboarding flow', () => {
     });
 
     it('cold restart skips onboarding', async () => {
-      const appId = getAppId();
-      await (driver as any).terminateApp(appId);
-      await (driver as any).activateApp(appId);
+      const id = appId();
+      await (driver as any).terminateApp(id);
+      await (driver as any).activateApp(id);
 
       await chat.waitForReady(TIMEOUT);
       expect(await isDisplayedSafe('onboarding-splash')).toBe(false);

@@ -1,9 +1,9 @@
 import React, {useContext} from 'react';
-import {Pressable} from 'react-native';
+import {Pressable, StyleSheet} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
-import {modelStore, ttsStore} from '../../store';
+import {modelStore, ttsStore, voiceModeStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {assistant, derivedText} from '../../utils/chat';
 import {PlayIcon, StopIcon} from '../../assets/icons';
@@ -16,6 +16,12 @@ const countWords = (text: string): number => {
   }
   return trimmed.split(/\s+/).length;
 };
+
+const styles = StyleSheet.create({
+  disabled: {
+    opacity: 0.5,
+  },
+});
 
 interface PlayButtonProps {
   message: MessageType.Any;
@@ -64,6 +70,8 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
     (playbackState.mode === 'playing' || playbackState.mode === 'streaming') &&
     playbackState.messageId === message.id;
 
+  const voiceModeOpen = voiceModeStore.isOpen;
+
   const handlePress = () => {
     if (isThisPlaying) {
       ttsStore.stop().catch(() => {});
@@ -85,8 +93,11 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
   return (
     <Pressable
       onPress={handlePress}
+      disabled={voiceModeOpen}
+      style={voiceModeOpen && styles.disabled}
       hitSlop={8}
       accessibilityRole="button"
+      accessibilityState={{disabled: voiceModeOpen}}
       accessibilityLabel={
         isThisPlaying
           ? l10n.voiceAndSpeech.stopMessageLabel

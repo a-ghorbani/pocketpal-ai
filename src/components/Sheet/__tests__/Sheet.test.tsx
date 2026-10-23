@@ -9,6 +9,7 @@ import {
 import {act, render} from '../../../../jest/test-utils';
 
 import {Sheet} from '../Sheet';
+import {SheetBackground} from '../SheetBackground';
 
 const fullScreenFrame = {x: 0, y: 0, width: 390, height: 844};
 const PERCENT_SNAP_POINTS = ['50%'];
@@ -43,6 +44,14 @@ describe('Sheet', () => {
     const modal = UNSAFE_getByType(BottomSheetModal);
     expect(modal.props.topInset).toBe(24);
     expect(modal.props.snapPoints).toEqual([fullScreenFrame.height / 2]);
+  });
+
+  it('renders the touch-taking SheetBackground', () => {
+    const {UNSAFE_getByType} = render(<Sheet />);
+
+    expect(UNSAFE_getByType(BottomSheetModal).props.backgroundComponent).toBe(
+      SheetBackground,
+    );
   });
 
   it('resolves percentages against an app window shorter than the screen', () => {

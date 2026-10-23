@@ -15,6 +15,8 @@ export interface SearchProviderMeta {
   label: string;
   /** Gated providers appear in the picker but cannot be the active provider. */
   selectable: boolean;
+  /** False for providers that work without a key (the key only raises limits). Defaults to true. */
+  requiresKey?: boolean;
 }
 
 /** Parallel ships gated (not selectable) until its free-tier/PAYG terms are confirmed. */
@@ -23,6 +25,7 @@ export const SEARCH_PROVIDERS: SearchProviderMeta[] = [
   {id: 'brave', label: 'Brave', selectable: true},
   {id: 'exa', label: 'Exa', selectable: true},
   {id: 'firecrawl', label: 'Firecrawl', selectable: true},
+  {id: 'you', label: 'You.com', selectable: true, requiresKey: false},
   {id: 'parallel', label: 'Parallel', selectable: false},
 ];
 
@@ -103,8 +106,16 @@ class SearchProviderStore {
     return (this.keys[id] ?? '').trim().length > 0;
   }
 
+  /** True when the provider works without a key (a key is optional). */
+  isKeyOptional(id: SearchProviderId): boolean {
+    return SEARCH_PROVIDERS.find(p => p.id === id)?.requiresKey === false;
+  }
+
   get isProviderConfigured(): boolean {
-    return this.hasKey(this.activeProviderId);
+    return (
+      this.isKeyOptional(this.activeProviderId) ||
+      this.hasKey(this.activeProviderId)
+    );
   }
 
   get canSearch(): boolean {

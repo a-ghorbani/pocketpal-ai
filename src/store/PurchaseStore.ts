@@ -22,11 +22,13 @@ import type {StorePlatform, VerifyResult} from '../services/iap/iapWire';
 import type {LinkOutcome} from '../services/iap/iapApi';
 import {changedCreatorFields} from '../services/iap/creatorContent';
 import type {CreatorContent} from '../services/iap/creatorContent';
+import {PLUS_PRODUCT_IDS, isPlusProduct} from '../services/plus/catalog';
 import {palStore as defaultPalStore} from './PalStore';
 
 import type {PalsHubPal} from '../types/palshub';
 
 export const LEDGER_KEY = 'purchase-ledger';
+export const PLUS_KEY = 'plus-entitlement';
 export const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000];
 export const RETRY_STEADY_MS = 60_000;
 export const STALE_PENDING_MS = 72 * 60 * 60 * 1000;
@@ -75,6 +77,26 @@ interface Ledger {
   records: Record<string, LedgerRecord>;
 }
 
+interface PlusEntitlementDoc {
+  version: 1;
+  productId: string;
+  unlockedAt: number;
+}
+
+const PLUS_CHAIN = 'plus';
+
+const isPlusDoc = (raw: string | null): boolean => {
+  if (raw === null) {
+    return false;
+  }
+  try {
+    const doc = JSON.parse(raw) as Partial<PlusEntitlementDoc> | null;
+    return doc?.version === 1 && typeof doc.productId === 'string';
+  } catch {
+    return false;
+  }
+};
+
 export type Availability = 'initializing' | 'ready' | 'unavailable';
 
 export type FlowPhase =
@@ -91,6 +113,10 @@ export type FlowPhase =
   | 'restore_needed';
 
 export type BuyResult = 'close' | 'stay';
+
+export type PlusFlow = 'idle' | 'paying';
+
+export type PlusBuyResult = 'purchased' | 'pending' | 'cancelled' | 'error';
 
 export interface StartOptions {
   store?: StorePort;
@@ -125,6 +151,7 @@ export interface PurchaseStoreDeps {
   storage: {
     getItem(key: string): Promise<string | null>;
     setItem(key: string, value: string): Promise<void>;
+    removeItem(key: string): Promise<void>;
   };
   now: () => number;
   events: PalEvents;
@@ -156,6 +183,12 @@ const RETRYABLE_RESULTS: ReadonlySet<VerifyResult['status']> = new Set([
 const platform = (): StorePlatform =>
   Platform.OS === 'ios' ? 'ios' : 'android';
 
+const isPlusTransaction = (tx: StoreTransaction): boolean =>
+  isPlusProduct(tx.productId);
+
+const isPalTransaction = (tx: StoreTransaction): boolean =>
+  !isPlusTransaction(tx);
+
 const txKey = (tx: StoreTransaction): string =>
   tx.transactionId ?? `${tx.productId}:${tx.state}`;
 
@@ -168,11 +201,19 @@ export class PurchaseStore {
   linkConflict = false;
   isRestoring = false;
   storefront: string | undefined = undefined;
+  plusUnlocked = false;
+  plusPending = false;
+  plusChecked = false;
+  plusFlow: PlusFlow = 'idle';
+  plusProductsLoading = false;
 
   private store: StorePort | null = null;
   private unsubscribeStore: (() => void) | null = null;
   private deps: PurchaseStoreDeps;
   private loaded: Promise<void> | null = null;
+  private plusLoaded: Promise<void> | null = null;
+  private plusRevision = 0;
+  private plusProductsFetch: Promise<void> | null = null;
   private ledgerWritable = true;
   private writeChain: Promise<void> = Promise.resolve();
   private productChains = new Map<string, Promise<unknown>>();
@@ -205,6 +246,9 @@ export class PurchaseStore {
       | 'unsubscribeStore'
       | 'deps'
       | 'loaded'
+      | 'plusLoaded'
+      | 'plusRevision'
+      | 'plusProductsFetch'
       | 'ledgerWritable'
       | 'writeChain'
       | 'productChains'
@@ -225,6 +269,9 @@ export class PurchaseStore {
       unsubscribeStore: false,
       deps: false,
       loaded: false,
+      plusLoaded: false,
+      plusRevision: false,
+      plusProductsFetch: false,
       ledgerWritable: false,
       writeChain: false,
       productChains: false,
@@ -250,6 +297,14 @@ export class PurchaseStore {
       ],
       () => {
         this.syncProducts();
+      },
+    );
+    reaction(
+      () => this.availability === 'ready',
+      ready => {
+        if (ready) {
+          this.fetchPlusProducts();
+        }
       },
     );
     reaction(
@@ -283,6 +338,13 @@ export class PurchaseStore {
       Platform.OS === 'ios' &&
       (this.storefront === undefined || this.storefront === 'USA')
     );
+  }
+
+  get plusProducts(): StoreProduct[] {
+    return PLUS_PRODUCT_IDS.flatMap(id => {
+      const product = this.products.get(id);
+      return product ? [product] : [];
+    });
   }
 
   productFor(productId: string | undefined): StoreProduct | undefined {
@@ -431,6 +493,49 @@ export class PurchaseStore {
     if (this.availability !== 'ready') {
       return;
     }
+    await this.fetchPalProducts();
+  }
+
+  retryPlusProducts(): void {
+    this.fetchPlusProducts();
+  }
+
+  private fetchPlusProducts(): Promise<void> {
+    if (this.availability !== 'ready') {
+      return Promise.resolve();
+    }
+    if (this.plusProductsFetch) {
+      return this.plusProductsFetch;
+    }
+    const missing = PLUS_PRODUCT_IDS.filter(id => !this.products.has(id));
+    if (missing.length === 0) {
+      return Promise.resolve();
+    }
+    const run = Promise.resolve()
+      .then(() => this.storePort.fetchProducts(missing))
+      .then(
+        products =>
+          runInAction(() => {
+            products.forEach(product =>
+              this.products.set(product.productId, product),
+            );
+          }),
+        () => undefined,
+      )
+      .finally(() =>
+        runInAction(() => {
+          this.plusProductsFetch = null;
+          this.plusProductsLoading = false;
+        }),
+      );
+    runInAction(() => {
+      this.plusProductsFetch = run;
+      this.plusProductsLoading = true;
+    });
+    return run;
+  }
+
+  private async fetchPalProducts(): Promise<void> {
     const wanted = this.deps.palStore.cachedPalsHubPals
       .filter(pal => pal.store_product_id && pal.iap_enabled?.[platform()])
       .map(pal => pal.store_product_id!)
@@ -479,6 +584,26 @@ export class PurchaseStore {
     } catch {
       this.ledgerWritable = false;
     }
+  }
+
+  loadPlus(): Promise<void> {
+    if (!this.plusLoaded) {
+      this.plusLoaded = this.readPlus();
+    }
+    return this.plusLoaded;
+  }
+
+  private async readPlus(): Promise<void> {
+    let raw: string | null = null;
+    try {
+      raw = await this.deps.storage.getItem(PLUS_KEY);
+    } catch {
+      raw = null;
+    }
+    const unlocked = isPlusDoc(raw);
+    runInAction(() => {
+      this.plusUnlocked = unlocked;
+    });
   }
 
   markLedgerWritable(): void {
@@ -582,7 +707,120 @@ export class PurchaseStore {
     tx: StoreTransaction,
     opts: ProcessOptions = {},
   ): Promise<void> {
+    if (isPlusTransaction(tx)) {
+      return this.serialize(PLUS_CHAIN, () => this.runPlus(tx));
+    }
     return this.serialize(tx.productId, () => this.runTransaction(tx, opts));
+  }
+
+  private async runPlus(tx: StoreTransaction): Promise<void> {
+    await this.loadPlus();
+    if (tx.state === 'pending') {
+      this.markPlusPending();
+      return;
+    }
+    runInAction(() => {
+      this.plusUnlocked = true;
+      this.plusPending = false;
+    });
+    this.plusRevision += 1;
+    if (!(await this.plusDocOnDisk())) {
+      const doc: PlusEntitlementDoc = {
+        version: 1,
+        productId: tx.productId,
+        unlockedAt: this.deps.now(),
+      };
+      try {
+        await this.deps.storage.setItem(PLUS_KEY, JSON.stringify(doc));
+      } catch (error) {
+        console.warn('Saving the Plus unlock failed:', error);
+        return;
+      }
+    }
+    if (tx.unfinished) {
+      await this.finish(tx);
+    }
+  }
+
+  private async plusDocOnDisk(): Promise<boolean> {
+    try {
+      return isPlusDoc(await this.deps.storage.getItem(PLUS_KEY));
+    } catch {
+      return false;
+    }
+  }
+
+  private async settlePlus(
+    txs: StoreTransaction[],
+    ok: boolean,
+    snapshot: number,
+    fromRestore: boolean,
+  ): Promise<void> {
+    await this.processPlusTransactions(txs);
+    await this.reconcilePlus(txs, ok, snapshot, fromRestore);
+  }
+
+  private async processPlusTransactions(
+    txs: StoreTransaction[],
+  ): Promise<void> {
+    for (const tx of txs.filter(isPlusTransaction)) {
+      await this.processTransaction(tx);
+    }
+  }
+
+  private reconcilePlus(
+    txs: StoreTransaction[],
+    ok: boolean,
+    snapshot: number,
+    fromRestore: boolean,
+  ): Promise<void> {
+    return this.serialize(PLUS_CHAIN, async () => {
+      await this.loadPlus();
+      if (ok && this.plusRevision === snapshot) {
+        const plus = txs.filter(isPlusTransaction);
+        if (this.plusUnlocked && !plus.some(tx => tx.state === 'purchased')) {
+          await this.relockPlus();
+        }
+        if (Platform.OS === 'android') {
+          const listedPending = plus.some(tx => tx.state === 'pending');
+          runInAction(() => {
+            this.plusPending = listedPending && !this.plusUnlocked;
+          });
+        } else if (fromRestore) {
+          runInAction(() => {
+            this.plusPending = false;
+          });
+        }
+      }
+      this.markPlusChecked();
+    });
+  }
+
+  private async relockPlus(): Promise<void> {
+    runInAction(() => {
+      this.plusUnlocked = false;
+    });
+    try {
+      await this.deps.storage.removeItem(PLUS_KEY);
+    } catch (error) {
+      console.warn('Removing the Plus unlock failed:', error);
+    }
+  }
+
+  private markPlusChecked(): void {
+    runInAction(() => {
+      this.plusChecked = true;
+    });
+  }
+
+  private markPlusPending(): void {
+    if (this.plusUnlocked) {
+      return;
+    }
+    runInAction(() => {
+      this.plusPending = true;
+    });
+    this.plusRevision += 1;
   }
 
   private async finish(tx: StoreTransaction): Promise<void> {
@@ -1119,6 +1357,58 @@ export class PurchaseStore {
     }
   }
 
+  async buyPlus(productId: string): Promise<PlusBuyResult> {
+    await this.loadPlus();
+    if (!this.canBuyPlus(productId)) {
+      return 'error';
+    }
+    runInAction(() => {
+      this.plusFlow = 'paying';
+    });
+    try {
+      const outcome = await this.storePort.purchase(productId, null);
+      switch (outcome.kind) {
+        case 'purchased':
+          await this.processTransaction(outcome.tx);
+          return 'purchased';
+        case 'pending':
+          await this.serialize(PLUS_CHAIN, async () => this.markPlusPending());
+          return 'pending';
+        case 'already_owned':
+          return (await this.deliverOwnedPlus()) ? 'purchased' : 'error';
+        case 'cancelled':
+          return 'cancelled';
+        default:
+          return 'error';
+      }
+    } catch (error) {
+      console.warn('Buying Plus failed:', error);
+      return 'error';
+    } finally {
+      runInAction(() => {
+        this.plusFlow = 'idle';
+      });
+    }
+  }
+
+  private canBuyPlus(productId: string): boolean {
+    return (
+      isPlusProduct(productId) &&
+      this.availability === 'ready' &&
+      this.plusChecked &&
+      this.products.has(productId) &&
+      !this.plusUnlocked &&
+      !this.plusPending &&
+      this.plusFlow === 'idle'
+    );
+  }
+
+  private async deliverOwnedPlus(): Promise<boolean> {
+    const {transactions} = await this.storePort.currentEntitlements();
+    await this.processPlusTransactions(transactions);
+    return this.plusUnlocked;
+  }
+
   private recordPending(palId: string, productId: string): Promise<void> {
     return this.serialize(productId, async () => {
       await this.load();
@@ -1140,6 +1430,7 @@ export class PurchaseStore {
       return;
     }
     this.started = true;
+    this.loadPlus().catch(() => {});
     await beforeInit?.();
     if (store) {
       this.setStore(store);
@@ -1182,6 +1473,16 @@ export class PurchaseStore {
   }
 
   private async recoverOnce(): Promise<void> {
+    try {
+      await this.recoverStore();
+    } catch (error) {
+      await this.loadPlus();
+      this.markPlusChecked();
+      throw error;
+    }
+  }
+
+  private async recoverStore(): Promise<void> {
     await this.deps.palStore.ready;
     await this.load();
     const available = await this.storePort.init();
@@ -1197,8 +1498,10 @@ export class PurchaseStore {
     }
     const unconfirmed = this.androidUnconfirmedRecords();
     this.resetAndroidAckMemo();
+    const snapshot = this.plusRevision;
     const {ok, transactions: txs} = await this.storeTransactions();
-    for (const tx of txs) {
+    await this.settlePlus(txs, ok, snapshot, false);
+    for (const tx of txs.filter(isPalTransaction)) {
       if (this.invalidTxIds.has(txKey(tx))) {
         continue;
       }
@@ -1292,7 +1595,7 @@ export class PurchaseStore {
 
   private async refresh(txs: StoreTransaction[]): Promise<boolean> {
     const proofs = txs
-      .filter(tx => tx.state === 'purchased')
+      .filter(tx => tx.state === 'purchased' && isPalTransaction(tx))
       .map(tx => tx.proof);
     const known = Object.fromEntries(
       Object.values(this.records)
@@ -1468,13 +1771,16 @@ export class PurchaseStore {
     return outcome;
   }
 
-  async restore(): Promise<void> {
+  async restore(): Promise<{queryOk: boolean}> {
     runInAction(() => {
       this.isRestoring = true;
     });
     try {
       await this.deps.palStore.ready;
       await this.load();
+      if (this.availability !== 'ready') {
+        await (this.recovering ?? this.recover()).catch(() => {});
+      }
       try {
         await this.storePort.sync();
       } catch (error) {
@@ -1483,12 +1789,15 @@ export class PurchaseStore {
       await this.drainQueue();
       const unconfirmed = this.androidUnconfirmedRecords();
       this.resetAndroidAckMemo();
+      const snapshot = this.plusRevision;
       const {ok, transactions: txs} =
         await this.storePort.currentEntitlements();
-      for (const tx of txs) {
+      await this.settlePlus(txs, ok, snapshot, true);
+      for (const tx of txs.filter(isPalTransaction)) {
         await this.processTransaction(tx, {settledVerify: true, install: true});
       }
       await this.dropStalePending(txs, true, ok, unconfirmed);
+      return {queryOk: ok};
     } finally {
       runInAction(() => {
         this.isRestoring = false;

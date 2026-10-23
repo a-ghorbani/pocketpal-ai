@@ -1,8 +1,10 @@
 import React from 'react';
 import {render, fireEvent, waitFor} from '@testing-library/react-native';
 import {Alert, Keyboard} from 'react-native';
+import BottomSheet from '@gorhom/bottom-sheet';
 
 import {ChatPalModelPickerSheet} from '../ChatPalModelPickerSheet';
+import {SheetBackground} from '../../Sheet/SheetBackground';
 import {modelStore, chatSessionStore} from '../../../store';
 import {user} from '../../../../jest/fixtures';
 import {UserContext, L10nContext} from '../../../utils';
@@ -133,6 +135,8 @@ describe('ChatPalModelPickerSheet', () => {
 
     expect(getByTestId('bottom-sheet')).toBeTruthy();
     expect(getByTestId('bottom-sheet-flatlist')).toBeTruthy();
+    expect(getByTestId('chat-pal-model-picker-tab-models')).toBeTruthy();
+    expect(getByTestId('chat-pal-model-picker-tab-pals')).toBeTruthy();
   });
 
   it('does not render when not visible', () => {
@@ -328,6 +332,20 @@ describe('ChatPalModelPickerSheet', () => {
     // In a real scenario, the onClose would be called by the BottomSheet component
     // when the user swipes down or taps the backdrop
     // For testing purposes, we can verify the component structure is correct
+  });
+
+  it('renders the touch-taking SheetBackground', () => {
+    const {UNSAFE_getByType} = render(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet {...defaultProps} />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    expect(UNSAFE_getByType(BottomSheet).props.backgroundComponent).toBe(
+      SheetBackground,
+    );
   });
 
   it('enables content panning gesture for scrolling', () => {

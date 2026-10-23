@@ -51,6 +51,7 @@ class MockModelStore {
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
   largestSuccessfulLoad: number | undefined = 4 * 1e9; // 4GB largest successful load
+  loadedModelBytes: number | undefined = undefined;
 
   refreshDownloadStatuses: jest.Mock;
   retryDownload: jest.Mock;

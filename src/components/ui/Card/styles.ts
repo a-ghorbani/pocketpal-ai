@@ -28,13 +28,11 @@ export const createStyles = (theme: Theme, {variant, size}: CardStyleArgs) => {
     padding,
     borderRadius: theme.radius.m,
     backgroundColor: theme.colors.surface,
+    ...(variant === 'elevated' ? {elevation: 1} : {}),
+    ...(variant === 'outlined'
+      ? {borderWidth: theme.stroke.sm, borderColor: theme.colors.outline}
+      : {}),
   };
-  if (variant === 'elevated') {
-    root.elevation = 1;
-  } else if (variant === 'outlined') {
-    root.borderWidth = theme.stroke.sm;
-    root.borderColor = theme.colors.outline;
-  }
   return StyleSheet.create({
     root,
     listRoot: {

@@ -1,10 +1,9 @@
 import React, {useState} from 'react';
 import {Text} from 'react-native';
 import {Menu} from 'react-native-paper';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {ChevronDownIcon} from '../../../assets/icons';
-import {useTheme} from '../../../hooks';
+import {useMenuStatusBarHeight, useTheme} from '../../../hooks';
 import {Pressable} from '../primitives/Pressable';
 
 import type {CommonDSProps} from '../types';
@@ -49,7 +48,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   placeholder,
 }) => {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
+  const statusBarHeight = useMenuStatusBarHeight();
   const [open, setOpen] = useState(false);
   const styles = createStyles(theme, {size, disabled});
   const selected = options.find(o => o.value === value);
@@ -61,7 +60,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
     <Menu
       visible={open}
       onDismiss={() => setOpen(false)}
-      statusBarHeight={insets.top}
+      statusBarHeight={statusBarHeight}
       anchor={
         <Pressable
           testID={testID}

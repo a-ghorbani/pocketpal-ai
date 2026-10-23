@@ -43,7 +43,9 @@ describe('the pending slot while the bound router model loads', () => {
     announce.mockClear();
     jest
       .mocked(useAnimatedStyle)
-      .mockImplementation(() => React.useRef({}).current);
+      .mockImplementation(
+        () => React.useRef({}).current as ReturnType<typeof useAnimatedStyle>,
+      );
     routerStore.records.clear();
     runInAction(() => {
       modelStore.activeRemoteBinding = BINDING;
@@ -57,7 +59,9 @@ describe('the pending slot while the bound router model loads', () => {
   });
 
   afterEach(() => {
-    jest.mocked(useAnimatedStyle).mockImplementation(() => ({}));
+    jest
+      .mocked(useAnimatedStyle)
+      .mockImplementation(() => ({}) as ReturnType<typeof useAnimatedStyle>);
     routerStore.records.clear();
     runInAction(() => {
       modelStore.activeRemoteBinding = undefined;

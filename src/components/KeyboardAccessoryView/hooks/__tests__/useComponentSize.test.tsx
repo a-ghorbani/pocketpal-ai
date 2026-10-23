@@ -37,6 +37,7 @@ describe('useComponentSize', () => {
       isDefaultPrevented: jest.fn(),
       isPropagationStopped: jest.fn(),
       persist: jest.fn(),
+      dispatchConfig: {} as any,
     };
 
     // Trigger the onLayout callback with the event

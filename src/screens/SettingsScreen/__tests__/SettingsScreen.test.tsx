@@ -12,8 +12,21 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
-import {l10n} from '../../../locales';
+import {
+  modelStore,
+  searchProviderStore,
+  uiStore,
+  ttsStore,
+  asrStore,
+  voiceModeStore,
+} from '../../../store';
+import {Menu} from '../../../components';
+import {l10n, t} from '../../../locales';
+import {
+  ASR_DISK_HEADROOM_FACTOR,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+} from '../../../services/asr';
 
 jest.useFakeTimers();
 
@@ -359,7 +372,7 @@ describe('SettingsScreen', () => {
     // Menus open from a ref.measure() callback. The test renderer's shared
     // measure mock is a no-op; make it invoke the callback so the menu opens.
     const mockNativeMethods =
-      require('react-native/jest/MockNativeMethods').default;
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
     beforeEach(() => {
       mockNativeMethods.measure.mockImplementation((cb: any) =>
         cb(0, 0, 10, 10, 0, 0),
@@ -1296,6 +1309,55 @@ describe('SettingsScreen', () => {
     });
   });
 
+  describe('Internet Search key row', () => {
+    const keyOptional = 'No key needed for You.com. Add one for higher limits.';
+    const youKeySet = 'Key is set for You.com.';
+    const braveKeyNotSet = 'No key set for Brave.';
+
+    afterEach(async () => {
+      await searchProviderStore.clearKey('you');
+      searchProviderStore.setActiveProvider('brave');
+    });
+
+    it('says no key is needed for You.com when it has none', () => {
+      searchProviderStore.setActiveProvider('you');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(keyOptional)).toBeTruthy();
+      expect(queryByText(youKeySet)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says the key is set for You.com when it has one', async () => {
+      searchProviderStore.setActiveProvider('you');
+      await searchProviderStore.setKey('you', 'test-key');
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(youKeySet)).toBeTruthy();
+      expect(queryByText(keyOptional)).toBeNull();
+      expect(queryByText('No key set for You.com.')).toBeNull();
+    });
+
+    it('says no key is set for Brave when it has none', () => {
+      const {getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByText(braveKeyNotSet)).toBeTruthy();
+      expect(queryByText('Key is set for Brave.')).toBeNull();
+      expect(
+        queryByText('No key needed for Brave. Add one for higher limits.'),
+      ).toBeNull();
+    });
+  });
+
   it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
     jest.useFakeTimers();
     const {getByText, queryByText} = render(<SettingsScreen />, {
@@ -1319,6 +1381,286 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('voice input (ASR)', () => {
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+        asrStore.downloadStates.small = 'not_installed';
+        asrStore.downloadError.small = null;
+        asrStore.freeDiskBytes = null;
+        asrStore.spokenLanguage = null;
+      });
+    });
+
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    it('toggle reflects the device default when no override is set', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(true);
+    });
+
+    it('toggle reflects an explicit user override over the device default', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = false;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(false);
+    });
+
+    it('shows the unsupported-device helper only when the device gate fails', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+      });
+      const {getByText} = renderSettings();
+      expect(
+        getByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeTruthy();
+    });
+
+    it('hides the unsupported-device helper on a supported device', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+      });
+      const {queryByText} = renderSettings();
+      expect(
+        queryByText(l10n.en.voiceInput.unsupportedDeviceHelper),
+      ).toBeNull();
+    });
+
+    it('shows the detected spoken language and clears it on Reset', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = null;
+        asrStore.spokenLanguage = 'en';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        'Auto-detected: English (EN)',
+      );
+      act(() => {
+        fireEvent.press(getByTestId('asr-reset-language'));
+      });
+      expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith(null);
+    });
+
+    it('names a spoken language the app has no UI translation for by its code', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.spokenLanguage = 'nl';
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        'Auto-detected: NL',
+      );
+    });
+
+    it('shows auto-detect without Reset before a language is detected', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {getByTestId, queryByTestId} = renderSettings();
+      expect(getByTestId('asr-spoken-language').props.children).toBe(
+        l10n.en.voiceInput.spokenLanguageAuto,
+      );
+      expect(queryByTestId('asr-reset-language')).toBeNull();
+    });
+
+    it('writes the override through setUserASROverride when toggled', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      act(() => {
+        fireEvent(getByTestId('asr-availability-switch'), 'valueChange', true);
+      });
+      expect(asrStore.setUserASROverride).toHaveBeenCalledWith(true);
+    });
+
+    it('offers install controls only when the gate is open', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        asrStore.userASROverride = false;
+      });
+      const {queryByTestId} = renderSettings();
+      expect(queryByTestId('asr-install-small')).toBeNull();
+    });
+
+    it('shows an install control for a not-installed tier when enabled', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'not_installed';
+      });
+      const {getByTestId} = renderSettings();
+      const install = getByTestId('asr-install-small');
+      act(() => {
+        fireEvent.press(install);
+      });
+      expect(asrStore.downloadModel).toHaveBeenCalledWith('small');
+    });
+
+    it('shows a remove control for an installed tier and deletes on press', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'ready';
+      });
+      const {getByTestId} = renderSettings();
+      const remove = getByTestId('asr-remove-small');
+      act(() => {
+        fireEvent.press(remove);
+      });
+      expect(asrStore.deleteModel).toHaveBeenCalledWith('small');
+    });
+
+    it('renders the insufficient-storage line for a disk-blocked tier', () => {
+      const freeMb = 50;
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'error';
+        asrStore.downloadError.small = ASR_INSUFFICIENT_STORAGE;
+        asrStore.freeDiskBytes = freeMb * 1024 * 1024;
+      });
+      // The line shows the headroom-inclusive required figure (matching the
+      // preflight threshold), not the raw model size.
+      const requiredMb = Math.ceil(
+        (ASR_TIERS.small.estimatedBytes * ASR_DISK_HEADROOM_FACTOR) /
+          (1024 * 1024),
+      );
+      const {getByTestId, getByText} = renderSettings();
+      expect(getByTestId('asr-insufficient-storage-small')).toBeTruthy();
+      expect(
+        getByText(
+          t(l10n.en.voiceInput.insufficientStorage, {
+            requiredMb,
+            freeMb,
+          }),
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  describe('hands-free voice', () => {
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    afterEach(() => {
+      (voiceModeStore as any).reset();
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+    });
+
+    it('shows the device gate, with no helper, on a capable phone', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {getByTestId, queryByText} = renderSettings();
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
+      expect(queryByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeNull();
+    });
+
+    it('is off with a heads-up on a weaker phone, and turns on from the switch', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId, getByText} = renderSettings();
+      const toggle = getByTestId('voice-mode-availability-switch');
+      expect(toggle.props.value).toBe(false);
+      expect(getByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeTruthy();
+
+      act(() => {
+        fireEvent(toggle, 'valueChange', true);
+      });
+      expect(voiceModeStore.setUserVoiceModeOverride).toHaveBeenCalledWith(
+        true,
+      );
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('search provider picker', () => {
+    const mockNativeMethods =
+      require('@react-native/jest-preset/jest/MockNativeMethods').default;
+
+    beforeEach(() => {
+      mockNativeMethods.measure.mockImplementation((cb: any) =>
+        cb(0, 0, 120, 40, 30, 200),
+      );
+    });
+
+    afterEach(() => {
+      mockNativeMethods.measure.mockReset();
+      runInAction(() => {
+        searchProviderStore.activeProviderId = 'brave';
+      });
+    });
+
+    const visibleMenus = (UNSAFE_getAllByType: any) =>
+      UNSAFE_getAllByType(Menu).filter((menu: any) => menu.props.visible);
+
+    it('opens anchored under its button', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+
+      const open = visibleMenus(UNSAFE_getAllByType);
+      expect(open).toHaveLength(1);
+      expect(open[0].props.anchor).toEqual({x: 30, y: 240});
+      expect(getByTestId('search-provider-option-exa')).toBeTruthy();
+    });
+
+    it('selecting a provider sets it and closes the menu', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      fireEvent.press(getByTestId('search-provider-option-exa'));
+
+      expect(searchProviderStore.setActiveProvider).toHaveBeenCalledWith('exa');
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(getByTestId('search-provider-selector-button')).toHaveTextContent(
+        /Exa$/,
+      );
+    });
+
+    it('dismissing closes the menu without changing the provider', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      fireEvent.press(getByTestId('search-provider-selector-button'));
+      act(() => {
+        visibleMenus(UNSAFE_getAllByType)[0].props.onDismiss();
+      });
+
+      expect(visibleMenus(UNSAFE_getAllByType)).toHaveLength(0);
+      expect(searchProviderStore.setActiveProvider).not.toHaveBeenCalled();
     });
   });
 });

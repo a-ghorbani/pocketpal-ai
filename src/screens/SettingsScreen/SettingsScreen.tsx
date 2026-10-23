@@ -5,7 +5,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
-  TextInput as RNTextInput,
+  type TextInputInstance,
   Alert,
   Linking,
   TouchableOpacity,
@@ -33,6 +33,8 @@ import {
   ShareIcon,
   LinkExternalIcon,
   VolumeOnIcon,
+  MicrophoneIcon,
+  VoiceWaveformIcon,
 } from '../../assets/icons';
 
 import {
@@ -51,18 +53,28 @@ import {PurchasesCard} from './PurchasesCard';
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
-import {CacheTypeMenuRow, useMenuAnchor} from './CacheTypeMenuRow';
+import {CacheTypeMenuRow} from './CacheTypeMenuRow';
+import {useMenuAnchor} from './useMenuAnchor';
 
 import {
   modelStore,
   uiStore,
   hfStore,
   ttsStore,
+  asrStore,
   searchProviderStore,
   purchaseStore,
+  voiceModeStore,
 } from '../../store';
 import {authService} from '../../services';
 import type {SearchProviderId} from '../../services/search/types';
+import {
+  ASR_DISK_HEADROOM_FACTOR,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+  ASR_TIER_ORDER,
+  type AsrTier,
+} from '../../services/asr';
 
 import {CacheType, ModelType} from '../../utils/types';
 import {
@@ -71,7 +83,7 @@ import {
   clearAllSessionCaches,
   getSessionCacheInfo,
 } from '../../utils';
-import {t} from '../../locales';
+import {type AvailableLanguage, languageDisplayNames, t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
@@ -85,6 +97,11 @@ import {
 const OPENCL_DOCS_URL =
   'https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/OPENCL.md#model-preparation';
 
+const languageName = (code: string): string =>
+  code in languageDisplayNames
+    ? languageDisplayNames[code as AvailableLanguage]
+    : code.toUpperCase();
+
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const theme = useTheme();
@@ -95,31 +112,21 @@ export const SettingsScreen: React.FC = observer(() => {
   );
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const keyCacheMenu = useMenuAnchor();
   const valueCacheMenu = useMenuAnchor();
   const draftKeyCacheMenu = useMenuAnchor();
   const draftValueCacheMenu = useMenuAnchor();
-  const [showDraftModelMenu, setShowDraftModelMenu] = useState(false);
+  const draftModelMenu = useMenuAnchor();
+  const searchProviderMenu = useMenuAnchor();
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [showAuthSheet, setShowAuthSheet] = useState(false);
-  const [showSearchProviderMenu, setShowSearchProviderMenu] = useState(false);
-  const [searchProviderAnchor, setSearchProviderAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
   const [showSearchKeySheet, setShowSearchKeySheet] = useState(false);
-  const searchProviderButtonRef = useRef<View>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
-  const [draftModelAnchor, setDraftModelAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({x: 0, y: 0});
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
-  const draftModelButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
       modelStore.setNContext(value);
@@ -190,7 +197,7 @@ export const SettingsScreen: React.FC = observer(() => {
     valueCacheMenu.close();
     draftKeyCacheMenu.close();
     draftValueCacheMenu.close();
-    setShowDraftModelMenu(false);
+    draftModelMenu.close();
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -334,24 +341,6 @@ export const SettingsScreen: React.FC = observer(() => {
       modelStore.setFlashAttnType(option.default_flash_attn_type);
     }
     // Otherwise, keep the user's current flash attention preference
-  };
-
-  const handleDraftModelPress = () => {
-    draftModelButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setDraftModelAnchor({x: pageX, y: pageY + height});
-        setShowDraftModelMenu(true);
-      },
-    );
-  };
-
-  const handleSearchProviderPress = () => {
-    searchProviderButtonRef.current?.measure(
-      (x, y, width, height, pageX, pageY) => {
-        setSearchProviderAnchor({x: pageX, y: pageY + height});
-        setShowSearchProviderMenu(true);
-      },
-    );
   };
 
   const activeSearchProvider = searchProviderStore.providers.find(
@@ -773,9 +762,9 @@ export const SettingsScreen: React.FC = observer(() => {
                         <View style={styles.fullRowControl}>
                           <View>
                             <Button
-                              ref={draftModelButtonRef}
+                              ref={draftModelMenu.buttonRef}
                               mode="outlined"
-                              onPress={handleDraftModelPress}
+                              onPress={draftModelMenu.open}
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
                               testID="speculative-draft-model-picker"
@@ -799,9 +788,9 @@ export const SettingsScreen: React.FC = observer(() => {
                                 l10n.settings.speculativeDraftModelNone}
                             </Button>
                             <Menu
-                              visible={showDraftModelMenu}
-                              onDismiss={() => setShowDraftModelMenu(false)}
-                              anchor={draftModelAnchor}
+                              visible={draftModelMenu.visible}
+                              onDismiss={draftModelMenu.close}
+                              anchor={draftModelMenu.anchor}
                               selectable>
                               <Menu.Item
                                 style={styles.menu}
@@ -809,7 +798,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                 selected={!selectedDraftModel}
                                 onPress={() => {
                                   modelStore.setSelectedDraftModel(undefined);
-                                  setShowDraftModelMenu(false);
+                                  draftModelMenu.close();
                                 }}
                               />
                               {eligibleDraftModels.map(model => (
@@ -820,7 +809,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                   selected={model.id === selectedDraftModel?.id}
                                   onPress={() => {
                                     modelStore.setSelectedDraftModel(model.id);
-                                    setShowDraftModelMenu(false);
+                                    draftModelMenu.close();
                                   }}
                                 />
                               ))}
@@ -1133,6 +1122,180 @@ export const SettingsScreen: React.FC = observer(() => {
                   />
                 </View>
 
+                <Divider />
+
+                {/* Voice input (ASR) availability toggle */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <MicrophoneIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.voiceInput.settingTitle}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.voiceInput.settingDescription}
+                    </Text>
+                    {!asrStore.deviceSupported && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.voiceInput.unsupportedDeviceHelper}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="asr-availability-switch"
+                    value={asrStore.userASROverride ?? asrStore.deviceSupported}
+                    onValueChange={value => asrStore.setUserASROverride(value)}
+                  />
+                </View>
+
+                {asrStore.asrAvailable && (
+                  <View style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <Text variant="bodyMedium" style={styles.textLabel}>
+                        {l10n.voiceInput.spokenLanguageLabel}
+                      </Text>
+                      <Text
+                        variant="labelSmall"
+                        style={styles.textDescription}
+                        testID="asr-spoken-language">
+                        {asrStore.spokenLanguage
+                          ? t(l10n.voiceInput.spokenLanguageDetected, {
+                              language: languageName(asrStore.spokenLanguage),
+                            })
+                          : l10n.voiceInput.spokenLanguageAuto}
+                      </Text>
+                    </View>
+                    {asrStore.spokenLanguage && (
+                      <Button
+                        mode="outlined"
+                        testID="asr-reset-language"
+                        onPress={() => asrStore.setSpokenLanguage(null)}
+                        style={styles.menuButton}>
+                        {l10n.voiceInput.resetLanguageCta}
+                      </Button>
+                    )}
+                  </View>
+                )}
+
+                {/* Per-tier voice-model install/delete (only when enabled) */}
+                {asrStore.asrAvailable &&
+                  ASR_TIER_ORDER.map((tier: AsrTier) => {
+                    const state = asrStore.downloadStates[tier];
+                    const sizeMb = Math.round(
+                      ASR_TIERS[tier].estimatedBytes / (1024 * 1024),
+                    );
+                    // Match the preflight threshold (estimated * headroom) so a
+                    // user who frees exactly this amount clears the disk gate.
+                    const requiredMb = Math.ceil(
+                      (ASR_TIERS[tier].estimatedBytes *
+                        ASR_DISK_HEADROOM_FACTOR) /
+                        (1024 * 1024),
+                    );
+                    const tierLabel =
+                      tier === 'base'
+                        ? l10n.voiceInput.tierBase
+                        : tier === 'small'
+                          ? l10n.voiceInput.tierSmall
+                          : l10n.voiceInput.tierLargeTurbo;
+                    const lowDisk =
+                      state === 'error' &&
+                      asrStore.downloadError[tier] === ASR_INSUFFICIENT_STORAGE;
+                    const freeMb =
+                      asrStore.freeDiskBytes != null
+                        ? Math.floor(asrStore.freeDiskBytes / (1024 * 1024))
+                        : null;
+                    return (
+                      <View key={tier} style={styles.switchContainer}>
+                        <View style={styles.textContainer}>
+                          <Text variant="bodyMedium" style={styles.textLabel}>
+                            {tierLabel}
+                          </Text>
+                          <Text
+                            variant="labelSmall"
+                            style={styles.textDescription}>
+                            {t(l10n.voiceInput.tierSizeLabel, {sizeMb})}
+                          </Text>
+                          {lowDisk && freeMb != null ? (
+                            <Text
+                              variant="labelSmall"
+                              style={styles.errorText}
+                              testID={`asr-insufficient-storage-${tier}`}>
+                              {t(l10n.voiceInput.insufficientStorage, {
+                                requiredMb,
+                                freeMb,
+                              })}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {state === 'ready' ? (
+                          <Button
+                            mode="outlined"
+                            testID={`asr-remove-${tier}`}
+                            onPress={() => asrStore.deleteModel(tier)}
+                            style={styles.menuButton}>
+                            {l10n.voiceInput.removeCta}
+                          </Button>
+                        ) : state === 'downloading' ? (
+                          <Button
+                            mode="outlined"
+                            disabled
+                            style={styles.menuButton}>
+                            {l10n.voiceInput.downloadingLabel}
+                          </Button>
+                        ) : (
+                          <Button
+                            mode="contained"
+                            testID={`asr-install-${tier}`}
+                            onPress={() => asrStore.downloadModel(tier)}
+                            style={styles.menuButton}>
+                            {state === 'error'
+                              ? l10n.voiceInput.retryCta
+                              : l10n.voiceInput.installCta}
+                          </Button>
+                        )}
+                      </View>
+                    );
+                  })}
+
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <VoiceWaveformIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        color={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.voiceMode.settingTitle}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.voiceMode.settingDescription}
+                    </Text>
+                    {!voiceModeStore.deviceSupported && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.voiceMode.unsupportedDeviceHelper}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="voice-mode-availability-switch"
+                    value={voiceModeStore.supported}
+                    onValueChange={value =>
+                      voiceModeStore.setUserVoiceModeOverride(value)
+                    }
+                  />
+                </View>
+
                 {/* Display Memory Usage (iOS only) */}
                 {Platform.OS === 'ios' && (
                   <>
@@ -1228,10 +1391,10 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <View style={styles.menuContainer}>
                     <Button
-                      ref={searchProviderButtonRef}
+                      ref={searchProviderMenu.buttonRef}
                       testID="search-provider-selector-button"
                       mode="outlined"
-                      onPress={handleSearchProviderPress}
+                      onPress={searchProviderMenu.open}
                       style={styles.menuButton}
                       contentStyle={styles.buttonContent}
                       icon={({size, color}) => (
@@ -1240,9 +1403,9 @@ export const SettingsScreen: React.FC = observer(() => {
                       {activeSearchProvider?.label ?? activeSearchProviderId}
                     </Button>
                     <Menu
-                      visible={showSearchProviderMenu}
-                      onDismiss={() => setShowSearchProviderMenu(false)}
-                      anchor={searchProviderAnchor}
+                      visible={searchProviderMenu.visible}
+                      onDismiss={searchProviderMenu.close}
+                      anchor={searchProviderMenu.anchor}
                       selectable>
                       {searchProviderStore.providers.map(provider => (
                         <Menu.Item
@@ -1260,7 +1423,7 @@ export const SettingsScreen: React.FC = observer(() => {
                             searchProviderStore.setActiveProvider(
                               provider.id as SearchProviderId,
                             );
-                            setShowSearchProviderMenu(false);
+                            searchProviderMenu.close();
                           }}
                         />
                       ))}
@@ -1282,11 +1445,19 @@ export const SettingsScreen: React.FC = observer(() => {
                               activeSearchProvider?.label ??
                               activeSearchProviderId,
                           })
-                        : t(l10n.settings.internetSearch.keyNotSet, {
-                            provider:
-                              activeSearchProvider?.label ??
+                        : searchProviderStore.isKeyOptional(
                               activeSearchProviderId,
-                          })}
+                            )
+                          ? t(l10n.settings.internetSearch.keyOptional, {
+                              provider:
+                                activeSearchProvider?.label ??
+                                activeSearchProviderId,
+                            })
+                          : t(l10n.settings.internetSearch.keyNotSet, {
+                              provider:
+                                activeSearchProvider?.label ??
+                                activeSearchProviderId,
+                            })}
                     </Text>
                     {!searchHasConsent && (
                       <Text variant="labelSmall" style={styles.textDescription}>

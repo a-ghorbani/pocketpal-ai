@@ -3,6 +3,7 @@ import {
   findNodeHandle,
   Keyboard,
   TextInput as NativeTextInput,
+  type TextInputInstance,
 } from 'react-native';
 import {useBottomSheetInternal} from '@gorhom/bottom-sheet';
 import {useSafeAreaFrame} from 'react-native-safe-area-context';
@@ -20,7 +21,7 @@ type RenderProps = Parameters<NonNullable<PaperTextInputProps['render']>>[0];
 type SheetAwareNativeInputProps = Omit<
   React.ComponentProps<typeof NativeTextInput>,
   'ref'
-> & {ref?: React.Ref<NativeTextInput>};
+> & {ref?: React.Ref<TextInputInstance>};
 type FocusEvent = Parameters<
   NonNullable<SheetAwareNativeInputProps['onFocus']>
 >[0];
@@ -34,12 +35,12 @@ const InSheetInput = ({
 }: SheetAwareNativeInputProps & {sheet: SheetContext}) => {
   const fillsScreen = useAppWindowFillsScreen();
   const {width: frameWidth} = useSafeAreaFrame();
-  const input = useRef<NativeTextInput | null>(null);
+  const input = useRef<TextInputInstance | null>(null);
   const focused = useRef(false);
   const previousWindow = useRef({fillsScreen, frameWidth});
 
   const setInput = useCallback(
-    (instance: NativeTextInput | null) => {
+    (instance: TextInputInstance | null) => {
       input.current = instance;
       if (typeof ref === 'function') {
         ref(instance);
@@ -77,7 +78,7 @@ const InSheetInput = ({
 
   const focusStaysInSheet = () => {
     const next = findNodeHandle(
-      NativeTextInput.State.currentlyFocusedInput() as unknown as NativeTextInput | null,
+      NativeTextInput.State.currentlyFocusedInput() as unknown as TextInputInstance | null,
     );
     return !!next && textInputNodesRef.current.has(next);
   };
@@ -125,5 +126,5 @@ export const SheetAwareNativeInput = (props: SheetAwareNativeInputProps) => {
 };
 
 export const renderSheetAwareInput = (props: RenderProps) => (
-  <SheetAwareNativeInput {...props} />
+  <SheetAwareNativeInput {...(props as SheetAwareNativeInputProps)} />
 );

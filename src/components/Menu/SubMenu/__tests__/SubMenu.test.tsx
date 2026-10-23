@@ -1,8 +1,13 @@
 import React from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {render} from '../../../../../jest/test-utils';
+import {measuresIncludeStatusBar} from '../../../../utils/edgeToEdge';
 import {SubMenu} from '../SubMenu';
 import {MenuItem} from '../../MenuItem';
+
+jest.mock('../../../../utils/edgeToEdge', () => ({
+  measuresIncludeStatusBar: jest.fn(() => false),
+}));
 
 describe('SubMenu', () => {
   beforeEach(() => {
@@ -56,7 +61,7 @@ describe('SubMenu', () => {
     expect(typeof paperMenuInstance.props.statusBarHeight).toBe('number');
   });
 
-  it('uses insets.top from useSafeAreaInsets as statusBarHeight', () => {
+  it('uses insets.top when the edge-to-edge measure is off or on iOS', () => {
     (useSafeAreaInsets as jest.Mock).mockReturnValue({
       top: 47,
       right: 0,
@@ -73,6 +78,25 @@ describe('SubMenu', () => {
 
     const paperMenuInstance = UNSAFE_getByType(PaperMenu);
     expect(paperMenuInstance.props.statusBarHeight).toBe(47);
+  });
+
+  it('passes 0 when RN measures in edge-to-edge window coordinates', () => {
+    (measuresIncludeStatusBar as jest.Mock).mockReturnValueOnce(true);
+    (useSafeAreaInsets as jest.Mock).mockReturnValue({
+      top: 47,
+      right: 0,
+      bottom: 34,
+      left: 0,
+    });
+
+    const PaperMenu = require('react-native-paper').Menu;
+    const {UNSAFE_getByType} = render(
+      <SubMenu visible={true} onDismiss={() => {}} anchor={{x: 100, y: 100}}>
+        <MenuItem label="Item 1" onPress={() => {}} />
+      </SubMenu>,
+    );
+
+    expect(UNSAFE_getByType(PaperMenu).props.statusBarHeight).toBe(0);
   });
 
   it('passes custom style alongside default styles', () => {

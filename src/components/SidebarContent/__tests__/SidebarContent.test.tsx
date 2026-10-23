@@ -6,6 +6,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {
   createDrawerNavigator,
   DrawerContentComponentProps,
+  useDrawerStatus,
 } from '@react-navigation/drawer';
 import {render, fireEvent, waitFor} from '@testing-library/react-native';
 
@@ -29,6 +30,25 @@ const TestNavigator = () => (
       <Drawer.Screen name="Chat" component={ChatScreen} />
       <Drawer.Screen name="Models" component={ModelsScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
+    </Drawer.Navigator>
+  </NavigationContainer>
+);
+
+const StatusChatScreen = ({navigation}: any) => {
+  const status = useDrawerStatus();
+  return (
+    <>
+      <Text>{`drawer:${status}`}</Text>
+      <Text onPress={() => navigation.openDrawer()}>open-drawer</Text>
+    </>
+  );
+};
+
+const DrawerStatusNavigator = () => (
+  <NavigationContainer>
+    <Drawer.Navigator drawerContent={renderSidebarContent}>
+      <Drawer.Screen name="Chat" component={StatusChatScreen} />
+      <Drawer.Screen name="Models" component={ModelsScreen} />
     </Drawer.Navigator>
   </NavigationContainer>
 );
@@ -63,6 +83,31 @@ describe('SidebarContent Component', () => {
     fireEvent.press(getByText('Session 1'));
     await waitFor(() => {
       expect(getByText('Chat Screen')).toBeTruthy();
+    });
+  });
+
+  describe('closes the drawer when the target is already focused', () => {
+    const renderOpenDrawerOnChat = async () => {
+      const utils = render(<DrawerStatusNavigator />);
+      fireEvent.press(utils.getByText('open-drawer'));
+      await waitFor(() => expect(utils.getByText('drawer:open')).toBeTruthy());
+      return utils;
+    };
+
+    it('after pressing a session', async () => {
+      const {getByText} = await renderOpenDrawerOnChat();
+
+      fireEvent.press(getByText('Session 1'));
+
+      await waitFor(() => expect(getByText('drawer:closed')).toBeTruthy());
+    });
+
+    it('after pressing the Chat item', async () => {
+      const {getByText, getByTestId} = await renderOpenDrawerOnChat();
+
+      fireEvent.press(getByTestId('drawer-item-chat'));
+
+      await waitFor(() => expect(getByText('drawer:closed')).toBeTruthy());
     });
   });
 

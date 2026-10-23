@@ -774,6 +774,118 @@ describe('useChatSession — AssistantTurn integration', () => {
     (talentRegistry as any).engines.delete('datetime');
   });
 
+  it('a later call that settles first still reaches appendToolOutcome after the earlier call', async () => {
+    const settleOrder: string[] = [];
+    let releaseCalculate!: () => void;
+    const calcTalent: TalentEngine = {
+      name: 'calculate',
+      execute: () =>
+        new Promise<TalentResult>(resolve => {
+          releaseCalculate = () => {
+            settleOrder.push('calculate');
+            resolve({type: 'text', summary: '4'});
+          };
+        }),
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    };
+    const dtTalent: TalentEngine = {
+      name: 'datetime',
+      execute: () => {
+        const settled = Promise.resolve<TalentResult>({
+          type: 'text',
+          summary: '8:28 AM',
+        });
+        settled.then(() => {
+          settleOrder.push('datetime');
+          releaseCalculate();
+        });
+        return settled;
+      },
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'datetime', description: '', parameters: {}},
+      }),
+    };
+    talentRegistry.register(calcTalent);
+    talentRegistry.register(dtTalent);
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Multi Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {
+          talents: [
+            {name: 'calculate', necessity: 'optional'},
+            {name: 'datetime', necessity: 'optional'},
+          ],
+        },
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+
+    let turnIndex = 0;
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockImplementation(async () => {
+        turnIndex += 1;
+        if (turnIndex === 1) {
+          return {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{}'},
+              },
+              {
+                id: 'c1',
+                type: 'function',
+                function: {name: 'datetime', arguments: '{}'},
+              },
+            ],
+          };
+        }
+        return {text: '4 at 8:28', content: '4 at 8:28'};
+      });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(settleOrder).toEqual(['datetime', 'calculate']);
+    const outcomeIds = (
+      chatSessionStore.appendToolOutcome as jest.Mock
+    ).mock.calls.map(c => (c[2] as {callId: string}).callId);
+    expect(outcomeIds).toEqual(['c0', 'c1']);
+
+    (talentRegistry as any).engines.delete('calculate');
+    (talentRegistry as any).engines.delete('datetime');
+  });
+
   it('#hookTest4 tool-followed-by-tool (multi-step chain): appendToolCall fires per step, ids stay distinct across steps', async () => {
     // Step 0: invoke calculate. Step 1: invoke datetime. Step 2: final
     // answer. The runner attaches a fresh normalized list to each
@@ -1017,6 +1129,85 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     // Cleanup
     (talentRegistry as any).engines.delete('calculate');
+  });
+
+  it('a Stop before the tool phase of a six-call reply cancels every call and ends the lease', async () => {
+    const execute = jest.fn(
+      async (): Promise<TalentResult> => ({type: 'text', summary: '4'}),
+    );
+    talentRegistry.register({
+      name: 'calculate',
+      execute,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    });
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Calc Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {talents: [{name: 'calculate', necessity: 'optional'}]},
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+    modelStore.context!.completion = jest.fn().mockResolvedValue({
+      text: '',
+      content: '',
+      tool_calls: [0, 1, 2, 3, 4, 5].map(i => ({
+        id: `c${i}`,
+        type: 'function',
+        function: {name: 'calculate', arguments: '{"e":"2+2"}'},
+      })),
+    });
+
+    try {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      (chatSessionStore.appendToolCall as jest.Mock).mockImplementationOnce(
+        async () => {
+          result.current.handleStopPress();
+        },
+      );
+      let settled = false;
+      result.current.handleSendPress(textMessage).then(() => {
+        settled = true;
+      });
+      await act(async () => {
+        for (let i = 0; i < 1000 && !settled; i++) {
+          await Promise.resolve();
+        }
+      });
+
+      expect(settled).toBe(true);
+      expect(modelStore.isGenerationBusy).toBe(false);
+      const outcomes = (
+        chatSessionStore.appendToolOutcome as jest.Mock
+      ).mock.calls.map(call => call[2].result.errorMessage);
+      expect(outcomes).toEqual(Array(6).fill('cancelled'));
+      expect(execute).not.toHaveBeenCalled();
+    } finally {
+      (talentRegistry as any).engines.delete('calculate');
+    }
   });
 
   it('#hookTest6 abort with no partial content: empty turn deleted via the store, no interrupted-metadata write', async () => {

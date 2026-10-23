@@ -56,8 +56,15 @@ class MockSearchProviderStore {
     return (this.keys[id] ?? '').trim().length > 0;
   }
 
+  isKeyOptional(id: SearchProviderId): boolean {
+    return SEARCH_PROVIDERS.find(p => p.id === id)?.requiresKey === false;
+  }
+
   get isProviderConfigured(): boolean {
-    return this.hasKey(this.activeProviderId);
+    return (
+      this.isKeyOptional(this.activeProviderId) ||
+      this.hasKey(this.activeProviderId)
+    );
   }
 
   get canSearch(): boolean {
