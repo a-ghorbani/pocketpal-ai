@@ -890,8 +890,8 @@ export const ChatView = observer(
 
     /**
      * Resends an existing row in place of `replaceFromId` and the rows after
-     * it; the resend gate has already checked the budget. The composer is
-     * left as it is.
+     * it; the resend gate has already checked the budget. It never clears the
+     * composer itself; ending an edit under the lease does.
      */
     const resend = React.useCallback(
       async (message: MessageType.PartialText, replaceFromId: string) => {

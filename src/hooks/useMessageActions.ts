@@ -23,10 +23,7 @@ type CopyableMessage = MessageType.Text | MessageType.AssistantTurn;
 interface UseMessageActionsProps {
   user: User;
   messages: MessageType.Any[];
-  /**
-   * Sends an existing row again in place of `replaceFromId` and the rows
-   * after it; it must not touch the composer.
-   */
+  /** Sends an existing row again in place of `replaceFromId` and the rows after it. */
   resendPress: (
     message: MessageType.PartialText,
     replaceFromId: string,
@@ -73,8 +70,7 @@ export const useMessageActions = ({
     [setInputText, setInputImages, setInputDocuments, user.id],
   );
 
-  /** Resends a user row. A row whose documents no longer fit is never
-   * removed; it opens in edit mode instead. */
+  /** Resends a user row. A row that no longer fits is never removed; the verdict goes to `onBudgetOver`. */
   const resend = useCallback(
     async (row: MessageType.Text) => {
       if (chatSessionStore.isStopping) {
