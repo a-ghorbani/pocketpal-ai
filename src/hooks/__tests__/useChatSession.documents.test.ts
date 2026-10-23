@@ -314,6 +314,34 @@ describe('useChatSession with documents', () => {
   });
 });
 
+describe('a chat switch while the documents are read', () => {
+  it('puts the reply in the chat the user row was written to', async () => {
+    const doc = pdf('slow-read', {pageCount: 1});
+    writeText(doc.id, ['page text']);
+    const read = fs.readFile.getMockImplementation()!;
+    fs.readFile.mockImplementation(async (p: string) => {
+      if (
+        (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls
+          .length > 0
+      ) {
+        chatSessionStore.activeSessionId = 'session-2';
+      }
+      return read(p);
+    });
+
+    await send({type: 'text', text: 'Summarise', documents: [doc]});
+
+    const turnsAdded = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.filter(([m]) => m.type === 'assistant_turn');
+    expect(turnsAdded).toEqual([]);
+    expect(chatSessionStore.addMessageToSession).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({type: 'assistant_turn'}),
+    );
+  });
+});
+
 describe('searched documents at send', () => {
   const report = pdf('report-c', {pageCount: 50, tokenEstimate: 60000});
   const pages = Array.from({length: 50}, (_, i) =>

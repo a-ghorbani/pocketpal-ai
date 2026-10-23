@@ -195,7 +195,10 @@ const prepareCompletion = async ({
   l10n,
   currentMessages,
   plan,
+  sessionId,
 }: {
+  /** The chat the user row was written to; the reply goes there too. */
+  sessionId: string;
   imageUris: string[];
   message: MessageType.PartialText;
   systemMessages: Array<{role: 'system'; content: string}>;
@@ -359,12 +362,16 @@ const prepareCompletion = async ({
     },
   };
 
-  await chatSessionStore.addMessageToCurrentSession(emptyTurn);
+  if (chatSessionStore.activeSessionId === sessionId) {
+    await chatSessionStore.addMessageToCurrentSession(emptyTurn);
+  } else {
+    await chatSessionStore.addMessageToSession(sessionId, emptyTurn);
+  }
 
   const messageInfo = {
     createdAt,
-    id: emptyTurn.id, // set by addMessageToCurrentSession
-    sessionId: chatSessionStore.activeSessionId!,
+    id: emptyTurn.id, // set when the row is added
+    sessionId,
   };
 
   return {cleanCompletionParams, messageInfo};
@@ -1022,6 +1029,7 @@ export const useChatSession = (
         s => s.id === chatSessionStore.activeSessionId,
       )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
     await addMessage(textMessage);
+    const rowSessionId = chatSessionStore.activeSessionId!;
     releaseSendHold((message.documents ?? []).map(ref => ref.id));
     if (!lease.signal.aborted) {
       modelStore.setInferencing(true);
@@ -1035,7 +1043,7 @@ export const useChatSession = (
     }
 
     const activeSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
+      s => s.id === rowSessionId,
     );
     const pal = activeSession?.activePalId
       ? palStore.pals.find(p => p.id === activeSession.activePalId)
@@ -1057,6 +1065,7 @@ export const useChatSession = (
       l10n,
       currentMessages,
       plan,
+      sessionId: rowSessionId,
     });
 
     currentMessageInfo.current = messageInfo;
