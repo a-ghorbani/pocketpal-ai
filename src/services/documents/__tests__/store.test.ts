@@ -208,6 +208,24 @@ describe('importDocument', () => {
     },
   );
 
+  it.each([
+    ['Statement 2024.03', 'application/pdf', 'pdf', 'source.pdf'],
+    ['notes.v2', 'text/plain', 'text', 'source.txt'],
+  ])(
+    'classifies %s, whose suffix is not a document extension, by its type',
+    async (name, type, kind, fileName) => {
+      pdfPages = ['only page'];
+      const ref = ready(
+        await importDocument(
+          picked(name, kind === 'pdf' ? '%PDF' : 'hi', {type}),
+        ),
+      );
+      expect(ref.kind).toBe(kind);
+      expect(ref.name).toBe(name);
+      expect(keepCopy.mock.calls[0][0].files[0].fileName).toBe(fileName);
+    },
+  );
+
   it('refuses a name without an extension whose type is not a document', async () => {
     const result = await importDocument(
       picked('Photo', 'x', {type: 'image/heic'}),

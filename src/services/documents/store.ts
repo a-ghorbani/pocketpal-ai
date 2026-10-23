@@ -130,6 +130,9 @@ const extensionForType = (type: string | null | undefined): string => {
   return mime.startsWith('text/') || TEXT_MIME_TYPES.has(mime) ? 'txt' : '';
 };
 
+const isDocumentExtension = (extension: string): boolean =>
+  extension === 'pdf' || TEXT_EXTENSIONS.has(extension);
+
 const classify = (extension: string): DocumentKind => {
   if (extension === 'pdf') {
     return 'pdf';
@@ -321,7 +324,10 @@ export const importDocument = async (
     const stagedName = virtual
       ? `${displayName.replace(/\.[^.]*$/, '')}.${virtual.extension}`
       : displayName;
-    const extension = extensionOf(stagedName) || extensionForType(picked.type);
+    const named = extensionOf(stagedName);
+    const extension = isDocumentExtension(named)
+      ? named
+      : extensionForType(picked.type) || named;
     const kind = classify(extension);
 
     await RNFS.mkdir(assertContained(docDir(id)));
