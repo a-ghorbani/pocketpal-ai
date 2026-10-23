@@ -875,6 +875,19 @@ describe('model load guard', () => {
       await expectNativeReads(model.id, path);
     });
 
+    it('LOCAL import whose picked name has a backslash loads and deletes', async () => {
+      const path = `${DOCS}/models/local/a\\b.gguf`;
+      existingFiles.add(path);
+      await modelStore.addLocalModel(path);
+      const [model] = toJS(modelStore.models);
+
+      await expectNativeReads(model.id, path);
+
+      await modelStore.deleteModel(storeModel(model.id));
+      expect(RNFS.unlink).toHaveBeenCalledWith(path);
+      expect(modelStore.models).toHaveLength(0);
+    });
+
     it('LOCAL model from an old iOS container loads at its re-anchored path', async () => {
       const recovered = `${DOCS}/models/local/m.gguf`;
       existingFiles.add(recovered);
@@ -974,6 +987,11 @@ describe('model load guard', () => {
         () => craftedLocal('file:///data/local/tmp/x'),
       ],
       ['LOCAL /tmp/x.gguf', () => craftedLocal('/tmp/x.gguf')],
+      [
+        'LOCAL models/local/a<U+0000>b',
+        () => craftedLocal(`${DOCS}/models/local/a\u0000b`),
+      ],
+      ['HF filename a\\b.gguf', () => craftedHf({filename: 'a\\b.gguf'})],
     ];
 
     it.each(MAIN)('%s: load refused', async (_case, build) => {

@@ -1,7 +1,11 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {MMProjRegex} from './multimodalPatterns';
-import {isSafePathSegment, isSafeRelativePath} from './pathGuard';
+import {
+  hasControlCharacter,
+  isSafePathSegment,
+  isSafeRelativePath,
+} from './pathGuard';
 import {ModelOrigin} from './types';
 
 export const MODEL_PATH_REFUSED = 'Model path is outside the models folder';
@@ -9,6 +13,15 @@ export const MODEL_PATH_REFUSED = 'Model path is outside the models folder';
 const GGUF_SUFFIX = /\.gguf$/i;
 
 const isGgufName = (name: string): boolean => GGUF_SUFFIX.test(name);
+
+const isLocalModelSegment = (segment: string): boolean =>
+  segment !== '' &&
+  segment !== '.' &&
+  segment !== '..' &&
+  !hasControlCharacter(segment);
+
+const isLocalModelRelativePath = (relative: string): boolean =>
+  relative.split('/').every(isLocalModelSegment);
 
 export const isModelFilePath = (
   path: unknown,
@@ -21,7 +34,9 @@ export const isModelFilePath = (
   const modelsPrefix = `${documentsPrefix}models/`;
   if (path.startsWith(modelsPrefix)) {
     const relative = path.slice(modelsPrefix.length);
-    return isSafeRelativePath(relative) && (local || isGgufName(relative));
+    return local
+      ? isLocalModelRelativePath(relative)
+      : isSafeRelativePath(relative) && isGgufName(relative);
   }
   if (path.startsWith(documentsPrefix)) {
     const name = path.slice(documentsPrefix.length);

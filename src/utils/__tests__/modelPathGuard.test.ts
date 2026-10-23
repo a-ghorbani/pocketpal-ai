@@ -484,3 +484,26 @@ describe('filename of a non-local ref', () => {
     ).toBe(true);
   });
 });
+
+describe('backslash in a model path segment', () => {
+  it.each([
+    `${MODELS}/local/a\\b.gguf`,
+    `${MODELS}/local/a\\b`,
+    `${MODELS}/local/\\`,
+    `${MODELS}/a\\b.bin`,
+  ])('a local model at %p is allowed', path => {
+    expect(isModelFilePath(path, {local: true})).toBe(true);
+  });
+
+  it.each<[string, string, boolean]>([
+    ['local a<U+0000>b', `${MODELS}/local/a\u0000b`, true],
+    ['local a\\b/..', `${MODELS}/local/a\\b/..`, true],
+    ['local a\\b//c', `${MODELS}/local/a\\b//c`, true],
+    ['hf file a\\b.gguf', `${MODELS}/hf/a/r/a\\b.gguf`, false],
+    ['hf author a\\b', `${MODELS}/hf/a\\b/r/x.gguf`, false],
+    ['legacy a\\b.gguf', `${DOCS}/a\\b.gguf`, false],
+    ['legacy a\\b.gguf as local', `${DOCS}/a\\b.gguf`, true],
+  ])('%s is refused', (_case, path, local) => {
+    expect(isModelFilePath(path, {local})).toBe(false);
+  });
+});
