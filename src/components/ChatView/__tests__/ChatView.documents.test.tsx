@@ -1212,6 +1212,46 @@ describe('leaving an edit that kept the composer', () => {
     finish({status: 'refused', reason: 'copy_failed'});
   });
 
+  it('brings back a removed chip whose import finished during the edit', async () => {
+    let finish: (value: any) => void = () => {};
+    const slow = ref('slow');
+    shown = [reply('r1', 'reply one'), olderRow];
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: budget(),
+    });
+    (pick as jest.Mock).mockResolvedValueOnce([
+      {uri: 'content://slow.pdf', name: 'slow.pdf', size: 1},
+    ]);
+    importDocument.mockImplementationOnce(
+      () => new Promise(resolve => (finish = resolve)),
+    );
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-document'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-document'));
+    });
+    chat.type('draft');
+    await regenerate(chat, 'reply one');
+    await act(async () => {
+      finish({status: 'ready', ref: slow});
+    });
+
+    fireEvent.press(chat.screen.getByLabelText('Remove slow.pdf'));
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expect(composerChips(chat)).toEqual(['slow.pdf']);
+    expect(documentStore.isHeld(slow.id)).toBe(true);
+    chat.type('draft');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({documents: [slow]}),
+    );
+  });
+
   it('restores the first pre-edit composer after moving the edit to another row', async () => {
     const {chat} = await setUp([
       reply('r2', 'reply two'),

@@ -138,8 +138,9 @@ type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 
 /**
  * The composer chips to bring back after an edit: the pre-edit chips, each as
- * it is now if it is still there. A removed chip comes back unless it was
- * still importing, since that import's result has nowhere to land.
+ * it is now if it is still there. A removed chip comes back as it was last
+ * seen, unless it was still importing then, since that import's result has
+ * nowhere to land.
  */
 const restoreChips = (
   snapshot: ComposerDocument[],
@@ -353,6 +354,16 @@ export const ChatView = observer(
       (update: (documents: ComposerDocument[]) => ComposerDocument[]) => {
         const next = update(inputDocumentsRef.current);
         inputDocumentsRef.current = next;
+        const snapshot = editSnapshotRef.current;
+        if (snapshot) {
+          const liveByKey = new Map(next.map(chip => [chip.key, chip]));
+          editSnapshotRef.current = {
+            ...snapshot,
+            documents: snapshot.documents.map(
+              chip => liveByKey.get(chip.key) ?? chip,
+            ),
+          };
+        }
         setComposerHeld(next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])));
         setInputDocuments(next);
       },
