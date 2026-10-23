@@ -1688,7 +1688,7 @@
     "spokenLanguageDetected": "تشخیص خودکار: {{language}}",
     "resetLanguageCta": "بازنشانی",
     "recordingLanguageAuto": "زبان: خودکار",
-    "recordingLanguage": "زبان: {{code}} (برای بازنشانی بزنید)",
+    "recordingLanguage": "زبان: {{code}} (برای بازنشانی ضربه بزنید)",
     "waitingForChatLabel": "پس از پایان پاسخ، به متن تبدیل می‌شود…",
     "tierBase": "Base (چندزبانه، کم‌حجم‌ترین)",
     "tierSmall": "Small (پیشنهادی)",
@@ -1711,12 +1711,12 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "هوش مصنوعی محلی را یک قدم جلوتر ببرید.",
-    "subline": "ابزارهای بیشتر برای این‌که ببینید یک گوشی واقعاً چه توانی دارد، و راهی برای حمایت مالی از کاری که PocketPal را رایگان و متن‌باز نگه می‌دارد.",
-    "unsupportedSubline": "قابلیت‌های Plus هنوز روی این گوشی اجرا نمی‌شوند. باز هم می‌توانید از PocketPal حمایت کنید؛ هر قابلیتی هم که بعداً به گوشی شما برسد شامل همین خرید است.",
-    "thanksHeadline": "ممنون که هوش مصنوعی محلی را همراه ما جلو می‌برید.",
-    "thanksSubline": "Plus روی این دستگاه فعال است. قابلیت‌های جدید Plus به‌صورت خودکار همین‌جا ظاهر می‌شوند.",
+    "subline": "Plus، PocketPal را رایگان و متن‌باز نگه می‌دارد. قابلیت‌های اضافه، تشکر ما از شماست.",
+    "unsupportedSubline": "قابلیت‌های Plus هنوز روی این گوشی اجرا نمی‌شوند. باز هم می‌توانید از PocketPal حمایت کنید.",
+    "thanksHeadline": "ممنون که PocketPal را زنده نگه می‌دارید.",
+    "thanksSubline": "Plus روی این دستگاه فعال است.",
     "features": {
-      "handsFreeVoice": "گفتگوی صوتی بدون دست",
+      "handsFreeVoice": "گفتگوی صوتی هندزفری",
       "localApiServer": "سرور API محلی"
     },
     "ready": "آماده",
