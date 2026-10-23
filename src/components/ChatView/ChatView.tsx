@@ -324,6 +324,10 @@ export const ChatView = observer(
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     /** Rows whose edit an in-flight composer send is committing. */
     const editsInFlightRef = React.useRef<string[]>([]);
+    /** The edit open when Increase context was chosen from the budget sheet. */
+    const editForReloadRef = React.useRef<string | null>(null);
+    /** That edit while its reload runs: the reload ends it, the composer keeps it. */
+    const editAcrossReloadRef = React.useRef<string | null>(null);
     const [inputDocuments, setInputDocuments] = React.useState<
       ComposerDocument[]
     >([]);
@@ -574,7 +578,9 @@ export const ChatView = observer(
       }
       if (
         carriedTextRef.current !== null ||
-        (endedEdit != null && editsInFlightRef.current.includes(endedEdit))
+        (endedEdit != null &&
+          (editsInFlightRef.current.includes(endedEdit) ||
+            endedEdit === editAcrossReloadRef.current))
       ) {
         return;
       }
@@ -1669,6 +1675,8 @@ export const ChatView = observer(
                 canIncreaseContext && activeModel?.origin !== ModelOrigin.REMOTE
                   ? () => {
                       setBudgetSheet(null);
+                      editForReloadRef.current =
+                        chatSessionStore.editingMessageId;
                       setIncreaseSheetOpen(true);
                     }
                   : undefined
@@ -1696,12 +1704,16 @@ export const ChatView = observer(
               model={activeModel}
               projectionModel={projectionModel}
               currentNCtx={currentNCtx}
-              onClose={() => setIncreaseSheetOpen(false)}
+              onClose={() => {
+                editForReloadRef.current = null;
+                setIncreaseSheetOpen(false);
+              }}
               onNewChat={() => {
                 chatSessionStore.resetActiveSession();
                 setIncreaseSheetOpen(false);
               }}
               onReloadStart={() => {
+                editAcrossReloadRef.current = editForReloadRef.current;
                 // Single advisory surface: dismiss the pal-load hint in the
                 // same handler so no frame shows two snackbars at once.
                 palLoadHint.dismiss();
@@ -1710,14 +1722,19 @@ export const ChatView = observer(
                   indefinite: true,
                 });
               }}
-              onReloadResult={(success, target) =>
+              onReloadResult={(success, target) => {
+                const edit = editAcrossReloadRef.current;
+                editAcrossReloadRef.current = null;
+                if (edit && !chatSessionStore.isEditMode) {
+                  chatSessionStore.enterEditMode(edit);
+                }
                 setReloadSnackbar({
                   message: success
                     ? t(l10n.chat.increaseContextSuccess, {target})
                     : l10n.chat.increaseContextFailure,
                   indefinite: false,
-                })
-              }
+                });
+              }}
             />
           ) : null}
 

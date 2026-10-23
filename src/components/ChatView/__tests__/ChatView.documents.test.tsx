@@ -5,6 +5,7 @@ import {pick} from '@react-native-documents/picker';
 import {textMessage, user} from '../../../../jest/fixtures';
 import {sessionFixtures} from '../../../../jest/fixtures/chatSessions';
 import {l10n} from '../../../locales';
+import * as memoryEstimator from '../../../utils/memoryEstimator';
 import {ChatView} from '../ChatView';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {chatSessionStore, modelStore, uiStore} from '../../../store';
@@ -19,6 +20,23 @@ jest.mock('react-native-image-picker', () => ({
     assets: [{uri: 'file:///staged.jpg'}],
   })),
 }));
+
+const mockReload: {finish?: (success: boolean, target: number) => void} = {};
+jest.mock('../../IncreaseContextSheet', () => {
+  const {Pressable} = require('react-native');
+  return {
+    IncreaseContextSheet: ({onReloadStart, onClose, onReloadResult}: any) => (
+      <Pressable
+        testID="mock-reload-start"
+        onPress={() => {
+          mockReload.finish = onReloadResult;
+          onReloadStart();
+          onClose();
+        }}
+      />
+    ),
+  };
+});
 
 jest.mock('../../ChatEmptyPlaceholder', () => ({
   ChatEmptyPlaceholder: jest.fn(() => null),
@@ -1278,6 +1296,63 @@ describe('ChatView edit mode', () => {
     );
     expect(store.isEditMode).toBe(false);
     expect(chat.input().props.value).toBe('Older row, rewritten');
+  });
+
+  it('keeps an over-budget edit across an Increase context reload', async () => {
+    const overVerdict = {
+      kind: 'over' as const,
+      reason: 'new' as const,
+      needed: 9100,
+      available: 3072,
+      newDocs: [{ref: older, tokens: 9000, mode: 'searched' as const}],
+      historyDocTokens: 0,
+    };
+    runInAction(() => {
+      modelStore.models = [
+        {id: 'local-model', name: 'local', isDownloaded: true} as any,
+      ];
+      modelStore.activeModelId = 'local-model';
+      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      (modelStore as any).largestSuccessfulLoad = 1e12;
+    });
+    const memory = jest
+      .spyOn(memoryEstimator, 'getModelMemoryRequirement')
+      .mockReturnValue(1);
+    shown = [olderRow];
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: jest
+        .fn()
+        .mockImplementation(async (message: {text: string}) =>
+          message.text === 'Older row, rewritten'
+            ? {...fitsPlan, verdict: overVerdict}
+            : fitsPlan,
+        ),
+    });
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    chat.type('Older row, rewritten');
+    await act(async () => {
+      chat.pressSend();
+    });
+    fireEvent.press(chat.screen.getByTestId('budget-increase-context'));
+    fireEvent.press(chat.screen.getByTestId('mock-reload-start'));
+
+    act(() => chatSessionStore.exitEditMode());
+    rerender(chat);
+    act(() => mockReload.finish?.(true, 4096));
+    rerender(chat);
+
+    expect(chat.input().props.value).toBe('Older row, rewritten');
+    expect(composerChips(chat)).toEqual(['older-doc.pdf']);
+    expect(chatSessionStore.enterEditMode).toHaveBeenLastCalledWith(
+      'older-row',
+    );
+    expect(store.editingMessageId).toBe('older-row');
+    memory.mockRestore();
+    runInAction(() => {
+      (modelStore as any).activeContextSettings = undefined;
+      (modelStore as any).largestSuccessfulLoad = undefined;
+    });
   });
 
   it('clears the composer when edit mode ends from outside', async () => {
