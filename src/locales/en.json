@@ -1372,7 +1372,7 @@
         "newChat": "New chat",
         "cancel": "Cancel",
         "searchInstead": "Search instead",
-        "resendBody": "This message and its documents no longer fit this model's context: about {{needed}} tokens needed, {{available}} available. Nothing was removed or sent.",
+        "resendBody": "This chat's documents no longer fit in {{available}} tokens (about {{needed}} needed). Nothing was removed or sent. To send it, edit the message to remove documents, or start a new chat.",
         "newBody": "Even a short excerpt of these documents needs about {{needed}} tokens with this chat, but the model has room for {{available}}. Nothing was sent."
       }
     }

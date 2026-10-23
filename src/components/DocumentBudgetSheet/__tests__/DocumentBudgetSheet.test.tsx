@@ -153,6 +153,29 @@ describe('DocumentBudgetSheet', () => {
     },
   );
 
+  it('explains a resend over on earlier documents alone and how to recover', () => {
+    const {getByTestId, queryByTestId} = render(
+      <DocumentBudgetSheet
+        isVisible
+        resend
+        verdict={{
+          kind: 'over',
+          needed: 6100,
+          available: 3072,
+          newDocs: [],
+          historyDocTokens: 6000,
+          reason: 'history',
+        }}
+        {...handlers()}
+      />,
+    );
+    expect(getByTestId('budget-body').props.children).toBe(
+      "This chat's documents no longer fit in 3.1k tokens (about 6.1k needed). Nothing was removed or sent. To send it, edit the message to remove documents, or start a new chat.",
+    );
+    expect(queryByTestId('budget-new-doc')).toBeNull();
+    expect(queryByTestId('budget-new-chat')).toBeNull();
+  });
+
   it('offers no Search instead next to the history actions', () => {
     const small = {...text, id: 'small', name: 'small.md', tokenEstimate: 300};
     const {getByTestId, queryByTestId} = render(
