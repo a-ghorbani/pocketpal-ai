@@ -531,6 +531,15 @@ describe('PalsHub model reference', () => {
     });
   });
 
+  it.each(['pocketpalai.db', 'x.bin', 'models', 'pal-images'])(
+    'drops a fallback model whose filename is %p, keeps the pal',
+    async filename => {
+      const {localPal} = await palStore.installOwnedPal(withRef({filename}));
+      expect(createdPal().defaultModel).toBeUndefined();
+      expect(localPal.systemPrompt).toBe('You tell stories.');
+    },
+  );
+
   it('an empty author keeps the fallback model', async () => {
     await palStore.installOwnedPal(withRef({author: ''}));
     expect(createdPal().defaultModel).toMatchObject({

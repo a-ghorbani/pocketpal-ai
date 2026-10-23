@@ -96,6 +96,12 @@ const hasSafeOriginFields = (ref: UnknownRecord): boolean =>
     emptyOr(isSafePathSegment)(ref.repo) &&
     emptyOr(isSafeRelativePath)(ref.id));
 
+const hasLoadableFilename = (ref: UnknownRecord): boolean =>
+  isEmpty(ref.filename) ||
+  ref.origin === ModelOrigin.LOCAL ||
+  ref.isLocal === true ||
+  isGgufName(ref.filename as string);
+
 const LOCAL_MODELS_MARKER = '/models/local/';
 
 const isImportableFullPath = (fullPath: unknown): boolean => {
@@ -127,6 +133,7 @@ export const isValidImportedModelRef = (ref: unknown): boolean => {
   return (
     isObject(ref) &&
     emptyOr(isSafeRelativePath)(ref.filename) &&
+    hasLoadableFilename(ref) &&
     isValidHfModel(ref.hfModel) &&
     isValidHfModelFile(ref.hfModelFile) &&
     hasSafeOriginFields(ref) &&

@@ -444,3 +444,43 @@ describe('control characters', () => {
     });
   });
 });
+
+describe('filename of a non-local ref', () => {
+  const NON_MODEL_FILES = ['pocketpalai.db', 'x.bin', 'models', 'pal-images'];
+  const refFor = (origin: string | undefined, filename: string) => ({
+    ...(origin === undefined ? {} : {origin}),
+    id: `a/r/${filename}`,
+    author: 'a',
+    repo: 'r',
+    filename,
+  });
+
+  describe.each(['hf', 'preset', 'remote', undefined])('origin %p', origin => {
+    it.each(NON_MODEL_FILES)('drops filename %p', filename => {
+      expect(isValidImportedModelRef(refFor(origin, filename))).toBe(false);
+    });
+
+    it.each(['x.gguf', 'Q4/x.GGUF'])('keeps filename %p', filename => {
+      expect(isValidImportedModelRef(refFor(origin, filename))).toBe(true);
+    });
+  });
+
+  it('keeps a remote ref with an empty filename', () => {
+    expect(isValidImportedModelRef(refFor('remote', ''))).toBe(true);
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['origin local', {origin: 'local', isLocal: false}],
+    ['isLocal true', {origin: 'hf', isLocal: true}],
+  ])('keeps a %s ref with a non-gguf filename', (_case, flags) => {
+    expect(
+      isValidImportedModelRef({
+        ...flags,
+        id: 'local-id',
+        author: '',
+        filename: 'x.bin',
+        fullPath: `${DOCS}/models/local/x.bin`,
+      }),
+    ).toBe(true);
+  });
+});

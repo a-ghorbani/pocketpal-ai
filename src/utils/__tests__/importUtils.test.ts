@@ -10,6 +10,9 @@ import {
 } from '../importUtils';
 import {exportPal} from '../exportUtils';
 import {LOOKIE_DEFAULT_MODEL} from '../../store/builtinPalModels';
+import {hfAsModel} from '..';
+import {processHFSearchResults} from '../hf';
+import smolVlmModelInfo from '../../../jest/fixtures/hfApi/ggml-org__SmolVLM-500M-Instruct-GGUF.model.json';
 import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 jest.mock('react-native-share', () => ({
@@ -541,6 +544,40 @@ describe('importUtils', () => {
             const ref = localModel(fullPath);
             const created = await importOne({...basePal, defaultModel: ref});
             expect(created.defaultModel).toEqual(ref);
+          },
+        );
+      });
+
+      describe('model filename', () => {
+        const capturedRef = () => {
+          const [listed] = processHFSearchResults([smolVlmModelInfo as any]);
+          const file = listed.siblings.find(
+            f => f.rfilename === 'SmolVLM-500M-Instruct-Q8_0.gguf',
+          )!;
+          return asJson(hfAsModel(listed, file));
+        };
+
+        it('keeps an HF ref built from the captured HF response', async () => {
+          const ref = capturedRef();
+          const created = await importOne({...basePal, defaultModel: ref});
+          expect(created.defaultModel).toEqual(ref);
+        });
+
+        it.each(['pocketpalai.db', 'x.bin', 'models', 'pal-images'])(
+          'drops an HF ref whose filename is %p, keeps the pal',
+          async filename => {
+            const created = await importOne({
+              ...basePal,
+              defaultModel: {...capturedRef(), filename},
+              promptGenerationModel: {
+                id: 'srv/m',
+                origin: 'remote',
+                filename,
+              },
+            });
+            expect(created.defaultModel).toBeUndefined();
+            expect(created.promptGenerationModel).toBeUndefined();
+            expectRestKept(created);
           },
         );
       });
