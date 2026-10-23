@@ -343,11 +343,20 @@ export const ChatView = observer(
       ComposerDocument[]
     >([]);
     const inputDocumentsRef = React.useRef<ComposerDocument[]>([]);
+    /** Attachments of undone sends that belong to a chat not open yet. */
+    const pendingAttachmentsRef = React.useRef(
+      new Map<string, {images: string[]; documents: DocumentRef[]}>(),
+    );
     const updateComposerDocuments = React.useCallback(
       (update: (documents: ComposerDocument[]) => ComposerDocument[]) => {
         const next = update(inputDocumentsRef.current);
         inputDocumentsRef.current = next;
-        setComposerHeld(next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])));
+        setComposerHeld([
+          ...next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])),
+          ...[...pendingAttachmentsRef.current.values()].flatMap(pending =>
+            pending.documents.map(ref => ref.id),
+          ),
+        ]);
         setInputDocuments(next);
       },
       [],
@@ -637,6 +646,11 @@ export const ChatView = observer(
       const draft = chatSessionStore.getDraft(newKey);
       syncedDraftRef.current = draft;
       loadedDraftKeyRef.current = newKey;
+      const kept = pendingAttachmentsRef.current.get(newKey);
+      if (kept) {
+        pendingAttachmentsRef.current.delete(newKey);
+        addAttachments(kept.images, kept.documents);
+      }
       setInputText(carried === null ? draft : prependText(carried, draft));
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
@@ -766,6 +780,27 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
+    /** Adds attachments ahead of the composer's; chips sharing a document id keep the first. */
+    const addAttachments = React.useCallback(
+      (images: string[] = [], documents: DocumentRef[] = []) => {
+        setInputImages(pending => [...images, ...pending]);
+        updateComposerDocuments(pending => {
+          const seen = new Set<string>();
+          return [...readyChips(documents), ...pending].filter(chip => {
+            if (!chip.ref) {
+              return true;
+            }
+            if (seen.has(chip.ref.id)) {
+              return false;
+            }
+            seen.add(chip.ref.id);
+            return true;
+          });
+        });
+      },
+      [updateComposerDocuments],
+    );
+
     /**
      * Puts an undone send back: in the open chat, ahead of what the composer
      * gained meanwhile, chips sharing a document id keeping the first; in
@@ -779,6 +814,15 @@ export const ChatView = observer(
               sessionId,
               prependText(message.text, chatSessionStore.getDraft(sessionId)),
             );
+            const kept = pendingAttachmentsRef.current.get(sessionId);
+            pendingAttachmentsRef.current.set(sessionId, {
+              images: [...(message.imageUris ?? []), ...(kept?.images ?? [])],
+              documents: [
+                ...(message.documents ?? []),
+                ...(kept?.documents ?? []),
+              ],
+            });
+            updateComposerDocuments(docs => docs);
           }
           return;
         }
@@ -796,22 +840,9 @@ export const ChatView = observer(
         } else if (message.text) {
           setInputText(pending => prependText(message.text, pending));
         }
-        setInputImages(pending => [...(message.imageUris ?? []), ...pending]);
-        updateComposerDocuments(pending => {
-          const seen = new Set<string>();
-          return [...readyChips(message.documents), ...pending].filter(chip => {
-            if (!chip.ref) {
-              return true;
-            }
-            if (seen.has(chip.ref.id)) {
-              return false;
-            }
-            seen.add(chip.ref.id);
-            return true;
-          });
-        });
+        addAttachments(message.imageUris, message.documents);
       },
-      [updateComposerDocuments],
+      [addAttachments, updateComposerDocuments],
     );
 
     /** The send steps a composer send and a resend share. */

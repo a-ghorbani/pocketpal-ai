@@ -863,6 +863,49 @@ describe('ChatView composer merge', () => {
       'go',
     );
   });
+
+  it("keeps an undone send's attachments for its own chat", async () => {
+    const report = ref('other-chat-doc');
+    let settle!: (undone: UndoneSend | undefined) => void;
+    const chat = renderChat({isVisionEnabled: true});
+    chat.onSendPress.mockImplementationOnce(
+      () =>
+        new Promise<UndoneSend | undefined>(resolve => {
+          settle = resolve;
+        }),
+    );
+    chat.type('typed here');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    await act(async () => {
+      settle({
+        message: {
+          type: 'text',
+          text: 'Summarise',
+          documents: [report],
+          imageUris: ['file:///other.jpg'],
+        },
+        sessionId: 'session-2',
+      });
+    });
+
+    expect(chat.screen.queryByText('other-chat-doc.pdf')).toBeNull();
+    expect(chat.screen.queryAllByLabelText(/^Image preview/)).toHaveLength(0);
+    expect(documentStore.isHeld(report.id)).toBe(true);
+
+    act(() => {
+      runInAction(() => {
+        chatSessionStore.activeSessionId = 'session-2';
+      });
+    });
+    chat.screen.rerender(chat.element({messages: []}));
+
+    expect(chat.screen.getByText('other-chat-doc.pdf')).toBeTruthy();
+    expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
+    expect(documentStore.isHeld(report.id)).toBe(true);
+  });
 });
 
 describe('ChatView resend', () => {
