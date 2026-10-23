@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "Bawa AI lokal lebih jauh.",
-    "subline": "Alat tambahan untuk menguji sejauh mana kemampuan sebuah ponsel, sekaligus cara ikut mendanai pengembangan yang menjaga PocketPal tetap gratis dan open source.",
-    "unsupportedSubline": "Fitur Plus belum bisa jalan di ponsel ini. Anda tetap bisa mendukung PocketPal, dan fitur yang nanti tersedia di ponsel Anda sudah termasuk.",
-    "thanksHeadline": "Terima kasih sudah ikut memajukan AI lokal bersama kami.",
-    "thanksSubline": "Plus sudah terbuka di perangkat ini. Fitur Plus yang baru akan muncul di sini secara otomatis.",
+    "subline": "Plus menjaga PocketPal tetap gratis dan open source. Fitur tambahannya adalah ucapan terima kasih kami.",
+    "unsupportedSubline": "Fitur Plus belum bisa jalan di ponsel ini. Anda tetap bisa mendukung PocketPal.",
+    "thanksHeadline": "Terima kasih sudah ikut menjaga PocketPal tetap berjalan.",
+    "thanksSubline": "Plus sudah terbuka di perangkat ini.",
     "features": {
       "handsFreeVoice": "Suara bebas genggam",
       "localApiServer": "Server API lokal"
