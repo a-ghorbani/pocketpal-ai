@@ -1735,17 +1735,7 @@ export const ChatView = observer(
                 updateComposerDocuments(prev =>
                   prev.filter(doc => doc.ref?.id !== documentRef.id),
                 );
-                const newDocs = budgetSheet.verdict.newDocs.filter(
-                  doc => doc.ref.id !== documentRef.id,
-                );
-                setBudgetSheet(
-                  newDocs.length > 0
-                    ? {
-                        ...budgetSheet,
-                        verdict: {...budgetSheet.verdict, newDocs},
-                      }
-                    : null,
-                );
+                setBudgetSheet(null);
               }}
               onIncreaseContext={
                 canIncreaseContext && activeModel?.origin !== ModelOrigin.REMOTE

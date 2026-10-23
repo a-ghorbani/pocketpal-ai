@@ -509,6 +509,31 @@ describe('ChatView send gate', () => {
     expect(documentStore.isHeld('big')).toBe(false);
   });
 
+  it('closes the sheet after Remove so its figures are never stale', async () => {
+    const second = ref('second', {pageCount: 40, tokenEstimate: 9000});
+    const evaluateSendBudget = jest.fn().mockResolvedValue({
+      verdict: over({
+        newDocs: [
+          {ref: big, tokens: 9000, mode: 'searched' as const},
+          {ref: second, tokens: 9000, mode: 'searched' as const},
+        ],
+      }),
+    });
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    await chat.attach(second);
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    fireEvent.press(chat.screen.getAllByTestId('budget-remove')[0]);
+
+    expect(chat.screen.queryByTestId('budget-body')).toBeNull();
+    expect(chat.screen.getByText('second.pdf')).toBeTruthy();
+    expect(chat.screen.queryByText('big.pdf')).toBeNull();
+  });
+
   it('removes a document from the sheet and the composer', async () => {
     const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: over()});
     const chat = renderChat({evaluateSendBudget});
