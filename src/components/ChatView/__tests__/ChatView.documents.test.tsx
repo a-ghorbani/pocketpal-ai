@@ -7,7 +7,7 @@ import {sessionFixtures} from '../../../../jest/fixtures/chatSessions';
 import {l10n} from '../../../locales';
 import {ChatView} from '../ChatView';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, uiStore} from '../../../store';
 import * as documentStore from '../../../services/documents/store';
 import type {DocumentRef} from '../../../services/documents/types';
 import type {UndoneSend} from '../../../hooks/useChatSession';
@@ -242,7 +242,6 @@ describe('ChatView send gate', () => {
   afterEach(() => {
     store.isEditMode = false;
     store.editingMessageId = null;
-    delete store.commitEdit;
   });
 
   it('writes nothing and keeps the composer when the documents do not fit', async () => {
@@ -271,7 +270,6 @@ describe('ChatView send gate', () => {
   it('keeps edit mode when an edited send does not fit', async () => {
     store.isEditMode = true;
     store.editingMessageId = 'edited';
-    store.commitEdit = jest.fn();
     const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: over()});
     const chat = renderChat({evaluateSendBudget});
     await chat.attach(big);
@@ -284,7 +282,7 @@ describe('ChatView send gate', () => {
     expect(evaluateSendBudget).toHaveBeenCalledWith(expect.anything(), {
       excludeFromId: 'edited',
     });
-    expect(store.commitEdit).not.toHaveBeenCalled();
+    expect(store.isEditMode).toBe(true);
     expect(chat.onSendPress).not.toHaveBeenCalled();
   });
 
@@ -359,18 +357,16 @@ describe('ChatView send gate', () => {
     expect(chat.onSendPress).toHaveBeenCalled();
   });
 
-  it('keeps an edited send held across commitEdit until the send settles', async () => {
+  it('keeps an edited send held until the send settles', async () => {
     store.isEditMode = true;
     store.editingMessageId = 'edited';
-    store.commitEdit = jest.fn(async () => {
-      documentStore.setComposerHeld([]);
-    });
     let heldAtSend: boolean | undefined;
     const evaluateSendBudget = jest
       .fn()
       .mockResolvedValue({verdict: {kind: 'fits'}});
     const chat = renderChat({evaluateSendBudget});
     chat.onSendPress.mockImplementation(async () => {
+      await Promise.resolve();
       heldAtSend = documentStore.isHeld('big');
       return undefined;
     });
@@ -381,7 +377,9 @@ describe('ChatView send gate', () => {
       chat.pressSend();
     });
 
-    expect(store.commitEdit).toHaveBeenCalled();
+    expect(chat.onSendPress).toHaveBeenCalledWith(expect.anything(), {
+      replaceFromId: 'edited',
+    });
     expect(heldAtSend).toBe(true);
     expect(documentStore.isHeld('big')).toBe(false);
   });
@@ -448,8 +446,20 @@ describe('ChatView history overflow', () => {
         chatSessionStore.activeSessionId = null as any;
       },
     );
-    const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
+    (chatSessionStore.getDraft as jest.Mock).mockImplementation(
+      (key: string) => (key === '__new_chat__' ? 'new chat draft' : ''),
+    );
+    const chat = renderChat({
+      evaluateSendBudget,
+      messages: [earlierRow],
+      isVisionEnabled: true,
+    });
     await chat.attach(pending);
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-gallery'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-gallery'));
+    });
     chat.type('thanks');
     await act(async () => {
       chat.pressSend();
@@ -458,12 +468,15 @@ describe('ChatView history overflow', () => {
     fireEvent.press(chat.screen.getByTestId('budget-new-chat'));
     act(() => chat.screen.rerender(chat.element({messages: []})));
 
-    expect(chat.input().props.value).toBe('thanks');
+    expect(chat.input().props.value).toBe('thanks\nnew chat draft');
     expect(chat.screen.getByText('carried.pdf')).toBeTruthy();
+    expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
+    expect(documentStore.isHeld(pending.id)).toBe(true);
     expect(chatSessionStore.saveDraft).not.toHaveBeenCalledWith(
       'session-1',
       expect.anything(),
     );
+    (chatSessionStore.getDraft as jest.Mock).mockReset().mockReturnValue('');
   });
 });
 
@@ -482,7 +495,6 @@ describe('ChatView plan over under the lease', () => {
   afterEach(() => {
     store.isEditMode = false;
     store.editingMessageId = null;
-    delete store.commitEdit;
   });
 
   const sendAndComeBackOver = async (chat: ReturnType<typeof renderChat>) => {
@@ -511,25 +523,6 @@ describe('ChatView plan over under the lease', () => {
     expect(chat.input().props.value).toBe('Summarise');
     expect(chat.screen.getAllByText('late-over.pdf')).toHaveLength(1);
     expect(chat.screen.getByTestId('budget-remove')).toBeTruthy();
-  });
-
-  it('restores once through the edit path too', async () => {
-    store.isEditMode = true;
-    store.editingMessageId = 'edited';
-    store.commitEdit = jest.fn(async () => {
-      store.isEditMode = false;
-    });
-    const evaluateSendBudget = jest
-      .fn()
-      .mockResolvedValue({verdict: {kind: 'fits'}});
-    const chat = renderChat({evaluateSendBudget});
-
-    await sendAndComeBackOver(chat);
-
-    expect(store.commitEdit).toHaveBeenCalled();
-    expect(chat.input().props.value).toBe('Summarise');
-    expect(chat.screen.getAllByText('late-over.pdf')).toHaveLength(1);
-    expect(chat.screen.getByTestId('budget-cancel')).toBeTruthy();
   });
 });
 
@@ -695,6 +688,63 @@ describe('ChatView composer merge', () => {
     expect(documentStore.isHeld(report.id)).toBe(true);
     expect(chat.input().props.value).toBe('typed meanwhile');
   });
+
+  it('restoring an undone send keeps every chip without a cap or a warning', async () => {
+    const sent = ['s1', 's2', 's3', 's4', 's5'].map(id => ref(id));
+    let settle!: (undone: UndoneSend | undefined) => void;
+    const chat = renderChat();
+    chat.onSendPress.mockImplementationOnce(
+      () =>
+        new Promise<UndoneSend | undefined>(resolve => {
+          settle = resolve;
+        }),
+    );
+    for (const doc of sent) {
+      await chat.attach(doc);
+    }
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+    await chat.attach(ref('n1'));
+    await chat.attach(ref('n2'));
+
+    await act(async () => {
+      settle({
+        message: {type: 'text', text: 'Summarise', documents: sent},
+        sessionId: 'session-1',
+      });
+    });
+
+    expect(
+      chat.screen.queryAllByTestId(/^composer-document-[a-z0-9]+$/),
+    ).toHaveLength(7);
+    expect(uiStore.setChatWarning).not.toHaveBeenCalled();
+  });
+
+  it('puts a send that found no model back in the composer', async () => {
+    const p = ref('p');
+    const chat = renderChat({isVisionEnabled: true});
+    await chat.attach(p);
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-gallery'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-gallery'));
+    });
+    chat.type('draft');
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => ({message, sessionId: 'session-1'}),
+    );
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.input().props.value).toBe('draft');
+    expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
+    expect(chat.screen.getByText('p.pdf')).toBeTruthy();
+    expect(documentStore.isHeld(p.id)).toBe(true);
+  });
 });
 
 describe('ChatView resend', () => {
@@ -723,7 +773,6 @@ describe('ChatView resend', () => {
   afterEach(() => {
     store.isEditMode = false;
     store.editingMessageId = null;
-    delete store.commitEdit;
   });
 
   const regenerateAnswer = async (chat: ReturnType<typeof renderChat>) => {
@@ -869,27 +918,6 @@ describe('ChatView resend', () => {
     expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
     expect(documentStore.isHeld(staged.id)).toBe(true);
   });
-
-  it('Try again in edit mode commits the edit and clears the composer', async () => {
-    store.isEditMode = true;
-    store.editingMessageId = 'question-row';
-    store.commitEdit = jest.fn(async () => {
-      store.isEditMode = false;
-    });
-    const chat = renderChat({
-      messages: [answer, question],
-      evaluateSendBudget: jest.fn().mockResolvedValue(fits),
-    });
-    await chat.attach(ref('edit-chip'));
-    chat.type('edited');
-
-    await regenerateAnswer(chat);
-
-    expect(store.commitEdit).toHaveBeenCalled();
-    expect(chat.onSendPress).toHaveBeenCalled();
-    expect(chat.input().props.value).toBe('');
-    expect(chat.screen.queryByText('edit-chip.pdf')).toBeNull();
-  });
 });
 
 describe('ChatView edit mode', () => {
@@ -923,12 +951,6 @@ describe('ChatView edit mode', () => {
         store.editingMessageId = null;
       }),
     );
-    store.commitEdit = jest.fn(async () =>
-      runInAction(() => {
-        store.isEditMode = false;
-        store.editingMessageId = null;
-      }),
-    );
     (chatSessionStore.saveDraft as jest.Mock).mockImplementation(
       (key: string, text: string) =>
         text.trim() ? drafts.set(key, text) : drafts.delete(key),
@@ -941,7 +963,6 @@ describe('ChatView edit mode', () => {
   afterEach(() => {
     store.isEditMode = false;
     store.editingMessageId = null;
-    delete store.commitEdit;
     (chatSessionStore.enterEditMode as jest.Mock).mockReset();
     (chatSessionStore.exitEditMode as jest.Mock).mockReset();
     (chatSessionStore.saveDraft as jest.Mock).mockReset();
@@ -1000,6 +1021,293 @@ describe('ChatView edit mode', () => {
 
     expect(drafts.get('session-1')).toBe('earlier');
     expect(chat.input().props.value).toBe('two');
+  });
+
+  const fitsPlan = {
+    newModes: [],
+    fullLoad: 0,
+    room: undefined,
+    excerptBudget: 0,
+    verdict: {kind: 'fits' as const},
+  };
+  const pressMenu = async (
+    chat: ReturnType<typeof renderChat>,
+    rowText: string,
+    label: string,
+  ) => {
+    fireEvent(chat.screen.getByText(rowText), 'onLongPress', {
+      nativeEvent: {pageX: 0, pageY: 0},
+    });
+    await act(async () => {
+      fireEvent.press(chat.screen.getByText(label));
+    });
+    rerender(chat);
+  };
+  const stageImage = async (chat: ReturnType<typeof renderChat>) => {
+    fireEvent.press(chat.screen.getByLabelText('Add attachment'));
+    await waitFor(() => chat.screen.getByTestId('attach-gallery'));
+    await act(async () => {
+      fireEvent.press(chat.screen.getByTestId('attach-gallery'));
+    });
+  };
+  const images = (chat: ReturnType<typeof renderChat>) =>
+    chat.screen
+      .queryAllByLabelText(/^Image preview/)
+      .map(node => node.props.source.uri);
+  /** The hook ends edit mode under the lease, right before it removes rows. */
+  const endsEditUnderLease = async () => {
+    chatSessionStore.exitEditMode();
+    return undefined;
+  };
+
+  describe.each([
+    ['with documents', [older]],
+    ['without documents', undefined],
+  ])('in a chat %s', (_label, documents) => {
+    const rowM = {
+      ...textMessage,
+      id: 'm',
+      author: user,
+      text: 'Question m',
+      documents,
+    };
+    const rowR = {
+      ...textMessage,
+      id: 'r',
+      author: user,
+      text: 'Question r',
+      documents,
+    };
+    const answer = (id: string, text: string) => ({
+      ...textMessage,
+      id,
+      author: {id: 'assistant'},
+      text,
+    });
+    const props = () => ({
+      isVisionEnabled: true,
+      evaluateSendBudget: jest.fn().mockResolvedValue(fitsPlan),
+    });
+
+    it.each([
+      ['at or above the edited row', 'Answer early', [rowM, rowR]],
+      ['below the edited row', 'Answer late', [rowR, rowM]],
+    ])(
+      'Try again on a row %s replaces from that row and clears the composer',
+      async (_where, answerText, [newer, earlier]) => {
+        shown = [
+          answer('a-late', 'Answer late'),
+          newer,
+          answer('a-early', 'Answer early'),
+          earlier,
+        ];
+        const chat = renderChat({messages: shown, ...props()});
+        await pressMenu(chat, 'Question m', menuLabels.edit);
+        expect(store.editingMessageId).toBe('m');
+        chat.onSendPress.mockImplementationOnce(endsEditUnderLease);
+
+        await pressMenu(chat, answerText, menuLabels.regenerate);
+
+        expect(chat.onSendPress).toHaveBeenCalledWith(
+          expect.objectContaining({text: 'Question r'}),
+          {replaceFromId: 'r', resend: true},
+        );
+        expect(store.isEditMode).toBe(false);
+        expect(chat.input().props.value).toBe('');
+        expect(composerChips(chat)).toEqual([]);
+      },
+    );
+
+    it('Edit then send replaces from the edited row and clears the composer', async () => {
+      shown = [answer('a1', 'Answer one'), rowM];
+      const chat = renderChat({messages: shown, ...props()});
+      await pressMenu(chat, 'Question m', menuLabels.edit);
+      chat.onSendPress.mockImplementationOnce(endsEditUnderLease);
+      chat.type('Question m, rewritten');
+
+      await act(async () => {
+        chat.pressSend();
+      });
+      rerender(chat);
+
+      expect(chat.onSendPress).toHaveBeenCalledWith(
+        expect.objectContaining({text: 'Question m, rewritten'}),
+        {replaceFromId: 'm'},
+      );
+      expect(store.isEditMode).toBe(false);
+      expect(chat.input().props.value).toBe('');
+      expect(images(chat)).toEqual([]);
+      expect(composerChips(chat)).toEqual([]);
+    });
+
+    it('Edit then cancel leaves an empty composer', async () => {
+      shown = [answer('a1', 'Answer one'), rowM];
+      const chat = renderChat({messages: shown, ...props()});
+      await pressMenu(chat, 'Question m', menuLabels.edit);
+
+      fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+      rerender(chat);
+
+      expect(chat.onSendPress).not.toHaveBeenCalled();
+      expect(chat.input().props.value).toBe('');
+      expect(composerChips(chat)).toEqual([]);
+    });
+  });
+
+  it('clears the composer when edit mode ends from outside', async () => {
+    shown = [olderRow];
+    const chat = renderChat({messages: shown});
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+
+    act(() => chatSessionStore.exitEditMode());
+    rerender(chat);
+
+    expect(chat.input().props.value).toBe('');
+    expect(composerChips(chat)).toEqual([]);
+  });
+
+  it('gives an edited send that did not go out back to the composer, still editing', async () => {
+    const overVerdict = {
+      kind: 'over' as const,
+      reason: 'new' as const,
+      needed: 9100,
+      available: 3072,
+      newDocs: [{ref: older, tokens: 9000, mode: 'searched' as const}],
+      historyDocTokens: 0,
+    };
+    shown = [olderRow];
+    const chat = renderChat({
+      messages: shown,
+      isVisionEnabled: true,
+      evaluateSendBudget: jest.fn().mockResolvedValue(fitsPlan),
+    });
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    await stageImage(chat);
+    chat.type('Older row, rewritten');
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => ({
+        message,
+        sessionId: 'session-1',
+        verdict: overVerdict,
+      }),
+    );
+
+    await act(async () => {
+      chat.pressSend();
+    });
+    rerender(chat);
+
+    expect(store.editingMessageId).toBe('older-row');
+    expect(chat.input().props.value).toBe('Older row, rewritten');
+    expect(images(chat)).toEqual(['file:///staged.jpg']);
+    expect(composerChips(chat)).toEqual(['older-doc.pdf']);
+    expect(documentStore.isHeld(older.id)).toBe(true);
+    expect(chat.screen.getByTestId('budget-remove')).toBeTruthy();
+  });
+
+  it('a Try again that ends the edit while an edited send waits does not clear what comes back', async () => {
+    const rowR = {
+      ...textMessage,
+      id: 'r',
+      author: user,
+      text: 'Question r',
+    };
+    const answer = {
+      ...textMessage,
+      id: 'a1',
+      author: {id: 'assistant'},
+      text: 'Answer one',
+    };
+    shown = [answer, rowR, olderRow];
+    const chat = renderChat({
+      messages: shown,
+      isVisionEnabled: true,
+      evaluateSendBudget: jest.fn().mockResolvedValue(fitsPlan),
+    });
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    let finishResend: () => void = () => {};
+    let finishSend: (undone: any) => void = () => {};
+    (chat.onSendPress as jest.Mock)
+      .mockImplementationOnce(
+        () =>
+          new Promise<undefined>(resolve => {
+            finishResend = () => {
+              chatSessionStore.exitEditMode();
+              resolve(undefined);
+            };
+          }),
+      )
+      .mockImplementationOnce(
+        () => new Promise(resolve => (finishSend = resolve)),
+      );
+    await pressMenu(chat, 'Answer one', menuLabels.regenerate);
+    chat.type('Older row, rewritten');
+    await act(async () => {
+      chat.pressSend();
+    });
+    const edited = (chat.onSendPress as jest.Mock).mock.calls[1][0];
+    expect((chat.onSendPress as jest.Mock).mock.calls[1][1]).toEqual({
+      replaceFromId: 'older-row',
+    });
+    chat.type('typed meanwhile');
+
+    await act(async () => {
+      finishResend();
+    });
+    rerender(chat);
+    expect(chat.input().props.value).toBe('typed meanwhile');
+
+    await act(async () => {
+      finishSend({message: edited, sessionId: 'session-1'});
+    });
+    rerender(chat);
+
+    expect(store.isEditMode).toBe(false);
+    expect(chat.input().props.value).toBe(
+      'Older row, rewritten\ntyped meanwhile',
+    );
+    expect(composerChips(chat)).toEqual(['older-doc.pdf']);
+  });
+
+  it('New chat from the sheet during a plain Edit carries the edited content', async () => {
+    drafts.set('session-1', 'earlier');
+    const overflow = {
+      kind: 'over' as const,
+      needed: 6100,
+      available: 3072,
+      newDocs: [],
+      historyDocTokens: 6000,
+      reason: 'history' as const,
+    };
+    shown = [olderRow];
+    const chat = renderChat({
+      messages: shown,
+      isVisionEnabled: true,
+      evaluateSendBudget: jest.fn().mockResolvedValue({verdict: overflow}),
+    });
+    (chatSessionStore.resetActiveSession as jest.Mock).mockImplementationOnce(
+      () =>
+        runInAction(() => {
+          store.isEditMode = false;
+          store.editingMessageId = null;
+          chatSessionStore.activeSessionId = null as any;
+        }),
+    );
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    await stageImage(chat);
+    chat.type('Older row, rewritten');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    fireEvent.press(chat.screen.getByTestId('budget-new-chat'));
+    act(() => chat.screen.rerender(chat.element({messages: []})));
+
+    expect(chat.input().props.value).toBe('Older row, rewritten');
+    expect(images(chat)).toEqual(['file:///staged.jpg']);
+    expect(composerChips(chat)).toEqual(['older-doc.pdf']);
+    expect(documentStore.isHeld(older.id)).toBe(true);
+    expect(drafts.get('session-1')).toBe('earlier');
   });
 });
 

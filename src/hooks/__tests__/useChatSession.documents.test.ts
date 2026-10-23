@@ -992,6 +992,81 @@ describe('removing rows under the lease', () => {
     expect(undone).toEqual({message, sessionId: 'session-1'});
   });
 
+  describe.each([
+    ['with documents', [earlier]],
+    ['without documents', undefined],
+  ])('in a chat %s', (_label, documents) => {
+    beforeEach(() => {
+      history = [
+        assistantRow('a2', 'second answer'),
+        userRow('m', 'second question'),
+        assistantRow('a1', 'first answer'),
+        userRow('u1', 'read', documents),
+      ];
+    });
+
+    it.each([
+      ['at or above the edited row', 'm', 'u1', 'read'],
+      ['below the edited row', 'u1', 'm', 'second question'],
+    ])(
+      'a resend of a row %s ends the edit and removes from that row only',
+      async (_where, edited, resent, text) => {
+        store.editingMessageId = edited;
+
+        await sendWith(
+          {type: 'text', text},
+          {replaceFromId: resent, resend: true},
+        );
+
+        expect(chatSessionStore.exitEditMode).toHaveBeenCalledTimes(1);
+        expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledTimes(1);
+        expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+          resent,
+          true,
+        );
+        expect(userRows().map(m => m.text)).toEqual([text]);
+      },
+    );
+
+    it('an edited send ends the edit and removes from the edited row', async () => {
+      store.editingMessageId = 'm';
+
+      await sendWith({type: 'text', text: 'rewritten'}, {replaceFromId: 'm'});
+
+      expect(chatSessionStore.exitEditMode).toHaveBeenCalledTimes(1);
+      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+        'm',
+        true,
+      );
+      expect(userRows().map(m => m.text)).toEqual(['rewritten']);
+    });
+
+    it('a resend outside edit mode removes from that row and leaves edit mode alone', async () => {
+      await sendWith(
+        {type: 'text', text: 'second question'},
+        {replaceFromId: 'm', resend: true},
+      );
+
+      expect(chatSessionStore.exitEditMode).not.toHaveBeenCalled();
+      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+        'm',
+        true,
+      );
+    });
+  });
+
+  it('keeps edit mode and its rows when an edited send finds no model', async () => {
+    store.editingMessageId = 'm';
+    modelStore.engine = undefined as any;
+    const message = {type: 'text' as const, text: 'rewritten'};
+
+    const undone = await sendWith(message, {replaceFromId: 'm'});
+
+    expect(chatSessionStore.exitEditMode).not.toHaveBeenCalled();
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(undone).toEqual({message, sessionId: 'session-1'});
+  });
+
   it('hands a resend back as nothing when no model is loaded', async () => {
     modelStore.engine = undefined as any;
 

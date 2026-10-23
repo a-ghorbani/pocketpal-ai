@@ -1281,20 +1281,6 @@ class ChatSessionStore {
   }
 
   /**
-   * Commits the edit by actually removing messages after the edited message
-   */
-  async commitEdit(): Promise<void> {
-    if (this.editingMessageId) {
-      // Remove messages after the edited message including the edited message as well.
-      await this.removeMessagesFromId(this.editingMessageId, true);
-      runInAction(() => {
-        this.isEditMode = false;
-        this.editingMessageId = null;
-      });
-    }
-  }
-
-  /**
    * Removes messages from the current active session starting from a specific message ID.
    * If includeMessage is true, the message with the given ID is also removed.
    *

@@ -1145,22 +1145,6 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.editingMessageId).toBeNull();
     });
 
-    it('commits edit by removing messages after the edited message', async () => {
-      chatSessionStore.enterEditMode(mockMessage3.id);
-      await chatSessionStore.commitEdit();
-
-      await waitFor(() => {
-        expect(chatSessionStore.isEditMode).toBe(false);
-      });
-
-      // expect(chatSessionStore.isEditMode).toBe(false);
-      expect(chatSessionStore.editingMessageId).toBeNull();
-      // Not sure how to test this after migration to db
-      // expect(chatSessionStore.sessions[0].messages.length).toBe(2);
-      // expect(chatSessionStore.sessions[0].messages[0].id).toBe(mockMessage2.id);
-      // expect(chatSessionStore.sessions[0].messages[1].id).toBe(mockMessage.id);
-    });
-
     it('returns correct messages when in edit mode', () => {
       // editing the first message will remove all messages after it
       chatSessionStore.enterEditMode(mockMessage.id);

@@ -78,11 +78,10 @@ import type {BudgetVerdict} from '../../services/documents/plan';
 import {documentKey} from '../../services/documents/render';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
-import {
-  MAX_DOCUMENTS_PER_MESSAGE,
-  type ComposerDocument,
-  type DocumentMode,
-  type DocumentRef,
+import type {
+  ComposerDocument,
+  DocumentMode,
+  DocumentRef,
 } from '../../services/documents/types';
 import {Pal} from '../../types/pal';
 import {
@@ -140,33 +139,6 @@ const prependText = (first: string, rest: string) =>
   rest ? `${first}\n${rest}` : first;
 
 type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
-
-/**
- * The composer chips to bring back after an edit: the pre-edit chips, each as
- * it is now if it is still there. A removed chip comes back as it was last
- * seen, unless it was still importing then, since that import's result has
- * nowhere to land.
- */
-const restoreChips = (
-  snapshot: ComposerDocument[],
-  live: ComposerDocument[],
-): ComposerDocument[] => {
-  const liveByKey = new Map(live.map(chip => [chip.key, chip]));
-  return snapshot.flatMap(chip => {
-    const now = liveByKey.get(chip.key);
-    if (now) {
-      return [now];
-    }
-    return chip.status === 'importing' ? [] : [chip];
-  });
-};
-
-type EditSnapshot = {
-  sessionId: string;
-  text: string;
-  images: string[];
-  documents: ComposerDocument[];
-};
 
 const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
   refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
@@ -350,10 +322,7 @@ export const ChatView = observer(
     const syncedDraftRef = React.useRef('');
     const carriedTextRef = React.useRef<string | null>(null);
     const [inputImages, setInputImages] = React.useState<string[]>([]);
-    const inputImagesRef = React.useRef(inputImages);
-    inputImagesRef.current = inputImages;
-    /** The composer as it was before an edit that kept it; null otherwise. */
-    const editSnapshotRef = React.useRef<EditSnapshot | null>(null);
+    const composerSendsInFlightRef = React.useRef(0);
     const [inputDocuments, setInputDocuments] = React.useState<
       ComposerDocument[]
     >([]);
@@ -362,21 +331,7 @@ export const ChatView = observer(
       (update: (documents: ComposerDocument[]) => ComposerDocument[]) => {
         const next = update(inputDocumentsRef.current);
         inputDocumentsRef.current = next;
-        const snapshot = editSnapshotRef.current;
-        if (snapshot) {
-          const liveByKey = new Map(next.map(chip => [chip.key, chip]));
-          editSnapshotRef.current = {
-            ...snapshot,
-            documents: snapshot.documents.map(
-              chip => liveByKey.get(chip.key) ?? chip,
-            ),
-          };
-        }
-        setComposerHeld(
-          [...next, ...(editSnapshotRef.current?.documents ?? [])].flatMap(
-            doc => (doc.ref ? [doc.ref.id] : []),
-          ),
-        );
+        setComposerHeld(next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])));
         setInputDocuments(next);
       },
       [],
@@ -605,30 +560,26 @@ export const ChatView = observer(
     }, [initialInputText, onInitialTextConsumed]);
 
     // ============ EDIT EXIT ============
-    // Every end of edit mode either restores the composer kept by the edit
-    // or clears it. Declared before the draft effect, which takes a snapshot
-    // left for a chat being switched away from.
+    // Every end of edit mode clears the composer, except when New chat carries
+    // it along or a composer send already cleared it. Declared before the
+    // draft effect, which reads what this one leaves in the refs.
     const isEditMode = chatSessionStore.isEditMode;
     const wasEditMode = usePrevious(isEditMode);
     React.useEffect(() => {
       if (!wasEditMode || isEditMode) {
         return;
       }
-      const snapshot = editSnapshotRef.current;
-      if (!snapshot) {
-        // The edited text is not a draft: a chat being left keeps its own.
-        inputTextRef.current = syncedDraftRef.current;
-        setInputText('');
-        setInputImages([]);
-        updateComposerDocuments(() => []);
+      if (
+        carriedTextRef.current !== null ||
+        composerSendsInFlightRef.current > 0
+      ) {
         return;
       }
-      setInputImages(snapshot.images);
-      updateComposerDocuments(live => restoreChips(snapshot.documents, live));
-      if (snapshot.sessionId === chatSessionStore.activeSessionId) {
-        setInputText(snapshot.text);
-        editSnapshotRef.current = null;
-      }
+      // The edited text is not a draft: a chat being left keeps its own.
+      inputTextRef.current = syncedDraftRef.current;
+      setInputText('');
+      setInputImages([]);
+      updateComposerDocuments(() => []);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on the edit-mode transition only
     }, [isEditMode]);
 
@@ -641,18 +592,10 @@ export const ChatView = observer(
 
       // This runs after the switch, so a cancelled send may already have put
       // its text into the draft being left: keep it rather than overwrite it.
-      const snapshot = editSnapshotRef.current;
       const carried = carriedTextRef.current;
       carriedTextRef.current = null;
       const typed =
-        snapshot && snapshot.sessionId === prevKey
-          ? snapshot.text
-          : carried !== null
-            ? syncedDraftRef.current
-            : inputTextRef.current;
-      if (prevKey !== newKey) {
-        editSnapshotRef.current = null;
-      }
+        carried !== null ? syncedDraftRef.current : inputTextRef.current;
       if (prevKey !== newKey && typed !== syncedDraftRef.current) {
         const stored = chatSessionStore.getDraft(prevKey);
         chatSessionStore.saveDraft(
@@ -793,105 +736,44 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
-    /** Adds content to the composer; chips sharing a document id keep the first. */
-    const mergeIntoComposer = React.useCallback(
-      (
-        incoming: {text: string; images?: string[]; documents?: DocumentRef[]},
-        order: 'incomingFirst' | 'pendingFirst',
-      ) => {
-        const incomingFirst = order === 'incomingFirst';
-        if (incoming.text) {
-          setInputText(pending =>
-            incomingFirst
-              ? prependText(incoming.text, pending)
-              : pending
-                ? prependText(pending, incoming.text)
-                : incoming.text,
-          );
-        }
-        setInputImages(pending => {
-          const images = incoming.images ?? [];
-          return incomingFirst
-            ? [...images, ...pending]
-            : [...pending, ...images];
-        });
-        const pending = inputDocumentsRef.current;
-        const chips = readyChips(incoming.documents);
-        const ordered = incomingFirst
-          ? [...chips, ...pending]
-          : [...pending, ...chips];
-        const seen = new Set<string>();
-        const merged = ordered.filter(chip => {
-          if (!chip.ref) {
-            return true;
-          }
-          if (seen.has(chip.ref.id)) {
-            return false;
-          }
-          seen.add(chip.ref.id);
-          return true;
-        });
-        const isPending = new Set(pending.map(chip => chip.key));
-        let room =
-          MAX_DOCUMENTS_PER_MESSAGE -
-          merged.filter(chip => !isPending.has(chip.key)).length;
-        const leftOut: ComposerDocument[] = [];
-        const capped = merged.filter(chip => {
-          if (!isPending.has(chip.key)) {
-            return true;
-          }
-          if (room > 0) {
-            room -= 1;
-            return true;
-          }
-          leftOut.push(chip);
-          return false;
-        });
-        updateComposerDocuments(() => capped);
-        if (leftOut.length > 0) {
-          uiStore.setChatWarning(
-            createDocumentWarning(
-              t(l10n.chat.documents.refusal, {
-                name: leftOut.map(chip => chip.name).join(', '),
-                reason: l10n.chat.documents.refusals.too_many_files,
-              }),
-            ),
-          );
-        }
-      },
-      [l10n, updateComposerDocuments],
-    );
-
+    /**
+     * Puts an undone send back: in the open chat, ahead of what the composer
+     * gained meanwhile, chips sharing a document id keeping the first; in
+     * another chat, its text ahead of that chat's draft.
+     */
     const restoreUndone = React.useCallback(
       ({message, sessionId, verdict}: UndoneSend) => {
-        const isOpenChat =
-          sessionId === (chatSessionStore.activeSessionId ?? '');
-        if (
-          !isOpenChat &&
-          !chatSessionStore.sessions.some(s => s.id === sessionId)
-        ) {
+        if (sessionId !== (chatSessionStore.activeSessionId ?? '')) {
+          if (chatSessionStore.sessions.some(s => s.id === sessionId)) {
+            chatSessionStore.saveDraft(
+              sessionId,
+              prependText(message.text, chatSessionStore.getDraft(sessionId)),
+            );
+          }
           return;
         }
-        if (isOpenChat) {
-          if (verdict) {
-            setBudgetSheet({verdict, resend: false});
-          }
-          mergeIntoComposer(
-            {
-              text: message.text,
-              images: message.imageUris,
-              documents: message.documents,
-            },
-            'incomingFirst',
-          );
-        } else {
-          chatSessionStore.saveDraft(
-            sessionId,
-            prependText(message.text, chatSessionStore.getDraft(sessionId)),
-          );
+        if (verdict) {
+          setBudgetSheet({verdict, resend: false});
         }
+        if (message.text) {
+          setInputText(pending => prependText(message.text, pending));
+        }
+        setInputImages(pending => [...(message.imageUris ?? []), ...pending]);
+        updateComposerDocuments(pending => {
+          const seen = new Set<string>();
+          return [...readyChips(message.documents), ...pending].filter(chip => {
+            if (!chip.ref) {
+              return true;
+            }
+            if (seen.has(chip.ref.id)) {
+              return false;
+            }
+            seen.add(chip.ref.id);
+            return true;
+          });
+        });
       },
-      [mergeIntoComposer],
+      [updateComposerDocuments],
     );
 
     /** The send steps a composer send and a resend share. */
@@ -909,28 +791,35 @@ export const ChatView = observer(
         },
       ) => {
         const documentIds = (message.documents ?? []).map(ref => ref.id);
+        const inFlight = resend ? 0 : 1;
         holdForSend(documentIds);
         try {
           const draftKey =
             chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
-          if (chatSessionStore.isEditMode) {
-            await chatSessionStore.commitEdit();
+          let undone: UndoneSend | undefined | void;
+          composerSendsInFlightRef.current += inFlight;
+          try {
+            const sent =
+              replaceFromId === undefined
+                ? onSendPress(message)
+                : onSendPress(
+                    message,
+                    resend ? {replaceFromId, resend} : {replaceFromId},
+                  );
+            if (clear !== 'none') {
+              setInputText('');
+              syncedDraftRef.current = '';
+              chatSessionStore.clearDraft(draftKey);
+              Keyboard.dismiss();
+            }
+            if (clear === 'all') {
+              setInputImages([]);
+              updateComposerDocuments(() => []);
+            }
+            undone = await sent;
+          } finally {
+            composerSendsInFlightRef.current -= inFlight;
           }
-          const sent =
-            replaceFromId === undefined
-              ? onSendPress(message)
-              : onSendPress(message, {replaceFromId, resend});
-          if (clear !== 'none') {
-            setInputText('');
-            syncedDraftRef.current = '';
-            chatSessionStore.clearDraft(draftKey);
-            Keyboard.dismiss();
-          }
-          if (clear === 'all') {
-            setInputImages([]);
-            updateComposerDocuments(() => []);
-          }
-          const undone = await sent;
           if (resend) {
             if (
               undone?.verdict &&
@@ -978,16 +867,18 @@ export const ChatView = observer(
             return;
           }
         }
-        editSnapshotRef.current = null;
-        await dispatchSend(message, {clear});
+        await dispatchSend(message, {
+          clear,
+          replaceFromId: chatSessionStore.editingMessageId ?? undefined,
+        });
       },
       [dispatchSend, evaluateSendBudget, messages],
     );
 
     /**
      * Resends an existing row in place of `replaceFromId` and the rows after
-     * it; the resend gate has already checked the budget. Outside edit mode
-     * the composer is left as it is.
+     * it; the resend gate has already checked the budget. The composer is
+     * left as it is.
      */
     const resend = React.useCallback(
       async (message: MessageType.PartialText, replaceFromId: string) => {
@@ -995,10 +886,7 @@ export const ChatView = observer(
           return;
         }
         await dispatchSend(message, {
-          clear:
-            chatSessionStore.isEditMode && !editSnapshotRef.current
-              ? 'all'
-              : 'none',
+          clear: 'none',
           replaceFromId,
           resend: true,
         });
