@@ -664,6 +664,21 @@ describe('document grounding instruction', () => {
     expect((system[0].content as string).endsWith(GROUNDING)).toBe(true);
   });
 
+  it('is absent when every document the chat refers to is gone', async () => {
+    const gone = pdf('gone-doc', {pageCount: 1});
+    history = [assistantRow('a1', 'ok'), userRow('u1', 'read', [gone])];
+    const plan = jest.requireActual('../../services/documents/plan');
+    const spy = jest.spyOn(plan, 'documentPlan');
+
+    await send({type: 'text', text: 'next', documents: [gone]});
+
+    expect(JSON.stringify(requests[0])).not.toContain(GROUNDING);
+    expect(
+      (spy.mock.calls[0][0] as {nonDocText: string}).nonDocText,
+    ).not.toContain(GROUNDING);
+    spy.mockRestore();
+  });
+
   it('is counted as non-document text when planning', async () => {
     const plan = jest.requireActual('../../services/documents/plan');
     const spy = jest.spyOn(plan, 'documentPlan');

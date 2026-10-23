@@ -275,7 +275,9 @@ const prepareCompletion = async ({
     systemMessages,
     settings: sessionCompletionSettings as CompletionParams,
     isMultimodalEnabled,
-    refs: documentRefs,
+    refs: documentRefs.filter(ref =>
+      Array.isArray(documentTexts.get(documentKey(ref))),
+    ),
     documentContent: row => documentContentFor(row.documents, documentTexts),
     tail: {role: 'user', content: userMessageContent},
   });
@@ -764,12 +766,13 @@ const planInputs = async (
     ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
     ...(message.documents ?? []),
   ];
+  const missingKeys = await findMissingDocuments(refs);
   const promptMessages = buildPromptMessages({
     rows,
     systemMessages: resolveSystemMessages({pal, model: modelStore.activeModel}),
     settings: settings as CompletionParams,
     isMultimodalEnabled: modelStore.activeModelCaps.visionActive,
-    refs,
+    refs: refs.filter(ref => !missingKeys.has(documentKey(ref))),
     tail: {role: 'user', content: message.text},
   });
   return {
@@ -781,7 +784,7 @@ const planInputs = async (
       ...promptMessages.map(plainText),
       tools.length > 0 ? JSON.stringify(tools) : '',
     ].join('\n'),
-    missingKeys: await findMissingDocuments(refs),
+    missingKeys,
   };
 };
 
