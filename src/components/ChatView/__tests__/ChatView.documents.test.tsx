@@ -1140,6 +1140,23 @@ describe('ChatView edit mode', () => {
       expect(composerChips(chat)).toEqual([]);
     });
 
+    it('Try again outside edit mode replaces from that row and keeps the composer', async () => {
+      shown = [answer('a1', 'Answer one'), rowM];
+      const chat = renderChat({messages: shown, ...props()});
+      await stageImage(chat);
+      chat.type('draft');
+
+      await pressMenu(chat, 'Answer one', menuLabels.regenerate);
+
+      expect(chat.onSendPress).toHaveBeenCalledWith(
+        expect.objectContaining({text: 'Question m'}),
+        {replaceFromId: 'm', resend: true},
+      );
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(chat.input().props.value).toBe('draft');
+      expect(images(chat)).toEqual(['file:///staged.jpg']);
+    });
+
     it('Edit then cancel leaves an empty composer', async () => {
       shown = [answer('a1', 'Answer one'), rowM];
       const chat = renderChat({messages: shown, ...props()});
