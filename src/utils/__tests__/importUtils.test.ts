@@ -507,6 +507,44 @@ describe('importUtils', () => {
         },
       );
 
+      describe('local model fullPath', () => {
+        const localModel = (fullPath: string) => ({
+          id: 'local-model-id',
+          author: '',
+          name: 'm.gguf',
+          filename: 'm.gguf',
+          fullPath,
+          isLocal: true,
+          origin: 'local',
+        });
+
+        it.each([
+          '/x/models/local/..',
+          '/x/models/local/../..',
+          '/etc/hosts',
+          'file:///data/local/tmp/x',
+          '/x/models/local/a\u0000b',
+        ])('%j drops the model, keeps the pal', async fullPath => {
+          const created = await importOne({
+            ...basePal,
+            defaultModel: localModel(fullPath),
+            promptGenerationModel: localModel(fullPath),
+          });
+          expect(created.defaultModel).toBeUndefined();
+          expect(created.promptGenerationModel).toBeUndefined();
+          expectRestKept(created);
+        });
+
+        it.each(['/docs/models/local/m.gguf', ''])(
+          '%j is kept',
+          async fullPath => {
+            const ref = localModel(fullPath);
+            const created = await importOne({...basePal, defaultModel: ref});
+            expect(created.defaultModel).toEqual(ref);
+          },
+        );
+      });
+
       it('drops each traversing model ref and keeps the pal', async () => {
         const lookie = () => asJson(LOOKIE_DEFAULT_MODEL);
         const pals = [

@@ -281,17 +281,61 @@ describe('isValidImportedModelRef', () => {
       ).toBe(false);
     });
 
-    it('does not check fullPath or isLocal', () => {
-      expect(
-        isValidImportedModelRef({
-          origin: 'local',
-          id: '/abs/path/x.gguf',
-          author: 'user',
-          filename: 'x.gguf',
-          fullPath: '/anywhere/../x.gguf',
-          isLocal: true,
-        }),
-      ).toBe(true);
+    describe('fullPath', () => {
+      const IOS_OLD_CONTAINER =
+        '/var/mobile/Containers/Data/Application/5D7C1A2B-3E4F-4A5B-8C9D-0E1F2A3B4C5D';
+      const localRef = (fullPath: unknown) => ({
+        origin: 'hf',
+        isLocal: 1,
+        id: 'local-id',
+        author: '',
+        filename: 'm.gguf',
+        fullPath,
+      });
+
+      it.each([
+        '/x/models/local/..',
+        '/x/models/local/../..',
+        '/etc/hosts',
+        'file:///data/local/tmp/x',
+        '/x/models/local/a\u0000b',
+        '/x/models/local/../../Library/f',
+        '/x/models/local/a/b',
+        '/x/../models/local/a.gguf',
+        '/x/models/local/a\u0000',
+        'file:///x/models/local/a.gguf',
+        `${DOCS}/models/../x`,
+        `${DOCS}/models/hf/a/x.gguf`,
+        '/a/models/local/b/models/local/c',
+        '/x/models/local/',
+        'models/local/a.gguf',
+        7,
+      ])('drops the ref for %j', fullPath => {
+        expect(isValidImportedModelRef(localRef(fullPath))).toBe(false);
+      });
+
+      it.each([
+        `${IOS_OLD_CONTAINER}/Documents/models/local/m.gguf`,
+        `${DOCS}/models/local/m.bin`,
+        `${DOCS}/models/old.gguf`,
+        undefined,
+        null,
+        '',
+      ])('keeps the ref for %j', fullPath => {
+        expect(isValidImportedModelRef(localRef(fullPath))).toBe(true);
+      });
+
+      it('checks fullPath whatever origin and isLocal say', () => {
+        expect(
+          isValidImportedModelRef({
+            origin: 'remote',
+            id: 'srv/m',
+            filename: '',
+            isLocal: false,
+            fullPath: '/etc/hosts',
+          }),
+        ).toBe(false);
+      });
     });
 
     it('accepts a PalsHub-style ref with a null author', () => {

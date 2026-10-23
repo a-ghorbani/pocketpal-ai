@@ -94,6 +94,30 @@ const hasSafeOriginFields = (ref: UnknownRecord): boolean =>
     emptyOr(isSafePathSegment)(ref.repo) &&
     emptyOr(isSafeRelativePath)(ref.id));
 
+const LOCAL_MODELS_MARKER = '/models/local/';
+
+const isImportableFullPath = (fullPath: unknown): boolean => {
+  if (isEmpty(fullPath)) {
+    return true;
+  }
+  if (
+    typeof fullPath !== 'string' ||
+    !fullPath.startsWith('/') ||
+    !isSafeRelativePath(fullPath.slice(1))
+  ) {
+    return false;
+  }
+  const [, localName, ...extra] = fullPath.split(LOCAL_MODELS_MARKER);
+  if (localName !== undefined) {
+    return extra.length === 0 && isSafePathSegment(localName);
+  }
+  const modelsPrefix = `${RNFS.DocumentDirectoryPath}/models/`;
+  return (
+    fullPath.startsWith(modelsPrefix) &&
+    isSafePathSegment(fullPath.slice(modelsPrefix.length))
+  );
+};
+
 export const isValidImportedModelRef = (ref: unknown): boolean => {
   if (isAbsent(ref)) {
     return true;
@@ -103,6 +127,7 @@ export const isValidImportedModelRef = (ref: unknown): boolean => {
     emptyOr(isSafeRelativePath)(ref.filename) &&
     isValidHfModel(ref.hfModel) &&
     isValidHfModelFile(ref.hfModelFile) &&
-    hasSafeOriginFields(ref)
+    hasSafeOriginFields(ref) &&
+    isImportableFullPath(ref.fullPath)
   );
 };
