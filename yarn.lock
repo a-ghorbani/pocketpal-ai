@@ -2497,15 +2497,15 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
-"@pocketpalai/react-native-speech-phonon@0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.1.1.tgz#ec2232d7f738ac8dc6900b280ef7bce745d8dfed"
-  integrity sha512-lWSgIrKE02c2OAtmTkqy4w+6IL9gHg/3df6TfKJrTe1UgqDcxIWtxUDLHnGAN034fjBCvCHNCqmWm0DaZziwDw==
+"@pocketpalai/react-native-speech-phonon@0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.1.2.tgz#40fc360012b6f0512be15788a1759fe1499d5323"
+  integrity sha512-nte1jxyWe96lI9zhEzSHkcDT3sqOOM6z5CE/YH525J63oH+cjJ5Qq1wU4YTpJ12ccXF0ixioJpOZ/M0JPIc1og==
 
-"@pocketpalai/react-native-speech@2.8.1":
-  version "2.8.1"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.8.1.tgz#0c8d85e3de42ce851c280f119c0ebe8efbcd33c0"
-  integrity sha512-/iAfkNPcIUr4Hh7bBX4VKhrl9oR0jX6f3rHWFmGCihlV//fkAJCa8usTDQiHODyHYyG5wIT3TqIpfJk1iGxjQA==
+"@pocketpalai/react-native-speech@2.8.2":
+  version "2.8.2"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.8.2.tgz#8642eaed63bbf31b677ef8af107cea46d6d2baa9"
+  integrity sha512-0LS1oxvvN8tST5sWWka/wU+hfwaSRgqE3BDhq3rLRVJEFpD9PCrgOzUy3jVEQNmSZEwbR5wOQD3utMfELh2zLA==
   dependencies:
     phonemize "^1.1.0"
 
