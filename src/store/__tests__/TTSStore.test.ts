@@ -1759,6 +1759,48 @@ describe('TTSStore', () => {
       expect(store.currentVoice).toBeNull();
     });
 
+    it('opens a Phonon voice reply with the voice options and still re-probes on a failed finalize', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      track(jest.spyOn(console, 'warn')).mockImplementation(() => {});
+      const store = await storeWithVoice(ZOEY);
+      store.setVoiceOutputActive(true);
+      const failingHandle = {
+        appendText: jest.fn(),
+        finalize: jest.fn().mockRejectedValue(new Error('ERR_PHONON_LOAD')),
+        cancel: jest.fn().mockResolvedValue(undefined),
+      };
+      mockPhononPlayStreaming.mockReturnValueOnce(failingHandle);
+
+      store.onAssistantMessageStart('msg-1');
+
+      const [voice, , opts] = (mockPhononPlayStreaming.mock.calls as any[])[0];
+      expect(voice).toEqual(ZOEY);
+      expect(opts).toEqual(
+        expect.objectContaining({
+          firstChunk: 'clause',
+          onProgress: expect.any(Function),
+        }),
+      );
+      opts.onProgress({
+        chunkText: '',
+        streamRange: {start: 0, end: 1},
+        chunkIndex: 0,
+        batchIndex: 0,
+      });
+      expect(store.voiceSpeechStarted).toBe('msg-1');
+
+      store.onAssistantMessageComplete('msg-1', 'Hello there.');
+      await flush();
+      await flush();
+
+      expect(store.voiceStreamFailed).toBe('msg-1');
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.currentVoice).toBeNull();
+    });
+
     it('hides Phonon on a probe error and keeps its files', async () => {
       mockPhononIsInstalled.mockResolvedValue(true);
       mockGetPhononSupport.mockResolvedValueOnce({
