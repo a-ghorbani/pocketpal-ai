@@ -26,6 +26,21 @@ describe('estimateDocTokens', () => {
     expect(estimateDocTokens('ภาษาไทย')).toBe(7);
   });
 
+  it('counts Indic and other complex-script characters one each', () => {
+    expect(estimateDocTokens('हिन्दी')).toBe(6);
+    expect(estimateDocTokens('தமிழ்')).toBe(5);
+    expect(estimateDocTokens('မြန်မာ')).toBe(6);
+    expect(estimateDocTokens('ქართ')).toBe(4);
+    expect(estimateDocTokens('አማርኛ')).toBe(4);
+  });
+
+  it('keeps Cyrillic, Greek, Arabic and Hebrew at a third each', () => {
+    expect(estimateDocTokens('привет')).toBe(2);
+    expect(estimateDocTokens('γεια σου')).toBe(3);
+    expect(estimateDocTokens('مرحبا')).toBe(2);
+    expect(estimateDocTokens('שלום')).toBe(2);
+  });
+
   it('adds both parts for mixed text', () => {
     expect(estimateDocTokens('PDF 文書 test')).toBe(2 + Math.ceil(9 / 3));
   });
