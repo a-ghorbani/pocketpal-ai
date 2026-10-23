@@ -134,6 +134,18 @@ describe('useChatSession', () => {
     });
 
     const sendWithThinkingOn = async (opts?: {spoken: boolean}) => {
+      const model = {
+        ...(modelsList as any)[0],
+        reasoning: {
+          isReasoning: 'yes',
+          source: 'user',
+          supportsEffort: true,
+          effortValues: ['low', 'medium', 'high'],
+          effortSource: 'user',
+        },
+      };
+      modelStore.models = [model] as any;
+      modelStore.activeModelId = model.id;
       const settings = await chatSessionStore.getCurrentCompletionSettings();
       (
         chatSessionStore.getCurrentCompletionSettings as jest.Mock

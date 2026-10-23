@@ -705,21 +705,29 @@ describe('ChatScreen graded effort pill cycle', () => {
     });
   });
 
-  const useGradedModel = () => {
+  const gradedReasoning = (effortValues: string[]) => ({
+    isReasoning: 'yes' as const,
+    source: 'user' as const,
+    supportsEffort: true,
+    effortValues,
+    effortSource: 'user' as const,
+  });
+
+  const useGradedModel = (
+    id = 'graded-model',
+    effortValues = ['low', 'medium', 'high'],
+  ) => {
     const model = {
       ...savedModels[0],
-      id: 'graded-model',
-      reasoning: {
-        isReasoning: 'yes' as const,
-        source: 'user' as const,
-        supportsEffort: true,
-        effortValues: ['low', 'medium', 'high'],
-        effortSource: 'user' as const,
-      },
+      id,
+      reasoning: gradedReasoning(effortValues),
     };
-    modelStore.models = [...savedModels, model];
     runInAction(() => {
-      modelStore.activeModelId = 'graded-model';
+      modelStore.models = [
+        ...modelStore.models.filter(m => m.id !== id),
+        model,
+      ];
+      modelStore.activeModelId = id;
     });
   };
 
@@ -759,22 +767,108 @@ describe('ChatScreen graded effort pill cycle', () => {
     });
   });
 
-  it('never surfaces a stored effort the model does not support', async () => {
-    // Regression for #994: a stored/new-chat effort (xhigh) persisted while a
-    // different model was active must be clamped to this model's effortValues.
-    // Before the fix the pill rendered the unsupported grade verbatim.
-    persisted = {
-      enable_thinking: true,
-      reasoning: {effort: 'xhigh'},
-    };
+  it('shows a stored unsupported effort as the nearest lower one', async () => {
+    persisted = {enable_thinking: true, reasoning: {effort: 'xhigh'}};
     useGradedModel();
     const {getByTestId} = render(<ChatScreen />, {withNavigation: true});
     const pill = () => within(getByTestId('thinking-toggle'));
-    const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
 
-    // xhigh is absent from ['low','medium','high'] → never selected.
-    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
-    expect(pill().queryByText(effortLabel('xhigh'))).toBeNull();
+    await waitFor(() =>
+      expect(pill().getByText(effortLabel('high'))).toBeTruthy(),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('thinking-toggle'));
+    });
+    expect(persisted).toMatchObject({
+      enable_thinking: false,
+      reasoning: {enabled: false, effort: undefined},
+    });
+  });
+
+  it('keeps a supported stored effort when the model becomes active after mount', async () => {
+    persisted = {enable_thinking: true, reasoning: {effort: 'high'}};
+    const {getByTestId, queryByTestId} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
+    await act(async () => {});
+    expect(queryByTestId('thinking-toggle')).toBeNull();
+
+    await act(async () => {
+      useGradedModel();
+    });
+    await waitFor(() =>
+      expect(
+        within(getByTestId('thinking-toggle')).getByText(effortLabel('high')),
+      ).toBeTruthy(),
+    );
+  });
+
+  it('re-clamps on a model switch and sends the clamped effort', async () => {
+    persisted = {enable_thinking: true, reasoning: {effort: 'xhigh'}};
+    modelStore.context!.completion = jest.fn().mockResolvedValue({
+      timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
+    });
+    modelStore.engine = {
+      completion: jest.fn((params, onData) =>
+        modelStore.context!.completion(params, onData),
+      ),
+      stopCompletion: jest.fn(),
+    } as any;
+    useGradedModel('wide-model', ['low', 'medium', 'high', 'xhigh']);
+    const {getByTestId, getByPlaceholderText} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
+    const pill = () => within(getByTestId('thinking-toggle'));
+    await waitFor(() =>
+      expect(pill().getByText(effortLabel('xhigh'))).toBeTruthy(),
+    );
+
+    await act(async () => {
+      useGradedModel();
+    });
+    await waitFor(() =>
+      expect(pill().getByText(effortLabel('high'))).toBeTruthy(),
+    );
+
+    await act(async () => {
+      fireEvent.changeText(
+        getByPlaceholderText(l10n.en.chat.typeYourMessage),
+        'Hello',
+      );
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('send-button'));
+    });
+    await waitFor(() =>
+      expect(modelStore.context!.completion).toHaveBeenCalled(),
+    );
+    const sent = (modelStore.context!.completion as jest.Mock).mock.calls[0][0];
+    expect(sent.chat_template_kwargs?.reasoning_effort).toBe('high');
+    expect(sent.reasoning?.effort).toBe('high');
+  });
+
+  it('re-clamps when the active model drops the stored grade', async () => {
+    persisted = {enable_thinking: true, reasoning: {effort: 'xhigh'}};
+    useGradedModel('wide-model', ['low', 'medium', 'high', 'xhigh']);
+    const {getByTestId} = render(<ChatScreen />, {withNavigation: true});
+    const pill = () => within(getByTestId('thinking-toggle'));
+    await waitFor(() =>
+      expect(pill().getByText(effortLabel('xhigh'))).toBeTruthy(),
+    );
+
+    await act(async () => {
+      runInAction(() => {
+        modelStore.activeModel!.reasoning = gradedReasoning([
+          'low',
+          'medium',
+          'high',
+        ]);
+      });
+    });
+    await waitFor(() =>
+      expect(pill().getByText(effortLabel('high'))).toBeTruthy(),
+    );
   });
 });
 

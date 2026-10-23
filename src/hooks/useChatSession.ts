@@ -17,7 +17,10 @@ import {
 } from '../store';
 import type {GenerationLease} from '../store/generationLease';
 import type {PersistedTurnTimings} from '../utils/completionTypes';
-import {resolveReasoningCapability} from '../utils/reasoningCapability';
+import {
+  clampEffort,
+  resolveReasoningCapability,
+} from '../utils/reasoningCapability';
 
 import {
   MessageType,
@@ -189,11 +192,11 @@ const prepareCompletion = async ({
   // hint — it never strips reasoning the model still returns (rendered by
   // ReasoningBlock); separate from include_thinking_in_context, which only
   // governs what prior <think> we SEND.
-  const isReasoningCapable =
-    resolveReasoningCapability(
-      modelStore.activeModel,
-      serverStore.remoteReasoning,
-    ).isReasoning !== 'no';
+  const reasoningCapability = resolveReasoningCapability(
+    modelStore.activeModel,
+    serverStore.remoteReasoning,
+  );
+  const isReasoningCapable = reasoningCapability.isReasoning !== 'no';
   cleanCompletionParams.reasoning_format = 'auto';
   // The enable_thinking:false hint only matters for reasoning-capable models;
   // a non-reasoning model would just ignore it.
@@ -204,6 +207,17 @@ const prepareCompletion = async ({
     };
   }
   // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
+  // The stored effort may be another model's; clamp it on the intent, which
+  // the remote engines read too.
+  if (cleanCompletionParams.reasoning) {
+    cleanCompletionParams.reasoning = {
+      ...cleanCompletionParams.reasoning,
+      effort: clampEffort(
+        cleanCompletionParams.reasoning.effort,
+        reasoningCapability.effortValues,
+      ),
+    };
+  }
   const reasoningEffort = cleanCompletionParams.reasoning?.effort;
   if (reasoningEffort) {
     cleanCompletionParams.chat_template_kwargs = {

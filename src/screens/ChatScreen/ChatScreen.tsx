@@ -150,8 +150,12 @@ export const ChatScreen: React.FC = observer(() => {
     !!modelStore.activeModel && reasoningCapability.isReasoning !== 'no';
 
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
-  const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(
+  const [storedEffort, setStoredEffort] = useState<string | undefined>(
     undefined,
+  );
+  const reasoningEffort = clampEffort(
+    storedEffort,
+    reasoningCapability.effortValues,
   );
   const activeSession = chatSessionStore.sessions.find(
     s => s.id === chatSessionStore.activeSessionId,
@@ -161,15 +165,7 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       if (!cancelled) {
         setThinkingEnabled(settings.enable_thinking ?? true);
-        // A stored/new-chat effort can outlive the model that produced it.
-        // Clamp it to the active model's effort set so an unsupported grade
-        // (e.g. xhigh on a low/medium/high model) is never selected.
-        setReasoningEffort(
-          clampEffort(
-            settings.reasoning?.effort,
-            reasoningCapability.effortValues,
-          ),
-        );
+        setStoredEffort(settings.reasoning?.effort);
       }
     });
     return () => {
@@ -285,7 +281,7 @@ export const ChatScreen: React.FC = observer(() => {
       }
     }
     setThinkingEnabled(nextEnabled);
-    setReasoningEffort(nextEffort);
+    setStoredEffort(nextEffort);
     await persistReasoning(nextEnabled, nextEffort);
   };
 

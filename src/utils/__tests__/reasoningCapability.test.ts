@@ -176,8 +176,13 @@ describe('clampEffort', () => {
     expect(clampEffort('high', ['low', 'medium', 'high'])).toBe('high');
   });
 
-  it('drops an effort the model does not support', () => {
-    expect(clampEffort('xhigh', ['low', 'medium', 'high'])).toBeUndefined();
+  it('snaps an unsupported effort to the nearest lower supported one', () => {
+    expect(clampEffort('xhigh', ['low', 'medium', 'high'])).toBe('high');
+    expect(clampEffort('high', ['low', 'xhigh'])).toBe('low');
+  });
+
+  it('falls back to the lowest supported effort when none is lower', () => {
+    expect(clampEffort('minimal', ['low', 'medium', 'high'])).toBe('low');
   });
 
   it('drops an effort when the model grades to nothing', () => {
