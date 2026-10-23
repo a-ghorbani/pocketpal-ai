@@ -889,8 +889,14 @@ export const ChatView = observer(
               Keyboard.dismiss();
             }
             if (clear === 'all') {
-              setInputImages([]);
-              updateComposerDocuments(() => []);
+              const sentImages = new Set(message.imageUris ?? []);
+              const sentDocuments = new Set(documentIds);
+              setInputImages(live => live.filter(uri => !sentImages.has(uri)));
+              updateComposerDocuments(live =>
+                live.filter(
+                  chip => !chip.ref || !sentDocuments.has(chip.ref.id),
+                ),
+              );
             }
             undone = await sent;
           } finally {

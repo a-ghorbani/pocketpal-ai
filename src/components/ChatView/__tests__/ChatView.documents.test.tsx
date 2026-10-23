@@ -418,6 +418,39 @@ describe('ChatView send gate', () => {
     expect(chat.input().props.value).toBe('');
   });
 
+  it('keeps a chip added during the check in the composer', async () => {
+    let answer: (plan: unknown) => void = () => {};
+    let checking = false;
+    const evaluateSendBudget = jest.fn().mockImplementation(async () =>
+      checking
+        ? new Promise(resolve => {
+            checking = false;
+            answer = resolve;
+          })
+        : {verdict: {kind: 'fits'}, newModes: []},
+    );
+    const later = ref('added-later');
+    const chat = renderChat({evaluateSendBudget});
+    await chat.attach(big);
+    chat.type('Summarise');
+    checking = true;
+    await act(async () => {
+      chat.pressSend();
+    });
+    await chat.attach(later);
+
+    await act(async () => {
+      answer({verdict: {kind: 'fits'}, newModes: []});
+    });
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({documents: [big]}),
+    );
+    expect(chat.screen.queryByText('big.pdf')).toBeNull();
+    expect(chat.screen.getByText('added-later.pdf')).toBeTruthy();
+    expect(documentStore.isHeld(later.id)).toBe(true);
+  });
+
   it('sends a message without documents in the same tick, without a check', () => {
     const evaluateSendBudget = jest.fn();
     const chat = renderChat({evaluateSendBudget});
