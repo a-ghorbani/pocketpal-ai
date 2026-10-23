@@ -3230,6 +3230,7 @@ describe('ModelStore', () => {
         n_head: 16,
         n_head_kv: 8,
         n_vocab: 151936,
+        n_vocab_is_exact: true,
         n_embd_head_k: 64,
         n_embd_head_v: 64,
         ...over,
@@ -3307,6 +3308,51 @@ describe('ModelStore', () => {
         });
         const target = localModel({id: 'target', ggufMetadata: mtpMeta()});
         await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired when draft and target vocab sizes differ', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({
+            nextn_predict_layers: 1,
+            n_embd: 1024,
+            n_vocab: 32000,
+          }),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({
+            nextn_predict_layers: 1,
+            n_embd: 1024,
+            n_vocab: 151936,
+          }),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('not paired when a vocab size is only an architecture estimate', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({
+            nextn_predict_layers: 1,
+            n_vocab_is_exact: false,
+          }),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
       });
 
       it('not paired for a plain (non-MTP) draft → off when target not capable', async () => {
@@ -6429,6 +6475,65 @@ describe('ModelStore', () => {
       const metadata = model.ggufMetadata as unknown as GGUFMetadata;
       expect(metadata.architecture).toBe('llama');
       expect(metadata.n_layers).toBe(32);
+      expect(metadata.n_vocab_is_exact).toBe(true);
+    });
+
+    it('marks an architecture-default vocab size as inexact', async () => {
+      const model = {
+        ...presetModelFixture,
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 4096,
+        'llama.attention.head_count': 32,
+      });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      const metadata = model.ggufMetadata as unknown as GGUFMetadata;
+      expect(metadata.n_vocab).toBe(128256);
+      expect(metadata.n_vocab_is_exact).toBe(false);
+    });
+
+    it('refreshes downloaded legacy metadata without vocab provenance', async () => {
+      const model = {
+        ...presetModelFixture,
+        isDownloaded: true,
+        ggufMetadata: {
+          architecture: 'llama',
+          n_layers: 32,
+          n_embd: 4096,
+          n_head: 32,
+          n_head_kv: 8,
+          n_vocab: 128256,
+          n_embd_head_k: 128,
+          n_embd_head_v: 128,
+        } as GGUFMetadata,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 4096,
+        'llama.attention.head_count': 32,
+        'llama.vocab_size': 32000,
+      });
+
+      (modelStore as any).loadMissingGGUFMetadata();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(loadLlamaModelInfo).toHaveBeenCalledTimes(1);
+      const storedModel = modelStore.models[0];
+      expect(storedModel.ggufMetadata?.n_vocab).toBe(32000);
+      expect(storedModel.ggufMetadata?.n_vocab_is_exact).toBe(true);
     });
   });
 
@@ -6538,6 +6643,7 @@ describe('ModelStore', () => {
         n_head: 16,
         n_head_kv: 8,
         n_vocab: 151936,
+        n_vocab_is_exact: true,
         n_embd_head_k: 64,
         n_embd_head_v: 64,
         ...over,
