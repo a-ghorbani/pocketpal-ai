@@ -442,7 +442,7 @@ export const ChatView = observer(
             result.status === 'needs_range' ? result.rangeLimit : undefined,
         }));
         if (result.status === 'ready') {
-          setRangeKey(null);
+          setRangeKey(open => (open === target.key ? null : open));
         }
       },
       [rangeKey, updateComposerDocuments, l10n],

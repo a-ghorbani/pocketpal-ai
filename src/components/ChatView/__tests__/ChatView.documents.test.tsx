@@ -210,6 +210,29 @@ describe('ChatView page ranges', () => {
     );
   });
 
+  it("leaves another chip's range sheet open when an earlier range finishes", async () => {
+    const other = ref('y', {pageCount: 40, tokenEstimate: 20000});
+    let finish: (result: any) => void = () => {};
+    setDocumentPageRange.mockImplementationOnce(
+      () => new Promise(resolve => (finish = resolve)),
+    );
+    const chat = renderChat();
+    await chat.attach(fortyPages);
+    await chat.attach(other);
+    await chooseRange(chat, '3', '5');
+
+    fireEvent.press(chat.screen.getByText('y.pdf'));
+    await waitFor(() => chat.screen.getByTestId('document-range-from'));
+    await act(async () => {
+      finish({
+        status: 'ready',
+        ref: {...fortyPages, pageRange: {from: 3, to: 5}, tokenEstimate: 1400},
+      });
+    });
+
+    expect(chat.screen.getByTestId('document-range-from')).toBeTruthy();
+  });
+
   it('keeps the chip asking for pages when the range is over a limit', async () => {
     setDocumentPageRange.mockResolvedValueOnce({
       status: 'needs_range',
