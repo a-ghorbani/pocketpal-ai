@@ -367,11 +367,10 @@ class VoiceModeController {
   }
 
   /**
-   * A call, alarm or Siri took the audio session: stop the mic and any turn.
-   * `ended` may never come (Android only holds focus while a chunk plays;
-   * iOS skips it after Siri and often after a call). A turn's next move into
-   * listening opens the mic again. While listening, the mic shows as off
-   * until `ended`, a cloud tap, the app becoming active, or unmute; the
+   * A call, alarm or Siri took the audio session: stop the mic and any turn,
+   * and show the mic as off until `ended`, a cloud tap, the app becoming
+   * active, or unmute. `ended` may never come (Android only holds focus while
+   * a chunk plays; iOS skips it after Siri and often after a call), and the
    * session holding it can last minutes, so no watchdog runs meanwhile.
    */
   onAudioInterruption({type}: AudioInterruptionProps): void {
@@ -384,8 +383,9 @@ class VoiceModeController {
       if (this.turn) {
         vtrace('interrupt', {src: 'audio_interruption'});
         this.turn.interrupt();
-      } else if (
-        voiceModeStore.phase === 'listening' &&
+      }
+      if (
+        (this.turn || voiceModeStore.phase === 'listening') &&
         !voiceModeStore.micMuted
       ) {
         this.pausedByInterruption = true;

@@ -1399,36 +1399,108 @@ describe('useVoiceMode', () => {
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
     });
 
-    it('interrupt a spoken reply, and the mic opens again with no ended event', async () => {
+    describe.each(['transcribing', 'thinking', 'speaking'] as const)(
+      'while %s',
+      phase => {
+        const interruptTurn = async () => {
+          const rendered = renderVoiceMode();
+          await rendered.enter();
+          speak(500);
+          speak(600, SILENT);
+          const [turn] = rendered.turns;
+          if (phase !== 'transcribing') {
+            act(() => turn.on.transcribed('hi'));
+          }
+          if (phase === 'speaking') {
+            act(() => turn.on.speechStarted());
+          }
+          expect(voiceModeStore.phase).toBe(phase);
+
+          interruption('began');
+          await flush();
+          await settleMic();
+          return rendered;
+        };
+
+        it('end the turn like a tap and listen with the mic paused', async () => {
+          const {turns} = await interruptTurn();
+
+          expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+          expect(port.stop).not.toHaveBeenCalled();
+          expect(voiceModeStore.phase).toBe('listening');
+          expect(voiceModeStore.micMuted).toBe(true);
+          expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+        });
+
+        it('reopen the mic when they end', async () => {
+          await interruptTurn();
+
+          interruption('ended');
+          await settleMic();
+
+          expect(voiceModeStore.micMuted).toBe(false);
+          expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+        });
+
+        it('reopen the mic on a cloud tap', async () => {
+          const {hook, engine} = await interruptTurn();
+
+          act(() => hook.result.current.tapCloud());
+          await settleMic();
+
+          expect(voiceModeStore.micMuted).toBe(false);
+          expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+          expect(engine.runTurn).toHaveBeenCalledTimes(1);
+        });
+
+        it('reopen the mic when the app becomes active', async () => {
+          await interruptTurn();
+
+          setAppState('active');
+          await settleMic();
+
+          expect(voiceModeStore.micMuted).toBe(false);
+          expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+        });
+      },
+    );
+
+    it('while speaking, one that ends before the turn finishes opens the mic once it does', async () => {
       const {enter, turns} = renderVoiceMode();
       await enter();
       speak(500);
       speak(600, SILENT);
       act(() => turns[0].on.speechStarted());
+      turns[0].interrupt.mockImplementation(async () => {});
 
       interruption('began');
-      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      interruption('ended');
+      await settleMic();
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+
+      turns[0].finish('interrupted');
       await flush();
       await settleMic();
-
-      expect(voiceModeStore.phase).toBe('listening');
+      expect(voiceModeStore.micMuted).toBe(false);
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
     });
 
-    it('interrupt a turn still being transcribed', async () => {
-      const {enter, turns} = renderVoiceMode();
+    it('while speaking with the mic muted, leave it muted after they end', async () => {
+      const {enter, hook, turns} = renderVoiceMode();
       await enter();
       speak(500);
       speak(600, SILENT);
-      expect(voiceModeStore.phase).toBe('transcribing');
+      act(() => turns[0].on.speechStarted());
+      act(() => hook.result.current.toggleMute());
 
       interruption('began');
-
-      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      interruption('ended');
       await flush();
       await settleMic();
-      expect(voiceModeStore.phase).toBe('listening');
-      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+
+      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
     });
 
     it('while listening with no ended event, unmuting opens the mic again', async () => {
