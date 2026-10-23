@@ -346,3 +346,19 @@ describe('index cache lifetime', () => {
     expect(load.mock.calls.map(([ref]) => ref.id)).toEqual([released.id]);
   });
 });
+
+describe('page mentions', () => {
+  it('ignores a page number too large to count', async () => {
+    const result = await run([[doc('huge-page'), ['Churn rose.']]], {
+      query: 'churn on page 9999999999999999',
+    });
+    expect(result.kind).toBe('excerpts');
+  }, 2000);
+
+  it('ignores a range end too large to count', async () => {
+    const result = await run([[doc('huge-range'), ['Churn rose.']]], {
+      query: 'churn on pages 3-9999999999999999',
+    });
+    expect(result.kind).toBe('excerpts');
+  }, 2000);
+});

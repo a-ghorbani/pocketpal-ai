@@ -223,11 +223,21 @@ export const dropDocumentIndexes = (id: string): void => {
 
 const PAGE_MENTION = /\b(?:pp?\.|pages?)\s*(\d+)(?:\s*[–-]\s*(\d+))?/gi;
 
+/** No document has more pages; larger numbers are not page mentions. */
+const MAX_MENTIONED_PAGE = 100_000;
+const MAX_MENTIONED_SPAN = 50;
+
 const mentionedPages = (query: string): Set<number> => {
   const pages = new Set<number>();
   for (const match of query.matchAll(PAGE_MENTION)) {
     const from = Number(match[1]);
-    const to = Math.min(Number(match[2] ?? match[1]), from + 50);
+    const end = Number(match[2] ?? match[1]);
+    if (!Number.isSafeInteger(from) || from < 1 || from > MAX_MENTIONED_PAGE) {
+      continue;
+    }
+    const to = Number.isSafeInteger(end)
+      ? Math.min(end, from + MAX_MENTIONED_SPAN, MAX_MENTIONED_PAGE)
+      : from;
     for (let page = from; page <= to; page++) {
       pages.add(page);
     }
