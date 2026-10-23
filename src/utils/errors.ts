@@ -254,6 +254,16 @@ export function createDocumentWarning(message: string): ErrorState {
   };
 }
 
+export function createChatWarning(message: string): ErrorState {
+  return {
+    code: 'unknown',
+    message,
+    context: 'chat',
+    recoverable: false,
+    severity: 'warning',
+  };
+}
+
 export function createMultimodalWarning(
   message: string,
   context: ErrorState['context'] = 'chat',

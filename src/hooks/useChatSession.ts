@@ -28,6 +28,7 @@ import {
 import {
   RemoteModelNotReadyError,
   RemoteModelRequestWithdrawnError,
+  createChatWarning,
   createMultimodalWarning,
 } from '../utils/errors';
 import {routerFailureMessage} from '../utils/routerCopy';
@@ -838,6 +839,15 @@ export const useChatSession = (
     await addMessage(systemRow(text, metadata));
   };
 
+  /** Edit mode hides rows after the edited one, so a row there would go unseen. */
+  const reportModelNotLoaded = async () => {
+    if (chatSessionStore.isEditMode) {
+      uiStore.setChatWarning(createChatWarning(l10n.chat.modelNotLoaded));
+      return;
+    }
+    await addSystemMessage(l10n.chat.modelNotLoaded);
+  };
+
   /**
    * A send that does not go out. A resend touched nothing, so only an over
    * verdict comes back. A composer send returns its content: after a chat
@@ -883,7 +893,7 @@ export const useChatSession = (
       return unsent(message, origin);
     }
     if (!lease) {
-      await addSystemMessage(l10n.chat.modelNotLoaded);
+      await reportModelNotLoaded();
       return unsent(message, origin);
     }
     leaseRef.current = lease;
@@ -936,7 +946,7 @@ export const useChatSession = (
     const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
-      await addSystemMessage(l10n.chat.modelNotLoaded);
+      await reportModelNotLoaded();
       return unsent(message, origin);
     }
     const {replaceFromId, resend} = origin.options;

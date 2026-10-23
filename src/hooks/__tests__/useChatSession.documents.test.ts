@@ -17,7 +17,8 @@ import {isHeld, setComposerHeld} from '../../services/documents/store';
 import type {DocumentRef} from '../../services/documents/types';
 import {docId} from '../../../jest/fixtures/documentIds';
 
-import {chatSessionStore, modelStore, palStore} from '../../store';
+import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
+import {l10n} from '../../locales';
 import {MessageType} from '../../utils/types';
 
 const user = {id: 'userId'};
@@ -1075,6 +1076,41 @@ describe('removing rows under the lease', () => {
     expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
     expect(undone).toEqual({message, sessionId: 'session-1'});
   });
+
+  it.each([
+    [
+      'no model is loaded',
+      () => {
+        modelStore.engine = undefined as any;
+      },
+    ],
+    [
+      'the model has no context',
+      () => {
+        modelStore.context = undefined as any;
+      },
+    ],
+  ])(
+    'shows a warning instead of a hidden row when an edited send finds %s',
+    async (_label, unload) => {
+      store.isEditMode = true;
+      store.editingMessageId = 'm';
+      unload();
+
+      await sendWith({type: 'text', text: 'rewritten'}, {replaceFromId: 'm'});
+
+      expect(
+        chatSessionStore.addMessageToCurrentSession,
+      ).not.toHaveBeenCalled();
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: l10n.en.chat.modelNotLoaded,
+          severity: 'warning',
+        }),
+      );
+      store.isEditMode = false;
+    },
+  );
 
   it('hands a resend back as nothing when no model is loaded', async () => {
     modelStore.engine = undefined as any;
