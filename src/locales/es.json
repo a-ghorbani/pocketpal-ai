@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "Lleva la IA local más lejos.",
-    "subline": "Herramientas extra para descubrir de lo que es capaz tu teléfono, y una forma de financiar el trabajo que mantiene PocketPal gratis y de código abierto.",
-    "unsupportedSubline": "Las funciones Plus todavía no funcionan en este teléfono. Aun así puedes apoyar PocketPal, y las funciones que lleguen a tu teléfono más adelante están incluidas.",
-    "thanksHeadline": "Gracias por llevar la IA local más lejos con nosotros.",
-    "thanksSubline": "Plus está desbloqueado en este dispositivo. Las nuevas funciones Plus aparecerán aquí automáticamente.",
+    "subline": "Plus mantiene PocketPal gratis y de código abierto. Las funciones extra son nuestra forma de darte las gracias.",
+    "unsupportedSubline": "Las funciones Plus todavía no funcionan en este teléfono. Aun así puedes apoyar PocketPal.",
+    "thanksHeadline": "Gracias por mantener PocketPal en marcha.",
+    "thanksSubline": "Plus está desbloqueado en este dispositivo.",
     "features": {
       "handsFreeVoice": "Voz manos libres",
       "localApiServer": "Servidor de API local"
