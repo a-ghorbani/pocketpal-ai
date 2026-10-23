@@ -1162,6 +1162,36 @@ describe('removing rows under the lease', () => {
     });
   });
 
+  it('runs one of two queued resends of the same row', async () => {
+    (chatSessionStore.removeMessagesFromId as jest.Mock).mockImplementation(
+      async (id: string) => {
+        const index = history.findIndex(row => row.id === id);
+        history = index >= 0 ? history.slice(index + 1) : history;
+      },
+    );
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+    const resend = () =>
+      result.current.handleSendPress(
+        {type: 'text', text: 'second question'},
+        {replaceFromId: 'm', resend: true},
+      );
+    let undone: unknown[] = [];
+
+    await act(async () => {
+      undone = await Promise.all([resend(), resend()]);
+    });
+
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledTimes(1);
+    expect(userRows().map(m => m.text)).toEqual(['second question']);
+    expect(undone).toEqual([undefined, undefined]);
+    (chatSessionStore.removeMessagesFromId as jest.Mock).mockReset();
+    (chatSessionStore.removeMessagesFromId as jest.Mock).mockResolvedValue(
+      undefined,
+    );
+  });
+
   it('hands a resend back as nothing when no model is loaded', async () => {
     modelStore.engine = undefined as any;
 

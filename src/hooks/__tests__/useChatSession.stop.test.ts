@@ -371,6 +371,10 @@ describe('useChatSession: a resend', () => {
       chatSessionStore.restoreUnsentText,
       chatSessionStore.addMessageToCurrentSession,
     ].forEach(fn => (fn as jest.Mock).mockClear());
+    Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+      get: jest.fn(() => [{...textMessage, id: 'row-1', text: 'again'}]),
+      configurable: true,
+    });
     const {engine, completions} = installEngine();
     const session = renderSession();
     const held = (await modelStore.acquireGeneration())!;
@@ -402,6 +406,10 @@ describe('useChatSession: a resend', () => {
     await act(async () => {
       completions[0].finish({text: 'a', content: 'a'});
       await sending;
+    });
+    Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+      get: jest.fn(() => []),
+      configurable: true,
     });
   });
 });

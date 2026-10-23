@@ -966,10 +966,11 @@ export const useChatSession = (
 
     const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
-    const currentMessages = rowsBefore(
-      toJS(chatSessionStore.currentSessionMessages),
-      replaceFromId,
-    );
+    const sessionRows = toJS(chatSessionStore.currentSessionMessages);
+    if (resend && !sessionRows.some(row => row.id === replaceFromId)) {
+      return undefined;
+    }
+    const currentMessages = rowsBefore(sessionRows, replaceFromId);
 
     const plan = hasDocuments(currentMessages, message)
       ? documentPlan(await planInputs(currentMessages, message))
