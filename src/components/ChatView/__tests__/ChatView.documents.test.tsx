@@ -439,6 +439,32 @@ describe('ChatView history overflow', () => {
     expect(chatSessionStore.resetActiveSession).toHaveBeenCalled();
   });
 
+  it('New chat takes the typed text and chips along, leaving the old draft alone', async () => {
+    const pending = ref('carried');
+    const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: overflow});
+    (chatSessionStore.resetActiveSession as jest.Mock).mockImplementationOnce(
+      () => {
+        chatSessionStore.activeSessionId = null as any;
+      },
+    );
+    const chat = renderChat({evaluateSendBudget, messages: [earlierRow]});
+    await chat.attach(pending);
+    chat.type('thanks');
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    fireEvent.press(chat.screen.getByTestId('budget-new-chat'));
+    act(() => chat.screen.rerender(chat.element({messages: []})));
+
+    expect(chat.input().props.value).toBe('thanks');
+    expect(chat.screen.getByText('carried.pdf')).toBeTruthy();
+    expect(chatSessionStore.saveDraft).not.toHaveBeenCalledWith(
+      'session-1',
+      expect.anything(),
+    );
+  });
+
   it('edits the earlier row and keeps what was pending in the composer', async () => {
     const pending = ref('pending');
     const evaluateSendBudget = jest.fn().mockResolvedValue({verdict: overflow});

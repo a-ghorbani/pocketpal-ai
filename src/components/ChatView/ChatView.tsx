@@ -347,6 +347,7 @@ export const ChatView = observer(
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
     const syncedDraftRef = React.useRef('');
+    const carriedTextRef = React.useRef<string | null>(null);
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const inputImagesRef = React.useRef(inputImages);
     inputImagesRef.current = inputImages;
@@ -634,10 +635,14 @@ export const ChatView = observer(
       // This runs after the switch, so a cancelled send may already have put
       // its text into the draft being left: keep it rather than overwrite it.
       const snapshot = editSnapshotRef.current;
+      const carried = carriedTextRef.current;
+      carriedTextRef.current = null;
       const typed =
         snapshot && snapshot.sessionId === prevKey
           ? snapshot.text
-          : inputTextRef.current;
+          : carried !== null
+            ? syncedDraftRef.current
+            : inputTextRef.current;
       if (prevKey !== newKey) {
         editSnapshotRef.current = null;
       }
@@ -652,7 +657,7 @@ export const ChatView = observer(
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
       syncedDraftRef.current = draft;
-      setInputText(draft);
+      setInputText(carried === null ? draft : prependText(carried, draft));
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
 
@@ -1768,6 +1773,9 @@ export const ChatView = observer(
               }
               onNewChat={() => {
                 setBudgetVerdict(null);
+                if (chatSessionStore.activeSessionId) {
+                  carriedTextRef.current = inputTextRef.current;
+                }
                 chatSessionStore.resetActiveSession();
               }}
               onEditMessage={
