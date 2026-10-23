@@ -25,6 +25,10 @@ import {isHighEndDevice} from '../../utils/deviceCapabilities';
 import {hfAsModel} from '../../utils';
 import {resolveHFModelForDownload} from '../../utils/hfResolve';
 import en from '../../locales/en.json';
+import {pick} from '@react-native-documents/picker';
+import {exportPal} from '../../utils/exportUtils';
+import {importPals} from '../../utils/importUtils';
+import {palRepository} from '../../repositories/PalRepository';
 import {
   isModelFilePath,
   isValidImportedModelRef,
@@ -46,6 +50,10 @@ jest.mock('../../utils/deviceCapabilities', () => ({
   getRecommendedThreadCount: jest.fn().mockResolvedValue(6),
   checkGpuSupport: jest.fn().mockResolvedValue({isSupported: false}),
   isHighEndDevice: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('react-native-share', () => ({
+  open: jest.fn().mockResolvedValue({success: true}),
 }));
 
 jest.mock('../../api/hf', () => ({
@@ -1331,5 +1339,87 @@ describe('model load guard', () => {
         );
       });
     });
+  });
+});
+
+describe('local model export and import', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+      existingFiles.has(path),
+    );
+    runInAction(() => {
+      modelStore.models = [];
+      palStore.pals = [];
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    runInAction(() => {
+      palStore.pals = [];
+    });
+  });
+
+  const exportThenImport = async (defaultModel: Model) => {
+    runInAction(() => {
+      palStore.pals = [
+        {
+          type: 'local',
+          id: 'exported-pal',
+          name: 'Local Pal',
+          systemPrompt: 'You help.',
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          parameters: {},
+          parameterSchema: [],
+          source: 'local',
+          defaultModel,
+        } as any,
+      ];
+    });
+    await exportPal('exported-pal');
+    const exported = (RNFS.writeFile as jest.Mock).mock.calls.at(-1)[1];
+    (pick as jest.Mock).mockResolvedValue([
+      {
+        uri: 'file:///picked/pal.json',
+        name: 'pal.json',
+        type: 'application/json',
+      },
+    ]);
+    (RNFS.readFile as jest.Mock).mockResolvedValue(exported);
+    const createPal = jest
+      .spyOn(palRepository, 'createPal')
+      .mockImplementation(async (data: any) => ({...data, id: 'imported'}));
+    await importPals();
+    return createPal.mock.calls[0][0] as any;
+  };
+
+  const addedLocalModel = async (path: string) => {
+    existingFiles.add(path);
+    await modelStore.addLocalModel(path);
+    return toJS(modelStore.models[0]);
+  };
+
+  it('keeps a local model whose picked name has a backslash', async () => {
+    const model = await addedLocalModel(`${DOCS}/models/local/a\\b.gguf`);
+
+    const imported = await exportThenImport(model);
+
+    expect(imported.name).toBe('Local Pal');
+    expect(imported.defaultModel).toEqual(JSON.parse(JSON.stringify(model)));
+  });
+
+  it.each([
+    ['two markers', `/x/models/local/a/models/local/a\\b.gguf`],
+    ['a parent segment', `${DOCS}/models/local/..`],
+    ['a control character', `${DOCS}/models/local/a\\b\u0000.gguf`],
+  ])('drops a local model whose fullPath has %s', async (_case, fullPath) => {
+    const model = await addedLocalModel(`${DOCS}/models/local/a\\b.gguf`);
+
+    const imported = await exportThenImport({...model, fullPath});
+
+    expect(imported.name).toBe('Local Pal');
+    expect(imported.defaultModel).toBeUndefined();
   });
 });

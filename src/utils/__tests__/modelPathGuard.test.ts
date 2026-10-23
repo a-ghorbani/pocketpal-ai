@@ -603,3 +603,70 @@ describe('toImportedModelRef', () => {
     expect(toImportedModelRef(undefined)).toBeUndefined();
   });
 });
+
+describe('backslash in an imported ref', () => {
+  const localRef = (overrides: Record<string, unknown>) => ({
+    origin: 'local',
+    isLocal: true,
+    id: 'local-id',
+    author: '',
+    filename: 'a\\b.gguf',
+    fullPath: `${DOCS}/models/local/a\\b.gguf`,
+    ...overrides,
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['origin local', {}],
+    ['isLocal true', {origin: 'hf'}],
+  ])('a %s ref keeps a backslash in its filename and fullPath', (_c, o) => {
+    expect(isValidImportedModelRef(localRef(o))).toBe(true);
+    expect(toImportedModelRef(localRef(o))).toEqual(localRef(o));
+  });
+
+  it('re-anchors a backslash name from another device', () => {
+    expect(
+      toImportedModelRef(
+        localRef({
+          fullPath: '/data/user/0/com.pocketpalai/files/models/local/a\\b.gguf',
+        }),
+      ),
+    ).toEqual(localRef({}));
+  });
+
+  it.each([
+    ['two markers', '/x/models/local/a/models/local/a\\b.gguf'],
+    ['a parent segment', '/x/models/local/..'],
+    ['a nested tail', '/x/models/local/a\\b/c'],
+    ['a control character', '/x/models/local/a\\b\u0000'],
+  ])('a local ref with %s in fullPath is dropped', (_c, fullPath) => {
+    expect(isValidImportedModelRef(localRef({fullPath}))).toBe(false);
+  });
+
+  it.each([
+    ['filename', {filename: 'a\\b.gguf'}],
+    ['hfModelFile.rfilename', {hfModelFile: {rfilename: 'a\\b.gguf'}}],
+  ])('a non-local ref with a backslash in %s is dropped', (_c, o) => {
+    expect(
+      isValidImportedModelRef({
+        origin: 'hf',
+        id: 'a/r/x.gguf',
+        author: 'a',
+        repo: 'r',
+        filename: 'x.gguf',
+        ...o,
+      }),
+    ).toBe(false);
+  });
+
+  it('a non-local ref with a backslash in fullPath is dropped', () => {
+    expect(
+      isValidImportedModelRef({
+        origin: 'remote',
+        id: 'srv/m',
+        filename: '',
+        isLocal: false,
+        fullPath: `${DOCS}/models/local/a\\b.gguf`,
+      }),
+    ).toBe(false);
+  });
+});

@@ -16,6 +16,7 @@ const isGgufName = (name: string): boolean => GGUF_SUFFIX.test(name);
 
 const isLocalModelSegment = (segment: string): boolean =>
   segment !== '' &&
+  !segment.includes('/') &&
   segment !== '.' &&
   segment !== '..' &&
   !hasControlCharacter(segment);
@@ -111,34 +112,50 @@ const hasSafeOriginFields = (ref: UnknownRecord): boolean =>
     emptyOr(isSafePathSegment)(ref.repo) &&
     emptyOr(isSafeRelativePath)(ref.id));
 
+const isLocalRef = (ref: UnknownRecord): boolean =>
+  ref.origin === ModelOrigin.LOCAL || ref.isLocal === true;
+
 const hasLoadableFilename = (ref: UnknownRecord): boolean =>
   isEmpty(ref.filename) ||
-  ref.origin === ModelOrigin.LOCAL ||
-  ref.isLocal === true ||
+  isLocalRef(ref) ||
   isGgufName(ref.filename as string);
 
 const LOCAL_MODELS_MARKER = '/models/local/';
 
-const rewrittenFullPath = (fullPath: string): string | undefined => {
-  if (!fullPath.startsWith('/') || !isSafeRelativePath(fullPath.slice(1))) {
+const segmentRules = (local: boolean) =>
+  local
+    ? {segment: isLocalModelSegment, relativePath: isLocalModelRelativePath}
+    : {segment: isSafePathSegment, relativePath: isSafeRelativePath};
+
+const rewrittenFullPath = (
+  fullPath: string,
+  local: boolean,
+): string | undefined => {
+  const rules = segmentRules(local);
+  if (!fullPath.startsWith('/') || !rules.relativePath(fullPath.slice(1))) {
     return undefined;
   }
   const [, localName, ...extra] = fullPath.split(LOCAL_MODELS_MARKER);
   if (localName !== undefined) {
-    return extra.length === 0 && isSafePathSegment(localName)
+    return extra.length === 0 && rules.segment(localName)
       ? `${RNFS.DocumentDirectoryPath}${LOCAL_MODELS_MARKER}${localName}`
       : undefined;
   }
   const modelsPrefix = `${RNFS.DocumentDirectoryPath}/models/`;
   return fullPath.startsWith(modelsPrefix) &&
-    isSafePathSegment(fullPath.slice(modelsPrefix.length))
+    rules.segment(fullPath.slice(modelsPrefix.length))
     ? fullPath
     : undefined;
 };
 
-const isImportableFullPath = (fullPath: unknown): boolean =>
+const isImportableFullPath = (fullPath: unknown, local: boolean): boolean =>
   isEmpty(fullPath) ||
-  (typeof fullPath === 'string' && rewrittenFullPath(fullPath) !== undefined);
+  (typeof fullPath === 'string' &&
+    rewrittenFullPath(fullPath, local) !== undefined);
+
+const isImportableFilename = (filename: unknown, local: boolean): boolean =>
+  isEmpty(filename) ||
+  (typeof filename === 'string' && segmentRules(local).relativePath(filename));
 
 export const isValidImportedModelRef = (ref: unknown): boolean => {
   if (isAbsent(ref)) {
@@ -146,12 +163,12 @@ export const isValidImportedModelRef = (ref: unknown): boolean => {
   }
   return (
     isObject(ref) &&
-    emptyOr(isSafeRelativePath)(ref.filename) &&
+    isImportableFilename(ref.filename, isLocalRef(ref)) &&
     hasLoadableFilename(ref) &&
     isValidHfModel(ref.hfModel) &&
     isValidHfModelFile(ref.hfModelFile) &&
     hasSafeOriginFields(ref) &&
-    isImportableFullPath(ref.fullPath)
+    isImportableFullPath(ref.fullPath, isLocalRef(ref))
   );
 };
 
@@ -162,6 +179,6 @@ export const toImportedModelRef = <T>(ref: T): T | undefined => {
   if (!isObject(ref) || isEmpty(ref.fullPath)) {
     return ref;
   }
-  const fullPath = rewrittenFullPath(ref.fullPath as string);
+  const fullPath = rewrittenFullPath(ref.fullPath as string, isLocalRef(ref));
   return fullPath === ref.fullPath ? ref : ({...ref, fullPath} as T);
 };
