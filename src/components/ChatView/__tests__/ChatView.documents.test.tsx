@@ -661,6 +661,35 @@ describe('ChatView composer merge', () => {
     expect(chat.screen.getAllByText('restored.pdf')).toHaveLength(1);
     expect(chat.input().props.value).toBe('Summarise');
   });
+
+  it('restoring attachments alone leaves the composer text as typed', async () => {
+    const report = ref('returned');
+    let settle!: (undone: UndoneSend | undefined) => void;
+    const chat = renderChat();
+    chat.onSendPress.mockImplementationOnce(
+      () =>
+        new Promise<UndoneSend | undefined>(resolve => {
+          settle = resolve;
+        }),
+    );
+    await chat.attach(report);
+    chat.type('Summarise');
+    await act(async () => {
+      chat.pressSend();
+    });
+    chat.type('typed meanwhile');
+
+    await act(async () => {
+      settle({
+        message: {type: 'text', text: '', documents: [report]},
+        sessionId: 'session-1',
+      });
+    });
+
+    expect(chat.screen.getByText('returned.pdf')).toBeTruthy();
+    expect(documentStore.isHeld(report.id)).toBe(true);
+    expect(chat.input().props.value).toBe('typed meanwhile');
+  });
 });
 
 describe('ChatView resend', () => {

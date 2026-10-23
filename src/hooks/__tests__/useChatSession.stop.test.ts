@@ -409,6 +409,50 @@ describe('useChatSession: a send whose chat changed while it waited', () => {
     );
   });
 
+  it('hands its attachments back to the open composer', async () => {
+    const installed = installEngine();
+    const session = renderSession();
+    const held = (await modelStore.acquireGeneration())!;
+    const documents = [{id: 'doc', name: 'a.pdf'} as any];
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress({
+        ...textMessage,
+        text: 'hi',
+        imageUris: ['file://a.jpg'],
+        documents,
+      });
+    });
+    chatSessionStore.activeSessionId = 'session-2';
+    await act(async () => {
+      held.end();
+    });
+
+    await expectNoRun({...installed, sending});
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+    await expect(sending).resolves.toEqual({
+      message: {
+        ...textMessage,
+        text: '',
+        imageUris: ['file://a.jpg'],
+        documents,
+      },
+      sessionId: 'session-2',
+    });
+  });
+
+  it('hands nothing back when it carried only text', async () => {
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    await expectNoRun(sent);
+    await expect(sent.sending).resolves.toBeUndefined();
+  });
+
   it('is cancelled when a new chat is started', async () => {
     const sent = await sendWhileHeld(() => {
       chatSessionStore.activeSessionId = null;

@@ -271,6 +271,46 @@ describe('useChatSession with documents', () => {
     ).mockResolvedValue(undefined);
     setComposerHeld([]);
   });
+
+  it('writes no row when the chat changes while the send is planned', async () => {
+    const doc = pdf('planned-doc', {pageCount: 1});
+    writeText(doc.id, ['x']);
+    const settings = chatSessionStore.getCurrentCompletionSettings as jest.Mock;
+    const defaults = await settings();
+    settings.mockImplementationOnce(async () => {
+      chatSessionStore.activeSessionId = 'session-2';
+      return defaults;
+    });
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, user, assistant),
+    );
+
+    let undone: unknown;
+    await act(async () => {
+      undone = await result.current.handleSendPress({
+        type: 'text',
+        text: 'go',
+        documents: [doc],
+        imageUris: ['file://a.jpg'],
+      });
+    });
+
+    expect(chatSessionStore.addMessageToCurrentSession).not.toHaveBeenCalled();
+    expect(requests).toEqual([]);
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'go',
+    );
+    expect(undone).toEqual({
+      message: {
+        type: 'text',
+        text: '',
+        documents: [doc],
+        imageUris: ['file://a.jpg'],
+      },
+      sessionId: 'session-2',
+    });
+  });
 });
 
 describe('searched documents at send', () => {

@@ -825,6 +825,24 @@ export const useChatSession = (
     await addMessage(systemRow(text, metadata));
   };
 
+  /**
+   * Returns a send cancelled by a chat switch: its text to the chat it was
+   * typed in, its attachments to the composer, which stays with the user.
+   */
+  const unsent = (
+    message: MessageType.PartialText,
+    sentFrom: string | null,
+  ): UndoneSend | undefined => {
+    chatSessionStore.restoreUnsentText(sentFrom, message.text);
+    if (!message.imageUris?.length && !message.documents?.length) {
+      return undefined;
+    }
+    return {
+      message: {...message, text: ''},
+      sessionId: chatSessionStore.activeSessionId ?? '',
+    };
+  };
+
   const handleSendPress = async (
     message: MessageType.PartialText,
   ): Promise<UndoneSend | undefined> => {
@@ -836,8 +854,7 @@ export const useChatSession = (
     chatSessionStore.setIsStopping(false);
     if (chatSessionStore.activeSessionId !== sentFrom) {
       lease?.end();
-      chatSessionStore.restoreUnsentText(sentFrom, message.text);
-      return;
+      return unsent(message, sentFrom);
     }
     if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -870,7 +887,7 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, lease, {
+      return await sendUnderLease(message, sentFrom, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
       });
@@ -886,6 +903,7 @@ export const useChatSession = (
 
   const sendUnderLease = async (
     message: MessageType.PartialText,
+    sentFrom: string | null,
     lease: GenerationLease,
     runUi: {stop: () => void; isStopped: () => boolean},
   ): Promise<UndoneSend | undefined> => {
@@ -906,6 +924,9 @@ export const useChatSession = (
     const plan = hasDocuments(currentMessages, message)
       ? documentPlan(await planInputs(currentMessages, message))
       : undefined;
+    if (chatSessionStore.activeSessionId !== sentFrom) {
+      return unsent(message, sentFrom);
+    }
     if (plan?.verdict.kind === 'over') {
       return {
         message,

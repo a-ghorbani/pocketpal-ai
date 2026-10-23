@@ -770,13 +770,15 @@ export const ChatView = observer(
         order: 'incomingFirst' | 'pendingFirst',
       ) => {
         const incomingFirst = order === 'incomingFirst';
-        setInputText(pending =>
-          incomingFirst
-            ? prependText(incoming.text, pending)
-            : pending
-              ? prependText(pending, incoming.text)
-              : incoming.text,
-        );
+        if (incoming.text) {
+          setInputText(pending =>
+            incomingFirst
+              ? prependText(incoming.text, pending)
+              : pending
+                ? prependText(pending, incoming.text)
+                : incoming.text,
+          );
+        }
         setInputImages(pending => {
           const images = incoming.images ?? [];
           return incomingFirst
