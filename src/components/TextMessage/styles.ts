@@ -44,6 +44,11 @@ export const styles = ({
           : 0,
       marginVertical: theme.insets.messageInsetsVertical,
     },
+    documentsContainer: {
+      marginBottom: 8,
+      gap: 6,
+      alignItems: 'flex-start',
+    },
     imageContainer: {
       marginBottom: 8,
       flexDirection: 'row',

@@ -413,6 +413,48 @@ describe('chat', () => {
       return {composer, type, send, switchTo};
     };
 
+    it('keeps a restored draft when the chat view mounts', () => {
+      drafts.set('session-1', 'draft');
+      const {composer} = renderChat();
+      expect(composer().props.value).toBe('draft');
+    });
+
+    it('saves no edit text for the chat left during a plain Edit', async () => {
+      const store = chatSessionStore as any;
+      const row = {...textMessage, id: 'row-1', author: user, text: 'Row text'};
+      (chatSessionStore.enterEditMode as jest.Mock).mockImplementation(
+        (id: string) => {
+          store.isEditMode = true;
+          store.editingMessageId = id;
+        },
+      );
+      drafts.set('session-2', 'two');
+      const utils = render(<ChatView {...props} messages={[row]} />, options);
+      fireEvent(utils.getByText('Row text'), 'onLongPress', {
+        nativeEvent: {pageX: 0, pageY: 0},
+      });
+      await act(async () => {
+        fireEvent.press(
+          utils.getByText(l10n.en.components.chatView.menuItems.edit),
+        );
+      });
+
+      act(() => {
+        store.isEditMode = false;
+        store.editingMessageId = null;
+        chatSessionStore.activeSessionId = 'session-2';
+        utils.rerender(<ChatView {...props} messages={[row]} />);
+      });
+
+      expect(drafts.has('session-1')).toBe(false);
+      expect(
+        utils.getByPlaceholderText(
+          l10n.en.components.chatInput.inputPlaceholder,
+        ).props.value,
+      ).toBe('two');
+      (chatSessionStore.enterEditMode as jest.Mock).mockReset();
+    });
+
     it('saves typed text for the chat being left', () => {
       const {type, switchTo} = renderChat();
       type('foo');

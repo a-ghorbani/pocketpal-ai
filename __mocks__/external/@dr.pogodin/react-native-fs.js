@@ -45,6 +45,7 @@ export const hash = jest.fn();
 let documentDirectoryPath = '/path/to/documents';
 export const DocumentDirectoryPath = documentDirectoryPath;
 export const LibraryDirectoryPath = '/path/to/library';
+export const CachesDirectoryPath = '/path/to/caches';
 export const MainBundlePath = '/path/to/bundle';
 
 // Allow tests to override the path
@@ -58,6 +59,9 @@ export const __setDocumentDirectoryPath = path => {
   });
 };
 export const copyFile = jest.fn().mockResolvedValue(true);
+export const moveFile = jest.fn().mockResolvedValue(undefined);
+export const read = jest.fn().mockResolvedValue('');
+export const readDir = jest.fn().mockResolvedValue([]);
 
 // Expose method to reset state for tests
 export const __resetMockState = () => {
@@ -77,8 +81,12 @@ const RNFS = {
   hash,
   DocumentDirectoryPath,
   LibraryDirectoryPath,
+  CachesDirectoryPath,
   MainBundlePath,
   copyFile,
+  moveFile,
+  read,
+  readDir,
   __resetMockState,
   __setDocumentDirectoryPath,
 };

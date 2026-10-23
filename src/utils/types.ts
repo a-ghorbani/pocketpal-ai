@@ -10,6 +10,7 @@ import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
 import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
+import type {DocumentRef} from '../services/documents/types';
 import type {ReasoningCapability} from './reasoningCapability';
 import type {ServerType} from './serverTypes';
 import type {Samplers} from './samplerParams';
@@ -184,6 +185,7 @@ export namespace MessageType {
     text: string;
     type: 'text';
     imageUris?: string[]; // Optional array of image URIs for multimodal messages
+    documents?: DocumentRef[];
   }
 
   export interface Text extends Base, PartialText {

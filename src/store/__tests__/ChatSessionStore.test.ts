@@ -1145,22 +1145,6 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.editingMessageId).toBeNull();
     });
 
-    it('commits edit by removing messages after the edited message', async () => {
-      chatSessionStore.enterEditMode(mockMessage3.id);
-      await chatSessionStore.commitEdit();
-
-      await waitFor(() => {
-        expect(chatSessionStore.isEditMode).toBe(false);
-      });
-
-      // expect(chatSessionStore.isEditMode).toBe(false);
-      expect(chatSessionStore.editingMessageId).toBeNull();
-      // Not sure how to test this after migration to db
-      // expect(chatSessionStore.sessions[0].messages.length).toBe(2);
-      // expect(chatSessionStore.sessions[0].messages[0].id).toBe(mockMessage2.id);
-      // expect(chatSessionStore.sessions[0].messages[1].id).toBe(mockMessage.id);
-    });
-
     it('returns correct messages when in edit mode', () => {
       // editing the first message will remove all messages after it
       chatSessionStore.enterEditMode(mockMessage.id);
@@ -1260,6 +1244,47 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.sessions[0].messages.length).toBe(2);
       expect(chatSessionStore.sessions[0].messages[0].id).toBe(mockMessage2.id);
       expect(chatSessionStore.sessions[0].messages[1].id).toBe(mockMessage.id);
+    });
+
+    it('removes from and refreshes the given chat even after another chat opens', async () => {
+      const other = {
+        id: 'session2',
+        title: 'Session 2',
+        date: new Date().toISOString(),
+        messages: [{...mockMessage, id: 'other-message'}],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [...chatSessionStore.sessions, other];
+      const getById = chatSessionRepository.getSessionById as jest.Mock;
+      getById.mockImplementationOnce(async (id: string) => ({
+        session: {id, title: 'Session', date: new Date().toISOString()},
+        messages:
+          id === 'session1'
+            ? [{toMessageObject: () => mockMessage}]
+            : [{toMessageObject: () => ({...mockMessage, id: 'wrong'})}],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      }));
+      const deleteMessage = jest
+        .spyOn(chatSessionRepository, 'deleteMessage')
+        .mockImplementation(async () => {
+          chatSessionStore.activeSessionId = 'session2';
+        });
+
+      await chatSessionStore.removeMessagesFromId(
+        mockMessage2.id,
+        true,
+        'session1',
+      );
+
+      expect(getById).toHaveBeenCalledWith('session1');
+      expect(chatSessionStore.sessions[0].messages.map(m => m.id)).toEqual([
+        mockMessage.id,
+      ]);
+      expect(chatSessionStore.sessions[1].messages.map(m => m.id)).toEqual([
+        'other-message',
+      ]);
+      deleteMessage.mockRestore();
     });
 
     it('does nothing for non-existent message ID', async () => {
@@ -2879,5 +2904,41 @@ describe('chatSessionStore', () => {
         expect(grouped.Pinned[1].id).toBe('1');
       });
     });
+  });
+});
+
+describe('chatSessionStore launch sweep', () => {
+  it('sweeps orphan documents against the referenced ids after loading', async () => {
+    const store = require('../../services/documents/store');
+    const sweep = jest
+      .spyOn(store, 'sweepOrphanDocuments')
+      .mockResolvedValue(undefined);
+    const referenced = jest
+      .spyOn(chatSessionRepository, 'getReferencedDocumentIds')
+      .mockResolvedValue(new Set(['kept']));
+
+    await chatSessionStore.initialize();
+
+    expect(sweep).toHaveBeenCalledTimes(1);
+    const getReferenced = sweep.mock.calls[0][0] as () => Promise<Set<string>>;
+    expect(await getReferenced()).toEqual(new Set(['kept']));
+    expect(referenced).toHaveBeenCalled();
+    sweep.mockRestore();
+  });
+});
+
+describe('chatSessionStore document index cache', () => {
+  const retrieveModule = jest.requireActual(
+    '../../services/documents/retrieve',
+  );
+
+  it('switching session clears the document index cache', async () => {
+    const clear = jest.spyOn(retrieveModule, 'clearDocumentIndexCache');
+
+    await chatSessionStore.setActiveSession('any-session');
+    chatSessionStore.resetActiveSession();
+
+    expect(clear).toHaveBeenCalledTimes(2);
+    clear.mockRestore();
   });
 });

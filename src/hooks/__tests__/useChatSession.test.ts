@@ -962,6 +962,52 @@ describe('useChatSession', () => {
       expect(isReadUrlAllowed('https://user.example.com/doc')).toBe(true);
       expect(isReadUrlAllowed('https://other.example.com/x')).toBe(false);
     });
+
+    it('never seeds the read_url allowlist from assistant or system text', async () => {
+      useSessionWithPal('');
+      await activateSearchTools();
+      captureMessages();
+      const history = [
+        {
+          ...textMessage,
+          id: 'assistant-row',
+          author: mockAssistant,
+          text: 'see https://laundered.example.com/x',
+        },
+        {
+          ...textMessage,
+          id: 'system-row',
+          author: mockAssistant,
+          text: 'notice https://sys.example.com/z',
+          metadata: {system: true},
+        },
+      ];
+      Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+        get: jest.fn(() => history),
+        configurable: true,
+      });
+
+      try {
+        const {result} = renderHook(() =>
+          useChatSession({current: null}, textMessage.author, mockAssistant),
+        );
+        await act(async () => {
+          await result.current.handleSendPress({
+            ...textMessage,
+            text: 'read https://user.example.com/doc',
+          });
+        });
+      } finally {
+        Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+          get: jest.fn(() => []),
+          configurable: true,
+        });
+      }
+
+      expect(isReadUrlAllowed('https://user.example.com/doc')).toBe(true);
+      expect(isReadUrlAllowed('https://laundered.example.com/x')).toBe(false);
+      expect(isReadUrlAllowed('https://sys.example.com/z')).toBe(false);
+    });
   });
 
   it('omits the search grounding line when no search tools are active', async () => {

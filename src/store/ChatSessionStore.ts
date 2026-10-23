@@ -19,6 +19,8 @@ import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
+import {sweepOrphanDocuments} from '../services/documents/store';
+import {clearDocumentIndexCache} from '../services/documents/retrieve';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -159,6 +161,11 @@ class ChatSessionStore {
       // Load data from database (whether migration happened or not)
       await this.loadSessionList();
       await this.loadGlobalSettings();
+      sweepOrphanDocuments(() =>
+        chatSessionRepository.getReferencedDocumentIds(),
+      ).catch(error =>
+        console.warn('Failed to sweep orphan documents:', error),
+      );
     } catch (error) {
       console.error('Failed to initialize ChatSessionStore:', error);
       runInAction(() => {
@@ -352,6 +359,7 @@ class ChatSessionStore {
   }
 
   resetActiveSession() {
+    clearDocumentIndexCache();
     runInAction(() => {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
@@ -394,6 +402,7 @@ class ChatSessionStore {
   }
 
   async setActiveSession(sessionId: string): Promise<void> {
+    clearDocumentIndexCache();
     const session = this.sessions.find(s => s.id === sessionId);
 
     // Lazy-load messages if not already loaded
@@ -1272,20 +1281,6 @@ class ChatSessionStore {
   }
 
   /**
-   * Commits the edit by actually removing messages after the edited message
-   */
-  async commitEdit(): Promise<void> {
-    if (this.editingMessageId) {
-      // Remove messages after the edited message including the edited message as well.
-      await this.removeMessagesFromId(this.editingMessageId, true);
-      runInAction(() => {
-        this.isEditMode = false;
-        this.editingMessageId = null;
-      });
-    }
-  }
-
-  /**
    * Removes messages from the current active session starting from a specific message ID.
    * If includeMessage is true, the message with the given ID is also removed.
    *
@@ -1295,9 +1290,10 @@ class ChatSessionStore {
   async removeMessagesFromId(
     messageId: string,
     includeMessage: boolean = true,
+    sessionId: string | null = this.activeSessionId,
   ): Promise<void> {
-    if (this.activeSessionId) {
-      const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (sessionId) {
+      const session = this.sessions.find(s => s.id === sessionId);
       if (session) {
         const messageIndex = session.messages.findIndex(
           msg => msg.id === messageId,
@@ -1313,9 +1309,8 @@ class ChatSessionStore {
             await chatSessionRepository.deleteMessage(msg.id);
           }
 
-          const updatedSession = await chatSessionRepository.getSessionById(
-            this.activeSessionId,
-          );
+          const updatedSession =
+            await chatSessionRepository.getSessionById(sessionId);
 
           // Update local state
           runInAction(() => {

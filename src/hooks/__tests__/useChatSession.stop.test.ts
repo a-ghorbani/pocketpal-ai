@@ -364,6 +364,57 @@ describe('useChatSession Stop and the generation lease', () => {
   });
 });
 
+describe('useChatSession: a resend', () => {
+  it('removes the replaced rows once it holds the lease, before the new row', async () => {
+    [
+      chatSessionStore.removeMessagesFromId,
+      chatSessionStore.restoreUnsentText,
+      chatSessionStore.addMessageToCurrentSession,
+    ].forEach(fn => (fn as jest.Mock).mockClear());
+    Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+      get: jest.fn(() => [{...textMessage, id: 'row-1', text: 'again'}]),
+      configurable: true,
+    });
+    const {engine, completions} = installEngine();
+    const session = renderSession();
+    const held = (await modelStore.acquireGeneration())!;
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress(
+        {...textMessage, text: 'again'},
+        {replaceFromId: 'row-1', resend: true},
+      );
+    });
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+
+    await act(async () => {
+      held.end();
+    });
+    await waitFor(() => expect(engine.completion).toHaveBeenCalledTimes(1));
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      'row-1',
+      true,
+      'session-1',
+    );
+    expect(
+      (chatSessionStore.removeMessagesFromId as jest.Mock).mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock
+        .invocationCallOrder[0],
+    );
+    await act(async () => {
+      completions[0].finish({text: 'a', content: 'a'});
+      await sending;
+    });
+    Object.defineProperty(chatSessionStore, 'currentSessionMessages', {
+      get: jest.fn(() => []),
+      configurable: true,
+    });
+  });
+});
+
 describe('useChatSession: a send whose chat changed while it waited', () => {
   async function sendWhileHeld(changeChat: () => void, text = 'hi') {
     const installed = installEngine();
@@ -407,6 +458,79 @@ describe('useChatSession: a send whose chat changed while it waited', () => {
       'session-1',
       'hi',
     );
+  });
+
+  it('hands its attachments back to the open composer', async () => {
+    const installed = installEngine();
+    const session = renderSession();
+    const held = (await modelStore.acquireGeneration())!;
+    const documents = [{id: 'doc', name: 'a.pdf'} as any];
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress({
+        ...textMessage,
+        text: 'hi',
+        imageUris: ['file://a.jpg'],
+        documents,
+      });
+    });
+    chatSessionStore.activeSessionId = 'session-2';
+    await act(async () => {
+      held.end();
+    });
+
+    await expectNoRun({...installed, sending});
+    expect(chatSessionStore.restoreUnsentText).toHaveBeenCalledWith(
+      'session-1',
+      'hi',
+    );
+    await expect(sending).resolves.toEqual({
+      message: {
+        ...textMessage,
+        text: '',
+        imageUris: ['file://a.jpg'],
+        documents,
+      },
+      sessionId: 'session-2',
+    });
+  });
+
+  it('hands nothing back when it carried only text', async () => {
+    const sent = await sendWhileHeld(() => {
+      chatSessionStore.activeSessionId = 'session-2';
+    });
+    await expectNoRun(sent);
+    await expect(sent.sending).resolves.toBeUndefined();
+  });
+
+  it('leaves a resent row and its attachments in place', async () => {
+    [
+      chatSessionStore.removeMessagesFromId,
+      chatSessionStore.restoreUnsentText,
+      chatSessionStore.addMessageToCurrentSession,
+    ].forEach(fn => (fn as jest.Mock).mockClear());
+    const installed = installEngine();
+    const session = renderSession();
+    const held = (await modelStore.acquireGeneration())!;
+    const documents = [{id: 'doc', name: 'a.pdf'} as any];
+
+    let sending!: Promise<unknown>;
+    await act(async () => {
+      sending = session.current.handleSendPress(
+        {...textMessage, text: 'again', documents},
+        {replaceFromId: 'row-1', resend: true},
+      );
+    });
+    chatSessionStore.activeSessionId = 'session-2';
+    await act(async () => {
+      held.end();
+    });
+
+    await expectNoRun({...installed, sending});
+    await expect(sending).resolves.toBeUndefined();
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(chatSessionStore.restoreUnsentText).not.toHaveBeenCalled();
   });
 
   it('is cancelled when a new chat is started', async () => {

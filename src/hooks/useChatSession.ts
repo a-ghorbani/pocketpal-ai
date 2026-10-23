@@ -28,6 +28,7 @@ import {
 import {
   RemoteModelNotReadyError,
   RemoteModelRequestWithdrawnError,
+  createChatWarning,
   createMultimodalWarning,
 } from '../utils/errors';
 import {routerFailureMessage} from '../utils/routerCopy';
@@ -55,6 +56,30 @@ import {
 } from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
+  DOCUMENT_GROUNDING,
+  documentContentFor,
+  documentKey,
+  modeOf,
+  renderExcerptBlock,
+  withDocumentContent,
+} from '../services/documents/render';
+import {retrieveExcerpts} from '../services/documents/retrieve';
+import {documentCountingOptions} from '../utils/documentCounting';
+import {
+  findMissingDocuments,
+  loadDocumentTexts,
+  releaseSendHold,
+} from '../services/documents/store';
+import {hasDocuments} from '../services/documents/budget';
+import {
+  documentPlan,
+  rowsBefore,
+  type BudgetVerdict,
+  type Plan,
+  type PlanInput,
+} from '../services/documents/plan';
+import type {DocumentRef} from '../services/documents/types';
+import {
   agentStateReducer,
   createTriggerMarkerCache,
   DEFAULT_MAX_TURNS,
@@ -64,6 +89,97 @@ import {
   type AgentUiState,
   type TokenDelta,
 } from '../services/agent';
+const documentGroundingFragment = (refs: DocumentRef[]): string[] =>
+  refs.length > 0 ? [DOCUMENT_GROUNDING] : [];
+
+/**
+ * The system message (prompt, talent fragments, document grounding) and the
+ * converted history: one builder for the send and for the budget plan.
+ */
+const buildPromptMessages = ({
+  rows,
+  systemMessages,
+  settings,
+  isMultimodalEnabled,
+  refs,
+  documentContent,
+  tail,
+}: {
+  rows: MessageType.Any[];
+  systemMessages: Array<{role: 'system'; content: string}>;
+  settings: CompletionParams | undefined;
+  isMultimodalEnabled: boolean;
+  refs: DocumentRef[];
+  documentContent?: (row: MessageType.Text) => string | undefined;
+  tail: Parameters<typeof assembleMessages>[2][number];
+}) => {
+  const history = convertToChatMessages(
+    rows.filter(msg => msg.type !== 'image'),
+    isMultimodalEnabled,
+    documentContent,
+  );
+  const chatMessages =
+    settings?.include_thinking_in_context === false
+      ? history.map(msg =>
+          msg.role === 'assistant' && typeof msg.content === 'string'
+            ? {...msg, content: removeThinkingParts(msg.content)}
+            : msg,
+        )
+      : history;
+  const toolNames = (
+    (settings?.tools as ToolDefinition[] | undefined) ?? []
+  ).map(tool => tool.function?.name ?? '');
+  const fragments = [
+    ...collectSystemPromptFragments(toolNames, {
+      now: new Date(),
+      maxToolTurns: DEFAULT_MAX_TURNS,
+    }),
+    ...documentGroundingFragment(refs),
+  ];
+  return assembleMessages(systemMessages, fragments, [...chatMessages, tail]);
+};
+
+const excerptBlockFor = async (
+  textRows: MessageType.Text[],
+  message: MessageType.PartialText,
+  fullTexts: Map<string, string[] | 'missing'>,
+  plan: Plan,
+  assistantId: string,
+): Promise<string> => {
+  const searched = (refs: DocumentRef[] = []) =>
+    refs.filter(ref => modeOf(ref) === 'searched');
+  const counting = documentCountingOptions();
+  const result = await retrieveExcerpts({
+    query: message.text,
+    previousQuery: textRows.find(row => row.author.id !== assistantId)?.text,
+    searchedRefs: [
+      ...[...textRows].reverse().flatMap(row => searched(row.documents)),
+      ...searched(message.documents),
+    ],
+    load: async ref => {
+      const key = documentKey(ref);
+      const read = fullTexts.get(key);
+      if (read !== undefined) {
+        return read;
+      }
+      return (await loadDocumentTexts([ref])).get(key) ?? 'missing';
+    },
+    excerptBudget: plan.excerptBudget,
+    measure: counting
+      ? async excerpts => {
+          try {
+            return await counting.tokenize(
+              renderExcerptBlock({kind: 'excerpts', excerpts}),
+            );
+          } catch {
+            return undefined;
+          }
+        }
+      : undefined,
+  });
+  return renderExcerptBlock(result);
+};
+
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -78,7 +194,11 @@ const prepareCompletion = async ({
   isMultimodalEnabled,
   l10n,
   currentMessages,
+  plan,
+  sessionId,
 }: {
+  /** The chat the user row was written to; the reply goes there too. */
+  sessionId: string;
   imageUris: string[];
   message: MessageType.PartialText;
   systemMessages: Array<{role: 'system'; content: string}>;
@@ -88,6 +208,7 @@ const prepareCompletion = async ({
   isMultimodalEnabled: boolean;
   l10n: any;
   currentMessages: MessageType.Any[];
+  plan?: Plan;
 }) => {
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
@@ -95,6 +216,38 @@ const prepareCompletion = async ({
 
   // Check if we have images and if multimodal is enabled
   const hasImages = imageUris && imageUris.length > 0;
+
+  const textRows = currentMessages.filter(
+    (msg): msg is MessageType.Text => msg.type === 'text',
+  );
+  const documentRefs = [
+    ...textRows.flatMap(row => row.documents ?? []),
+    ...(message.documents ?? []),
+  ];
+  const fullTexts = await loadDocumentTexts(
+    documentRefs.filter(ref => modeOf(ref) === 'full'),
+  );
+  const searchedOnly = documentRefs.filter(
+    ref => modeOf(ref) === 'searched' && !fullTexts.has(documentKey(ref)),
+  );
+  const missingSearched = await findMissingDocuments(searchedOnly);
+  const documentTexts = new Map(fullTexts);
+  for (const ref of searchedOnly) {
+    const key = documentKey(ref);
+    documentTexts.set(key, missingSearched.has(key) ? 'missing' : []);
+  }
+  const excerptBlock =
+    plan && plan.excerptBudget > 0
+      ? await excerptBlockFor(textRows, message, fullTexts, plan, assistant.id)
+      : undefined;
+  const newDocumentContent = documentContentFor(
+    message.documents,
+    documentTexts,
+    excerptBlock,
+  );
+  const userText = newDocumentContent
+    ? withDocumentContent(newDocumentContent, message.text)
+    : message.text;
 
   // Create user message content - use array format only for multimodal,
   // string for text-only.
@@ -104,7 +257,7 @@ const prepareCompletion = async ({
     userMessageContent = [
       {
         type: 'text',
-        text: message.text,
+        text: userText,
       },
       ...imageUris.map(path => ({
         type: 'image_url',
@@ -112,7 +265,7 @@ const prepareCompletion = async ({
       })),
     ];
   } else {
-    userMessageContent = message.text;
+    userMessageContent = userText;
 
     if (hasImages && !isMultimodalEnabled) {
       uiStore.setChatWarning(
@@ -121,50 +274,29 @@ const prepareCompletion = async ({
     }
   }
 
-  // Convert chat session messages to llama.rn format. Filtering
-  // image-typed messages happens here (multimodal user messages carry
-  // their images via imageUris on the Text row, not a separate Image
-  // message). AssistantTurn rows pass through to convertToChatMessages,
-  // which expands each step into assistant + tool API messages.
-  let chatMessages = convertToChatMessages(
-    currentMessages.filter(msg => msg.type !== 'image'),
+  const messages = buildPromptMessages({
+    rows: currentMessages,
+    systemMessages,
+    settings: sessionCompletionSettings as CompletionParams,
     isMultimodalEnabled,
-  );
-
-  // Strip thinking parts from assistant context if the user opted out.
-  const includeThinkingInContext =
-    (sessionCompletionSettings as CompletionParams)
-      ?.include_thinking_in_context !== false;
-  if (!includeThinkingInContext) {
-    chatMessages = chatMessages.map(msg => {
-      if (msg.role === 'assistant' && typeof msg.content === 'string') {
-        return {
-          ...msg,
-          content: removeThinkingParts(msg.content),
-        };
-      }
-      return msg;
-    });
-  }
-
-  // Talent-contributed system-prompt fragments (e.g. search grounding). Kept on
-  // the initial messages array so they persist across every follow-up tool turn.
-  const sessionToolNames = (
-    (sessionCompletionSettings?.tools as ToolDefinition[] | undefined) ?? []
-  ).map(tool => tool.function?.name ?? '');
-  const systemPromptFragments = collectSystemPromptFragments(sessionToolNames, {
-    now: new Date(),
-    maxToolTurns: DEFAULT_MAX_TURNS,
+    refs: documentRefs.filter(ref =>
+      Array.isArray(documentTexts.get(documentKey(ref))),
+    ),
+    documentContent: row => documentContentFor(row.documents, documentTexts),
+    tail: {role: 'user', content: userMessageContent},
   });
-
-  const messages = assembleMessages(systemMessages, systemPromptFragments, [
-    ...chatMessages,
-    {role: 'user', content: userMessageContent},
-  ]);
 
   // Reseed the read_url exfiltration allowlist for this run; the trust policy
   // (which sources count) lives in the talents module.
-  seedReadUrlAllowlist(messages, currentMessages);
+  seedReadUrlAllowlist(
+    [
+      ...textRows
+        .filter(row => row.author.id !== assistant.id)
+        .map(row => row.text),
+      message.text,
+    ],
+    currentMessages,
+  );
 
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
@@ -230,12 +362,16 @@ const prepareCompletion = async ({
     },
   };
 
-  await chatSessionStore.addMessageToCurrentSession(emptyTurn);
+  if (chatSessionStore.activeSessionId === sessionId) {
+    await chatSessionStore.addMessageToCurrentSession(emptyTurn);
+  } else {
+    await chatSessionStore.addMessageToSession(sessionId, emptyTurn);
+  }
 
   const messageInfo = {
     createdAt,
-    id: emptyTurn.id, // set by addMessageToCurrentSession
-    sessionId: chatSessionStore.activeSessionId!,
+    id: emptyTurn.id, // set when the row is added
+    sessionId,
   };
 
   return {cleanCompletionParams, messageInfo};
@@ -592,6 +728,86 @@ function yieldToTouches(signal: AbortSignal): Promise<void> {
 export type UndoneSend = {
   message: MessageType.PartialText;
   sessionId: string;
+  /** Set when the documents no longer fit at send time; nothing was written. */
+  verdict?: Extract<BudgetVerdict, {kind: 'over'}>;
+};
+
+export type SendOptions = {
+  /** The row this send replaces, removed with every later row once the send holds the lease and fits. */
+  replaceFromId?: string;
+  /** Sends an existing row again; a bail touches neither the row nor the composer. */
+  resend?: boolean;
+};
+
+/** What a send knew when it was pressed. */
+type SendOrigin = {
+  sentFrom: string | null;
+  editingAtEntry: string | null;
+  options: SendOptions;
+};
+
+export type EvaluateSendBudget = (
+  message: MessageType.PartialText,
+  options?: {excludeFromId?: string},
+) => Promise<Plan>;
+
+const NO_DOCUMENTS_PLAN: Plan = {
+  newModes: [],
+  fullLoad: 0,
+  room: undefined,
+  excerptBudget: 0,
+  verdict: {kind: 'fits'},
+};
+
+const plainText = (message: {content?: unknown; tool_calls?: unknown}) => {
+  const {content} = message;
+  const text =
+    typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+        ? content
+            .filter(part => part?.type === 'text' && part.text)
+            .map(part => part.text)
+            .join('\n')
+        : '';
+  return message.tool_calls
+    ? `${text}${JSON.stringify(message.tool_calls)}`
+    : text;
+};
+
+/** Everything `documentPlan` needs besides the rows, resolved the way a send resolves it. */
+const planInputs = async (
+  rows: MessageType.Any[],
+  message: MessageType.PartialText,
+): Promise<PlanInput> => {
+  const palId = chatSessionStore.activePalId;
+  const pal = palId ? palStore.pals.find(p => p.id === palId) : null;
+  const settings = await chatSessionStore.getCurrentCompletionSettings();
+  const tools = (settings?.tools as ToolDefinition[] | undefined) ?? [];
+  const refs = [
+    ...rows.flatMap(row => (row.type === 'text' ? (row.documents ?? []) : [])),
+    ...(message.documents ?? []),
+  ];
+  const missingKeys = await findMissingDocuments(refs);
+  const promptMessages = buildPromptMessages({
+    rows,
+    systemMessages: resolveSystemMessages({pal, model: modelStore.activeModel}),
+    settings: settings as CompletionParams,
+    isMultimodalEnabled: modelStore.activeModelCaps.visionActive,
+    refs: refs.filter(ref => !missingKeys.has(documentKey(ref))),
+    tail: {role: 'user', content: message.text},
+  });
+  return {
+    rows,
+    message,
+    windowTokens: modelStore.activeModelCaps.effectiveContextLength,
+    activeModelId: modelStore.activeModelId,
+    nonDocText: [
+      ...promptMessages.map(plainText),
+      tools.length > 0 ? JSON.stringify(tools) : '',
+    ].join('\n'),
+    missingKeys,
+  };
 };
 
 export const useChatSession = (
@@ -630,23 +846,73 @@ export const useChatSession = (
     await addMessage(systemRow(text, metadata));
   };
 
+  /**
+   * Reports a send that found no model and hands it back. In edit mode a row
+   * after the edited one would go unseen, so it warns instead. The report's
+   * row can create the chat a new-chat send was typed in, so that chat counts
+   * as the one it came from.
+   */
+  const failWithoutModel = async (
+    message: MessageType.PartialText,
+    origin: SendOrigin,
+  ): Promise<UndoneSend | undefined> => {
+    if (chatSessionStore.isEditMode) {
+      uiStore.setChatWarning(createChatWarning(l10n.chat.modelNotLoaded));
+    } else {
+      await addSystemMessage(l10n.chat.modelNotLoaded);
+    }
+    return unsent(message, {
+      ...origin,
+      sentFrom: chatSessionStore.activeSessionId,
+    });
+  };
+
+  /**
+   * A send that does not go out. A resend touched nothing, so only an over
+   * verdict comes back. A composer send returns its content: after a chat
+   * switch the text goes to the chat it was typed in and the attachments to
+   * the composer, which stays with the user; otherwise all of it goes back
+   * to the open composer.
+   */
+  const unsent = (
+    message: MessageType.PartialText,
+    {sentFrom, options}: SendOrigin,
+    verdict?: UndoneSend['verdict'],
+  ): UndoneSend | undefined => {
+    const sessionId = chatSessionStore.activeSessionId ?? '';
+    if (options.resend) {
+      return verdict ? {message, sessionId, verdict} : undefined;
+    }
+    if (chatSessionStore.activeSessionId === sentFrom) {
+      return verdict ? {message, sessionId, verdict} : {message, sessionId};
+    }
+    chatSessionStore.restoreUnsentText(sentFrom, message.text);
+    if (!message.imageUris?.length && !message.documents?.length) {
+      return undefined;
+    }
+    return {message: {...message, text: ''}, sessionId};
+  };
+
   const handleSendPress = async (
     message: MessageType.PartialText,
+    options: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
-    const sentFrom = chatSessionStore.activeSessionId;
+    const origin: SendOrigin = {
+      sentFrom: chatSessionStore.activeSessionId,
+      editingAtEntry: chatSessionStore.editingMessageId,
+      options,
+    };
     if (modelStore.isGenerationBusy) {
       chatSessionStore.setIsStopping(true);
     }
     const lease = await modelStore.acquireGeneration();
     chatSessionStore.setIsStopping(false);
-    if (chatSessionStore.activeSessionId !== sentFrom) {
+    if (chatSessionStore.activeSessionId !== origin.sentFrom) {
       lease?.end();
-      chatSessionStore.restoreUnsentText(sentFrom, message.text);
-      return;
+      return unsent(message, origin);
     }
     if (!lease) {
-      await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return failWithoutModel(message, origin);
     }
     leaseRef.current = lease;
 
@@ -675,7 +941,7 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, lease, {
+      return await sendUnderLease(message, origin, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
       });
@@ -691,22 +957,61 @@ export const useChatSession = (
 
   const sendUnderLease = async (
     message: MessageType.PartialText,
+    origin: SendOrigin,
     lease: GenerationLease,
     runUi: {stop: () => void; isStopped: () => boolean},
   ): Promise<UndoneSend | undefined> => {
     const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
-      await addSystemMessage(l10n.chat.modelNotLoaded);
-      return;
+      return failWithoutModel(message, origin);
     }
+    const {replaceFromId, resend} = origin.options;
 
     const imageUris = message.imageUris;
     const hasImages = !!(imageUris && imageUris.length > 0);
 
     const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
-    const currentMessages = toJS(chatSessionStore.currentSessionMessages);
+    const sessionRows = toJS(chatSessionStore.currentSessionMessages);
+    if (resend && !sessionRows.some(row => row.id === replaceFromId)) {
+      return undefined;
+    }
+    const currentMessages = rowsBefore(sessionRows, replaceFromId);
+
+    const plan = hasDocuments(currentMessages, message)
+      ? documentPlan(await planInputs(currentMessages, message))
+      : undefined;
+    if (chatSessionStore.activeSessionId !== origin.sentFrom) {
+      return unsent(message, origin);
+    }
+    if (
+      !resend &&
+      replaceFromId !== undefined &&
+      chatSessionStore.editingMessageId !== replaceFromId
+    ) {
+      return unsent(message, origin);
+    }
+    if (plan?.verdict.kind === 'over') {
+      return unsent(message, origin, plan.verdict);
+    }
+    const endsEdit =
+      !!origin.editingAtEntry &&
+      chatSessionStore.editingMessageId === origin.editingAtEntry;
+    if (replaceFromId !== undefined) {
+      await chatSessionStore.removeMessagesFromId(
+        replaceFromId,
+        true,
+        origin.sentFrom,
+      );
+    }
+    if (endsEdit) {
+      chatSessionStore.exitEditMode();
+    }
+    const documents = message.documents?.map((ref, i) => ({
+      ...ref,
+      mode: plan?.newModes[i],
+    }));
 
     const textMessage: MessageType.Text = {
       author: user,
@@ -715,6 +1020,7 @@ export const useChatSession = (
       text: message.text,
       type: 'text',
       imageUris: hasImages ? imageUris : undefined,
+      documents: documents?.length ? documents : undefined,
       metadata: {
         contextId,
         conversationId: conversationIdRef.current,
@@ -726,7 +1032,16 @@ export const useChatSession = (
       (chatSessionStore.sessions.find(
         s => s.id === chatSessionStore.activeSessionId,
       )?.title ?? NEW_SESSION_TITLE) === NEW_SESSION_TITLE;
-    await addMessage(textMessage);
+    if (
+      origin.sentFrom !== null &&
+      chatSessionStore.activeSessionId !== origin.sentFrom
+    ) {
+      await chatSessionStore.addMessageToSession(origin.sentFrom, textMessage);
+    } else {
+      await addMessage(textMessage);
+    }
+    const rowSessionId = origin.sentFrom ?? chatSessionStore.activeSessionId!;
+    releaseSendHold((message.documents ?? []).map(ref => ref.id));
     if (!lease.signal.aborted) {
       modelStore.setInferencing(true);
       modelStore.setIsStreaming(false);
@@ -739,7 +1054,7 @@ export const useChatSession = (
     }
 
     const activeSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
+      s => s.id === rowSessionId,
     );
     const pal = activeSession?.activePalId
       ? palStore.pals.find(p => p.id === activeSession.activePalId)
@@ -752,7 +1067,7 @@ export const useChatSession = (
 
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
       imageUris: imageUris || [],
-      message,
+      message: {...message, documents},
       systemMessages,
       contextId,
       assistant,
@@ -760,6 +1075,8 @@ export const useChatSession = (
       isMultimodalEnabled,
       l10n,
       currentMessages,
+      plan,
+      sessionId: rowSessionId,
     });
 
     currentMessageInfo.current = messageInfo;
@@ -1078,6 +1395,20 @@ export const useChatSession = (
     return undone;
   };
 
+  const evaluateSendBudget: EvaluateSendBudget = async (
+    message,
+    {excludeFromId} = {},
+  ) => {
+    const rows = rowsBefore(
+      toJS(chatSessionStore.currentSessionMessages),
+      excludeFromId,
+    );
+    if (!hasDocuments(rows, message)) {
+      return NO_DOCUMENTS_PLAN;
+    }
+    return documentPlan(await planInputs(rows, message));
+  };
+
   const handleResetConversation = async () => {
     conversationIdRef.current = randId();
     await addSystemMessage(l10n.chat.conversationReset);
@@ -1094,6 +1425,7 @@ export const useChatSession = (
 
   return {
     handleSendPress,
+    evaluateSendBudget,
     handleResetConversation,
     handleStopPress,
   };

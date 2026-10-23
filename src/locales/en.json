@@ -665,7 +665,8 @@
         "thinkingDisabled": "Thinking mode disabled",
         "thinkText": "Think",
         "cycleEffort": "Reasoning effort: {{level}}. Double tap to cycle effort level"
-      }
+      },
+      "addAttachment": "Add attachment"
     },
     "contentReportSheet": {
       "title": "Report Content",
@@ -1327,7 +1328,56 @@
       "openLinkError": "Couldn't open this link."
     },
     "routerLoading": "Loading model…",
-    "routerLoadingPercent": "Loading model · {{percent}}%"
+    "routerLoadingPercent": "Loading model · {{percent}}%",
+    "documents": {
+      "attach": "Document",
+      "pages": "{{count}} pages",
+      "pageRange": "p. {{from}}–{{to}} of {{total}}",
+      "tokens": "~{{tokens}} tokens",
+      "choosePages": "choose pages",
+      "inFull": "in full",
+      "searched": "searched",
+      "searchInstead": "Search instead",
+      "remove": "Remove {{name}}",
+      "refusal": "Couldn't attach {{name}}: {{reason}}",
+      "refusals": {
+        "unsupported_type": "this file type is not supported",
+        "copy_failed": "the file could not be copied",
+        "too_large": "the file is larger than 25 MB",
+        "pdf_unreadable": "the PDF could not be read",
+        "pdf_encrypted": "the PDF is password protected",
+        "pdf_unavailable": "reading PDFs is not available in this build",
+        "no_text": "no extractable text (scanned PDFs are not supported)",
+        "binary": "the file is not plain text",
+        "text_too_long": "the text is longer than 1,000,000 characters",
+        "too_many_files": "a message can carry at most 5 documents"
+      },
+      "rangeSheet": {
+        "title": "Choose pages",
+        "body": "{{total}} pages. Pick up to {{maxPages}} pages with at most {{maxChars}} characters of text.",
+        "from": "From page",
+        "to": "To page",
+        "invalid": "Enter pages between 1 and {{total}}, first page before last.",
+        "tooManyPages": "Choose at most {{max}} pages.",
+        "tooManyChars": "These pages hold too much text. Choose fewer pages.",
+        "apply": "Apply",
+        "cancel": "Cancel"
+      },
+      "budgetSheet": {
+        "title": "Documents don't fit",
+        "historyTitle": "Earlier documents don't fit",
+        "historyBody": "The documents already in this chat no longer fit this model's context: about {{needed}} tokens needed, {{available}} available. Nothing was sent.",
+        "earlierDocuments": "Already in this chat: ~{{tokens}} tokens",
+        "choosePages": "Choose pages",
+        "remove": "Remove",
+        "increaseContext": "Increase context",
+        "newChat": "New chat",
+        "cancel": "Cancel",
+        "searchInstead": "Search instead",
+        "resendBody": "This chat's documents no longer fit in {{available}} tokens (about {{needed}} needed). Nothing was removed or sent. To send it, edit the message to remove documents, or start a new chat.",
+        "newBody": "Even a short excerpt of these documents needs about {{needed}} tokens with this chat, but the model has room for {{available}}. Nothing was sent."
+      }
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

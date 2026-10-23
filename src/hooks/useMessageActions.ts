@@ -6,6 +6,11 @@ import {chatSessionStore, modelStore} from '../store';
 
 import {derivedText} from '../utils/chat';
 import {MessageType, User} from '../utils/types';
+import {hasDocuments} from '../services/documents/budget';
+import type {BudgetVerdict} from '../services/documents/plan';
+import {holdForSend, releaseSendHold} from '../services/documents/store';
+import type {DocumentRef} from '../services/documents/types';
+import type {EvaluateSendBudget} from './useChatSession';
 
 /**
  * Either a legacy `Text` message or an `AssistantTurn` row. Used by
@@ -18,17 +23,28 @@ type CopyableMessage = MessageType.Text | MessageType.AssistantTurn;
 interface UseMessageActionsProps {
   user: User;
   messages: MessageType.Any[];
-  handleSendPress: (message: MessageType.PartialText) => Promise<void>;
+  /** Sends an existing row again in place of `replaceFromId` and the rows after it. */
+  resendPress: (
+    message: MessageType.PartialText,
+    replaceFromId: string,
+  ) => Promise<void>;
   setInputText?: (text: string) => void;
   setInputImages?: (images: string[]) => void;
+  setInputDocuments?: (documents: DocumentRef[]) => void;
+  evaluateSendBudget?: EvaluateSendBudget;
+  /** The resend no longer fits; nothing was removed or sent. */
+  onBudgetOver?: (verdict: Extract<BudgetVerdict, {kind: 'over'}>) => void;
 }
 
 export const useMessageActions = ({
   user,
   messages,
-  handleSendPress,
+  resendPress,
   setInputText,
   setInputImages,
+  setInputDocuments,
+  evaluateSendBudget,
+  onBudgetOver,
 }: UseMessageActionsProps) => {
   const handleCopy = useCallback((message: CopyableMessage) => {
     if (message.type !== 'text' && message.type !== 'assistant_turn') {
@@ -49,8 +65,49 @@ export const useMessageActions = ({
       chatSessionStore.enterEditMode(message.id);
       setInputText?.(message.text);
       setInputImages?.(message.imageUris || []);
+      setInputDocuments?.(message.documents ?? []);
     },
-    [setInputText, setInputImages, user.id],
+    [setInputText, setInputImages, setInputDocuments, user.id],
+  );
+
+  /** Resends a user row. A row that no longer fits is never removed; the verdict goes to `onBudgetOver`. */
+  const resend = useCallback(
+    async (row: MessageType.Text) => {
+      if (chatSessionStore.isStopping) {
+        return;
+      }
+      const message: MessageType.PartialText = {
+        text: row.text,
+        type: 'text',
+        imageUris: row.imageUris?.length ? row.imageUris : undefined,
+        documents: row.documents?.length ? row.documents : undefined,
+      };
+      const gated = !!evaluateSendBudget && hasDocuments(messages, message);
+      const documentIds = (row.documents ?? []).map(ref => ref.id);
+      const sessionId = chatSessionStore.activeSessionId;
+      holdForSend(documentIds);
+      try {
+        if (gated) {
+          const {verdict} = await evaluateSendBudget(message, {
+            excludeFromId: row.id,
+          });
+          if (sessionId !== chatSessionStore.activeSessionId) {
+            return;
+          }
+          if (verdict.kind === 'over') {
+            onBudgetOver?.(verdict);
+            return;
+          }
+        }
+        if (chatSessionStore.isStopping) {
+          return;
+        }
+        await resendPress(message, row.id);
+      } finally {
+        releaseSendHold(documentIds);
+      }
+    },
+    [messages, evaluateSendBudget, onBudgetOver, resendPress],
   );
 
   const handleTryAgain = useCallback(
@@ -62,18 +119,7 @@ export const useMessageActions = ({
       // If it's the user's message (only Text rows can be authored by
       // the user), resubmit it.
       if (message.type === 'text' && message.author.id === user.id) {
-        const messageText = message.text;
-        const relatedImages = message.imageUris;
-
-        await chatSessionStore.removeMessagesFromId(message.id, true);
-        await handleSendPress({
-          text: messageText,
-          type: 'text',
-          imageUris:
-            relatedImages && relatedImages.length > 0
-              ? relatedImages
-              : undefined,
-        });
+        await resend(message);
         return;
       }
 
@@ -89,20 +135,10 @@ export const useMessageActions = ({
         | undefined;
 
       if (previousMessage && previousMessage.text) {
-        const messageText = previousMessage.text;
-        const relatedImages = previousMessage.imageUris;
-        await chatSessionStore.removeMessagesFromId(previousMessage.id, true);
-        await handleSendPress({
-          text: messageText,
-          type: 'text',
-          imageUris:
-            relatedImages && relatedImages.length > 0
-              ? relatedImages
-              : undefined,
-        });
+        await resend(previousMessage);
       }
     },
-    [messages, handleSendPress, user.id],
+    [messages, resend, user.id],
   );
 
   const handleTryAgainWith = useCallback(

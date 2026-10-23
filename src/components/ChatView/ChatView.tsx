@@ -56,15 +56,37 @@ import {
   asrStore,
   chatSessionStore,
   modelStore,
+  uiStore,
 } from '../../store';
-import type {UndoneSend} from '../../hooks/useChatSession';
+import type {
+  EvaluateSendBudget,
+  SendOptions,
+  UndoneSend,
+} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
-import {MessageType, User} from '../../utils/types';
+import {MessageType, ModelOrigin, User} from '../../utils/types';
+import {
+  holdForSend,
+  releaseSendHold,
+  setComposerHeld,
+  setDocumentPageRange,
+} from '../../services/documents/store';
+import {hasDocuments} from '../../services/documents/budget';
+import type {BudgetVerdict} from '../../services/documents/plan';
+import {documentKey} from '../../services/documents/render';
+import {documentCountingOptions} from '../../utils/documentCounting';
+import {createDocumentWarning} from '../../utils/errors';
+import type {
+  ComposerDocument,
+  DocumentMode,
+  DocumentRef,
+} from '../../services/documents/types';
 import {Pal} from '../../types/pal';
 import {
   calculateChatMessages,
+  randId,
   unwrap,
   UserContext,
   L10nContext,
@@ -85,6 +107,8 @@ import {
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  DocumentBudgetSheet,
+  DocumentRangeSheet,
   GreetingBubble,
   SuggestedPromptsRow,
 } from '..';
@@ -114,6 +138,20 @@ type SubMenuItem = {
 const prependText = (first: string, rest: string) =>
   rest ? `${first}\n${rest}` : first;
 
+type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
+
+/**
+ * What the composer holds beyond a sent text that it still starts with,
+ * ignoring the whitespace the send trimmed.
+ */
+const unsentPart = (live: string, sent: string): string => {
+  const typed = live.trimStart();
+  return typed.startsWith(sent) ? typed.slice(sent.length).trimStart() : live;
+};
+
+const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
+  refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));
+
 dayjs.extend(calendar);
 
 export type ChatTopLevelProps = ChatInputTopLevelProps & MessageTopLevelProps;
@@ -121,7 +159,11 @@ export type ChatTopLevelProps = ChatInputTopLevelProps & MessageTopLevelProps;
 export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   onSendPress: (
     message: MessageType.PartialText,
+    options?: SendOptions,
   ) => Promise<UndoneSend | undefined> | void;
+  /** Checks attached documents against the context window before a send.
+   * Without it every send fits. */
+  evaluateSendBudget?: EvaluateSendBudget;
   /** If {@link ChatProps.dateFormat} and/or {@link ChatProps.timeFormat} is not enough to
    * customize date headers in your case, use this to return an arbitrary
    * string based on a `dateTime` of a particular message. Can be helpful to
@@ -251,6 +293,7 @@ export const ChatView = observer(
     onPalSettingsSelect,
     onPreviewDataFetched,
     onSendPress,
+    evaluateSendBudget,
     onStopPress,
     renderBubble,
     renderCustomMessage,
@@ -285,7 +328,160 @@ export const ChatView = observer(
     const [inputText, setInputText] = React.useState('');
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
+    const syncedDraftRef = React.useRef('');
+    const carriedTextRef = React.useRef<string | null>(null);
+    /** The draft key the composer was last loaded for. */
+    const loadedDraftKeyRef = React.useRef<string | null>(null);
     const [inputImages, setInputImages] = React.useState<string[]>([]);
+    /** Rows whose edit an in-flight composer send is committing. */
+    const editsInFlightRef = React.useRef<string[]>([]);
+    /** The edit open when Increase context was chosen from the budget sheet. */
+    const editForReloadRef = React.useRef<string | null>(null);
+    /** That edit while its reload runs: the reload ends it, the composer keeps it. */
+    const editAcrossReloadRef = React.useRef<string | null>(null);
+    const [inputDocuments, setInputDocuments] = React.useState<
+      ComposerDocument[]
+    >([]);
+    const inputDocumentsRef = React.useRef<ComposerDocument[]>([]);
+    /** Attachments of undone sends that belong to a chat not open yet. */
+    const pendingAttachmentsRef = React.useRef(
+      new Map<string, {images: string[]; documents: DocumentRef[]}>(),
+    );
+    const updateComposerDocuments = React.useCallback(
+      (update: (documents: ComposerDocument[]) => ComposerDocument[]) => {
+        const next = update(inputDocumentsRef.current);
+        inputDocumentsRef.current = next;
+        setComposerHeld([
+          ...next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])),
+          ...[...pendingAttachmentsRef.current.values()].flatMap(pending =>
+            pending.documents.map(ref => ref.id),
+          ),
+        ]);
+        setInputDocuments(next);
+      },
+      [],
+    );
+    React.useEffect(() => () => setComposerHeld([]), []);
+    const sessionIds = chatSessionStore.sessions.map(session => session.id);
+    const sessionIdsKey = sessionIds.join('|');
+    React.useEffect(() => {
+      const pending = pendingAttachmentsRef.current;
+      const gone = [...pending.keys()].filter(id => !sessionIds.includes(id));
+      if (gone.length > 0) {
+        gone.forEach(id => pending.delete(id));
+        updateComposerDocuments(documents => documents);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the chat ids
+    }, [sessionIdsKey]);
+    const setComposerRefs = React.useCallback(
+      (refs: DocumentRef[]) => updateComposerDocuments(() => readyChips(refs)),
+      [updateComposerDocuments],
+    );
+    const [rangeKey, setRangeKey] = React.useState<string | null>(null);
+    const [budgetSheet, setBudgetSheet] = React.useState<{
+      verdict: OverVerdict;
+      resend: boolean;
+    } | null>(null);
+    const budgetCheckRef = React.useRef(false);
+
+    const [documentModes, setDocumentModes] = React.useState<
+      Record<string, DocumentMode>
+    >({});
+    const predictionRef = React.useRef(0);
+    const readyDocuments = inputDocuments.filter(
+      doc => doc.status === 'ready' && doc.ref,
+    );
+    const readySignature = readyDocuments
+      .map(
+        doc =>
+          `${doc.key}:${documentKey(doc.ref!)}:${doc.ref!.searchPinned ? 1 : 0}`,
+      )
+      .join('|');
+    const windowTokens = modelStore.activeModelCaps.effectiveContextLength;
+    const editingMessageId = chatSessionStore.editingMessageId;
+    React.useEffect(() => {
+      const prediction = ++predictionRef.current;
+      if (!evaluateSendBudget || readyDocuments.length === 0) {
+        setDocumentModes({});
+        return;
+      }
+      evaluateSendBudget(
+        {
+          type: 'text',
+          text: inputTextRef.current,
+          documents: readyDocuments.map(doc => doc.ref!),
+        },
+        {excludeFromId: editingMessageId ?? undefined},
+      )
+        .then(plan => {
+          if (prediction === predictionRef.current) {
+            setDocumentModes(
+              Object.fromEntries(
+                readyDocuments.map((doc, i) => [doc.key, plan.newModes[i]]),
+              ),
+            );
+          }
+        })
+        .catch(error =>
+          console.warn('Failed to predict document modes:', error),
+        );
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- recomputed on the inputs a plan depends on, not per keystroke
+    }, [
+      readySignature,
+      messages.length,
+      modelStore.activeModelId,
+      windowTokens,
+      editingMessageId,
+      evaluateSendBudget,
+    ]);
+    const rangeDocument = inputDocuments.find(doc => doc.key === rangeKey);
+
+    const applyDocumentRange = React.useCallback(
+      async (from: number, to: number) => {
+        const target = inputDocumentsRef.current.find(
+          doc => doc.key === rangeKey,
+        );
+        if (!target?.ref) {
+          return;
+        }
+        const withTarget = (
+          change: (doc: ComposerDocument) => ComposerDocument,
+        ) =>
+          updateComposerDocuments(prev =>
+            prev.map(doc => (doc.key === target.key ? change(doc) : doc)),
+          );
+        withTarget(doc => ({...doc, status: 'importing'}));
+        const result = await setDocumentPageRange(
+          target.ref,
+          from,
+          to,
+          documentCountingOptions(),
+        );
+        if (result.status === 'refused') {
+          withTarget(() => target);
+          uiStore.setChatWarning(
+            createDocumentWarning(
+              t(l10n.chat.documents.refusal, {
+                name: target.name,
+                reason: l10n.chat.documents.refusals[result.reason],
+              }),
+            ),
+          );
+          return;
+        }
+        withTarget(doc => ({
+          ...doc,
+          status: result.status,
+          ref: result.ref,
+          rangeLimit:
+            result.status === 'needs_range' ? result.rangeLimit : undefined,
+        }));
+        if (result.status === 'ready') {
+          setRangeKey(open => (open === target.key ? null : open));
+        }
+      },
+      [rangeKey, updateComposerDocuments, l10n],
+    );
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
       null,
@@ -399,17 +595,56 @@ export const ChatView = observer(
       }
     }, [initialInputText, onInitialTextConsumed]);
 
+    // ============ EDIT EXIT ============
+    // Every end of edit mode clears the composer, except when New chat carries
+    // it along or the composer send committing that edit already cleared it.
+    // Declared before the draft effect, which reads what this one leaves in
+    // the refs.
+    const isEditMode = chatSessionStore.isEditMode;
+    const wasEditMode = usePrevious(isEditMode);
+    const endedEdit = usePrevious(chatSessionStore.editingMessageId);
+    React.useEffect(() => {
+      if (!wasEditMode || isEditMode) {
+        return;
+      }
+      if (
+        carriedTextRef.current !== null ||
+        (endedEdit != null &&
+          (editsInFlightRef.current.includes(endedEdit) ||
+            endedEdit === editAcrossReloadRef.current))
+      ) {
+        return;
+      }
+      // The edited text is not a draft: a chat being left keeps its own.
+      inputTextRef.current = syncedDraftRef.current;
+      setInputText('');
+      setInputImages([]);
+      updateComposerDocuments(() => []);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on the edit-mode transition only
+    }, [isEditMode]);
+
     // ============ DRAFT AUTOSAVE ============
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
-    const syncedDraftRef = React.useRef('');
     React.useEffect(() => {
       const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
       const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
 
       // This runs after the switch, so a cancelled send may already have put
       // its text into the draft being left: keep it rather than overwrite it.
-      const typed = inputTextRef.current;
+      if (prevKey !== newKey && editAcrossReloadRef.current !== null) {
+        // The kept edit belongs to the chat being left: end it as any edit
+        // ends on a chat switch.
+        editAcrossReloadRef.current = null;
+        editForReloadRef.current = null;
+        inputTextRef.current = syncedDraftRef.current;
+        setInputImages([]);
+        updateComposerDocuments(() => []);
+      }
+      const carried = carriedTextRef.current;
+      carriedTextRef.current = null;
+      const typed =
+        carried !== null ? syncedDraftRef.current : inputTextRef.current;
       if (prevKey !== newKey && typed !== syncedDraftRef.current) {
         const stored = chatSessionStore.getDraft(prevKey);
         chatSessionStore.saveDraft(
@@ -421,7 +656,13 @@ export const ChatView = observer(
       // Restore draft for the session we're entering
       const draft = chatSessionStore.getDraft(newKey);
       syncedDraftRef.current = draft;
-      setInputText(draft);
+      loadedDraftKeyRef.current = newKey;
+      const kept = pendingAttachmentsRef.current.get(newKey);
+      if (kept) {
+        pendingAttachmentsRef.current.delete(newKey);
+        addAttachments(kept.images, kept.documents);
+      }
+      setInputText(carried === null ? draft : prependText(carried, draft));
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
 
@@ -550,51 +791,206 @@ export const ChatView = observer(
     const previousChatMessages = usePrevious(chatMessages);
 
     // ============ MESSAGE INPUT HANDLERS ============
-    const restoreUndone = React.useCallback(
-      ({message, sessionId}: UndoneSend) => {
-        if (!chatSessionStore.sessions.some(s => s.id === sessionId)) {
-          return;
-        }
-        if (sessionId === chatSessionStore.activeSessionId) {
-          setInputText(prev => prependText(message.text, prev));
-          setInputImages(prev => [...(message.imageUris ?? []), ...prev]);
-        } else {
-          chatSessionStore.saveDraft(
-            sessionId,
-            prependText(message.text, chatSessionStore.getDraft(sessionId)),
-          );
-        }
+    /** Adds attachments ahead of the composer's; chips sharing a document id keep the first. */
+    const addAttachments = React.useCallback(
+      (images: string[] = [], documents: DocumentRef[] = []) => {
+        setInputImages(pending => [...images, ...pending]);
+        updateComposerDocuments(pending => {
+          const seen = new Set<string>();
+          return [...readyChips(documents), ...pending].filter(chip => {
+            if (!chip.ref) {
+              return true;
+            }
+            if (seen.has(chip.ref.id)) {
+              return false;
+            }
+            seen.add(chip.ref.id);
+            return true;
+          });
+        });
       },
-      [],
+      [updateComposerDocuments],
     );
 
-    const wrappedOnSendPress = React.useCallback(
-      async (message: MessageType.PartialText) => {
+    /**
+     * Puts an undone send back: in the open chat, ahead of what the composer
+     * gained meanwhile, chips sharing a document id keeping the first; in
+     * another chat, its text ahead of that chat's draft.
+     */
+    const restoreUndone = React.useCallback(
+      ({message, sessionId, verdict}: UndoneSend) => {
+        if (sessionId !== (chatSessionStore.activeSessionId ?? '')) {
+          if (chatSessionStore.sessions.some(s => s.id === sessionId)) {
+            chatSessionStore.saveDraft(
+              sessionId,
+              prependText(message.text, chatSessionStore.getDraft(sessionId)),
+            );
+            const kept = pendingAttachmentsRef.current.get(sessionId);
+            pendingAttachmentsRef.current.set(sessionId, {
+              images: [...(message.imageUris ?? []), ...(kept?.images ?? [])],
+              documents: [
+                ...(message.documents ?? []),
+                ...(kept?.documents ?? []),
+              ],
+            });
+            updateComposerDocuments(docs => docs);
+          }
+          return;
+        }
+        if (verdict) {
+          setBudgetSheet({verdict, resend: false});
+        }
+        const openKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+        if (message.text && loadedDraftKeyRef.current !== openKey) {
+          // The send created this chat; its draft is not loaded yet, and
+          // loading it would replace the composer, so the text rides along.
+          carriedTextRef.current = prependText(
+            message.text,
+            carriedTextRef.current ?? '',
+          );
+        } else if (message.text) {
+          setInputText(pending => prependText(message.text, pending));
+        }
+        addAttachments(message.imageUris, message.documents);
+      },
+      [addAttachments, updateComposerDocuments],
+    );
+
+    /** The send steps a composer send and a resend share. */
+    const dispatchSend = React.useCallback(
+      async (
+        message: MessageType.PartialText,
+        {
+          clear,
+          replaceFromId,
+          resend = false,
+        }: {
+          clear: 'all' | 'text' | 'none';
+          replaceFromId?: string;
+          resend?: boolean;
+        },
+      ) => {
+        const documentIds = (message.documents ?? []).map(ref => ref.id);
+        const committedEdit = resend ? undefined : replaceFromId;
+        holdForSend(documentIds);
+        try {
+          const draftKey =
+            chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+          let undone: UndoneSend | undefined | void;
+          if (committedEdit !== undefined) {
+            editsInFlightRef.current = [
+              ...editsInFlightRef.current,
+              committedEdit,
+            ];
+          }
+          try {
+            const sent =
+              replaceFromId === undefined
+                ? onSendPress(message)
+                : onSendPress(
+                    message,
+                    resend ? {replaceFromId, resend} : {replaceFromId},
+                  );
+            if (clear !== 'none') {
+              setInputText(live =>
+                clear === 'text' ? '' : unsentPart(live, message.text),
+              );
+              syncedDraftRef.current = '';
+              chatSessionStore.clearDraft(draftKey);
+              Keyboard.dismiss();
+            }
+            if (clear === 'all') {
+              const sentImages = new Set(message.imageUris ?? []);
+              const sentDocuments = new Set(documentIds);
+              setInputImages(live => live.filter(uri => !sentImages.has(uri)));
+              updateComposerDocuments(live =>
+                live.filter(
+                  chip => !chip.ref || !sentDocuments.has(chip.ref.id),
+                ),
+              );
+            }
+            undone = await sent;
+          } finally {
+            if (committedEdit !== undefined) {
+              const i = editsInFlightRef.current.indexOf(committedEdit);
+              editsInFlightRef.current = editsInFlightRef.current.filter(
+                (_, j) => j !== i,
+              );
+            }
+          }
+          if (resend && undone?.verdict) {
+            if (undone.sessionId === (chatSessionStore.activeSessionId ?? '')) {
+              setBudgetSheet({verdict: undone.verdict, resend: true});
+            }
+          } else if (undone) {
+            restoreUndone(undone);
+          }
+        } finally {
+          releaseSendHold(documentIds);
+        }
+      },
+      [onSendPress, restoreUndone, updateComposerDocuments],
+    );
+
+    const sendFromComposer = React.useCallback(
+      async (
+        message: MessageType.PartialText,
+        clear: 'all' | 'text' = 'all',
+      ) => {
         if (chatSessionStore.isStopping) {
           return;
         }
-        const draftKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
-        if (chatSessionStore.isEditMode) {
-          await chatSessionStore.commitEdit();
+        const editing = chatSessionStore.editingMessageId ?? undefined;
+        if (evaluateSendBudget && hasDocuments(messages, message)) {
+          if (budgetCheckRef.current) {
+            return;
+          }
+          budgetCheckRef.current = true;
+          const sessionId = chatSessionStore.activeSessionId;
+          let verdict: BudgetVerdict;
+          try {
+            ({verdict} = await evaluateSendBudget(message, {
+              excludeFromId: editing,
+            }));
+          } finally {
+            budgetCheckRef.current = false;
+          }
+          if (sessionId !== chatSessionStore.activeSessionId) {
+            return;
+          }
+          if (verdict.kind === 'over') {
+            setBudgetSheet({verdict, resend: false});
+            return;
+          }
         }
-        const sent = onSendPress(message);
-        setInputText('');
-        syncedDraftRef.current = '';
-        chatSessionStore.clearDraft(draftKey);
-        Keyboard.dismiss();
-        const undone = await sent;
-        if (undone) {
-          restoreUndone(undone);
-        }
+        await dispatchSend(message, {clear, replaceFromId: editing});
       },
-      [onSendPress, restoreUndone],
+      [dispatchSend, evaluateSendBudget, messages],
     );
 
-    const handleCancelEdit = React.useCallback(() => {
-      setInputText('');
-      setInputImages([]);
-      chatSessionStore.exitEditMode();
-    }, []);
+    /**
+     * Resends an existing row in place of `replaceFromId` and the rows after
+     * it; the resend gate has already checked the budget. It never clears the
+     * composer itself; ending an edit under the lease does.
+     */
+    const resend = React.useCallback(
+      async (message: MessageType.PartialText, replaceFromId: string) => {
+        if (chatSessionStore.isStopping) {
+          return;
+        }
+        await dispatchSend(message, {
+          clear: 'none',
+          replaceFromId,
+          resend: true,
+        });
+      },
+      [dispatchSend],
+    );
+
+    const requestEditExit = React.useCallback(
+      () => chatSessionStore.exitEditMode(),
+      [],
+    );
 
     // Voice-input seam: append a transcript to the current composer text.
     // Reuses the prop-driven external-write mechanism of `initialInputText`
@@ -612,9 +1008,12 @@ export const ChatView = observer(
       useMessageActions({
         user,
         messages,
-        handleSendPress: wrappedOnSendPress,
+        resendPress: resend,
         setInputText,
         setInputImages,
+        setInputDocuments: setComposerRefs,
+        evaluateSendBudget,
+        onBudgetOver: verdict => setBudgetSheet({verdict, resend: true}),
       });
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
@@ -1069,7 +1468,7 @@ export const ChatView = observer(
               // only outcome, so the user can never scroll the list to reveal
               // content the keyboard is hiding; "none" lets the drag scroll
               // while the input stays focused. Tap-to-dismiss on send is
-              // preserved via Keyboard.dismiss() in wrappedOnSendPress.
+              // preserved via Keyboard.dismiss() in the composer send.
               keyboardDismissMode={
                 Platform.OS === 'ios' ? 'interactive' : 'none'
               }
@@ -1211,11 +1610,11 @@ export const ChatView = observer(
                 {...{
                   ...unwrap(inputProps),
                   isStreaming,
-                  onSendPress: wrappedOnSendPress,
+                  onSendPress: sendFromComposer,
                   onStopPress,
                   chatInputHeight,
                   inputBackgroundColor,
-                  onCancelEdit: handleCancelEdit,
+                  onCancelEdit: requestEditExit,
                   onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
                   isStopVisible,
                   isPickerVisible,
@@ -1227,6 +1626,10 @@ export const ChatView = observer(
                   appendTranscript: composerShowsPromptText
                     ? undefined
                     : appendTranscript,
+                  documents: inputDocuments,
+                  onDocumentsChange: updateComposerDocuments,
+                  onOpenDocumentRange: setRangeKey,
+                  documentModes,
                   textInputProps: {
                     ...textInputProps,
                     ...(!composerShowsPromptText && {
@@ -1256,7 +1659,7 @@ export const ChatView = observer(
                 <SuggestedPromptsRow
                   prompts={activePal.greeting.suggestedPrompts}
                   onSelect={prompt =>
-                    wrappedOnSendPress({type: 'text', text: prompt})
+                    sendFromComposer({type: 'text', text: prompt}, 'text')
                   }
                 />
               </Reanimated.View>
@@ -1294,6 +1697,67 @@ export const ChatView = observer(
             {menuItems.map(renderMenuItem)}
           </Menu>
 
+          {rangeDocument?.ref ? (
+            <DocumentRangeSheet
+              isVisible
+              documentRef={rangeDocument.ref}
+              rangeLimit={rangeDocument.rangeLimit}
+              isApplying={rangeDocument.status === 'importing'}
+              onApply={applyDocumentRange}
+              onClose={() => setRangeKey(null)}
+            />
+          ) : null}
+
+          {budgetSheet ? (
+            <DocumentBudgetSheet
+              isVisible
+              verdict={budgetSheet.verdict}
+              resend={budgetSheet.resend}
+              onChoosePages={documentRef => {
+                setBudgetSheet(null);
+                setRangeKey(
+                  inputDocumentsRef.current.find(
+                    doc => doc.ref?.id === documentRef.id,
+                  )?.key ?? null,
+                );
+              }}
+              onSearchInstead={documentRef => {
+                setBudgetSheet(null);
+                updateComposerDocuments(prev =>
+                  prev.map(doc =>
+                    doc.ref?.id === documentRef.id
+                      ? {...doc, ref: {...doc.ref, searchPinned: true}}
+                      : doc,
+                  ),
+                );
+              }}
+              onRemove={documentRef => {
+                updateComposerDocuments(prev =>
+                  prev.filter(doc => doc.ref?.id !== documentRef.id),
+                );
+                setBudgetSheet(null);
+              }}
+              onIncreaseContext={
+                canIncreaseContext && activeModel?.origin !== ModelOrigin.REMOTE
+                  ? () => {
+                      setBudgetSheet(null);
+                      editForReloadRef.current =
+                        chatSessionStore.editingMessageId;
+                      setIncreaseSheetOpen(true);
+                    }
+                  : undefined
+              }
+              onNewChat={() => {
+                setBudgetSheet(null);
+                if (chatSessionStore.activeSessionId) {
+                  carriedTextRef.current = inputTextRef.current;
+                }
+                chatSessionStore.resetActiveSession();
+              }}
+              onClose={() => setBudgetSheet(null)}
+            />
+          ) : null}
+
           {/* Content report sheet */}
           <ContentReportSheet
             isVisible={isReportSheetVisible}
@@ -1306,12 +1770,16 @@ export const ChatView = observer(
               model={activeModel}
               projectionModel={projectionModel}
               currentNCtx={currentNCtx}
-              onClose={() => setIncreaseSheetOpen(false)}
+              onClose={() => {
+                editForReloadRef.current = null;
+                setIncreaseSheetOpen(false);
+              }}
               onNewChat={() => {
                 chatSessionStore.resetActiveSession();
                 setIncreaseSheetOpen(false);
               }}
               onReloadStart={() => {
+                editAcrossReloadRef.current = editForReloadRef.current;
                 // Single advisory surface: dismiss the pal-load hint in the
                 // same handler so no frame shows two snackbars at once.
                 palLoadHint.dismiss();
@@ -1320,14 +1788,19 @@ export const ChatView = observer(
                   indefinite: true,
                 });
               }}
-              onReloadResult={(success, target) =>
+              onReloadResult={(success, target) => {
+                const edit = editAcrossReloadRef.current;
+                editAcrossReloadRef.current = null;
+                if (edit && !chatSessionStore.isEditMode) {
+                  chatSessionStore.enterEditMode(edit);
+                }
                 setReloadSnackbar({
                   message: success
                     ? t(l10n.chat.increaseContextSuccess, {target})
                     : l10n.chat.increaseContextFailure,
                   indefinite: false,
-                })
-              }
+                });
+              }}
             />
           ) : null}
 

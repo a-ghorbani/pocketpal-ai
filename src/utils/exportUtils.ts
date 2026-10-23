@@ -320,6 +320,12 @@ export const exportChatSessionAsMarkdown = async (
       if (Array.isArray(imageUris)) {
         imageUris.forEach(() => lines.push('', '_[image]_'));
       }
+      const documents: unknown = exported.metadata?.documents;
+      if (Array.isArray(documents)) {
+        documents.forEach(({name}: {name: string}) =>
+          lines.push('', `_[document: ${name}]_`),
+        );
+      }
 
       lines.push('', '---', '');
     }

@@ -11,6 +11,7 @@ import 'react-native-get-random-values';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {MessageType} from './types';
+import {isDocumentId, isValidPageRange} from '../services/documents/paths';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
@@ -114,6 +115,34 @@ export const validateImportedData = (
   }
 };
 
+const MAX_DOCUMENT_NAME_LENGTH = 1024;
+
+const isCount = (value: unknown): boolean =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+/** A document ref as the app writes it; anything else in an import is dropped. */
+const isImportableDocument = (ref: any): boolean =>
+  !!ref &&
+  typeof ref === 'object' &&
+  isDocumentId(ref.id) &&
+  typeof ref.name === 'string' &&
+  ref.name.trim().length > 0 &&
+  ref.name.length <= MAX_DOCUMENT_NAME_LENGTH &&
+  (ref.kind === 'pdf' || ref.kind === 'text') &&
+  isCount(ref.byteSize) &&
+  isCount(ref.charCount) &&
+  isCount(ref.tokenEstimate) &&
+  (ref.pageCount === undefined || Number.isSafeInteger(ref.pageCount)) &&
+  (ref.pageCount === undefined || ref.pageCount >= 0) &&
+  (ref.pageRange === undefined || isValidPageRange(ref.pageRange)) &&
+  (ref.mode === undefined || ref.mode === 'full' || ref.mode === 'searched') &&
+  (ref.searchPinned === undefined || typeof ref.searchPinned === 'boolean') &&
+  (ref.tokenCount === undefined ||
+    (typeof ref.tokenCount === 'object' &&
+      ref.tokenCount !== null &&
+      typeof ref.tokenCount.modelId === 'string' &&
+      isCount(ref.tokenCount.n)));
+
 /**
  * Validate a single chat session
  */
@@ -148,6 +177,24 @@ const validateSingleSession = (session: any): ImportedChatSession => {
 
     if (!msg.createdAt) {
       msg.createdAt = Date.now();
+    }
+
+    if (
+      msg.metadata !== undefined &&
+      (typeof msg.metadata !== 'object' ||
+        msg.metadata === null ||
+        Array.isArray(msg.metadata))
+    ) {
+      msg.metadata = {};
+    }
+
+    if (msg.metadata && 'documents' in msg.metadata) {
+      const {documents} = msg.metadata;
+      if (Array.isArray(documents)) {
+        msg.metadata.documents = documents.filter(isImportableDocument);
+      } else {
+        delete msg.metadata.documents;
+      }
     }
 
     return msg;

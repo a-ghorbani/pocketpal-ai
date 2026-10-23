@@ -1,6 +1,8 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
 import {palStore} from '../../store';
+import {validate} from 'uuid';
+import {docId} from '../../../jest/fixtures/documentIds';
 import {
   readJsonFile,
   validateImportedData,
@@ -67,11 +69,125 @@ describe('importUtils', () => {
       ) as ImportedChatSession;
 
       // Verify
-      expect(result.id).toMatch(/^mock-uuid-12345/); // UUID will have random component
+      expect(validate(result.id)).toBe(true);
       expect(result.date).toBeDefined();
       expect(result.messages).toEqual([]);
       expect(result.completionSettings).toBeDefined();
     });
+  });
+
+  describe('imported document refs', () => {
+    const goodId = docId('imported');
+    const ref = (id: unknown, extra = {}) => ({
+      id,
+      name: 'a.pdf',
+      kind: 'pdf',
+      byteSize: 1,
+      charCount: 1,
+      tokenEstimate: 1,
+      ...extra,
+    });
+
+    it('drops document refs with invalid ids or ranges and keeps the message', () => {
+      const result = validateImportedData({
+        title: 'With documents',
+        messages: [
+          {
+            id: 'm1',
+            author: 'user',
+            text: 'Summarise',
+            metadata: {
+              documents: [
+                ref('..'),
+                ref('../..'),
+                ref('/abs/path'),
+                ref(''),
+                ref('a/b'),
+                ref('a\\b'),
+                ref(goodId, {pageRange: {from: '../x', to: 1}}),
+                ref(goodId, {pageRange: {from: 1.5, to: 2}}),
+                ref(goodId),
+                ref(goodId, {pageRange: {from: 2, to: 3}}),
+              ],
+            },
+          },
+          {id: 'm2', author: 'user', metadata: {documents: 'nope'}},
+        ],
+      }) as ImportedChatSession;
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0].metadata?.documents).toEqual([
+        ref(goodId),
+        ref(goodId, {pageRange: {from: 2, to: 3}}),
+      ]);
+      expect(result.messages[1].metadata).not.toHaveProperty('documents');
+    });
+  });
+
+  describe('imported document ref shape', () => {
+    const id = docId('shape');
+    const valid = {
+      id,
+      name: 'a.pdf',
+      kind: 'pdf',
+      byteSize: 1,
+      charCount: 1,
+      tokenEstimate: 1,
+    };
+    const importRefs = (documents: unknown[]) =>
+      (
+        validateImportedData({
+          title: 'Shapes',
+          messages: [{id: 'm', author: 'user', metadata: {documents}}],
+        }) as ImportedChatSession
+      ).messages[0].metadata?.documents;
+
+    it.each([
+      ['an object name', {name: {}}],
+      ['a missing name', {name: undefined}],
+      ['an empty name', {name: '  '}],
+      ['an overlong name', {name: 'x'.repeat(2000)}],
+      ['an unknown kind', {kind: 'exe'}],
+      ['an unknown mode', {mode: 'everything'}],
+      ['a non-boolean searchPinned', {searchPinned: 'yes'}],
+      ['a negative size', {byteSize: -1}],
+      ['an infinite estimate', {tokenEstimate: Infinity}],
+      ['a non-numeric char count', {charCount: '5'}],
+      ['a bad page count', {pageCount: -3}],
+      ['a bad exact count', {tokenCount: {modelId: 'm', n: 'many'}}],
+    ])('drops a ref with %s', (_label, change) => {
+      expect(importRefs([{...valid, ...change}])).toEqual([]);
+    });
+
+    it('keeps a complete ref', () => {
+      const full = {
+        ...valid,
+        pageCount: 3,
+        pageRange: {from: 1, to: 2},
+        mode: 'searched',
+        searchPinned: true,
+        tokenCount: {modelId: 'm', n: 2},
+      };
+      expect(importRefs([full])).toEqual([full]);
+    });
+  });
+
+  describe('non-object message metadata', () => {
+    it.each(['x', 42, true, null, [1, 2]])(
+      'imports every session when a message has metadata %j',
+      metadata => {
+        const result = validateImportedData([
+          {
+            title: 'Odd metadata',
+            messages: [{id: 'm1', author: 'user', text: 'hi', metadata}],
+          },
+          {title: 'Plain', messages: [{id: 'm2', author: 'user', text: 'yo'}]},
+        ]) as ImportedChatSession[];
+
+        expect(result).toHaveLength(2);
+        expect(result[0].messages[0].metadata).toEqual({});
+      },
+    );
   });
 
   describe('Pal Import Functions', () => {
