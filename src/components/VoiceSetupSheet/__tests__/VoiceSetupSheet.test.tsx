@@ -116,6 +116,34 @@ describe('VoiceSetupSheet', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('does not finish when the download completes in the background', async () => {
+    const appState = AppState.currentState;
+    asr.downloadModel.mockImplementationOnce(async () => {
+      Object.defineProperty(AppState, 'currentState', {
+        value: 'background',
+        configurable: true,
+        writable: true,
+      });
+      runInAction(() => {
+        asr.downloadStates.base = 'ready';
+      });
+    });
+    try {
+      const {getByTestId} = renderSheet();
+      fireEvent.press(getByTestId('voice-setup-continue'));
+      await waitFor(() => expect(asrStore.downloadModel).toHaveBeenCalled());
+      await act(async () => {});
+      expect(ensureMicPermission).not.toHaveBeenCalled();
+      expect(onDone).not.toHaveBeenCalled();
+
+      Object.defineProperty(AppState, 'currentState', {value: 'active'});
+      fireEvent.press(getByTestId('voice-setup-continue'));
+      await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    } finally {
+      Object.defineProperty(AppState, 'currentState', {value: appState});
+    }
+  });
+
   it('shows download progress and blocks Continue while downloading', () => {
     runInAction(() => {
       asr.downloadStates.base = 'downloading';

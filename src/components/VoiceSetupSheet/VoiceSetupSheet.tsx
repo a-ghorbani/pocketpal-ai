@@ -82,7 +82,11 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
       try {
         if (!baseReady()) {
           await asrStore.downloadModel('base', {select: false});
-          if (!baseReady() || !visible.current) {
+          if (
+            !baseReady() ||
+            !visible.current ||
+            AppState.currentState === 'background'
+          ) {
             return;
           }
         }
