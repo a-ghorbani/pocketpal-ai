@@ -169,4 +169,17 @@ describe('useMessageActions with documents', () => {
 
     expect(t.setInputDocuments).toHaveBeenCalledWith([doc]);
   });
+
+  it('leaves the row in place when a stopping run refuses the resend', async () => {
+    const t = setup({kind: 'fits'});
+    (chatSessionStore as any).isStopping = true;
+
+    await act(async () => {
+      await t.result.current.handleTryAgain(assistantRow);
+    });
+
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(t.handleSendPress).not.toHaveBeenCalled();
+    (chatSessionStore as any).isStopping = false;
+  });
 });

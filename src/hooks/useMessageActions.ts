@@ -74,6 +74,9 @@ export const useMessageActions = ({
    * removed; it opens in edit mode instead. */
   const resend = useCallback(
     async (row: MessageType.Text) => {
+      if (chatSessionStore.isStopping) {
+        return;
+      }
       const message: MessageType.PartialText = {
         text: row.text,
         type: 'text',
@@ -92,6 +95,9 @@ export const useMessageActions = ({
             onBudgetOver?.(verdict, row);
             return;
           }
+        }
+        if (chatSessionStore.isStopping) {
+          return;
         }
         await chatSessionStore.removeMessagesFromId(row.id, true);
         await resendPress(message);
