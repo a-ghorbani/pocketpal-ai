@@ -1,5 +1,7 @@
 import {Platform} from 'react-native';
 
+import type {NeuralEngineId} from './types';
+
 /**
  * Sample text used for the voice preview button in Setup UI (v1.1).
  * Lives here so the service and future UI share a single string.
@@ -11,13 +13,11 @@ export const TTS_PREVIEW_SAMPLE =
 export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
 /** Peak runtime memory of each neural engine once loaded. */
-export const TTS_ENGINE_RUNTIME_BYTES: Record<
-  'supertonic' | 'kokoro' | 'kitten',
-  number
-> = {
+export const TTS_ENGINE_RUNTIME_BYTES: Record<NeuralEngineId, number> = {
   supertonic: 500_000_000,
   kokoro: 500_000_000,
   kitten: 200_000_000,
+  phonon: 200 * 1024 * 1024,
 };
 
 /** Subdirectory (relative to app documents dir) used for Supertonic model files. */
