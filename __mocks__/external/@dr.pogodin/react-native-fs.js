@@ -1,6 +1,12 @@
 // Track deleted files for stateful behavior in tests
 const deletedFiles = new Set();
-export const stat = jest.fn();
+export const stat = jest
+  .fn()
+  .mockImplementation(path =>
+    deletedFiles.has(path)
+      ? Promise.reject(new Error(`ENOENT: no such file, '${path}'`))
+      : Promise.resolve({isFile: () => true}),
+  );
 export const mkdir = jest.fn();
 export const unlink = jest.fn().mockImplementation(path => {
   deletedFiles.add(path);

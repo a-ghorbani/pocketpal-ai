@@ -170,6 +170,14 @@ const answersSession = (
   capsMatchBinding(caps, binding, binding.modelId) &&
   caps?.samplerDefaults !== undefined;
 
+const isRegularFile = async (path: string): Promise<boolean> => {
+  try {
+    return (await RNFS.stat(path)).isFile();
+  } catch {
+    return false;
+  }
+};
+
 const isLocalModel = (model: Model): boolean =>
   model.isLocal || model.origin === ModelOrigin.LOCAL;
 
@@ -1810,7 +1818,10 @@ class ModelStore {
         await this.releaseContext(true); // Clear active model and all related state
       }
 
-      if (isModelFilePath(filePath, {local: true})) {
+      if (
+        isModelFilePath(filePath, {local: true}) &&
+        (await isRegularFile(filePath))
+      ) {
         try {
           await RNFS.unlink(filePath);
         } catch (err) {
@@ -1827,7 +1838,10 @@ class ModelStore {
       console.log('deleting: ', filePath);
 
       try {
-        if (isModelFilePath(filePath, {local: false})) {
+        if (
+          isModelFilePath(filePath, {local: false}) &&
+          (await isRegularFile(filePath))
+        ) {
           await RNFS.unlink(filePath);
 
           // Check if we need to release context (if this model is currently active)

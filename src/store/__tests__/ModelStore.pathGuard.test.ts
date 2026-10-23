@@ -89,6 +89,21 @@ const hfPathOf = (model: Model) =>
   hfPath(model.author, model.repo!, model.filename);
 
 let existingFiles: Set<string>;
+let existingFolders: Set<string>;
+
+beforeEach(() => {
+  existingFiles = new Set();
+  existingFolders = new Set();
+  (RNFS.stat as jest.Mock).mockImplementation(async (path: string) => {
+    if (existingFiles.has(path)) {
+      return {isFile: () => true};
+    }
+    if (existingFolders.has(path)) {
+      return {isFile: () => false};
+    }
+    throw new Error(`ENOENT: no such file, '${path}'`);
+  });
+});
 
 const storeModel = (id: string) => modelStore.models.find(m => m.id === id)!;
 
@@ -102,6 +117,7 @@ const expectDownloadsAndDeletes = async (id: string, expectedPath: string) => {
 
   await modelStore.checkSpaceAndDownload(id);
   expect(downloadTarget(id)).toBe(expectedPath);
+  existingFiles.add(expectedPath);
 
   runInAction(() => {
     storeModel(id).isDownloaded = true;
@@ -372,6 +388,102 @@ describe('every model kind main persists still downloads and deletes', () => {
       expect(RNFS.unlink).toHaveBeenCalledWith(path);
       expect(modelStore.models).toHaveLength(0);
     });
+  });
+});
+
+describe('model delete touches only regular files', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (RNFS.exists as jest.Mock).mockImplementation(
+      async (path: string) =>
+        existingFiles.has(path) || existingFolders.has(path),
+    );
+    (RNFS.unlink as jest.Mock).mockImplementation(async (path: string) => {
+      existingFiles.delete(path);
+    });
+    runInAction(() => {
+      modelStore.models = [];
+      modelStore.activeModelId = undefined;
+    });
+  });
+
+  const localRow = (fullPath: string): Model =>
+    createModel({
+      id: 'local-folder',
+      author: '',
+      filename: fullPath.split('/').pop(),
+      fullPath,
+      isLocal: true,
+      origin: ModelOrigin.LOCAL,
+      isDownloaded: true,
+    }) as Model;
+
+  it.each([`${DOCS}/models/hf`, `${DOCS}/models/local`])(
+    'a LOCAL row naming the folder %s leaves the list without an unlink',
+    async folder => {
+      existingFolders.add(folder);
+      const warn = jest.spyOn(console, 'warn');
+      runInAction(() => {
+        modelStore.models = [localRow(folder)];
+      });
+
+      await modelStore.deleteModel(storeModel('local-folder'));
+
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        '[ModelStore] Skipped deleting unexpected path:',
+        folder,
+      );
+      expect(modelStore.models).toHaveLength(0);
+      warn.mockRestore();
+    },
+  );
+
+  it('a non-local model whose path is a folder keeps its downloaded state', async () => {
+    const folder = `${DOCS}/models/hf/a/r/x.gguf`;
+    existingFolders.add(folder);
+    runInAction(() => {
+      modelStore.models = [
+        createModel({
+          id: 'a/r/x.gguf',
+          author: 'a',
+          repo: 'r',
+          filename: 'x.gguf',
+          origin: ModelOrigin.HF,
+          isDownloaded: true,
+        }) as Model,
+      ];
+    });
+
+    await modelStore.deleteModel(storeModel('a/r/x.gguf'));
+
+    expect(RNFS.unlink).not.toHaveBeenCalled();
+    expect(storeModel('a/r/x.gguf').isDownloaded).toBe(true);
+  });
+
+  it.each([
+    ['LOCAL', `${DOCS}/models/local/m.gguf`, true],
+    ['non-local', `${DOCS}/models/hf/a/r/x.gguf`, false],
+  ])('a %s delete whose stat throws is skipped', async (_kind, path, local) => {
+    existingFiles.add(path);
+    (RNFS.stat as jest.Mock).mockRejectedValueOnce(new Error('stat failed'));
+    const model = local
+      ? localRow(path)
+      : (createModel({
+          id: 'local-folder',
+          author: 'a',
+          repo: 'r',
+          filename: 'x.gguf',
+          origin: ModelOrigin.HF,
+          isDownloaded: true,
+        }) as Model);
+    runInAction(() => {
+      modelStore.models = [model];
+    });
+
+    await modelStore.deleteModel(storeModel('local-folder'));
+
+    expect(RNFS.unlink).not.toHaveBeenCalled();
   });
 });
 
