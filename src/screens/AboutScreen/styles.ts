@@ -118,10 +118,21 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
     },
     legalRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'center',
       alignItems: 'center',
       paddingVertical: theme.spacing.default * 1.5,
+      columnGap: theme.spacing.default / 2,
+      rowGap: theme.spacing.default / 4,
+    },
+    legalItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: theme.spacing.default / 2,
+    },
+    legalHit: {
+      minHeight: 44,
+      justifyContent: 'center',
     },
     legalLink: {
       ...theme.fonts.bodySmall,
@@ -131,5 +142,21 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,
       opacity: 0.5,
+    },
+    legalSeparatorHidden: {
+      opacity: 0,
+    },
+    noticesContent: {
+      padding: theme.spacing.default,
+      paddingBottom: insets.bottom + theme.spacing.default,
+    },
+    noticesCredit: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurface,
+      marginBottom: theme.spacing.default,
+    },
+    noticesText: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
     },
   });

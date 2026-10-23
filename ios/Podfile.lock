@@ -2389,7 +2389,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeech (2.5.2):
+  - RNSpeech (2.8.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2410,6 +2410,29 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+    - Yoga
+  - RNSpeechPhonon (0.1.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNSpeech
     - Yoga
   - RNSVG (15.16.0):
     - hermes-engine
@@ -2707,6 +2730,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNShare (from `../node_modules/react-native-share`)
   - "RNSpeech (from `../node_modules/@pocketpalai/react-native-speech`)"
+  - "RNSpeechPhonon (from `../node_modules/@pocketpalai/react-native-speech-phonon`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -2969,6 +2993,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-share"
   RNSpeech:
     :path: "../node_modules/@pocketpalai/react-native-speech"
+  RNSpeechPhonon:
+    :path: "../node_modules/@pocketpalai/react-native-speech-phonon"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -3119,7 +3145,8 @@ SPEC CHECKSUMS:
   RNReanimated: 61460cb633e8f22b3049882003d193ee86a3897a
   RNScreens: 4bac14b997bcf160be0a967bfdae27956847f289
   RNShare: 765191a3c96beb2955ed961643db333b1ddf257a
-  RNSpeech: 19414f71efb80fa85aa38cfcd35e9ae9a1cdd49b
+  RNSpeech: e1e61c20899aa70ea07cd7ed40a39e3d0189b40e
+  RNSpeechPhonon: 8199fd18549224aa30b1c2e6bd7138f50818c980
   RNSVG: ea960a71afc1707bd14dead3ec578763321f7096
   RNVectorIcons: c7cd45980aad8bbd77a47b906f62957c9494dcb6
   RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e

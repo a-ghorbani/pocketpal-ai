@@ -5,8 +5,10 @@
 import {Platform} from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
+import {waitFor} from '@testing-library/react-native';
 
 import {KittenEngine} from '..';
+import {ttsRuntime} from '../../../runtime';
 import {
   KITTEN_MODEL_BASE_URL,
   KITTEN_MODEL_FILES,
@@ -175,6 +177,25 @@ describe('KittenEngine', () => {
 
       await engine.play('again', anyVoice);
       expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('playStreaming()', () => {
+    it('passes voice stream options to the lib stream', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      ttsRuntime._resetForTests();
+      const onProgress = jest.fn();
+
+      new KittenEngine().playStreaming(anyVoice, undefined, {
+        firstChunk: 'clause',
+        onProgress,
+      });
+      await waitFor(() =>
+        expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+          anyVoice.id,
+          expect.objectContaining({firstChunk: 'clause'}),
+        ),
+      );
     });
   });
 });

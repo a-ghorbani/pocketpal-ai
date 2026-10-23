@@ -7,7 +7,7 @@ import {derivedTextMessage} from '../../../../jest/fixtures';
 import {L10nContext} from '../../../utils';
 import {assistant} from '../../../utils/chat';
 import {l10n} from '../../../locales';
-import {modelStore, ttsStore} from '../../../store';
+import {modelStore, ttsStore, voiceModeStore} from '../../../store';
 import type {MessageType} from '../../../utils/types';
 
 import {PlayButton} from '../PlayButton';
@@ -38,6 +38,7 @@ describe('PlayButton', () => {
       ttsStore.currentVoice = null;
       ttsStore.playbackState = {mode: 'idle'};
       modelStore.isStreaming = false;
+      voiceModeStore.phase = 'closed';
     });
   });
 
@@ -192,5 +193,40 @@ describe('PlayButton', () => {
     fireEvent.press(getByTestId('playbutton-msg-1'));
     expect(ttsStore.stop).toHaveBeenCalledTimes(1);
     expect(ttsStore.play).not.toHaveBeenCalled();
+  });
+
+  describe('while voice mode is open', () => {
+    beforeEach(() => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'v1',
+          name: 'Alex',
+          engine: 'system',
+        } as any;
+      });
+    });
+
+    it('is disabled and does not replay into the open mic', () => {
+      runInAction(() => {
+        voiceModeStore.phase = 'listening';
+      });
+      const {getByTestId} = renderButton(makeAssistantMsg());
+      const button = getByTestId('playbutton-msg-1');
+      expect(button.props.accessibilityState).toEqual(
+        expect.objectContaining({disabled: true}),
+      );
+      fireEvent.press(button);
+      expect(ttsStore.play).not.toHaveBeenCalled();
+    });
+
+    it('replays again once voice mode is closed', () => {
+      const {getByTestId} = renderButton(makeAssistantMsg());
+      const button = getByTestId('playbutton-msg-1');
+      expect(button.props.accessibilityState).toEqual(
+        expect.objectContaining({disabled: false}),
+      );
+      fireEvent.press(button);
+      expect(ttsStore.play).toHaveBeenCalledTimes(1);
+    });
   });
 });

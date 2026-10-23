@@ -137,9 +137,9 @@ const WHISPER_CPP_BASE_URL =
 export const ASR_TIERS: Record<AsrTier, AsrTierManifest> = {
   base: {
     tier: 'base',
-    modelFilename: 'ggml-base-q5_1.bin',
-    modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-base-q5_1.bin`,
-    estimatedBytes: 59_707_625,
+    modelFilename: 'ggml-base-q8_0.bin',
+    modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-base-q8_0.bin`,
+    estimatedBytes: 81_768_585,
     runtimeBytes: 330_000_000,
   },
   small: {

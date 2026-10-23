@@ -15,7 +15,12 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import type {
+  NeuralEngine,
+  StreamOptions,
+  StreamingHandle,
+  Voice,
+} from '../../types';
 import {KOKORO_VOICES} from './voices';
 
 export type KokoroProgressCallback = (progress: number) => void;
@@ -36,7 +41,7 @@ export type KokoroProgressCallback = (progress: number) => void;
  * QA. The library default on iOS would otherwise include CoreML; we keep
  * it bare CPU for now.
  */
-export class KokoroEngine implements Engine {
+export class KokoroEngine implements NeuralEngine {
   readonly id = 'kokoro' as const;
 
   private getParentDir(): string {
@@ -248,8 +253,12 @@ export class KokoroEngine implements Engine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {

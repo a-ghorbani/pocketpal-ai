@@ -1,6 +1,5 @@
 import {
   AppState,
-  Platform,
   type AppStateStatus,
   type NativeEventSubscription,
 } from 'react-native';
@@ -11,8 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
 
 import {
-  ASR_ANDROID_RAM_SHARE,
-  ASR_IOS_CEILING_SHARE,
   ASR_DEFAULT_TIER,
   ASR_DEVICE_TIERS,
   ASR_DISK_HEADROOM_FACTOR,
@@ -21,6 +18,8 @@ import {
   ASR_TIERS,
   ASR_TIER_ORDER,
   whisperAsrEngine,
+  readDeviceMemory,
+  whisperFits,
 } from '../services/asr';
 import type {
   AsrDownloadState,
@@ -105,28 +104,21 @@ export class ASRStore {
 
   /**
    * Whether whisper fits next to the loaded chat model, by the app's estimate
-   * of both. Android's free-memory figure can be far off (#982), so Android
-   * budgets against total RAM. iOS does not count mmap'd chat weights against
-   * the app, so iOS budgets against what it reported free before any load,
-   * keeping a reserve (ASR_IOS_CEILING_SHARE).
+   * of both (`whisperFits`). Android's free-memory figure can be far off
+   * (#982), so Android budgets against total RAM. iOS does not count mmap'd
+   * chat weights against the app, so iOS budgets against what it reported
+   * free before any load, keeping a reserve (ASR_IOS_CEILING_SHARE).
    */
   async hasMemoryForCapture(): Promise<boolean> {
-    const whisperBytes = ASR_TIERS[this.selectedTier].runtimeBytes;
-    const chatBytes = modelStore.loadedModelBytes ?? 0;
-    try {
-      if (Platform.OS === 'ios') {
-        const ceiling = modelStore.availableMemoryCeiling;
-        return (
-          !ceiling ||
-          chatBytes + whisperBytes <= ceiling * ASR_IOS_CEILING_SHARE
-        );
-      }
-      const total = await DeviceInfo.getTotalMemory();
-      return chatBytes + whisperBytes <= total * ASR_ANDROID_RAM_SHARE;
-    } catch (err) {
-      console.warn('[ASRStore] memory check failed:', err);
-      return true;
-    }
+    const memory = await readDeviceMemory(modelStore);
+    return (
+      memory == null ||
+      whisperFits(
+        memory,
+        modelStore.loadedModelBytes ?? 0,
+        ASR_TIERS[this.selectedTier].runtimeBytes,
+      )
+    );
   }
 
   /**
@@ -244,7 +236,10 @@ export class ASRStore {
 
   // --- Model download -----------------------------------------------------
 
-  async downloadModel(tier: AsrTier): Promise<void> {
+  async downloadModel(
+    tier: AsrTier,
+    {select = true}: {select?: boolean} = {},
+  ): Promise<void> {
     if (this.downloadStates[tier] === 'downloading') {
       return;
     }
@@ -291,9 +286,11 @@ export class ASRStore {
         this.downloadStates[tier] = 'ready';
         this.downloadProgress[tier] = 1;
       });
-      // Installing any tier makes it the active one so the mic becomes
-      // actionable without a separate selection step.
-      this.setSelectedTier(tier);
+      // Dictation's installs make the tier the active one, so the mic works
+      // without a separate selection step; voice mode's base download doesn't.
+      if (select) {
+        this.setSelectedTier(tier);
+      }
     } catch (err) {
       console.warn(`[ASRStore] ${tier} download failed:`, err);
       const message = err instanceof Error ? err.message : String(err);

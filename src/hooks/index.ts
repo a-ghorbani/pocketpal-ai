@@ -7,4 +7,5 @@ export * from './useStorageCheck';
 export * from './useDeepLinking';
 export * from './usePalLoadHint';
 export * from './useVoiceCapture';
+export * from './useVoiceMode';
 export * from './useMenuStatusBarHeight';

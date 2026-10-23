@@ -1,7 +1,11 @@
 import {AppState, Platform} from 'react-native';
 import {RESULTS, check, request, openSettings} from 'react-native-permissions';
 
-import {ensureMicPermission, openMicSettings} from '../asrMicPermission';
+import {
+  ensureMicPermission,
+  isMicGranted,
+  openMicSettings,
+} from '../asrMicPermission';
 
 const mockCheck = check as jest.Mock;
 const mockRequest = request as jest.Mock;
@@ -133,5 +137,28 @@ describe('openMicSettings', () => {
   it('swallows an openSettings failure', async () => {
     mockOpenSettings.mockRejectedValue(new Error('no settings'));
     await expect(openMicSettings()).resolves.toBeUndefined();
+  });
+});
+
+describe('isMicGranted', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it.each([
+    [RESULTS.GRANTED, true],
+    [RESULTS.LIMITED, true],
+    [RESULTS.DENIED, false],
+    [RESULTS.BLOCKED, false],
+    [RESULTS.UNAVAILABLE, false],
+  ])('reports %s as granted=%s without prompting', async (status, granted) => {
+    mockCheck.mockResolvedValue(status);
+    expect(await isMicGranted()).toBe(granted);
+    expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it('reports not granted when the permission API throws', async () => {
+    mockCheck.mockRejectedValue(new Error('boom'));
+    expect(await isMicGranted()).toBe(false);
   });
 });

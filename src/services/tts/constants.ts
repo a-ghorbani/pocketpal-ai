@@ -1,3 +1,7 @@
+import {Platform} from 'react-native';
+
+import type {NeuralEngineId} from './types';
+
 /**
  * Sample text used for the voice preview button in Setup UI (v1.1).
  * Lives here so the service and future UI share a single string.
@@ -7,6 +11,14 @@ export const TTS_PREVIEW_SAMPLE =
 
 /** Minimum total RAM required to enable the TTS feature (4 GiB). */
 export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
+
+/** Peak runtime memory of each neural engine once loaded. */
+export const TTS_ENGINE_RUNTIME_BYTES: Record<NeuralEngineId, number> = {
+  supertonic: 500_000_000,
+  kokoro: 500_000_000,
+  kitten: 200_000_000,
+  phonon: 200 * 1024 * 1024,
+};
 
 /** Subdirectory (relative to app documents dir) used for Supertonic model files. */
 export const SUPERTONIC_MODEL_SUBDIR = 'tts/supertonic';
@@ -146,3 +158,157 @@ export const KITTEN_MODEL_FILES = [
 
 /** Estimated total size of the Kitten model bundle (~57 MB + dict). */
 export const KITTEN_MODEL_ESTIMATED_BYTES = 57 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
+// Phonon (31m English only; the 40m models are CC BY-NC and never used)
+// ---------------------------------------------------------------------------
+
+/** Subdirectory for Phonon model files. */
+export const PHONON_MODEL_SUBDIR = 'tts/phonon';
+
+/** Install generation; bump to force a clean re-download. */
+export const PHONON_MODEL_VERSION = 1;
+
+/** Install sentinel, written last so an interrupted download never counts. */
+export const PHONON_VERSION_SENTINEL_FILENAME = 'model-version.json';
+
+export const PHONON_HF_BASE_URL = 'https://huggingface.co';
+
+export interface PhononPinnedFile {
+  name: string;
+  size: number;
+  sha256: string;
+}
+
+/** Android checkpoint, `modelPath` of the Android engine. */
+export const PHONON_ANDROID_REPO = 'gradium/phonon-31m-en';
+export const PHONON_ANDROID_REVISION =
+  '52433c46975bfa13144c56204c9f4ee1c5b148aa';
+export const PHONON_ANDROID_FILES: readonly PhononPinnedFile[] = [
+  {
+    name: 'config.json',
+    size: 2851,
+    sha256: '7062ea376e6b158543c8abec8e5af67df171c49ad70eb7e2a0fb25c16f265e06',
+  },
+  {
+    name: 'tokenizer.json',
+    size: 277967,
+    sha256: '691a00068fa7b989f2f3e5ae5daa2d1a5bb319f2d5360deafcfb19a8bb6e7936',
+  },
+  {
+    name: 'model.q8.gguf',
+    size: 64512352,
+    sha256: 'a7d9aad2cd6dc66473f24a08bc6d2939030ef4d751ef82349361fbef3272dbae',
+  },
+  {
+    name: 'default-voice.safetensors',
+    size: 256136,
+    sha256: 'f739e8c4c76ee7f92e7c94a82002748c8cd22e99582ac49f7b9b94cd63786e18',
+  },
+];
+
+export interface PhononVoicePin {
+  name: string;
+  voiceId: string;
+  locale: 'en-us' | 'en-gb';
+  gender: 'female' | 'male';
+  description: string;
+  sha256: string;
+}
+
+/**
+ * Curated Android voices, fetched by `voiceId` and saved under `name`
+ * (the engine's voice id is the file stem).
+ */
+export const PHONON_VOICES_REPO = 'gradium/phonon-voices';
+export const PHONON_VOICES_REVISION =
+  'da6c9ec0d47be8df5c87c730a3aa97187f3229c3';
+export const PHONON_VOICE_FILE_SIZE = 256136;
+export const PHONON_VOICE_PINS: readonly PhononVoicePin[] = [
+  {
+    name: 'Zoey',
+    voiceId: 'NbpkqMVS3CJeq2j8',
+    locale: 'en-us',
+    gender: 'female',
+    description: 'Playful and upbeat, standard American accent',
+    sha256: '97c7f8c253413574406ab80dd23f49c3ebb2517163b00a9bf86b9c4cf43e7e23',
+  },
+  {
+    name: 'Juniper',
+    voiceId: 'NIWIOv5vTi5eRMj8',
+    locale: 'en-us',
+    gender: 'female',
+    description: 'Cheerful, personable, resonant',
+    sha256: '444378eb06b7c492b86e8fc7d13e4db1a3c0cf3e68891a960bf6f0a41a13ef35',
+  },
+  {
+    name: 'Harper',
+    voiceId: '4SZHfMpw-p46Ywgs',
+    locale: 'en-us',
+    gender: 'female',
+    description: 'Modern, confident and friendly',
+    sha256: '6b3da6e2d796a20c51af892c482bd6509fb88267a221aff83c870843dee2a123',
+  },
+  {
+    name: 'Easton',
+    voiceId: 'LMDIYE0Oa377Qh6Z',
+    locale: 'en-us',
+    gender: 'male',
+    description: 'Punchy and close in, crisp consonants',
+    sha256: '45c582673cb20edb04ddcca2b5a8865ddfb0a82599efadb269021e87d20fbdd4',
+  },
+  {
+    name: 'Micah',
+    voiceId: '40QrMVgAxFiUnP9f',
+    locale: 'en-us',
+    gender: 'male',
+    description: 'Buoyant, high energy, playful lift',
+    sha256: '0de1098d1051686a138d068e83ff09deb5053328bc74ec9541a1fdb90bfc24da',
+  },
+  {
+    name: 'Trevor',
+    voiceId: '0zLApsZfVLLNaEGl',
+    locale: 'en-us',
+    gender: 'male',
+    description: 'Buoyant over a resonant mid-low core',
+    sha256: 'dc1341c8937af5534e6bbcc5c0fc5e7c10312229b59061228074f93683fe2261',
+  },
+  {
+    name: 'Maeve',
+    voiceId: '6PWnV0Nq4wu7RVBT',
+    locale: 'en-gb',
+    gender: 'female',
+    description: 'Sparky, attentive British English',
+    sha256: '56494ee67d533ad227ff0dfd0b1c13ff5aa91f1ad6e596e66c2986ba3005e844',
+  },
+  {
+    name: 'Alfie',
+    voiceId: 'X6NceqF285Gr04gb',
+    locale: 'en-gb',
+    gender: 'male',
+    description: 'Punchy and forward British English',
+    sha256: '4de75497fff3030168e8aa6dca23ffeb332b1bc8c25d0bf3507ceadac953ae9c',
+  },
+];
+
+/** Display metadata for the curated voices, passed as `voicesMetadataPath`. */
+export const PHONON_VOICES_JSONL_FILENAME = 'voices.jsonl';
+
+/**
+ * iOS: precompiled Core ML bundle mirrored file by file, listed in a
+ * `path<TAB>size<TAB>sha256` manifest at the repo root.
+ */
+export const PHONON_IOS_REPO = 'palshub/phonon-31m-en-coreml';
+export const PHONON_IOS_REVISION = '0222045816b825e8a004013c7158b111245b4aab';
+export const PHONON_IOS_BUNDLE_NAME = 'phonon-31m-en-coreml';
+export const PHONON_IOS_MANIFEST_PATH = 'phonon-31m-en-coreml.manifest.tsv';
+export const PHONON_IOS_MANIFEST_SHA256 =
+  '4f91af242637d13a93f38a574e4f99466a3063aa5a7d24fc34a797f53b12599a';
+/** Local copy of the verified manifest, the iOS install file list. */
+export const PHONON_IOS_MANIFEST_FILENAME = 'manifest.tsv';
+
+/** Exact pinned byte totals; they feed the disk-space preflight. */
+export const PHONON_ANDROID_MODEL_BYTES = 67_098_394;
+export const PHONON_IOS_MODEL_BYTES = 171_554_733;
+export const PHONON_MODEL_ESTIMATED_BYTES =
+  Platform.OS === 'ios' ? PHONON_IOS_MODEL_BYTES : PHONON_ANDROID_MODEL_BYTES;

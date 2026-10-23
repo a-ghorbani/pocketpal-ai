@@ -369,6 +369,30 @@ describe('SupertonicEngine', () => {
       );
     });
 
+    it('merges voice stream options with language and subscribes progress', async () => {
+      const onProgress = jest.fn();
+      new SupertonicEngine().playStreaming(anyVoice, undefined, {
+        language: 'en',
+        firstChunk: 'clause',
+        onProgress,
+      });
+      await flush();
+
+      const [voiceId, options] = (Speech.createSpeechStream as jest.Mock).mock
+        .calls[0];
+      expect(voiceId).toBe(anyVoice.id);
+      expect(options).toEqual(
+        expect.objectContaining({
+          language: 'en',
+          firstChunk: 'clause',
+        }),
+      );
+      expect(options).not.toHaveProperty('onProgress');
+      const [stream] = __getCreatedStreams();
+      expect(stream!.onProgress).toHaveBeenCalledTimes(1);
+      expect(stream!.onProgress).toHaveBeenCalledWith(onProgress);
+    });
+
     it('forwards appendText to the lib stream once the engine is acquired', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
       const handle = new SupertonicEngine().playStreaming(anyVoice);

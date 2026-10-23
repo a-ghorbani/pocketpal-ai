@@ -1,3 +1,5 @@
+import {Platform} from 'react-native';
+
 import type {EngineId} from '../../services/tts';
 
 /**
@@ -12,7 +14,8 @@ import type {EngineId} from '../../services/tts';
  * RAM is the peak resident MB measured during synthesis (E2E memory
  * profile, iPhone 17 Pro simulator and Pixel emulator, Release). Each value
  * is the higher of the two platforms, rounded. Approximate, not disk
- * footprint.
+ * footprint. Phonon can't run on the x86_64 emulator: its value is the Pixel 9
+ * per-launch peak less Kitten's phone-vs-emulator offset, rounded up to 50.
  */
 export interface EngineMeta {
   /** ~MB on disk after install (0 for system). */
@@ -50,6 +53,14 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
     accent: '#1E4DF6',
     gradientFrom: 'rgba(30, 77, 246, 0.14)',
     gradientTo: 'rgba(30, 77, 246, 0.02)',
+  },
+  phonon: {
+    sizeMb: Platform.OS === 'ios' ? 164 : 64,
+    ramMb: 300,
+    voices: 8,
+    accent: '#0E9F8E',
+    gradientFrom: 'rgba(14, 159, 142, 0.14)',
+    gradientTo: 'rgba(14, 159, 142, 0.02)',
   },
   system: {
     sizeMb: 0,

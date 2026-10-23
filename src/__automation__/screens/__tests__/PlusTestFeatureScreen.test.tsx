@@ -6,6 +6,10 @@ import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/p
 import {dismissPlus, plusGate} from '../../../services/plus/gate';
 import {setShipOverride} from '../../../services/plus/shipOverride';
 
+jest.mock('../../../services/plus/catalog', () =>
+  require('../../../../jest/fixtures/plus').mockUnshippedCatalog(),
+);
+
 import {PlusTestFeatureScreen} from '../PlusTestFeatureScreen';
 
 describe('PlusTestFeatureScreen', () => {

@@ -4,25 +4,38 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
+import type {
+  StreamProgressEvent,
+  SupertonicLanguage,
+} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
-  KittenEngine,
-  KokoroEngine,
+  getNeuralEngine,
+  getPhononSupport,
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
   TTS_PREVIEW_SAMPLE,
   SUPERTONIC_MODEL_ESTIMATED_BYTES,
   KOKORO_MODEL_ESTIMATED_BYTES,
   KITTEN_MODEL_ESTIMATED_BYTES,
+  PHONON_MODEL_ESTIMATED_BYTES,
   ttsRuntime,
 } from '../services/tts';
-import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
+import type {
+  EngineId,
+  NeuralEngineId,
+  StreamOptions,
+  StreamingHandle,
+  SupertonicSteps,
+  Voice,
+} from '../services/tts';
 import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
+import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -52,8 +65,7 @@ export type NeuralDownloadState =
 /** Alias preserved for external consumers that imported the v1.2 name. */
 export type SupertonicDownloadState = NeuralDownloadState;
 
-/** Neural engine ids managed by the store's download state machines. */
-export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
+export type {NeuralEngineId};
 
 const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
 
@@ -66,6 +78,14 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
 const previewMessageId = (voice: Voice): string =>
   `preview:${voice.engine}:${voice.id}`;
+
+/** A voice reply's stream and its first-chunk hold. */
+type VoiceStream = {
+  messageId: string;
+  held: string[] | null;
+  holdTimer: ReturnType<typeof setTimeout> | null;
+  chars: number;
+};
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -113,6 +133,15 @@ export class TTSStore {
   // Runtime playback state (discriminated union)
   playbackState: TTSPlaybackState = {mode: 'idle'};
 
+  /** True while a voice-mode session is open; it speaks every reply. */
+  voiceOutputActive: boolean = false;
+  private holdFirstChunk: boolean = false;
+  /** Message id of the voice reply whose speech has begun playing. */
+  voiceSpeechStarted: string | null = null;
+  /** Message id of the last voice reply whose speech failed. */
+  voiceStreamFailed: string | null = null;
+  private voiceStream: VoiceStream | null = null;
+
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
   currentVoice: Voice | null = null;
@@ -147,6 +176,13 @@ export class TTSStore {
   kittenDownloadProgress: number = 0;
   kittenDownloadError: string | null = null;
 
+  phononDownloadState: NeuralDownloadState = 'not_installed';
+  phononDownloadProgress: number = 0;
+  phononDownloadError: string | null = null;
+
+  /** Whether the add-on's probe said Phonon runs here, this session. */
+  phononSupported: boolean = false;
+
   // Idempotency guard for the auto-speak path.
   lastSpokenMessageId: string | null = null;
 
@@ -167,7 +203,11 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable(this, {}, {autoBind: true});
+    makeAutoObservable<TTSStore, 'holdFirstChunk' | 'voiceStream'>(
+      this,
+      {holdFirstChunk: false, voiceStream: false},
+      {autoBind: true},
+    );
     makePersistable(this, {
       name: 'TTSStore',
       properties: [
@@ -203,6 +243,8 @@ export class TTSStore {
       this.deviceMeetsMemory = totalMemory >= TTS_MIN_RAM_BYTES;
     });
 
+    await this.refreshPhononSupport();
+
     // Lifecycle hooks below run UNCONDITIONALLY — see architecture/tts.md §4e
     // and I8. A user on a low-memory device may flip `userTTSOverride = true`
     // mid-session, at which point the AppState listener and session reaction
@@ -211,7 +253,9 @@ export class TTSStore {
     // (plus component-level guards) remain the gate on user-visible work.
 
     // Derive each neural engine's install state from disk in parallel.
-    const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];
+    const neuralIds = Object.keys(
+      TTSStore.ENGINE_ESTIMATED_BYTES,
+    ) as NeuralEngineId[];
     const results = await Promise.all(
       neuralIds.map(async id => {
         try {
@@ -252,7 +296,7 @@ export class TTSStore {
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
-        this.stop();
+        this.stop('session_change');
       },
     );
   }
@@ -265,13 +309,90 @@ export class TTSStore {
       // Only react to 'background' — 'inactive' fires for transient
       // interruptions (Control Center, incoming call sheet, notification
       // tap) that shouldn't tear down a 200+ MB engine.
-      this.stop()
+      this.stop('background')
         .then(() => ttsRuntime.release())
         .catch(err => {
           console.warn('[TTSStore] background release failed:', err);
         });
     }
   };
+
+  /** Whether the next assistant reply opens a speech stream. */
+  get streamsReplies(): boolean {
+    return (
+      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+    );
+  }
+
+  setVoiceOutputActive(
+    active: boolean,
+    {holdFirstChunk = false}: {holdFirstChunk?: boolean} = {},
+  ) {
+    this.voiceOutputActive = active;
+    this.holdFirstChunk = active && holdFirstChunk;
+  }
+
+  isEngineOffered(id: EngineId): boolean {
+    return id !== 'phonon' || this.phononSupported;
+  }
+
+  /**
+   * Re-read the Phonon probe. When it says unsupported, a selected Phonon
+   * voice is released and cleared; its model files stay on disk, because
+   * deleting them would void the add-on's recorded load failure.
+   */
+  async refreshPhononSupport(): Promise<void> {
+    let support: {supported: boolean; reason: string};
+    try {
+      support = await getPhononSupport();
+    } catch {
+      support = {supported: false, reason: 'error'};
+    }
+    runInAction(() => {
+      this.phononSupported = support.supported;
+    });
+    if (support.supported) {
+      return;
+    }
+    console.log(`[tts] phonon hidden: ${support.reason}`);
+    if (this.currentVoice?.engine !== 'phonon') {
+      return;
+    }
+    if (ttsRuntime.getActiveEngineId() === 'phonon') {
+      await this.stop();
+      await ttsRuntime.release();
+    }
+    runInAction(() => {
+      if (this.currentVoice?.engine === 'phonon') {
+        this.currentVoice = null;
+      }
+    });
+  }
+
+  private refreshAfterPhononFailure(): void {
+    this.refreshPhononSupport().catch(err => {
+      console.warn('[TTSStore] phonon support refresh failed:', err);
+    });
+  }
+
+  private withPhononFailureHook(handle: StreamingHandle): StreamingHandle {
+    return {
+      appendText: chunk => handle.appendText(chunk),
+      finalize: async () => {
+        try {
+          await handle.finalize();
+        } catch (err) {
+          this.refreshAfterPhononFailure();
+          throw err;
+        }
+      },
+      cancel: () => {
+        const cancelled = handle.cancel();
+        this.refreshAfterPhononFailure();
+        return cancelled;
+      },
+    };
+  }
 
   setAutoSpeak(on: boolean) {
     this.autoSpeakEnabled = on;
@@ -347,56 +468,98 @@ export class TTSStore {
   // --- Per-engine state helpers ----------------------------------------
 
   private setDownloadState(id: NeuralEngineId, state: NeuralDownloadState) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadState = state;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadState = state;
-    } else {
-      this.kittenDownloadState = state;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadState = state;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadState = state;
+        break;
+      case 'kitten':
+        this.kittenDownloadState = state;
+        break;
+      case 'phonon':
+        this.phononDownloadState = state;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private setDownloadProgress(id: NeuralEngineId, progress: number) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadProgress = progress;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadProgress = progress;
-    } else {
-      this.kittenDownloadProgress = progress;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadProgress = progress;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadProgress = progress;
+        break;
+      case 'kitten':
+        this.kittenDownloadProgress = progress;
+        break;
+      case 'phonon':
+        this.phononDownloadProgress = progress;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private setDownloadError(id: NeuralEngineId, error: string | null) {
-    if (id === 'supertonic') {
-      this.supertonicDownloadError = error;
-    } else if (id === 'kokoro') {
-      this.kokoroDownloadError = error;
-    } else {
-      this.kittenDownloadError = error;
+    switch (id) {
+      case 'supertonic':
+        this.supertonicDownloadError = error;
+        break;
+      case 'kokoro':
+        this.kokoroDownloadError = error;
+        break;
+      case 'kitten':
+        this.kittenDownloadError = error;
+        break;
+      case 'phonon':
+        this.phononDownloadError = error;
+        break;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
   }
 
   private getDownloadState(id: NeuralEngineId): NeuralDownloadState {
-    if (id === 'supertonic') {
-      return this.supertonicDownloadState;
+    switch (id) {
+      case 'supertonic':
+        return this.supertonicDownloadState;
+      case 'kokoro':
+        return this.kokoroDownloadState;
+      case 'kitten':
+        return this.kittenDownloadState;
+      case 'phonon':
+        return this.phononDownloadState;
+      default: {
+        const unhandled: never = id;
+        throw new Error(`[TTSStore] unknown engine ${String(unhandled)}`);
+      }
     }
-    if (id === 'kokoro') {
-      return this.kokoroDownloadState;
-    }
-    return this.kittenDownloadState;
   }
 
   /**
    * Stop any in-flight playback and reset state to idle.
    */
-  async stop(): Promise<void> {
+  async stop(by = 'other'): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    vtrace('tts.stop', {by, mode: state.mode});
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
     this.streamStripper = null;
     this.streamPlaceholderEmitted = false;
+    this.clearVoiceHold();
     if (state.mode === 'streaming') {
       try {
         await state.handle.cancel();
@@ -456,6 +619,9 @@ export class TTSStore {
       }
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
+      if (voice.engine === 'phonon') {
+        this.refreshAfterPhononFailure();
+      }
     } finally {
       runInAction(() => {
         if (
@@ -500,6 +666,9 @@ export class TTSStore {
       }
     } catch (err) {
       console.warn('[TTSStore] preview failed:', err);
+      if (voice.engine === 'phonon') {
+        this.refreshAfterPhononFailure();
+      }
     } finally {
       runInAction(() => {
         if (
@@ -528,8 +697,7 @@ export class TTSStore {
   /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string): void {
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
@@ -539,7 +707,7 @@ export class TTSStore {
     // promise is passed to the streaming handle so it waits for the old
     // `Speech.stop()` to complete before starting synthesis — prevents
     // the old stop flag from killing the new stream's first sentence.
-    const stopDone = this.stop().catch(err => {
+    const stopDone = this.stop('new_stream').catch(err => {
       console.warn('[TTSStore] stop before new stream failed:', err);
     });
 
@@ -547,17 +715,112 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
+    const voiceOpts = this.openVoiceStream(messageId);
     const engine = getEngine(voice.engine);
+    let engineHandle: StreamingHandle;
+    if (voice.engine === 'supertonic') {
+      engineHandle = (engine as SupertonicEngine).playStreaming(
+        voice,
+        stopDone,
+        {
+          ...voiceOpts,
+          language: this.supertonicLanguage,
+          inferenceSteps: this.supertonicSteps,
+        },
+      );
+    } else if (voiceOpts) {
+      engineHandle = engine.playStreaming(voice, stopDone, voiceOpts);
+    } else {
+      engineHandle = engine.playStreaming(voice, stopDone);
+    }
     const handle =
-      voice.engine === 'supertonic'
-        ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
-            language: this.supertonicLanguage,
-            inferenceSteps: this.supertonicSteps,
-          })
-        : engine.playStreaming(voice, stopDone);
+      voice.engine === 'phonon'
+        ? this.withPhononFailureHook(engineHandle)
+        : engineHandle;
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
+    vtrace('tts.open', {voice: !!voiceOpts, engine: voice.engine});
+  }
+
+  private openVoiceStream(messageId: string): StreamOptions | undefined {
+    if (!this.voiceOutputActive) {
+      this.voiceStream = null;
+      return undefined;
+    }
+    this.voiceSpeechStarted = null;
+    this.voiceStreamFailed = null;
+    const stream: VoiceStream = {
+      messageId,
+      held: this.holdFirstChunk ? [] : null,
+      holdTimer: null,
+      chars: 0,
+    };
+    if (stream.held) {
+      stream.holdTimer = setTimeout(
+        () => this.releaseHeldVoiceText(messageId),
+        VOICE_FIRST_CHUNK_HOLD_MS,
+      );
+    }
+    this.voiceStream = stream;
+    return {
+      firstChunk: 'clause',
+      onProgress: event => this.onVoiceProgress(messageId, event),
+    };
+  }
+
+  private onVoiceProgress(messageId: string, event: StreamProgressEvent) {
+    vtrace('tts.chunk', {
+      i: event.chunkIndex,
+      chars: event.chunkText.length,
+      current: this.voiceStream?.messageId === messageId,
+    });
+    if (this.voiceStream?.messageId === messageId) {
+      this.voiceSpeechStarted = messageId;
+    }
+  }
+
+  private appendReplyText(handle: StreamingHandle, text: string) {
+    if (this.voiceStream) {
+      this.voiceStream.chars += text.length;
+    }
+    const held = this.voiceStream?.held;
+    if (held) {
+      held.push(text);
+    } else {
+      handle.appendText(text);
+    }
+  }
+
+  private appendPlaceholder(handle: StreamingHandle) {
+    this.streamPlaceholderEmitted = true;
+    this.appendReplyText(handle, `${pickThinkingPlaceholder()} `);
+  }
+
+  private releaseHeldVoiceText(messageId: string) {
+    const stream = this.voiceStream;
+    const state = this.playbackState;
+    if (stream?.messageId !== messageId || !stream.held) {
+      return;
+    }
+    this.clearVoiceHold();
+    const held = stream.held;
+    stream.held = null;
+    vtrace('tts.unhold', {parts: held.length});
+    if (state.mode !== 'streaming' || state.messageId !== messageId) {
+      return;
+    }
+    for (const text of held) {
+      state.handle.appendText(text);
+    }
+  }
+
+  private clearVoiceHold() {
+    const stream = this.voiceStream;
+    if (stream?.holdTimer) {
+      clearTimeout(stream.holdTimer);
+      stream.holdTimer = null;
+    }
   }
 
   /** Delta chunk from the LLM stream. */
@@ -572,7 +835,7 @@ export class TTSStore {
     }
     const stripper = this.streamStripper;
     if (stripper == null) {
-      state.handle.appendText(chunkText);
+      this.appendReplyText(state.handle, chunkText);
       return;
     }
     if (reasoningDelta) {
@@ -584,16 +847,14 @@ export class TTSStore {
       !this.streamPlaceholderEmitted &&
       cleaned.length === 0
     ) {
-      state.handle.appendText(`${pickThinkingPlaceholder()} `);
-      this.streamPlaceholderEmitted = true;
+      this.appendPlaceholder(state.handle);
       return;
     }
     if (cleaned.length > 0) {
       if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-        state.handle.appendText(`${pickThinkingPlaceholder()} `);
-        this.streamPlaceholderEmitted = true;
+        this.appendPlaceholder(state.handle);
       }
-      state.handle.appendText(cleaned);
+      this.appendReplyText(state.handle, cleaned);
     }
   }
 
@@ -610,23 +871,37 @@ export class TTSStore {
         const leftover = stripper.flush();
         if (leftover.length > 0) {
           if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-            state.handle.appendText(`${pickThinkingPlaceholder()} `);
-            this.streamPlaceholderEmitted = true;
+            this.appendPlaceholder(state.handle);
           }
-          state.handle.appendText(leftover);
+          this.appendReplyText(state.handle, leftover);
         }
       }
+      if (this.voiceStream) {
+        this.releaseHeldVoiceText(this.voiceStream.messageId);
+      }
+      const isVoiceReply = this.voiceStream?.messageId === messageId;
+      vtrace('tts.finalize', {
+        voice: isVoiceReply,
+        chars: this.voiceStream?.chars,
+      });
       state.handle
         .finalize()
         .catch(err => {
           console.warn('[TTSStore] finalize failed:', err);
+          vtrace('tts.finalize.fail', {err: String(err)});
+          if (isVoiceReply) {
+            runInAction(() => {
+              this.voiceStreamFailed = messageId;
+            });
+          }
         })
         .finally(() => {
           runInAction(() => {
-            if (
+            const owns =
               this.playbackState.mode === 'streaming' &&
-              this.playbackState.messageId === messageId
-            ) {
+              this.playbackState.messageId === messageId;
+            vtrace('tts.finalized', {owns});
+            if (owns) {
               this.playbackState = {mode: 'idle'};
               // Only reset stripper if this message still owns it —
               // a new message may have already set its own stripper.
@@ -639,8 +914,7 @@ export class TTSStore {
     }
 
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
@@ -661,6 +935,7 @@ export class TTSStore {
     supertonic: SUPERTONIC_MODEL_ESTIMATED_BYTES,
     kokoro: KOKORO_MODEL_ESTIMATED_BYTES,
     kitten: KITTEN_MODEL_ESTIMATED_BYTES,
+    phonon: PHONON_MODEL_ESTIMATED_BYTES,
   };
 
   private async downloadNeuralEngine(id: NeuralEngineId): Promise<void> {
@@ -674,24 +949,16 @@ export class TTSStore {
       this.setDownloadError(id, null);
     });
 
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
+    const engine = getNeuralEngine(id);
 
     // Reclaim engine-specific legacy files BEFORE the disk-space preflight,
     // so a borderline device upgrading from an older engine layout (e.g.
     // Kokoro FP16 → FP32) is not blocked by space the migration is about to
     // free. Idempotent; safe when there is nothing to reclaim.
-    if (
-      'reclaimLegacySpace' in engine &&
-      typeof engine.reclaimLegacySpace === 'function'
-    ) {
-      try {
-        await engine.reclaimLegacySpace();
-      } catch (err) {
-        console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
-      }
+    try {
+      await engine.reclaimLegacySpace?.();
+    } catch (err) {
+      console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
     }
 
     // Safety-net disk-space check. The UI already disables the Install
@@ -752,10 +1019,7 @@ export class TTSStore {
     if (this.getDownloadState(id) === 'downloading') {
       return;
     }
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
+    const engine = getNeuralEngine(id);
     // If this engine is currently active, stop in-flight audio AND
     // release the native resources BEFORE unlinking files. Skipping
     // either step risks a native crash from the engine touching files
@@ -791,6 +1055,10 @@ export class TTSStore {
     return this.downloadNeuralEngine('kitten');
   }
 
+  async downloadPhonon(): Promise<void> {
+    return this.downloadNeuralEngine('phonon');
+  }
+
   /** Retry a failed Supertonic download (preserved for API compat). */
   async retryDownload(): Promise<void> {
     return this.downloadNeuralEngine('supertonic');
@@ -804,6 +1072,10 @@ export class TTSStore {
     return this.downloadNeuralEngine('kitten');
   }
 
+  async retryPhononDownload(): Promise<void> {
+    return this.downloadNeuralEngine('phonon');
+  }
+
   async deleteSupertonic(): Promise<void> {
     return this.deleteNeuralEngine('supertonic');
   }
@@ -814,6 +1086,10 @@ export class TTSStore {
 
   async deleteKitten(): Promise<void> {
     return this.deleteNeuralEngine('kitten');
+  }
+
+  async deletePhonon(): Promise<void> {
+    return this.deleteNeuralEngine('phonon');
   }
 }
 
