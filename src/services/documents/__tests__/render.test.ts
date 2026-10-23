@@ -287,3 +287,11 @@ describe('format characters inside delimiter lookalikes', () => {
     expect(block.match(/<<\\</g)).toHaveLength(2);
   });
 });
+
+describe('a persisted ref with a broken name', () => {
+  it('renders instead of throwing', () => {
+    const broken = pdf({name: {} as unknown as string, mode: 'searched'});
+    expect(() => renderDocumentStub(broken)).not.toThrow();
+    expect(() => renderDocumentBlock(broken, ['x'])).not.toThrow();
+  });
+});

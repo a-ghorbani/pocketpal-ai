@@ -209,7 +209,7 @@ export const TextMessage = ({
         {documents.map(documentRef => (
           <DocumentChip
             key={documentRef.id}
-            name={documentRef.name}
+            name={typeof documentRef.name === 'string' ? documentRef.name : ''}
             documentRef={documentRef}
             mode={modeOf(documentRef)}
             testID="message-document-chip"

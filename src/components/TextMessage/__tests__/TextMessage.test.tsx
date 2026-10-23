@@ -199,4 +199,21 @@ describe('document chips', () => {
     );
     expect(getByText('12 pages · searched')).toBeTruthy();
   });
+
+  it('renders a stored document whose name is not text', () => {
+    expect(() =>
+      renderWithProviders(
+        <TextMessage
+          message={{
+            ...derivedTextMessage,
+            text: 'old',
+            documents: [{...report, name: {} as unknown as string}],
+          }}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={false}
+        />,
+      ),
+    ).not.toThrow();
+  });
 });

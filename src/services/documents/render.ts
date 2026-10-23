@@ -24,8 +24,8 @@ export const documentKey = (ref: DocumentRef): string =>
     : `${ref.id}:all`;
 
 /** A file name as a quoted string that cannot close its quotes or break a line. */
-const quoted = (name: string): string =>
-  `"${name
+const quoted = (name: unknown): string =>
+  `"${(typeof name === 'string' ? name : '')
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/[\r\n]+/g, ' ')}"`;

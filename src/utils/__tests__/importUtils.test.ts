@@ -124,6 +124,54 @@ describe('importUtils', () => {
     });
   });
 
+  describe('imported document ref shape', () => {
+    const id = docId('shape');
+    const valid = {
+      id,
+      name: 'a.pdf',
+      kind: 'pdf',
+      byteSize: 1,
+      charCount: 1,
+      tokenEstimate: 1,
+    };
+    const importRefs = (documents: unknown[]) =>
+      (
+        validateImportedData({
+          title: 'Shapes',
+          messages: [{id: 'm', author: 'user', metadata: {documents}}],
+        }) as ImportedChatSession
+      ).messages[0].metadata?.documents;
+
+    it.each([
+      ['an object name', {name: {}}],
+      ['a missing name', {name: undefined}],
+      ['an empty name', {name: '  '}],
+      ['an overlong name', {name: 'x'.repeat(2000)}],
+      ['an unknown kind', {kind: 'exe'}],
+      ['an unknown mode', {mode: 'everything'}],
+      ['a non-boolean searchPinned', {searchPinned: 'yes'}],
+      ['a negative size', {byteSize: -1}],
+      ['an infinite estimate', {tokenEstimate: Infinity}],
+      ['a non-numeric char count', {charCount: '5'}],
+      ['a bad page count', {pageCount: -3}],
+      ['a bad exact count', {tokenCount: {modelId: 'm', n: 'many'}}],
+    ])('drops a ref with %s', (_label, change) => {
+      expect(importRefs([{...valid, ...change}])).toEqual([]);
+    });
+
+    it('keeps a complete ref', () => {
+      const full = {
+        ...valid,
+        pageCount: 3,
+        pageRange: {from: 1, to: 2},
+        mode: 'searched',
+        searchPinned: true,
+        tokenCount: {modelId: 'm', n: 2},
+      };
+      expect(importRefs([full])).toEqual([full]);
+    });
+  });
+
   describe('non-object message metadata', () => {
     it.each(['x', 42, true, null, [1, 2]])(
       'imports every session when a message has metadata %j',
