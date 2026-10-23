@@ -21,6 +21,7 @@ import {
 } from '../../../../jest/test-utils';
 import {mockPurchaseStore as purchaseStore} from '../../../../__mocks__/stores/purchaseStore';
 import {fakePlusFeatures, fakePlusL10n} from '../../../../jest/fixtures/plus';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {L10nContext} from '../../../utils';
 import type {PlusFeature} from '../../../services/plus/catalog';
 import {deviceRam} from '../../../services/plus/deviceRam';
@@ -34,6 +35,18 @@ import {
 } from '../../../config/urls';
 
 import {PlusScreen} from '../PlusScreen';
+
+jest.mock(
+  '../../../assets/icons',
+  () =>
+    new Proxy(
+      {__esModule: true},
+      {
+        get: (target: Record<string, unknown>, prop: string) =>
+          prop in target ? target[prop] : String(prop),
+      },
+    ),
+);
 
 const mockWindow = {width: 411, height: 923, scale: 2, fontScale: 1};
 
@@ -121,10 +134,15 @@ describe('PlusScreen', () => {
   });
 
   describe('idle', () => {
-    it('shows the features, the first tile selected and Get Plus', () => {
+    it('shows the features, no tile selected and Choose an amount', () => {
       const {getByTestId, getByText, queryByTestId} = renderScreen();
 
       expect(getByText('Push local AI further.')).toBeTruthy();
+      expect(
+        getByText(
+          'Plus keeps PocketPal free and open source. The extra features are our thanks.',
+        ),
+      ).toBeTruthy();
       expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
         'Hands-free voiceReady',
       );
@@ -136,13 +154,29 @@ describe('PlusScreen', () => {
         'Plus is optional. Chatting stays free.',
       );
       expect(
-        getByText('Pay what you like. Same features at every price.'),
+        getByText(
+          'Pay what feels right. Every amount unlocks the same features.',
+        ),
       ).toBeTruthy();
-      expect(getByTestId('plus-tile-plus.1').props.accessibilityState).toEqual({
-        checked: true,
-        disabled: false,
+      ['plus.1', 'plus.2', 'plus.3', 'plus.4'].forEach(id =>
+        expect(getByTestId(`plus-tile-${id}`).props.accessibilityState).toEqual(
+          {checked: false, disabled: false},
+        ),
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Choose an amount');
+      expect(getByTestId('plus-cta').props.accessibilityLabel).toBe(
+        'Choose an amount',
+      );
+      expect(getByTestId('plus-cta').props.accessibilityState).toEqual({
+        busy: false,
+        disabled: true,
       });
-      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+      expect(
+        StyleSheet.flatten(getByTestId('plus-cta').props.style).backgroundColor,
+      ).toBe(themeFixtures.lightTheme.colors.surfaceVariant);
+      expect(
+        StyleSheet.flatten(getByText('Choose an amount').props.style).color,
+      ).toBe(themeFixtures.lightTheme.colors.onBackground);
       expect(getByText('One-time purchase')).toBeTruthy();
       expect(getByTestId('plus-restore')).toBeTruthy();
       expect(getByTestId('plus-open-source')).toBeTruthy();
@@ -162,11 +196,70 @@ describe('PlusScreen', () => {
       ]);
     });
 
-    it('preselects the first returned tile', () => {
-      setProducts(['plus.3', 'plus.4']);
+    it('buys nothing until a tile is picked', () => {
+      const {getByTestId, getByText} = renderScreen();
+
+      fireEvent.press(getByTestId('plus-cta'));
+      expect(purchaseStore.buyPlus).not.toHaveBeenCalled();
+
+      fireEvent.press(getByTestId('plus-tile-plus.3'));
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $24.99');
+      expect(getByTestId('plus-cta').props.accessibilityLabel).toBe(
+        'Get Plus · $24.99',
+      );
+      expect(getByTestId('plus-cta').props.accessibilityState).toEqual({
+        busy: false,
+        disabled: false,
+      });
+      expect(
+        StyleSheet.flatten(getByTestId('plus-cta').props.style).backgroundColor,
+      ).not.toBe(themeFixtures.lightTheme.colors.surfaceVariant);
+      expect(
+        StyleSheet.flatten(getByText('Get Plus · $24.99').props.style).color,
+      ).toBe(themeFixtures.lightTheme.colors.background);
+    });
+
+    it('checks only the last picked tile', () => {
       const {getByTestId} = renderScreen();
 
-      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $24.99');
+      fireEvent.press(getByTestId('plus-tile-plus.3'));
+      fireEvent.press(getByTestId('plus-tile-plus.2'));
+
+      expect(
+        ['plus.1', 'plus.2', 'plus.3', 'plus.4'].map(
+          id => getByTestId(`plus-tile-${id}`).props.accessibilityState.checked,
+        ),
+      ).toEqual([false, true, false, false]);
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $9.99');
+    });
+
+    it('forgets the pick when the screen opens again', () => {
+      const {getByTestId, queryByTestId, rerender, onClose} = renderScreen();
+      fireEvent.press(getByTestId('plus-tile-plus.2'));
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $9.99');
+
+      rerender(<></>);
+      expect(queryByTestId('plus-cta')).toBeNull();
+      rerender(screenElement(onClose));
+
+      expect(getByTestId('plus-cta')).toHaveTextContent('Choose an amount');
+      expect(
+        getByTestId('plus-tile-plus.2').props.accessibilityState.checked,
+      ).toBe(false);
+    });
+
+    it('falls back to Choose an amount when the picked price goes away', () => {
+      const {getByTestId} = renderScreen();
+      fireEvent.press(getByTestId('plus-tile-plus.4'));
+
+      act(() => setProducts(['plus.1', 'plus.2', 'plus.3']));
+
+      expect(getByTestId('plus-cta')).toHaveTextContent('Choose an amount');
+      expect(getByTestId('plus-cta').props.accessibilityState).toMatchObject({
+        disabled: true,
+      });
+      fireEvent.press(getByTestId('plus-cta'));
+      expect(purchaseStore.buyPlus).not.toHaveBeenCalled();
     });
 
     it('buys the selected price', async () => {
@@ -186,10 +279,8 @@ describe('PlusScreen', () => {
     set({plusFlow: 'paying'});
     const {getByTestId} = renderScreen();
 
-    expect(getByTestId('plus-cta')).not.toHaveTextContent('Get Plus');
-    expect(getByTestId('plus-cta').props.accessibilityLabel).toBe(
-      'Get Plus · $4.99',
-    );
+    expect(getByTestId('plus-cta')).not.toHaveTextContent('Choose an amount');
+    expect(getByTestId('plus-cta').props.accessibilityLabel).toBe('Loading');
     expect(getByTestId('plus-cta').props.accessibilityState).toMatchObject({
       busy: true,
       disabled: true,
@@ -232,6 +323,7 @@ describe('PlusScreen', () => {
     purchaseStore.buyPlus.mockResolvedValueOnce('error');
     const {getByTestId, queryByTestId, queryByText} = renderScreen();
 
+    fireEvent.press(getByTestId('plus-tile-plus.1'));
     await act(async () => {
       fireEvent.press(getByTestId('plus-cta'));
     });
@@ -240,7 +332,9 @@ describe('PlusScreen', () => {
       "The purchase didn't go through. Try again.",
     );
     expect(
-      queryByText('Pay what you like. Same features at every price.'),
+      queryByText(
+        'Pay what feels right. Every amount unlocks the same features.',
+      ),
     ).toBeNull();
     expect(getByTestId('plus-free-line')).toBeTruthy();
     expect(getByTestId('plus-tile-plus.1').props.accessibilityState).toEqual({
@@ -258,11 +352,18 @@ describe('PlusScreen', () => {
 
   it('thanks the owner and offers only Done', () => {
     set({plusUnlocked: true});
-    const {getByTestId, getByText, queryByTestId, onClose} = renderScreen();
+    const {getByTestId, getByText, queryByTestId, onClose, UNSAFE_root} =
+      renderScreen();
 
-    expect(
-      getByText('Thanks for pushing local AI forward with us.'),
-    ).toBeTruthy();
+    expect(getByText('Thank you for keeping PocketPal going.')).toBeTruthy();
+    expect(getByText('Plus is unlocked on this device.')).toBeTruthy();
+    const hearts = UNSAFE_root.findAll(
+      node => (node.type as string) === 'HeartIcon',
+    );
+    expect(hearts).toHaveLength(1);
+    expect(hearts[0].props.stroke).toBe(
+      themeFixtures.lightTheme.colors.secondary,
+    );
     expect(getByTestId('plus-feature-handsFreeVoice')).toBeTruthy();
     expect(queryByTestId('plus-tile-plus.1')).toBeNull();
     expect(queryByTestId('plus-restore')).toBeNull();
@@ -276,10 +377,12 @@ describe('PlusScreen', () => {
 
   it('keeps one button while paying and mounts a new one when pending', () => {
     const {getByTestId} = renderScreen();
+    fireEvent.press(getByTestId('plus-tile-plus.1'));
     const buy = getByTestId('plus-cta');
 
     act(() => set({plusFlow: 'paying'}));
     expect(getByTestId('plus-cta')).toBe(buy);
+    expect(buy.props.accessibilityLabel).toBe('Loading');
 
     act(() => set({plusFlow: 'idle', plusPending: true}));
     expect(getByTestId('plus-cta')).not.toBe(buy);
@@ -316,6 +419,7 @@ describe('PlusScreen', () => {
       expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
         "Off on this phone. Turn it on in Settings if you're brave.",
       );
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
     });
 
@@ -347,6 +451,7 @@ describe('PlusScreen', () => {
       expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
         'Turned off in Settings.',
       );
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
       runInAction(() => {
         voiceModeStore.userVoiceModeOverride = null;
@@ -388,6 +493,7 @@ describe('PlusScreen', () => {
       ]);
       const {getByTestId} = renderScreen();
 
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
     });
 
@@ -398,11 +504,15 @@ describe('PlusScreen', () => {
       ]);
       const {getByTestId, getByText} = renderScreen();
 
+      expect(getByTestId('plus-cta')).toHaveTextContent('Choose an amount');
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       expect(getByTestId('plus-cta')).toHaveTextContent(
         'Get Plus anyway · $4.99',
       );
       expect(
-        getByText(/Plus features don't run on this phone yet/),
+        getByText(
+          "Plus features don't run on this phone yet. You can still support PocketPal.",
+        ),
       ).toBeTruthy();
     });
 
@@ -506,6 +616,7 @@ describe('PlusScreen', () => {
 
       expect(queryByTestId('plus-loading')).toBeNull();
       expect(getByTestId('plus-tile-plus.3')).toBeTruthy();
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
     });
   });
@@ -712,6 +823,7 @@ describe('PlusScreen', () => {
         arrange();
         const {getByTestId} = renderScreen();
 
+        fireEvent.press(getByTestId('plus-tile-plus.1'));
         await act(async () => {
           fireEvent.press(getByTestId(testID));
         });
@@ -751,6 +863,7 @@ describe('PlusScreen', () => {
         arrange();
         const {getByTestId, getByText} = renderScreen();
 
+        fireEvent.press(getByTestId('plus-tile-plus.1'));
         await act(async () => {
           fireEvent.press(getByTestId(testID));
         });
@@ -768,7 +881,7 @@ describe('PlusScreen', () => {
 
     act(() => set({plusUnlocked: false}));
 
-    expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+    expect(getByTestId('plus-cta')).toHaveTextContent('Choose an amount');
   });
 
   describe('layout', () => {
@@ -804,7 +917,7 @@ describe('PlusScreen', () => {
 
         expect(textOf(next!)).toBe(free);
         expect(textOf(nodeAfter(tree, free)!)).toBe(
-          'Pay what you like. Same features at every price.',
+          'Pay what feels right. Every amount unlocks the same features.',
         );
       },
     );
@@ -902,6 +1015,7 @@ describe('PlusScreen', () => {
       purchaseStore.buyPlus.mockResolvedValueOnce('error');
       const {getByTestId} = renderScreen();
 
+      fireEvent.press(getByTestId('plus-tile-plus.1'));
       fireEvent.press(getByTestId('plus-cta'));
       await waitFor(() => expect(getByTestId('plus-error-line')).toBeTruthy());
 

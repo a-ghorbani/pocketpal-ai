@@ -116,7 +116,11 @@ describe('PocketPal Plus', () => {
     await openPlusWith(openPlus);
 
     expect(await plus.isShown('plus-licence', 2000)).toBe(driver.isIOS);
+    expect(await plus.ctaLabel()).toBe('Choose an amount');
+    expect(await plus.ctaEnabled()).toBe(false);
+    await plus.selectTile('plus.1');
     expect(await plus.ctaLabel()).toBe('Get Plus · $4.99');
+    expect(await plus.ctaEnabled()).toBe(true);
     await plus.buy();
     await plus.waitForPurchased();
     await plus.done();
@@ -140,6 +144,7 @@ describe('PocketPal Plus', () => {
   it('shows pending, then unlocks when the store approves with the screen open', async () => {
     await openPlusWith(openPlus, {next: 'pending'});
 
+    await plus.selectTile('plus.1');
     await plus.buy();
     await plus.waitFor('plus-pending-notice');
     expect(await plus.ctaLabel()).toBe('Pending');
@@ -150,6 +155,7 @@ describe('PocketPal Plus', () => {
 
   it('keeps pending across a relaunch on Android only', async () => {
     await openPlusWith(openPlus, {next: 'pending'});
+    await plus.selectTile('plus.1');
     await plus.buy();
     await plus.waitFor('plus-pending-notice');
 
@@ -159,7 +165,7 @@ describe('PocketPal Plus', () => {
     if (driver.isAndroid) {
       await plus.waitFor('plus-pending-notice');
     } else {
-      expect(await plus.ctaLabel()).toBe('Get Plus · $4.99');
+      expect(await plus.ctaLabel()).toBe('Choose an amount');
     }
   });
 
@@ -168,6 +174,7 @@ describe('PocketPal Plus', () => {
       this.skip();
     }
     await openPlusWith(openPlus, {next: 'pending'});
+    await plus.selectTile('plus.1');
     await plus.buy();
     await plus.waitFor('plus-pending-notice');
 
@@ -193,6 +200,7 @@ describe('PocketPal Plus', () => {
   it('shows an inline error and buys on retry', async () => {
     await openPlusWith(openPlus, {next: 'error:service-error'});
 
+    await plus.selectTile('plus.1');
     await plus.buy();
     expect(await plus.text('plus-error-line')).toBe(
       "The purchase didn't go through. Try again.",
@@ -225,7 +233,7 @@ describe('PocketPal Plus', () => {
     await plus.restore();
 
     expect(await plus.restoreNote()).toBe('No Plus purchase found.');
-    expect(await plus.ctaLabel()).toBe('Get Plus · $4.99');
+    expect(await plus.ctaLabel()).toBe('Choose an amount');
   });
 
   it('locks Plus again after a refund', async () => {
@@ -236,7 +244,7 @@ describe('PocketPal Plus', () => {
     await relaunchApp();
     await openPlus();
 
-    expect(await plus.ctaLabel(60000)).toBe('Get Plus · $4.99');
+    expect(await plus.ctaLabel(60000)).toBe('Choose an amount');
   });
 
   it('returns to the price grid when a refund lands while the screen is open', async () => {
@@ -247,7 +255,7 @@ describe('PocketPal Plus', () => {
     await driver.background(2);
 
     await plus.waitFor('plus-cta', 60000);
-    expect(await plus.ctaLabel()).toBe('Get Plus · $4.99');
+    expect(await plus.ctaLabel()).toBe('Choose an amount');
   });
 
   it('shows unavailable billing and keeps Restore reachable', async () => {
@@ -292,6 +300,7 @@ describe('PocketPal Plus', () => {
     await plus.waitFor('plus-test-feature-open');
     await browser.$(byExactTestId('plus-test-feature-open')).click();
     await plus.waitForScreen();
+    await plus.selectTile('plus.1');
     await plus.buy();
     await plus.waitForPurchased();
     await plus.done();
@@ -324,6 +333,7 @@ describe('PocketPal Plus', () => {
     await tapVoice();
     await browser.$(byExactTestId('voice-teaser-get-plus')).click();
     await plus.waitForScreen();
+    await plus.selectTile('plus.1');
     await plus.buy();
     await plus.waitForPurchased();
     await plus.done();
