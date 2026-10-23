@@ -322,7 +322,8 @@ export const ChatView = observer(
     const syncedDraftRef = React.useRef('');
     const carriedTextRef = React.useRef<string | null>(null);
     const [inputImages, setInputImages] = React.useState<string[]>([]);
-    const composerSendsInFlightRef = React.useRef(0);
+    /** Rows whose edit an in-flight composer send is committing. */
+    const editsInFlightRef = React.useRef<string[]>([]);
     const [inputDocuments, setInputDocuments] = React.useState<
       ComposerDocument[]
     >([]);
@@ -561,17 +562,19 @@ export const ChatView = observer(
 
     // ============ EDIT EXIT ============
     // Every end of edit mode clears the composer, except when New chat carries
-    // it along or a composer send already cleared it. Declared before the
-    // draft effect, which reads what this one leaves in the refs.
+    // it along or the composer send committing that edit already cleared it.
+    // Declared before the draft effect, which reads what this one leaves in
+    // the refs.
     const isEditMode = chatSessionStore.isEditMode;
     const wasEditMode = usePrevious(isEditMode);
+    const endedEdit = usePrevious(chatSessionStore.editingMessageId);
     React.useEffect(() => {
       if (!wasEditMode || isEditMode) {
         return;
       }
       if (
         carriedTextRef.current !== null ||
-        composerSendsInFlightRef.current > 0
+        (endedEdit != null && editsInFlightRef.current.includes(endedEdit))
       ) {
         return;
       }
@@ -791,13 +794,18 @@ export const ChatView = observer(
         },
       ) => {
         const documentIds = (message.documents ?? []).map(ref => ref.id);
-        const inFlight = resend ? 0 : 1;
+        const committedEdit = resend ? undefined : replaceFromId;
         holdForSend(documentIds);
         try {
           const draftKey =
             chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
           let undone: UndoneSend | undefined | void;
-          composerSendsInFlightRef.current += inFlight;
+          if (committedEdit !== undefined) {
+            editsInFlightRef.current = [
+              ...editsInFlightRef.current,
+              committedEdit,
+            ];
+          }
           try {
             const sent =
               replaceFromId === undefined
@@ -818,7 +826,12 @@ export const ChatView = observer(
             }
             undone = await sent;
           } finally {
-            composerSendsInFlightRef.current -= inFlight;
+            if (committedEdit !== undefined) {
+              const i = editsInFlightRef.current.indexOf(committedEdit);
+              editsInFlightRef.current = editsInFlightRef.current.filter(
+                (_, j) => j !== i,
+              );
+            }
           }
           if (resend) {
             if (

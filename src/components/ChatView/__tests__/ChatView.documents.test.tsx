@@ -1171,6 +1171,53 @@ describe('ChatView edit mode', () => {
     });
   });
 
+  describe.each([
+    ['with documents', [older]],
+    ['without documents', undefined],
+  ])('while an earlier send is still running, in a chat %s', (_label, docs) => {
+    const row = {...olderRow, documents: docs};
+    const startPendingSend = async (chat: ReturnType<typeof renderChat>) => {
+      chat.onSendPress.mockImplementationOnce(() => new Promise(() => {}));
+      chat.type('first message');
+      await act(async () => {
+        chat.pressSend();
+      });
+    };
+
+    it('clears the composer when a plain Edit is cancelled', async () => {
+      shown = [row];
+      const chat = renderChat({messages: shown});
+      await startPendingSend(chat);
+      await pressMenu(chat, 'Older row', menuLabels.edit);
+      expect(chat.input().props.value).toBe('Older row');
+
+      fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+      rerender(chat);
+
+      expect(chat.input().props.value).toBe('');
+      expect(composerChips(chat)).toEqual([]);
+    });
+
+    it('keeps the left chat draft when a chat switch ends a plain Edit', async () => {
+      drafts.set('session-2', 'two');
+      shown = [row];
+      const chat = renderChat({messages: shown});
+      await startPendingSend(chat);
+      drafts.set('session-1', 'earlier');
+      await pressMenu(chat, 'Older row', menuLabels.edit);
+
+      runInAction(() => {
+        store.isEditMode = false;
+        store.editingMessageId = null;
+        chatSessionStore.activeSessionId = 'session-2';
+      });
+      rerender(chat);
+
+      expect(drafts.get('session-1')).toBe('earlier');
+      expect(chat.input().props.value).toBe('two');
+    });
+  });
+
   it('clears the composer when edit mode ends from outside', async () => {
     shown = [olderRow];
     const chat = renderChat({messages: shown});
