@@ -74,6 +74,33 @@ const TEXT_MIME_TYPES: ReadonlySet<string> = new Set([
 
 const NUL_PROBE_BYTES = 8192;
 
+const bytesOf = (base64: string): number[] =>
+  Array.from(atob(base64), char => char.charCodeAt(0));
+
+/** The byte order a UTF-16 byte order mark announces, if the file starts with one. */
+const utf16Order = ([first, second]: number[]): 'le' | 'be' | undefined =>
+  first === 0xff && second === 0xfe
+    ? 'le'
+    : first === 0xfe && second === 0xff
+      ? 'be'
+      : undefined;
+
+const decodeUtf16 = (bytes: number[], order: 'le' | 'be'): string => {
+  const units: number[] = [];
+  for (let i = 2; i + 1 < bytes.length; i += 2) {
+    units.push(
+      order === 'le'
+        ? bytes[i] + bytes[i + 1] * 256
+        : bytes[i] * 256 + bytes[i + 1],
+    );
+  }
+  let text = '';
+  for (let i = 0; i < units.length; i += 8192) {
+    text += String.fromCharCode(...units.slice(i, i + 8192));
+  }
+  return text;
+};
+
 class Refusal extends Error {
   constructor(readonly reason: DocumentRefusalReason) {
     super(reason);
@@ -296,11 +323,18 @@ const importText = async (
   if (ref.byteSize > MAX_TEXT_DOCUMENT_BYTES) {
     throw new Refusal('text_too_long');
   }
-  const probe = await RNFS.read(path, NUL_PROBE_BYTES, 0, 'ascii');
-  if (probe.includes('\u0000')) {
-    throw new Refusal('binary');
+  const order = utf16Order(bytesOf(await RNFS.read(path, 2, 0, 'base64')));
+  if (!order) {
+    const probe = await RNFS.read(path, NUL_PROBE_BYTES, 0, 'ascii');
+    if (probe.includes('\u0000')) {
+      throw new Refusal('binary');
+    }
   }
-  const pages = [await RNFS.readFile(path, 'utf8')];
+  const pages = [
+    order
+      ? decodeUtf16(bytesOf(await RNFS.readFile(path, 'base64')), order)
+      : await RNFS.readFile(path, 'utf8'),
+  ];
   if (!hasText(pages)) {
     throw new Refusal('no_text');
   }

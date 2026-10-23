@@ -55,8 +55,13 @@ beforeEach(() => {
     }
     return files.get(p);
   });
-  fs.read.mockImplementation(async (p: string, length: number) =>
-    (files.get(p) ?? '').slice(0, length),
+  fs.read.mockImplementation(
+    async (p: string, length: number, _position: number, encoding: string) =>
+      encoding === 'base64'
+        ? Buffer.from(files.get(p) ?? '')
+            .subarray(0, length)
+            .toString('base64')
+        : (files.get(p) ?? '').slice(0, length),
   );
   fs.moveFile.mockImplementation(async (from: string, to: string) => {
     files.set(to, files.get(from) ?? '');
@@ -245,6 +250,59 @@ describe('importDocument', () => {
     const result = await importDocument(picked('data.csv', 'a,b\u0000c'));
     expect(result).toEqual({status: 'refused', reason: 'binary'});
     expect(docDirs()).toEqual([]);
+  });
+
+  describe('UTF-16 text', () => {
+    const bytes = (content: string) => {
+      const read = fs.read.getMockImplementation()!;
+      const readFile = fs.readFile.getMockImplementation()!;
+      fs.read.mockImplementation(
+        async (
+          p: string,
+          length: number,
+          position: number,
+          encoding: string,
+        ) =>
+          encoding === 'base64'
+            ? Buffer.from(
+                (files.get(p) ?? '').slice(0, length),
+                'latin1',
+              ).toString('base64')
+            : read(p, length, position, encoding),
+      );
+      fs.readFile.mockImplementation(async (p: string, encoding: string) =>
+        encoding === 'base64' && files.has(p)
+          ? Buffer.from(files.get(p)!, 'latin1').toString('base64')
+          : readFile(p, encoding),
+      );
+      return content;
+    };
+
+    it.each([
+      ['little-endian', '\xff\xfe', 'utf16le'],
+      ['big-endian', '\xfe\xff', 'utf16be'],
+    ])('imports %s text with a byte order mark', async (_order, bom, enc) => {
+      const text = 'Grüße, 世界';
+      const body =
+        enc === 'utf16le'
+          ? Buffer.from(text, 'utf16le')
+          : Buffer.from(text, 'utf16le').swap16();
+      const content = bytes(bom + body.toString('latin1'));
+
+      const ref = ready(await importDocument(picked('notes.txt', content)));
+
+      expect(ref.kind).toBe('text');
+      expect(
+        JSON.parse(files.get(`${ROOT}/${ref.id}/text.all.json`)!).pages,
+      ).toEqual([text]);
+    });
+
+    it('still refuses a binary file without a byte order mark', async () => {
+      const result = await importDocument(
+        picked('data.csv', bytes('a,b\u0000c')),
+      );
+      expect(result).toEqual({status: 'refused', reason: 'binary'});
+    });
   });
 
   it('refuses a text file over the byte cap without decoding it', async () => {
