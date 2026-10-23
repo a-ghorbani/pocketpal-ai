@@ -1,6 +1,7 @@
 import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
 import {finiteNumber} from './finite';
+import {defaultCompletionParams} from './completionSettingsVersions';
 
 export type {ToolCall} from 'llama.rn';
 import type {ToolCall} from 'llama.rn';
@@ -30,16 +31,23 @@ const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
 
 export type CompletionParams = ApiCompletionParams & AppOnlyCompletionParams;
 
+// A run adds these to the stored settings before converting them.
+const RUN_KEYS: (keyof ApiCompletionParams)[] = [
+  'messages',
+  'tools',
+  'reasoning',
+];
+
+const isApiCompletionKey = (key: string): boolean =>
+  !(APP_ONLY_KEYS as string[]).includes(key) &&
+  (key in defaultCompletionParams || (RUN_KEYS as string[]).includes(key));
+
 export function toApiCompletionParams(
   params: CompletionParams,
 ): ApiCompletionParams {
-  const apiParams: Partial<CompletionParams> = {...params};
-
-  for (const key of APP_ONLY_KEYS) {
-    delete apiParams[key];
-  }
-
-  return apiParams as ApiCompletionParams;
+  return Object.fromEntries(
+    Object.entries(params).filter(([key]) => isApiCompletionKey(key)),
+  ) as ApiCompletionParams;
 }
 
 export interface CompletionStreamData {
