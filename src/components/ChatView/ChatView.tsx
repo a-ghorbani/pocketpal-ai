@@ -78,10 +78,11 @@ import {rowsBefore, type BudgetVerdict} from '../../services/documents/plan';
 import {documentKey} from '../../services/documents/render';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
-import type {
-  ComposerDocument,
-  DocumentMode,
-  DocumentRef,
+import {
+  MAX_DOCUMENTS_PER_MESSAGE,
+  type ComposerDocument,
+  type DocumentMode,
+  type DocumentRef,
 } from '../../services/documents/types';
 import {Pal} from '../../types/pal';
 import {
@@ -371,7 +372,11 @@ export const ChatView = observer(
             ),
           };
         }
-        setComposerHeld(next.flatMap(doc => (doc.ref ? [doc.ref.id] : [])));
+        setComposerHeld(
+          [...next, ...(editSnapshotRef.current?.documents ?? [])].flatMap(
+            doc => (doc.ref ? [doc.ref.id] : []),
+          ),
+        );
         setInputDocuments(next);
       },
       [],
@@ -808,25 +813,51 @@ export const ChatView = observer(
             ? [...images, ...pending]
             : [...pending, ...images];
         });
-        updateComposerDocuments(pending => {
-          const chips = readyChips(incoming.documents);
-          const ordered = incomingFirst
-            ? [...chips, ...pending]
-            : [...pending, ...chips];
-          const seen = new Set<string>();
-          return ordered.filter(chip => {
-            if (!chip.ref) {
-              return true;
-            }
-            if (seen.has(chip.ref.id)) {
-              return false;
-            }
-            seen.add(chip.ref.id);
+        const pending = inputDocumentsRef.current;
+        const chips = readyChips(incoming.documents);
+        const ordered = incomingFirst
+          ? [...chips, ...pending]
+          : [...pending, ...chips];
+        const seen = new Set<string>();
+        const merged = ordered.filter(chip => {
+          if (!chip.ref) {
             return true;
-          });
+          }
+          if (seen.has(chip.ref.id)) {
+            return false;
+          }
+          seen.add(chip.ref.id);
+          return true;
         });
+        const isPending = new Set(pending.map(chip => chip.key));
+        let room =
+          MAX_DOCUMENTS_PER_MESSAGE -
+          merged.filter(chip => !isPending.has(chip.key)).length;
+        const leftOut: ComposerDocument[] = [];
+        const capped = merged.filter(chip => {
+          if (!isPending.has(chip.key)) {
+            return true;
+          }
+          if (room > 0) {
+            room -= 1;
+            return true;
+          }
+          leftOut.push(chip);
+          return false;
+        });
+        updateComposerDocuments(() => capped);
+        if (leftOut.length > 0) {
+          uiStore.setChatWarning(
+            createDocumentWarning(
+              t(l10n.chat.documents.refusal, {
+                name: leftOut.map(chip => chip.name).join(', '),
+                reason: l10n.chat.documents.refusals.too_many_files,
+              }),
+            ),
+          );
+        }
       },
-      [updateComposerDocuments],
+      [l10n, updateComposerDocuments],
     );
 
     /** Puts a row in edit mode while keeping what the composer already holds. */

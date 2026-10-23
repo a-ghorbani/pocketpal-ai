@@ -7,7 +7,7 @@ import {sessionFixtures} from '../../../../jest/fixtures/chatSessions';
 import {l10n} from '../../../locales';
 import {ChatView} from '../ChatView';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, uiStore} from '../../../store';
 import * as documentStore from '../../../services/documents/store';
 import type {DocumentRef} from '../../../services/documents/types';
 import type {UndoneSend} from '../../../hooks/useChatSession';
@@ -1238,6 +1238,44 @@ describe('leaving an edit that kept the composer', () => {
     });
     expect(chat.onSendPress).toHaveBeenCalled();
     finish({status: 'refused', reason: 'copy_failed'});
+  });
+
+  it('caps the merged chips at five, the row first, and restores the rest on cancel', async () => {
+    const olderTwo = ref('older-two');
+    shown = [
+      reply('r1', 'reply one'),
+      {...olderRow, documents: [older, olderTwo]},
+    ];
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: budget(),
+    });
+    for (const id of ['p1', 'p2', 'p3', 'p4']) {
+      await chat.attach(ref(id));
+    }
+
+    await regenerate(chat, 'reply one');
+
+    expect(composerChips(chat)).toEqual([
+      'p1.pdf',
+      'p2.pdf',
+      'p3.pdf',
+      'older-doc.pdf',
+      'older-two.pdf',
+    ]);
+    expect(uiStore.setChatWarning).toHaveBeenCalledTimes(1);
+    expect(documentStore.isHeld('p4')).toBe(true);
+
+    fireEvent.press(chat.screen.getByTestId('edit-bar-cancel'));
+    rerender(chat);
+
+    expect(composerChips(chat)).toEqual([
+      'p1.pdf',
+      'p2.pdf',
+      'p3.pdf',
+      'p4.pdf',
+    ]);
+    expect(documentStore.isHeld('p4')).toBe(true);
   });
 
   it('brings back a removed chip whose import finished during the edit', async () => {
