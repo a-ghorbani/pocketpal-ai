@@ -170,13 +170,13 @@
     "contextFull": "對話內容已達上限。請開始新對話或增加內容長度。",
     "contextFullEscalated": "內容仍已達上限。請開始新對話，或增加內容長度以繼續進行。",
     "contextFullHeavyTalent": "對話內容已達上限 — {{talent}} 傾向於需要更多內容。請開始新對話或增加內容長度。",
-    "contextBannerDismiss": "略過",
+    "contextBannerDismiss": "關閉",
     "contextNewChat": "新對話",
     "contextIncrease": "增加內容長度",
     "contextMoreRoom": "更多空間",
     "increaseContextTitle": "給此對話更多空間",
     "increaseContextBody": "空間是模型的運作記憶 — 指它一次能記住此對話的內容量。更多的空間代表在回覆被截斷前可以進行更長的對話。",
-    "increaseContextTokensUnit": "token",
+    "increaseContextTokensUnit": "Token",
     "increaseContextWordsRam": "約 {{words}} 字 · 約 {{ram}} RAM",
     "increaseContextFitsChip": "符合要求",
     "increaseContextTightChip": "空間不足",
@@ -210,7 +210,7 @@
       "openLinkError": "無法開啟此連結。"
     },
     "contextFullRemote": "對話空間不足。請開始新對話。",
-    "speculativeInitFailed": "此裝置無法為此模型啟動投機解碼（Speculative Decoding）——最可能的原因是記憶體不足以容納草稿內容。請在「設定」→「進階設定」中關閉「投機解碼」，然後再試一次。",
+    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼，很可能是草稿模型的上下文記憶體不足。請在「設定 → 進階設定」中關閉推測解碼後再試一次。",
     "routerLoading": "載入模型中…",
     "routerLoadingPercent": "載入模型中 · {{percent}}%"
   },
@@ -451,10 +451,10 @@
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
       "saveChanges": "儲存更改",
-      "reasoningSection": "推理",
+      "reasoningSection": "推理中",
       "isReasoningModel": "推理模型",
       "effortLevels": {
-        "minimal": "最小",
+        "minimal": "最低",
         "low": "低",
         "medium": "中",
         "high": "高",
@@ -462,7 +462,7 @@
         "max": "最高"
       },
       "isReasoningModelHelp": "顯示此模型的思考控制，即使未自動偵測到。",
-      "supportsEffort": "支援分級努力程度",
+      "supportsEffort": "支援分級強度",
       "effortValues": "此模型支援的強度層級"
     },
     "assistantPalSheet": {
@@ -654,7 +654,7 @@
         "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
         "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
       },
-      "talents": "技能",
+      "talents": "才能",
       "talentNames": {
         "render_html": "HTML 預覽",
         "calculate": "數學表達式",
@@ -675,7 +675,7 @@
         "textPlaceholder": "此 pal 在空聊天室中該說什麼？",
         "suggestedPromptsLabel": "建議提示詞",
         "addPromptButton": "新增提示詞",
-        "promptPlaceholder": "針對此建議指令（Chip）編寫簡短提示詞",
+        "promptPlaceholder": "用於建議指令（Chip）的簡短提示詞",
         "removePromptLabel": "移除提示詞"
       }
     },
@@ -707,10 +707,10 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "中斷 — 可能上下文已滿",
+      "truncated": "已截斷 — 可能上下文已滿",
       "draftAccepted": "草稿：{{accepted}}/{{total}}（{{pct}}%）",
-      "promptTokensPerSec": "{{value}} prompt tokens/sec",
-      "cachedTokens": "{{value}} 已快取"
+      "promptTokensPerSec": "{{value}} 提示詞元/秒",
+      "cachedTokens": "已快取 {{value}}"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -768,7 +768,7 @@
       "usingServerDefault": "使用伺服器預設值：{{value}}",
       "usingServerDefaultUnreported": "使用伺服器預設值（未回報）",
       "resetToServerDefault": "伺服器預設值：{{value}} · 重置",
-      "resetToServerDefaultAccessibilityLabel": "將 {{name}} 恢復至伺服器預設值，{{value}}"
+      "resetToServerDefaultAccessibilityLabel": "將 {{name}} 重置為伺服器預設值，{{value}}"
     }
   },
   "feedback": {
@@ -1232,7 +1232,8 @@
       "consentRequired": "請接受上方的說明，以設定金鑰並啟用搜尋。",
       "consentGivenTitle": "網路搜尋已啟用",
       "consentGivenDescription": "如上所述，查詢與網頁讀取可能會離開你的裝置。",
-      "consentRevoke": "撤銷"
+      "consentRevoke": "撤銷",
+      "keyOptional": "{{provider}} 不需要金鑰。新增金鑰可提高使用額度。"
     },
     "languageSheetTitle": "語言",
     "languageSearchPlaceholder": "搜尋語言",
@@ -1242,7 +1243,7 @@
     "speculativeDraftModel": "草稿模型",
     "speculativeDraftModelDescription": "當前模型的草稿 token。",
     "speculativeDraftModelNone": "無（內嵌 MTP）",
-    "speculativeDraftModelIgnoredOverridden": "目由於當前模型自帶其對應的草稿模型，因此此項選擇將被忽略。",
+    "speculativeDraftModelIgnoredOverridden": "目前使用的模型已內建自己的草稿模型，因此會忽略此選擇。",
     "speculativeDraftModelIgnoredIncompatible": "此草稿模型與目前使用的模型不相容，因此會被忽略。",
     "speculativeDraftModelIgnoredNotCapable": "此模型不含草稿層，因此無法用作草稿模型。",
     "speculativeDraftKeyCacheType": "草稿鍵快取類型",
@@ -1451,11 +1452,11 @@
       "pending": "待處理",
       "unlocking": "解鎖中",
       "retry": "重試",
-      "supportCode": "支援碼：{{code}}",
+      "supportCode": "客服代碼：{{code}}",
       "noLongerAvailable": "此 Pal 已不再可用。您可以 {{refundLink}}。",
       "refundLink": "向 Apple 申請退款",
-      "notCompleted": "此購買無法完成。Google 將會為您退款。",
-      "withdrawnRefunding": "此 Pal 已撤回。請聯繫客服申請退款。",
+      "notCompleted": "此筆購買無法完成。Google 將會為您退款。",
+      "withdrawnRefunding": "此 Pal 已下架。請聯絡客服申請退款。",
       "invalid": "無法驗證此筆購買。",
       "heldInvalid": "我們無法解鎖此項購買。請提供此代碼給客服。",
       "recommendedModel": "推薦模型",
@@ -1466,8 +1467,8 @@
       "appleMediaTerms": "Apple 媒體服務條款",
       "linkPrompt": "登入以在您的其他裝置上使用",
       "linkSignIn": "登入",
-      "dismiss": "現在不是時候",
-      "linkConflict": "這些購買項目與另一個帳號連結。",
+      "dismiss": "現在不用",
+      "linkConflict": "這些購買項目已連結至另一個帳號。",
       "restorePurchases": "恢復購買項目",
       "badgePending": "待處理",
       "badgeUnlocking": "解鎖中",
@@ -1481,8 +1482,8 @@
       "modelStep": {
         "download": "下載 · {{size}}",
         "startChat": "開始對話",
-        "needsMemory": "此 Pal 需要至少 {{size}} 記憶體的裝置來執行其最小模型。",
-        "noModelFits": "此裝置的記憶體不足以運行此 Pal。"
+        "needsMemory": "此 Pal 需要至少 {{size}} 的記憶體才能執行其最小模型。",
+        "noModelFits": "此裝置的記憶體不足以執行此 Pal。"
       }
     }
   },
@@ -1516,7 +1517,7 @@
     "engineTierLightest": "最輕量",
     "engineTierBestQuality": "最佳品質",
     "engineTierFastestStart": "最快啟動",
-    "engineSpecsLine": "{{voices}} 種聲音  ·  {{sizeMb}} MB  ·  約 {{ramMb}} MB RAM",
+    "engineSpecsLine": "{{voices}} 種語音 · {{sizeMb}} MB · ~{{ramMb}} MB RAM",
     "engineSystemSpecsLine": "{{voices}} 種語音",
     "engineRemoveTitle": "移除 {{engineTitle}}？",
     "engineRemoveBody": "可釋放約 {{sizeMb}} MB 的裝置空間。",
@@ -1629,7 +1630,7 @@
       "titleAccent": "隨時，"
     },
     "screen3": {
-      "title": "更小，\n但屬於你。",
+      "title": "更小，\n但屬於您。",
       "titleAccent": "更小，",
       "body": "手機上的 Pal 快速且具備隱私性——但比雲端 AI 更輕量。將它們想像成隨身伴侶，而非無所不知的神諭。",
       "highlight": "快速且保有隱私",
@@ -1671,5 +1672,83 @@
     "extraInProgress": "還有 {{count}} 個正在處理中",
     "failedTitle": "下載未完成",
     "retry": "重試"
+  },
+  "voiceInput": {
+    "micLabel": "語音輸入",
+    "recordingLabel": "錄音中",
+    "stopLabel": "停止並轉錄",
+    "cancelLabel": "取消語音輸入",
+    "transcribingLabel": "轉錄中…",
+    "setupLabel": "設定語音輸入",
+    "settingTitle": "語音輸入",
+    "settingDescription": "在聊天中點擊麥克風即可語音輸入；語音會在您的裝置上轉錄。",
+    "unsupportedDeviceHelper": "此裝置低於建議規格，語音輸入可能會很慢或無法運作。",
+    "spokenLanguageLabel": "口說語言",
+    "spokenLanguageAuto": "自動偵測",
+    "spokenLanguageDetected": "自動偵測：{{language}}",
+    "resetLanguageCta": "重置",
+    "recordingLanguageAuto": "語言：自動",
+    "recordingLanguage": "語言：{{code}}（點擊可重置）",
+    "waitingForChatLabel": "將在回覆完成後轉錄…",
+    "tierBase": "Base（多語言、體積最小）",
+    "tierSmall": "Small（建議）",
+    "tierLargeTurbo": "Large Turbo（最佳品質）",
+    "tierSizeLabel": "{{sizeMb}} MB",
+    "installCta": "下載",
+    "downloadingLabel": "下載中…",
+    "retryCta": "重試",
+    "removeCta": "移除",
+    "errorPermissionDenied": "語音輸入需要麥克風權限。",
+    "errorPermissionBlocked": "麥克風權限已被封鎖，請在「設定」中開啟。",
+    "errorTranscribeFailed": "無法轉錄 — 請再試一次。",
+    "errorNotInstalled": "請下載語音模型以使用語音輸入。",
+    "errorInsufficientMemory": "記憶體不足，無法在使用此聊天模型時進行語音輸入。請改用較小的模型。",
+    "errorMicUnavailable": "麥克風沒有回應。請再試一次，或改用較小的聊天模型。",
+    "errorTranscriptPartial": "您的部分語音內容無法轉錄。",
+    "openSettingsLabel": "開啟設定",
+    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此模型（目前剩餘 {{freeMb}} MB）。"
+  },
+  "plus": {
+    "eyebrow": "PocketPal Plus",
+    "headline": "讓本地 AI 走得更遠。",
+    "subline": "額外工具，讓您試出手機真正的實力，也讓 PocketPal 能持續免費且開放原始碼。",
+    "unsupportedSubline": "Plus 功能目前還無法在這支手機上執行。您仍然可以支持 PocketPal，日後支援這支手機的功能也都包含在內。",
+    "thanksHeadline": "感謝您和我們一起推動本地 AI。",
+    "thanksSubline": "Plus 已在此裝置上解鎖。日後新增的 Plus 功能會自動出現在這裡。",
+    "features": {
+      "handsFreeVoice": "免持語音",
+      "localApiServer": "本地 API 伺服器"
+    },
+    "ready": "可使用",
+    "needsRam": "需要 {{gb}} GB RAM",
+    "comingSoon": "即將推出",
+    "speedLine": "速度取決於您的手機與模型。",
+    "inDevelopment": "開發中的功能可能會變更，也可能不會推出。",
+    "priceCaption": "金額隨您決定，每個價格都提供相同功能。",
+    "buyError": "購買未完成。請再試一次。",
+    "getPlus": "取得 Plus · {{price}}",
+    "getPlusAnyway": "仍要取得 Plus · {{price}}",
+    "loading": "載入中",
+    "pending": "待處理",
+    "pendingTitle": "正在等待商店確認您的付款。",
+    "pendingBody": "付款完成後，Plus 會自動解鎖。您可以關閉此畫面。",
+    "unavailableTitle": "目前無法進行購買。",
+    "unavailableBody": "無法連線到商店。請稍後再試，或恢復先前的購買項目。",
+    "done": "完成",
+    "oneTimePurchase": "一次性購買",
+    "restore": "恢復購買",
+    "openSource": "開放原始碼 ↗",
+    "licence": "一次性購買 Plus 的使用授權。",
+    "terms": "條款",
+    "appleMediaTerms": "Apple 媒體服務條款",
+    "noPurchaseFound": "找不到 Plus 的購買記錄。",
+    "restoreFailed": "無法連線到商店。請再試一次。",
+    "sidebar": {
+      "title": "PocketPal Plus",
+      "unlocked": "已解鎖",
+      "subtitleOne": "{{first}}",
+      "subtitleTwo": "{{first}}、{{second}}",
+      "subtitleMore": "{{first}}、{{second}} 等"
+    }
   }
 }
