@@ -839,13 +839,25 @@ export const useChatSession = (
     await addMessage(systemRow(text, metadata));
   };
 
-  /** Edit mode hides rows after the edited one, so a row there would go unseen. */
-  const reportModelNotLoaded = async () => {
+  /**
+   * Reports a send that found no model and hands it back. In edit mode a row
+   * after the edited one would go unseen, so it warns instead. The report's
+   * row can create the chat a new-chat send was typed in, so that chat counts
+   * as the one it came from.
+   */
+  const failWithoutModel = async (
+    message: MessageType.PartialText,
+    origin: SendOrigin,
+  ): Promise<UndoneSend | undefined> => {
     if (chatSessionStore.isEditMode) {
       uiStore.setChatWarning(createChatWarning(l10n.chat.modelNotLoaded));
-      return;
+    } else {
+      await addSystemMessage(l10n.chat.modelNotLoaded);
     }
-    await addSystemMessage(l10n.chat.modelNotLoaded);
+    return unsent(message, {
+      ...origin,
+      sentFrom: chatSessionStore.activeSessionId,
+    });
   };
 
   /**
@@ -893,8 +905,7 @@ export const useChatSession = (
       return unsent(message, origin);
     }
     if (!lease) {
-      await reportModelNotLoaded();
-      return unsent(message, origin);
+      return failWithoutModel(message, origin);
     }
     leaseRef.current = lease;
 
@@ -946,8 +957,7 @@ export const useChatSession = (
     const engine = lease.engine;
     const contextId = modelStore.contextId;
     if (!contextId) {
-      await reportModelNotLoaded();
-      return unsent(message, origin);
+      return failWithoutModel(message, origin);
     }
     const {replaceFromId, resend} = origin.options;
 

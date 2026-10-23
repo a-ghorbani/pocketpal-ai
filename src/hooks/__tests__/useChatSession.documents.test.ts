@@ -1112,6 +1112,56 @@ describe('removing rows under the lease', () => {
     },
   );
 
+  describe.each([
+    ['with documents', [earlier]],
+    ['without documents', undefined],
+  ])('in a new chat %s', (_label, documents) => {
+    beforeEach(() => {
+      history = [];
+      chatSessionStore.activeSessionId = null as any;
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async () => {
+        chatSessionStore.activeSessionId = 'created-by-row';
+      });
+    });
+
+    afterEach(() => {
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockResolvedValue(undefined);
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+
+    it.each([
+      [
+        'no model is loaded',
+        () => {
+          modelStore.engine = undefined as any;
+        },
+      ],
+      [
+        'the model has no context',
+        () => {
+          modelStore.context = undefined as any;
+        },
+      ],
+    ])('hands the send back to the open chat when %s', async (_l, unload) => {
+      unload();
+      const message = {
+        type: 'text' as const,
+        text: 'go',
+        documents,
+        imageUris: ['file://a.jpg'],
+      };
+
+      const undone = await sendWith(message);
+
+      expect(chatSessionStore.restoreUnsentText).not.toHaveBeenCalled();
+      expect(undone).toEqual({message, sessionId: 'created-by-row'});
+    });
+  });
+
   it('hands a resend back as nothing when no model is loaded', async () => {
     modelStore.engine = undefined as any;
 
