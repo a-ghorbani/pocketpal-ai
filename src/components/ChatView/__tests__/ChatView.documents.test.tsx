@@ -939,6 +939,27 @@ describe('ChatView composer merge', () => {
     expect(chat.screen.getAllByLabelText(/^Image preview/)).toHaveLength(1);
     expect(documentStore.isHeld(report.id)).toBe(true);
   });
+
+  it("drops an undone send's kept attachments when its chat is deleted", async () => {
+    const report = ref('deleted-chat-doc');
+    const chat = renderChat();
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(async () => ({
+      message: {type: 'text', text: 'Summarise', documents: [report]},
+      sessionId: 'session-2',
+    }));
+    chat.type('typed here');
+    await act(async () => {
+      chat.pressSend();
+    });
+    expect(documentStore.isHeld(report.id)).toBe(true);
+
+    chatSessionStore.sessions = chatSessionStore.sessions.filter(
+      session => session.id !== 'session-2',
+    );
+    act(() => chat.screen.rerender(chat.element()));
+
+    expect(documentStore.isHeld(report.id)).toBe(false);
+  });
 });
 
 describe('ChatView resend', () => {

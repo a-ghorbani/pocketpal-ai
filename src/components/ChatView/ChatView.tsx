@@ -362,6 +362,17 @@ export const ChatView = observer(
       [],
     );
     React.useEffect(() => () => setComposerHeld([]), []);
+    const sessionIds = chatSessionStore.sessions.map(session => session.id);
+    const sessionIdsKey = sessionIds.join('|');
+    React.useEffect(() => {
+      const pending = pendingAttachmentsRef.current;
+      const gone = [...pending.keys()].filter(id => !sessionIds.includes(id));
+      if (gone.length > 0) {
+        gone.forEach(id => pending.delete(id));
+        updateComposerDocuments(documents => documents);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the chat ids
+    }, [sessionIdsKey]);
     const setComposerRefs = React.useCallback(
       (refs: DocumentRef[]) => updateComposerDocuments(() => readyChips(refs)),
       [updateComposerDocuments],
