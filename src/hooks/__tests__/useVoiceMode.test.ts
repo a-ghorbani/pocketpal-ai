@@ -637,6 +637,54 @@ describe('useVoiceMode', () => {
       expect(hook.result.current.sheet).toBeNull();
     });
 
+    describe('when the model changed while the memory sheet was open', () => {
+      const openTightSheet = async () => {
+        runInAction(() => {
+          model.loadedModelBytes =
+            5e9 * ASR_IOS_CEILING_SHARE -
+            ASR_TIERS.base.runtimeBytes -
+            TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+        });
+        const rendered = renderVoiceMode();
+        await rendered.enter();
+        expect(rendered.hook.result.current.sheet).toMatchObject({
+          fit: {status: 'tight'},
+        });
+        return rendered;
+      };
+
+      it('Continue anyway opens the model picker once the model is gone', async () => {
+        const {hook, engine} = await openTightSheet();
+        runInAction(() => {
+          model.activeModelId = undefined;
+        });
+
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        expect(openModelPicker).toHaveBeenCalledTimes(1);
+        expect(hook.result.current.sheet).toBeNull();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(voiceModeStore.phase).toBe('closed');
+      });
+
+      it('Continue anyway does not enter while the model is loading', async () => {
+        const {hook, engine} = await openTightSheet();
+        runInAction(() => {
+          model.isContextLoading = true;
+        });
+
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(voiceModeStore.phase).toBe('closed');
+      });
+    });
+
     it("won't enter on Continue anyway when whisper won't fit", async () => {
       runInAction(() => {
         model.loadedModelBytes = 5e9;

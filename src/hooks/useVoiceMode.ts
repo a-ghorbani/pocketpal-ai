@@ -185,6 +185,14 @@ class VoiceModeController {
     }
   }
 
+  async continueAnyway(): Promise<void> {
+    await this.exiting;
+    this.showSheet(null);
+    if (!this.entryBlocked()) {
+      await this.enter();
+    }
+  }
+
   private entryBlocked(): boolean {
     if (!voiceModeStore.isUnlocked) {
       this.showSheet({kind: 'teaser'});
@@ -636,7 +644,7 @@ export function useVoiceMode({
 
   const continueAnyway = useCallback(async () => {
     if (sheet?.kind === 'memory' && sheet.fit.status === 'tight') {
-      await controller.enter();
+      await controller.continueAnyway();
     }
   }, [controller, sheet]);
 
