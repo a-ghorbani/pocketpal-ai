@@ -555,7 +555,9 @@
     "tourDescription": "Die Willkommensbildschirme erneut ansehen, um zu sehen, was PocketPal AI bietet.",
     "showIntroButton": "Einführung erneut anzeigen",
     "privacyPolicy": "Datenschutzerklärung",
-    "termsOfService": "Nutzungsbedingungen"
+    "termsOfService": "Nutzungsbedingungen",
+    "openSourceNotices": "Open-Source Notizen",
+    "phononNoticesCredit": "Phonon-Sprachmodell und Stimmen von Gradium, lizenziert unter Apache-2.0. Basierend auf Pocket TTS und dem Mimi-Codec von Kyutai."
   },
   "feedback": {
     "title": "Feedback senden",
@@ -1573,7 +1575,11 @@
     "engineRetryCta": "Erneut versuchen",
     "voicesEmptyState": "Keine Stimmen gefunden.",
     "kokoroDeviceNote": "Einige Stimmen funktionieren möglicherweise nicht auf allen Geräten.",
-    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um diese Engine zu installieren ({{freeMb}} MB verfügbar)."
+    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um diese Engine zu installieren ({{freeMb}} MB verfügbar).",
+    "engineChipPhonon": "Phonon",
+    "enginePhononTagline": "Schnell startend und speicher sparend. Nur auf Englisch.",
+    "enginePhononCredit": "Modell und Stimmen von Gradium (Apache-2.0), basierend auf Kyutais Mimi.",
+    "engineTierNatural": "natürliches Englisch"
   },
   "voiceInput": {
     "micLabel": "Diktieren",
@@ -1707,5 +1713,9 @@
     "extraInProgress": "+{{count}} weitere in Bearbeitung",
     "failedTitle": "Download nicht abgeschlossen",
     "retry": "Erneut versuchen"
+  },
+  "plus": {
+    "eyebrow": "PocketPal Plus",
+    "headline": "Lokale KI weiterentwickeln."
   }
 }
