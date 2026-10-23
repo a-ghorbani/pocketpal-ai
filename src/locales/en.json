@@ -1774,7 +1774,7 @@
     "subline": "Extra tools for testing what a phone can really do, and a way to fund the work that keeps PocketPal free and open source.",
     "unsupportedSubline": "Plus features don't run on this phone yet. You can still support PocketPal, and features that reach your phone later are included.",
     "thanksHeadline": "Thanks for pushing local AI forward with us.",
-    "thanksSubline": "Plus is unlocked on this device. New Plus features appear here automatically.",
+    "thanksSubline": "Plus is unlocked on this device.",
     "features": {
       "handsFreeVoice": "Hands-free voice",
       "localApiServer": "Local API server"
