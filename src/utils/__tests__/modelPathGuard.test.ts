@@ -507,3 +507,35 @@ describe('backslash in a model path segment', () => {
     expect(isModelFilePath(path, {local})).toBe(false);
   });
 });
+
+describe('isLocal must be exactly true to skip the gguf rule', () => {
+  it.each<[string, unknown]>([
+    ['"true"', 'true'],
+    ['"yes"', 'yes'],
+    ['1', 1],
+  ])('isLocal %s with a non-gguf filename is dropped', (_case, isLocal) => {
+    for (const origin of ['hf', 'preset', 'remote', undefined]) {
+      expect(
+        isValidImportedModelRef({
+          ...(origin === undefined ? {} : {origin}),
+          isLocal,
+          id: 'a/r/pocketpalai.db',
+          author: 'a',
+          repo: 'r',
+          filename: 'pocketpalai.db',
+        }),
+      ).toBe(false);
+    }
+  });
+});
+
+describe('dot segments in a local model path', () => {
+  it.each([
+    `${MODELS}/.`,
+    `${MODELS}/local/.`,
+    `${MODELS}/local/./a\\b.gguf`,
+    `${MODELS}/local/a\\b/.`,
+  ])('%p is refused', path => {
+    expect(isModelFilePath(path, {local: true})).toBe(false);
+  });
+});

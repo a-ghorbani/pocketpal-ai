@@ -994,6 +994,27 @@ describe('model load guard', () => {
       ['HF filename a\\b.gguf', () => craftedHf({filename: 'a\\b.gguf'})],
     ];
 
+    it.each([`${DOCS}/models/.`, `${DOCS}/models/local/.`])(
+      'LOCAL row at the folder %p is not loaded or unlinked',
+      async fullPath => {
+        const model = createModel({
+          id: 'local-folder',
+          author: '',
+          filename: '.',
+          fullPath,
+          isLocal: true,
+          origin: ModelOrigin.LOCAL,
+          isDownloaded: true,
+        }) as Model;
+        runInAction(() => {
+          modelStore.models = [model];
+        });
+        await expectLoadRefused(model.id);
+        await modelStore.deleteModel(storeModel(model.id));
+        expect(RNFS.unlink).not.toHaveBeenCalled();
+      },
+    );
+
     it.each(MAIN)('%s: load refused', async (_case, build) => {
       const model = build();
       runInAction(() => {
