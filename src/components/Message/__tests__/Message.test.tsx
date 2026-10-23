@@ -1,6 +1,6 @@
 import {render} from '@testing-library/react-native';
 import * as React from 'react';
-import {Animated, Image, Linking, Platform} from 'react-native';
+import {Animated, Image, Keyboard, Platform} from 'react-native';
 import {EnrichedMarkdownText} from 'react-native-enriched-markdown';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
@@ -14,6 +14,7 @@ import {
   render as renderWithProviders,
 } from '../../../../jest/test-utils';
 import {l10n} from '../../../locales';
+import * as plainText from '../../MarkdownView/markdownToPlainText';
 import {Message} from '../Message';
 
 const rowProps = {
@@ -136,7 +137,6 @@ describe('message', () => {
         'impactLight',
         expect.any(Object),
       );
-      expect(queryByTestId('user-row-footer')).toBeNull();
       expect(queryByTestId('message-menu-button')).toBeNull();
       expect(queryByTestId('assistant-turn-footer')).toBeNull();
       jest.useRealTimers();
@@ -176,19 +176,8 @@ describe('message', () => {
         return lastMarkdownProps();
       };
 
-      it('opens the link through the tap handler on a user row on Android', () => {
-        const openURL = jest
-          .spyOn(Linking, 'openURL')
-          .mockResolvedValue(undefined);
-        const props = renderLinkRow(derivedTextMessage.author.id, 'android');
-
-        expect(props.onLinkLongPress).toBe(props.onLinkPress);
-        props.onLinkLongPress({url: 'https://x.y'});
-        expect(openURL).toHaveBeenCalledWith('https://x.y');
-        openURL.mockRestore();
-      });
-
       it.each([
+        ['a user row on Android', derivedTextMessage.author.id, 'android'],
         ['a user row on iOS', derivedTextMessage.author.id, 'ios'],
         ['an assistant row on Android', 'assistant', 'android'],
       ])('leaves it to the renderer on %s', (_case, authorId, os) => {
@@ -226,7 +215,7 @@ describe('message', () => {
       expect(row.props.accessibilityActions).toEqual([
         {
           name: 'longpress',
-          label: l10n.en.components.messageMenuButton.accessibilityLabel,
+          label: l10n.en.components.messageMenuButton.openMenuAction,
         },
       ]);
 
@@ -254,6 +243,51 @@ describe('message', () => {
       expect(userRowOf(UNSAFE_root).props.accessibilityLabel).toBe(
         'first item second item See the probe. print(1)',
       );
+    });
+
+    it('derives the label once per text, not per row object', () => {
+      const toPlain = jest.spyOn(plainText, 'markdownToPlainText');
+      const {rerender} = renderWithProviders(
+        <Message {...rowProps} message={{...derivedTextMessage}} />,
+      );
+      rerender(<Message {...rowProps} message={{...derivedTextMessage}} />);
+      expect(toPlain).toHaveBeenCalledTimes(1);
+
+      rerender(
+        <Message
+          {...rowProps}
+          message={{...derivedTextMessage, text: 'another'}}
+        />,
+      );
+      expect(toPlain).toHaveBeenCalledTimes(2);
+      toPlain.mockRestore();
+    });
+
+    it('starts no hold or press-in while the keyboard is up', () => {
+      jest.useFakeTimers();
+      const keyboard = jest.spyOn(Keyboard, 'isVisible').mockReturnValue(true);
+      const spring = jest.spyOn(Animated, 'spring');
+      const onMessageMenuPress = jest.fn();
+      const {UNSAFE_root} = renderWithProviders(
+        <Message
+          {...rowProps}
+          message={derivedTextMessage}
+          onMessageMenuPress={onMessageMenuPress}
+        />,
+      );
+
+      fireEvent(userRowOf(UNSAFE_root), 'touchStart', {
+        nativeEvent: {pageX: 1, pageY: 2},
+      });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(onMessageMenuPress).not.toHaveBeenCalled();
+      expect(spring).not.toHaveBeenCalled();
+      keyboard.mockRestore();
+      spring.mockRestore();
+      jest.useRealTimers();
     });
 
     it('springs the user bubble to 1.01 on touch start and back on release', () => {

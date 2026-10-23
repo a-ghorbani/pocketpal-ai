@@ -8,6 +8,7 @@ const LONG_PRESS_MOVE_TOLERANCE = 10;
 
 type TouchLongPressHandlers = {
   onLongPress: (event: PressPointEvent) => void;
+  canStart?: () => boolean;
   onPressIn?: () => void;
   onPressOut?: () => void;
 };
@@ -19,6 +20,7 @@ type TouchLongPressHandlers = {
  */
 export const useTouchLongPress = ({
   onLongPress,
+  canStart,
   onPressIn,
   onPressOut,
 }: TouchLongPressHandlers) => {
@@ -50,6 +52,9 @@ export const useTouchLongPress = ({
     () => ({
       onTouchStart: ({nativeEvent: {pageX, pageY}}: GestureResponderEvent) => {
         release();
+        if (canStart && !canStart()) {
+          return;
+        }
         const point = {pageX, pageY};
         start.current = point;
         pressed.current = true;
@@ -72,6 +77,6 @@ export const useTouchLongPress = ({
       onTouchEnd: release,
       onTouchCancel: release,
     }),
-    [clearHold, onLongPress, onPressIn, release],
+    [canStart, clearHold, onLongPress, onPressIn, release],
   );
 };

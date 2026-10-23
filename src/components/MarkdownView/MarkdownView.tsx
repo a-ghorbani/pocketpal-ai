@@ -22,7 +22,6 @@ interface MarkdownViewProps {
   maxMessageWidth: number;
   selectable?: boolean;
   blockContextMenu?: boolean;
-  openLinkOnLongPress?: boolean;
   streamingAnimation?: boolean;
   variant?: MarkdownVariant;
 }
@@ -43,7 +42,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     maxMessageWidth,
     selectable,
     blockContextMenu = true,
-    openLinkOnLongPress,
     streamingAnimation,
     variant = 'body',
   }) => {
@@ -106,7 +104,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             enableTaskListItemToggle={false}
             enableLinkPreview={false}
             onLinkPress={openLink}
-            onLinkLongPress={openLinkOnLongPress ? openLink : undefined}
             selectionMenuConfig={selectionMenuConfig}
             accessibilityLabels={accessibilityLabels}
           />
@@ -119,7 +116,6 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     prevProps.maxMessageWidth === nextProps.maxMessageWidth &&
     prevProps.selectable === nextProps.selectable &&
     prevProps.blockContextMenu === nextProps.blockContextMenu &&
-    prevProps.openLinkOnLongPress === nextProps.openLinkOnLongPress &&
     prevProps.streamingAnimation === nextProps.streamingAnimation &&
     prevProps.variant === nextProps.variant,
 );

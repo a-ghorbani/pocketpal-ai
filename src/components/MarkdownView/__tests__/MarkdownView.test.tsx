@@ -164,21 +164,6 @@ describe('MarkdownView', () => {
     expect(lastProps().onLinkLongPress).toBeUndefined();
   });
 
-  it('re-renders when only openLinkOnLongPress changes', () => {
-    const {rerender} = render(
-      <MarkdownView markdownText="a" maxMessageWidth={300} />,
-    );
-    rerender(
-      <MarkdownView
-        markdownText="a"
-        maxMessageWidth={300}
-        openLinkOnLongPress
-      />,
-    );
-
-    expect(lastProps().onLinkLongPress).toBe(lastProps().onLinkPress);
-  });
-
   it('turns break tags into spaces before rendering', () => {
     render(<MarkdownView markdownText="one<br/>two" maxMessageWidth={300} />);
 

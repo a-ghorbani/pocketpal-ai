@@ -7,6 +7,7 @@ import {useTouchLongPress} from '../useTouchLongPress';
 
 type Handlers = {
   onLongPress: jest.Mock;
+  canStart?: () => boolean;
   onPressIn?: jest.Mock;
   onPressOut?: jest.Mock;
 };
@@ -125,6 +126,24 @@ describe('useTouchLongPress', () => {
     fireEvent(target, 'touchEnd', touch(0, 0));
 
     expect(onPressOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts nothing when canStart says no', () => {
+    const onLongPress = jest.fn();
+    const onPressIn = jest.fn();
+    const {getByTestId} = render(
+      <Target
+        onLongPress={onLongPress}
+        onPressIn={onPressIn}
+        canStart={() => false}
+      />,
+    );
+
+    fireEvent(getByTestId('target'), 'touchStart', touch(0, 0));
+    wait(500);
+
+    expect(onPressIn).not.toHaveBeenCalled();
+    expect(onLongPress).not.toHaveBeenCalled();
   });
 
   it('does not fire after unmount', () => {

@@ -633,7 +633,8 @@
       "reasoning": "Reasoning"
     },
     "messageMenuButton": {
-      "accessibilityLabel": "More actions"
+      "accessibilityLabel": "More actions",
+      "openMenuAction": "Open message menu"
     },
     "markdownView": {
       "selectionMenu": {

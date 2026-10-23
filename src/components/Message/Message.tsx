@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   AccessibilityActionEvent,
   Animated,
+  Keyboard,
   type HostInstance,
   Pressable,
   Text,
@@ -33,7 +34,7 @@ import {
   L10nContext,
   UserContext,
 } from '../../utils';
-import {markdownToPlainText} from '../../utils/markdownToPlainText';
+import {markdownToPlainText} from '../MarkdownView/markdownToPlainText';
 import {openAtPressPoint} from '../../utils/pressPoint';
 import {visibleStepContent} from '../../utils/chat';
 
@@ -41,6 +42,8 @@ const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
+
+const isKeyboardHidden = () => !Keyboard.isVisible();
 
 export interface MessageTopLevelProps extends TextMessageTopLevelProps {
   isActiveRun?: boolean;
@@ -168,23 +171,24 @@ export const Message = observer(
     const pressOut = React.useCallback(() => springScale(1), [springScale]);
     const userRowTouches = useTouchLongPress({
       onLongPress: openUserMenu,
+      canStart: isKeyboardHidden,
       onPressIn: pressIn,
       onPressOut: pressOut,
     });
 
+    const userText =
+      currentUserIsAuthor && message.type === 'text' ? message.text : undefined;
     const userRowLabel = React.useMemo(
       () =>
-        currentUserIsAuthor && message.type === 'text'
-          ? markdownToPlainText(message.text)
-          : undefined,
-      [currentUserIsAuthor, message],
+        userText === undefined ? undefined : markdownToPlainText(userText),
+      [userText],
     );
 
     const userRowActions = React.useMemo(
       () => [
         {
           name: 'longpress',
-          label: l10n.components.messageMenuButton.accessibilityLabel,
+          label: l10n.components.messageMenuButton.openMenuAction,
         },
       ],
       [l10n],

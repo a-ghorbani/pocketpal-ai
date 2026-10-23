@@ -223,7 +223,7 @@ export const Selectors = {
     /**
      * Selector for detecting inference completion.
      * Matches any element with "tokens/sec" in its accessibility label/content-desc.
-     * The timing info appears in the message bubble's accessibility label when inference completes.
+     * The timing appears in the assistant footer's timing text when inference completes.
      */
     get inferenceComplete(): string {
       if (isAndroid()) {

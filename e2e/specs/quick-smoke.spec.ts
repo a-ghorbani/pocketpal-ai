@@ -186,7 +186,7 @@ describe('Quick Smoke Test', () => {
 
       if (exists) {
         console.log('[Timing] Inference complete - timing found');
-        // Extract timing from accessibility label (content-desc on Android, label on iOS)
+        // Read the footer timing text (label on iOS, text on Android)
         const labelText = await readTimingText(timingElement);
         const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
         timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
