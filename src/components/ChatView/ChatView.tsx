@@ -140,9 +140,14 @@ const prependText = (first: string, rest: string) =>
 
 type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 
-/** What the composer holds beyond a sent text that it still starts with. */
-const unsentPart = (live: string, sent: string): string =>
-  live.startsWith(sent) ? live.slice(sent.length).trimStart() : live;
+/**
+ * What the composer holds beyond a sent text that it still starts with,
+ * ignoring the whitespace the send trimmed.
+ */
+const unsentPart = (live: string, sent: string): string => {
+  const typed = live.trimStart();
+  return typed.startsWith(sent) ? typed.slice(sent.length).trimStart() : live;
+};
 
 const readyChips = (refs: DocumentRef[] = []): ComposerDocument[] =>
   refs.map(ref => ({key: randId(), status: 'ready', name: ref.name, ref}));

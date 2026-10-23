@@ -400,6 +400,24 @@ describe('ChatView send gate', () => {
     },
   );
 
+  it.each([
+    ['a leading space', ' hello'],
+    ['a leading newline', '\nhello'],
+    ['surrounding whitespace', '  hello \n'],
+  ])('clears a sent message that began with %s', async (_label, typed) => {
+    const chat = renderChat();
+    chat.type(typed);
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(chat.onSendPress).toHaveBeenCalledWith(
+      expect.objectContaining({text: 'hello'}),
+    );
+    expect(chat.input().props.value).toBe('');
+  });
+
   it('sends a message without documents in the same tick, without a check', () => {
     const evaluateSendBudget = jest.fn();
     const chat = renderChat({evaluateSendBudget});
