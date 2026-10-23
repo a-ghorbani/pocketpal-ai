@@ -1097,5 +1097,88 @@ describe('model load guard', () => {
       await expectLoadRefused(ghost.id);
       await expectReadsSkipped(ghost.id);
     });
+
+    it.each<[string, () => Model]>([
+      ['HF filename x.bin', () => craftedHf({filename: 'x.bin'})],
+      [
+        'PRESET filename x.bin',
+        () => craftedHf({filename: 'x.bin', origin: ModelOrigin.PRESET}),
+      ],
+      [
+        'LOCAL models/local/../../../etc/hosts',
+        () => craftedLocal(`${DOCS}/models/local/../../../etc/hosts`),
+      ],
+      [
+        'LOCAL models/local/a<U+0000>b.gguf',
+        () => craftedLocal(`${DOCS}/models/local/a\u0000b.gguf`),
+      ],
+    ])('%s: load refused, model info and hash not read', async (_c, build) => {
+      const model = build();
+      runInAction(() => {
+        modelStore.models = [model];
+      });
+      await expectLoadRefused(model.id);
+      await expectReadsSkipped(model.id);
+    });
+
+    it('an empty LOCAL fullPath fails before init, as before', async () => {
+      const model = craftedLocal('');
+      runInAction(() => {
+        modelStore.models = [model];
+      });
+      await expectRejectedBeforeInit(model.id);
+      await expectReadsSkipped(model.id);
+    });
+
+    it('a non-gguf projector file: the whole load is refused', async () => {
+      await expectLoadRefused(await withProjector('mmproj-x.bin'));
+    });
+
+    it('a non-gguf HF draft file: the whole load is refused', async () => {
+      await expectLoadRefused(await withDraft(craftedHf({filename: 'dr.bin'})));
+    });
+
+    describe('projector path passed by the caller', () => {
+      const lookie = async () => {
+        const llm = (await modelStore.addHFModel(
+          LOOKIE_DEFAULT_MODEL.hfModel!,
+          LOOKIE_DEFAULT_MODEL.hfModelFile!,
+        ))!;
+        markDownloaded();
+        resetLoadState();
+        return storeModel(llm.id);
+      };
+
+      it.each([
+        '/etc/hosts',
+        'file:///data/local/tmp/x.gguf',
+        `${DOCS}/models/hf/a/r/../../../../x.gguf`,
+        `${DOCS}/models/hf/a/r/mmproj-x.bin`,
+        `${DOCS}/models/hf/a/r/mmproj-a\u0000b.gguf`,
+      ])('%j: the whole load is refused', async path => {
+        const llm = await lookie();
+        await expect(modelStore.initContext(llm, path)).rejects.toThrow(
+          refused,
+        );
+        expect(initLlama).not.toHaveBeenCalled();
+        expect(ctx.initMultimodal).not.toHaveBeenCalled();
+        expect(modelStore.modelLoadError?.message).toBe(refused);
+      });
+
+      it('an in-root projector path reaches initMultimodal', async () => {
+        const llm = await lookie();
+        const projectorPath = hfPathOf(storeModel(llm.defaultProjectionModel!));
+
+        await modelStore.initContext(llm, projectorPath);
+
+        expect(modelStore.modelLoadError).toBeNull();
+        expect((initLlama as jest.Mock).mock.calls[0][0].model).toBe(
+          hfPathOf(llm),
+        );
+        expect(ctx.initMultimodal).toHaveBeenCalledWith(
+          expect.objectContaining({path: projectorPath}),
+        );
+      });
+    });
   });
 });
