@@ -603,6 +603,15 @@ export const ChatView = observer(
 
       // This runs after the switch, so a cancelled send may already have put
       // its text into the draft being left: keep it rather than overwrite it.
+      if (prevKey !== newKey && editAcrossReloadRef.current !== null) {
+        // The kept edit belongs to the chat being left: end it as any edit
+        // ends on a chat switch.
+        editAcrossReloadRef.current = null;
+        editForReloadRef.current = null;
+        inputTextRef.current = syncedDraftRef.current;
+        setInputImages([]);
+        updateComposerDocuments(() => []);
+      }
       const carried = carriedTextRef.current;
       carriedTextRef.current = null;
       const typed =
