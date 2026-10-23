@@ -198,6 +198,49 @@ describe('SquarePalCard', () => {
       expect(getByText('T')).toBeTruthy(); // First letter
     });
 
+    describe('thumbnail source', () => {
+      const palImages = `${
+        require('@dr.pogodin/react-native-fs').DocumentDirectoryPath
+      }/pal-images`;
+      const renderCard = (thumbnail_url: string) =>
+        render(
+          <SquarePalCard
+            pal={createLocalPal({name: 'Test Pal', thumbnail_url})}
+            onPress={mockOnPress}
+            isLocal={true}
+          />,
+        );
+      const imageUris = (view: ReturnType<typeof renderCard>) =>
+        view
+          .UNSAFE_queryAllByType(require('react-native').Image)
+          .map(image => image.props.source?.uri);
+
+      it.each([
+        '..',
+        '../..',
+        '/etc/hosts',
+        'file:///data/local/tmp/x',
+        'a\u0000b',
+      ])('%j shows the first letter instead of a file', name => {
+        const view = renderCard(name);
+        expect(imageUris(view)).toEqual([]);
+        expect(view.getByText('T')).toBeTruthy();
+      });
+
+      it('an empty thumbnail_url shows the first letter', () => {
+        const view = renderCard('');
+        expect(imageUris(view)).toEqual([]);
+        expect(view.getByText('T')).toBeTruthy();
+      });
+
+      it.each([
+        ['https://example.com/thumb.jpg', 'https://example.com/thumb.jpg'],
+        ['p1_thumbnail.png', `file://${palImages}/p1_thumbnail.png`],
+      ])('%s renders as %s', (name, uri) => {
+        expect(imageUris(renderCard(name))).toEqual([uri]);
+      });
+    });
+
     it('renders protection badge for protected PalsHub pals', () => {
       const pal = createPalsHubPal({protection_level: 'reveal_on_purchase'});
       const {UNSAFE_getAllByType} = render(

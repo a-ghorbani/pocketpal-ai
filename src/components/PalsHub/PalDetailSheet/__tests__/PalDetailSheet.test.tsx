@@ -86,6 +86,58 @@ describe('PalDetailSheet', () => {
     };
   });
 
+  describe('thumbnail source', () => {
+    const palImages = `${
+      require('@dr.pogodin/react-native-fs').DocumentDirectoryPath
+    }/pal-images`;
+    const renderWithThumbnail = async (thumbnail_url: string) => {
+      const pal = createPalsHubPal({thumbnail_url});
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(pal);
+      const view = render(<PalDetailSheet {...defaultProps} pal={pal} />);
+      await waitFor(() => expect(palsHubService.getPal).toHaveBeenCalled());
+      await waitFor(() => expect(view.getByTestId('sheet')).toBeTruthy());
+      return view;
+    };
+    const imageUris = (view: Awaited<ReturnType<typeof renderWithThumbnail>>) =>
+      view
+        .UNSAFE_queryAllByType(require('react-native').Image)
+        .map(image => image.props.source?.uri);
+    const placeholders = (
+      view: Awaited<ReturnType<typeof renderWithThumbnail>>,
+    ) =>
+      view.UNSAFE_queryAllByType(require('../../../../assets/icons').UserIcon);
+
+    it.each([
+      '..',
+      '../..',
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      'a\u0000b',
+    ])('%j shows the placeholder instead of a file', async name => {
+      const view = await renderWithThumbnail(name);
+      expect(imageUris(view)).not.toContainEqual(
+        expect.stringMatching(/^file:/),
+      );
+      expect(placeholders(view).length).toBeGreaterThan(0);
+    });
+
+    it('an empty thumbnail_url shows the placeholder', async () => {
+      const view = await renderWithThumbnail('');
+      expect(imageUris(view)).not.toContainEqual(
+        expect.stringMatching(/^file:/),
+      );
+      expect(placeholders(view).length).toBeGreaterThan(0);
+    });
+
+    it.each([
+      ['https://example.com/thumb.jpg', 'https://example.com/thumb.jpg'],
+      ['p1_thumbnail.png', `file://${palImages}/p1_thumbnail.png`],
+    ])('%s renders as %s', async (name, uri) => {
+      const view = await renderWithThumbnail(name);
+      expect(imageUris(view)).toContain(uri);
+    });
+  });
+
   describe('Rendering', () => {
     it('renders correctly when visible', async () => {
       const {getByTestId} = render(<PalDetailSheet {...defaultProps} />);

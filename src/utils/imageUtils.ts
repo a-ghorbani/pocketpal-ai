@@ -29,16 +29,15 @@ export const isRemoteThumbnailUrl = (thumbnailUrl: string): boolean => {
 /**
  * Convert a thumbnail filename to a full file:// URI for React Native Image component
  * @param filename - Filename like "palId_thumbnail.jpg"
- * @returns Full file:// URI like "file:///path/to/documents/pal-images/palId_thumbnail.jpg"
+ * @returns Full file:// URI like "file:///path/to/documents/pal-images/palId_thumbnail.jpg",
+ *   the remote URL unchanged, or undefined when the filename is not a plain file name
  */
-export const getFullThumbnailUri = (filename: string): string => {
+export const getFullThumbnailUri = (filename: string): string | undefined => {
   if (isRemoteThumbnailUrl(filename)) {
-    return filename; // Return remote URLs as-is
+    return filename;
   }
-
-  // Convert filename to full file:// URI
-  const fullPath = `${PAL_IMAGES_DIR}/${filename}`;
-  return `file://${fullPath}`;
+  const absolutePath = getAbsoluteThumbnailPath(filename);
+  return absolutePath ? `file://${absolutePath}` : undefined;
 };
 
 /**

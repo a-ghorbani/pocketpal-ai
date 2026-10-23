@@ -17,6 +17,7 @@ import {
   getLocalThumbnailPath,
   cleanupOrphanedThumbnails,
   getAbsoluteThumbnailPath,
+  getFullThumbnailUri,
 } from '../imageUtils';
 import {isSafePathSegment} from '../pathGuard';
 import {withEachControl} from '../../../jest/fixtures/controlCharacters';
@@ -201,6 +202,31 @@ describe('imageUtils', () => {
       expect(mockRNFS.unlink).not.toHaveBeenCalled();
     });
   });
+  describe('getFullThumbnailUri', () => {
+    it.each([
+      '..',
+      '../..',
+      '../../Library/x',
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      'a\u0000b',
+      '',
+    ])('%j gives no local URI', name => {
+      expect(getFullThumbnailUri(name)).toBeUndefined();
+    });
+
+    it('returns a remote URL unchanged', () => {
+      expect(getFullThumbnailUri('https://h/t.png')).toBe('https://h/t.png');
+      expect(getFullThumbnailUri('http://h/t.png')).toBe('http://h/t.png');
+    });
+
+    it('returns a pal-images file URI for a plain name', () => {
+      expect(getFullThumbnailUri(expectedFilename)).toBe(
+        `file://${expectedLocalPath}`,
+      );
+    });
+  });
+
   describe('thumbnail paths stay inside pal-images', () => {
     const palImagesDir = `${mockDocumentPath}/pal-images`;
     const UNSAFE_NAMES = [
