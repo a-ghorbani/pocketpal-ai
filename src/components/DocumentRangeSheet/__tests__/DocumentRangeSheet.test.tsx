@@ -73,6 +73,17 @@ describe('DocumentRangeSheet', () => {
     expect(getByTestId('document-range-limit')).toBeTruthy();
   });
 
+  it('explains a first import whose text is over the character limit', () => {
+    const {getByTestId, queryByTestId} = renderSheet(doc(300), jest.fn(), {
+      rangeLimit: 'too_many_chars',
+    });
+    expect(getByTestId('document-range-limit')).toBeTruthy();
+
+    fireEvent.changeText(getByTestId('document-range-from'), '1');
+    fireEvent.changeText(getByTestId('document-range-to'), '20');
+    expect(queryByTestId('document-range-limit')).toBeNull();
+  });
+
   it('shows the page limit only after an edit makes the range too long', () => {
     const {getByTestId, queryByTestId} = renderSheet(doc(1200), jest.fn(), {
       rangeLimit: 'too_many_pages',
