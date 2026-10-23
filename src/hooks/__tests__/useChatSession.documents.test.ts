@@ -913,8 +913,19 @@ describe('removing rows under the lease', () => {
     });
   });
 
-  it('ends the edit right before removing from the edited row, then sends', async () => {
+  it('ends the edit once the edited row and its replies are removed, then sends', async () => {
     store.editingMessageId = 'm';
+    let removed = false;
+    let removedAtExit: boolean | undefined;
+    (chatSessionStore.removeMessagesFromId as jest.Mock).mockImplementationOnce(
+      async () => {
+        await Promise.resolve();
+        removed = true;
+      },
+    );
+    (chatSessionStore.exitEditMode as jest.Mock).mockImplementationOnce(() => {
+      removedAtExit = removed;
+    });
 
     await sendWith({type: 'text', text: 'rewritten'}, {replaceFromId: 'm'});
 
@@ -922,9 +933,7 @@ describe('removing rows under the lease', () => {
       'm',
       true,
     );
-    expect(callOrder(chatSessionStore.exitEditMode)).toBeLessThan(
-      callOrder(chatSessionStore.removeMessagesFromId),
-    );
+    expect(removedAtExit).toBe(true);
     expect(callOrder(chatSessionStore.removeMessagesFromId)).toBeLessThan(
       callOrder(chatSessionStore.addMessageToCurrentSession),
     );

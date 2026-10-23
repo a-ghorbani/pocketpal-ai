@@ -967,14 +967,14 @@ export const useChatSession = (
     if (plan?.verdict.kind === 'over') {
       return unsent(message, origin, plan.verdict);
     }
-    if (
-      origin.editingAtEntry &&
-      chatSessionStore.editingMessageId === origin.editingAtEntry
-    ) {
-      chatSessionStore.exitEditMode();
-    }
+    const endsEdit =
+      !!origin.editingAtEntry &&
+      chatSessionStore.editingMessageId === origin.editingAtEntry;
     if (replaceFromId !== undefined) {
       await chatSessionStore.removeMessagesFromId(replaceFromId, true);
+    }
+    if (endsEdit) {
+      chatSessionStore.exitEditMode();
     }
     const documents = message.documents?.map((ref, i) => ({
       ...ref,
