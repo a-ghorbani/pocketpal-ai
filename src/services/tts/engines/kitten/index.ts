@@ -13,7 +13,12 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {NeuralEngine, StreamingHandle, Voice} from '../../types';
+import type {
+  NeuralEngine,
+  StreamOptions,
+  StreamingHandle,
+  Voice,
+} from '../../types';
 import {KITTEN_VOICES} from './voices';
 
 export type KittenProgressCallback = (progress: number) => void;
@@ -167,8 +172,12 @@ export class KittenEngine implements NeuralEngine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {

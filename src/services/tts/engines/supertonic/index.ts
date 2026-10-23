@@ -20,6 +20,7 @@ import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {
   NeuralEngine,
+  StreamOptions,
   StreamingHandle,
   SupertonicSteps,
   Voice,
@@ -337,14 +338,19 @@ export class SupertonicEngine implements NeuralEngine {
   playStreaming(
     voice: Voice,
     waitFor?: Promise<void>,
-    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
+    opts?: StreamOptions & {
+      language?: SupertonicLanguage;
+      inferenceSteps?: SupertonicSteps;
+    },
   ): StreamingHandle {
+    const {language, inferenceSteps, ...streamOpts} = opts ?? {};
     return createEngineStreamingHandle(
       this,
       voice.id,
       {
-        language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
-        ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
+        ...streamOpts,
+        language: language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+        ...(inferenceSteps ? {inferenceSteps} : {}),
       },
       waitFor,
     );

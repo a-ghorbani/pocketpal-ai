@@ -74,10 +74,7 @@ const {
 // assert the initLlama payload.
 const {initLlama, addNativeLogListener, toggleNativeLog} = require('llama.rn');
 
-const {
-  activateKeepAwake,
-  deactivateKeepAwake,
-} = require('../../../utils/keepAwake');
+const {acquireKeepAwake} = require('../../../utils/keepAwake');
 
 import {
   BenchmarkRunnerScreen,
@@ -551,38 +548,18 @@ describe('BenchmarkRunnerScreen', () => {
       expect(writtenOutcomes()).toEqual([]);
     });
 
-    it('claims keep-awake after enterBenchmarkMode and releases it in finally', async () => {
+    it('holds keep-awake after enterBenchmarkMode and releases it in finally', async () => {
       stubOpenCLLogs();
+      const release = jest.fn();
+      acquireKeepAwake.mockReturnValueOnce(release);
       await runMatrix(VALID_CONFIG, setStatus, setLastCell);
-      expect(activateKeepAwake).toHaveBeenCalledTimes(1);
-      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+      expect(acquireKeepAwake).toHaveBeenCalledTimes(1);
+      expect(release).toHaveBeenCalledTimes(1);
       const enter = (modelStore.enterBenchmarkMode as jest.Mock).mock
         .invocationCallOrder[0];
-      const activate = activateKeepAwake.mock.invocationCallOrder[0];
-      const deactivate = deactivateKeepAwake.mock.invocationCallOrder[0];
-      expect(enter).toBeLessThan(activate);
-      expect(activate).toBeLessThan(deactivate);
-    });
-
-    it('runs the matrix and still deactivates when activateKeepAwake throws', async () => {
-      stubOpenCLLogs();
-      activateKeepAwake.mockImplementationOnce(() => {
-        throw new Error('no-native-module');
-      });
-      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
-      expect(lastWrittenReport().runs[0].status).toBe('ok');
-      expect(lastWrittenReport().outcome).toBe('complete');
-      expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
-    });
-
-    it('a failing deactivateKeepAwake does not turn a complete run into an error', async () => {
-      stubOpenCLLogs();
-      deactivateKeepAwake.mockImplementationOnce(() => {
-        throw new Error('no-native-module');
-      });
-      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
-      expect(setStatus).toHaveBeenLastCalledWith('complete');
-      expect(modelStore.exitBenchmarkMode).toHaveBeenCalledTimes(1);
+      const acquire = acquireKeepAwake.mock.invocationCallOrder[0];
+      expect(enter).toBeLessThan(acquire);
+      expect(acquire).toBeLessThan(release.mock.invocationCallOrder[0]);
     });
 
     it('touches neither keep-awake call when enterBenchmarkMode rejects', async () => {
@@ -592,8 +569,7 @@ describe('BenchmarkRunnerScreen', () => {
       await expect(
         runMatrix(VALID_CONFIG, setStatus, setLastCell),
       ).rejects.toThrow('enter-failed');
-      expect(activateKeepAwake).not.toHaveBeenCalled();
-      expect(deactivateKeepAwake).not.toHaveBeenCalled();
+      expect(acquireKeepAwake).not.toHaveBeenCalled();
       expect(RNFS.writeFile).not.toHaveBeenCalled();
     });
 

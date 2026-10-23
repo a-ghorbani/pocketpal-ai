@@ -24,6 +24,7 @@ import {fakePlusFeatures, fakePlusL10n} from '../../../../jest/fixtures/plus';
 import {L10nContext} from '../../../utils';
 import type {PlusFeature} from '../../../services/plus/catalog';
 import {deviceRam} from '../../../services/plus/deviceRam';
+import {modelStore, voiceModeStore} from '../../../store';
 import {setShipOverride} from '../../../services/plus/shipOverride';
 
 import {
@@ -109,6 +110,7 @@ describe('PlusScreen', () => {
     setShipOverride(['handsFreeVoice']);
     runInAction(() => {
       deviceRam.ramBytes = 8e9;
+      modelStore.deviceTier = 'high';
     });
     openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   });
@@ -130,6 +132,9 @@ describe('PlusScreen', () => {
         'Local API serverComing soon',
       );
       expect(getByText('Speed depends on your phone and model.')).toBeTruthy();
+      expect(getByTestId('plus-free-line')).toHaveTextContent(
+        'Plus is optional. Chatting stays free.',
+      );
       expect(
         getByText('Pay what you like. Same features at every price.'),
       ).toBeTruthy();
@@ -237,6 +242,7 @@ describe('PlusScreen', () => {
     expect(
       queryByText('Pay what you like. Same features at every price.'),
     ).toBeNull();
+    expect(getByTestId('plus-free-line')).toBeTruthy();
     expect(getByTestId('plus-tile-plus.1').props.accessibilityState).toEqual({
       checked: true,
       disabled: false,
@@ -261,6 +267,7 @@ describe('PlusScreen', () => {
     expect(queryByTestId('plus-tile-plus.1')).toBeNull();
     expect(queryByTestId('plus-restore')).toBeNull();
     expect(queryByTestId('plus-cta')).toBeNull();
+    expect(queryByTestId('plus-free-line')).toBeNull();
     expect(getByTestId('plus-done').props.accessibilityLabel).toBe('Done');
 
     fireEvent.press(getByTestId('plus-done'));
@@ -297,6 +304,64 @@ describe('PlusScreen', () => {
   });
 
   describe('feature rows', () => {
+    it('below its device gate, shows hands-free voice as Off with the Settings note under its name', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        "Hands-free voiceOff on this phone. Turn it on in Settings if you're brave.Off",
+      );
+      expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
+        "Off on this phone. Turn it on in Settings if you're brave.",
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+    });
+
+    it('below its device gate, shows hands-free voice as Ready once turned on in Settings', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+        voiceModeStore.userVoiceModeOverride = true;
+      });
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceReady',
+      );
+      expect(queryByTestId('plus-feature-note-handsFreeVoice')).toBeNull();
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = null;
+      });
+    });
+
+    it('on a supported phone, shows hands-free voice as Off when turned off in Settings', () => {
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = false;
+      });
+      const {getByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceTurned off in Settings.Off',
+      );
+      expect(getByTestId('plus-feature-note-handsFreeVoice')).toHaveTextContent(
+        'Turned off in Settings.',
+      );
+      expect(getByTestId('plus-cta')).toHaveTextContent('Get Plus · $4.99');
+      runInAction(() => {
+        voiceModeStore.userVoiceModeOverride = null;
+      });
+    });
+
+    it('on a supported phone, shows hands-free voice as Ready by default', () => {
+      const {getByTestId, queryByTestId} = renderScreen();
+
+      expect(getByTestId('plus-feature-handsFreeVoice')).toHaveTextContent(
+        'Hands-free voiceReady',
+      );
+      expect(queryByTestId('plus-feature-note-handsFreeVoice')).toBeNull();
+    });
+
     it('shows Ready, Needs N GB and Coming soon', () => {
       mockFeatures = fakePlusFeatures([
         {id: 'open', shipped: true},
@@ -730,13 +795,15 @@ describe('PlusScreen', () => {
     };
 
     it.each([667, 923])(
-      'puts the prices right after the speed line at %i dp',
+      'puts the free line, then the prices, right after the speed line at %i dp',
       height => {
         mockWindow.height = height;
         const tree = renderScreen().toJSON() as ReactTestRendererJSON;
         const next = nodeAfter(tree, 'Speed depends on your phone and model.');
+        const free = 'Plus is optional. Chatting stays free.';
 
-        expect(textOf(next!)).toBe(
+        expect(textOf(next!)).toBe(free);
+        expect(textOf(nodeAfter(tree, free)!)).toBe(
           'Pay what you like. Same features at every price.',
         );
       },

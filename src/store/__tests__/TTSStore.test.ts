@@ -659,6 +659,266 @@ describe('TTSStore', () => {
     });
   });
 
+  describe('voice output gate', () => {
+    const makeLowMemoryStore = async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const store = new TTSStore();
+      await store.init();
+      return store;
+    };
+
+    it.each([
+      [false, false, false, false],
+      [false, true, false, false],
+      [false, false, true, false],
+      [false, true, true, true],
+      [true, false, false, true],
+      [true, true, true, true],
+    ])(
+      'voice %s, gate %s, auto-speak %s → streamsReplies %s',
+      async (voice, gate, autoSpeak, expected) => {
+        const store = await makeLowMemoryStore();
+        store.setUserTTSOverride(gate);
+        store.setAutoSpeak(autoSpeak);
+        store.setVoiceOutputActive(voice);
+        expect(store.streamsReplies).toBe(expected);
+      },
+    );
+
+    it('opens a stream for a voice reply with the gate closed and auto-speak off', async () => {
+      const store = await makeLowMemoryStore();
+      store.setUserTTSOverride(false);
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSupertonicPlayStreaming).toHaveBeenCalledTimes(1);
+      expect(store.autoSpeakEnabled).toBe(false);
+      expect(store.userTTSOverride).toBe(false);
+    });
+
+    it('stops opening streams once voice output ends', async () => {
+      const store = await makeLowMemoryStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+      store.setVoiceOutputActive(false);
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageComplete('msg-2', 'hello');
+      await flush();
+
+      expect(mockSupertonicPlayStreaming).not.toHaveBeenCalled();
+      expect(mockSupertonicPlay).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('voice reply stream', () => {
+    type VoiceHandle = MockHandle & {
+      waitFor: Promise<void> | undefined;
+      opts: any;
+    };
+    const voiceHandles: VoiceHandle[] = [];
+
+    const captureHandles = () => {
+      mockSupertonicPlayStreaming.mockImplementation(((
+        _voice: Voice,
+        waitFor?: Promise<void>,
+        opts?: any,
+      ) => {
+        const handle: VoiceHandle = {
+          appendText: jest.fn(),
+          finalize: jest.fn().mockResolvedValue(undefined),
+          cancel: jest.fn().mockResolvedValue(undefined),
+          waitFor,
+          opts,
+        };
+        voiceHandles.push(handle);
+        return handle;
+      }) as any);
+    };
+
+    const appended = (handle: MockHandle) =>
+      handle.appendText.mock.calls.map(c => c[0]).join('');
+
+    const progress = (handle: VoiceHandle) =>
+      handle.opts.onProgress({
+        chunkText: '',
+        streamRange: {start: 0, end: 1},
+        chunkIndex: 0,
+        batchIndex: 0,
+      });
+
+    const makeVoiceStore = async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setVoiceOutputActive(true);
+      return store;
+    };
+
+    const defaultPlayStreaming =
+      mockSupertonicPlayStreaming.getMockImplementation()!;
+
+    beforeEach(() => {
+      voiceHandles.length = 0;
+      captureHandles();
+    });
+
+    afterEach(() => {
+      mockSupertonicPlayStreaming.mockImplementation(defaultPlayStreaming);
+    });
+
+    it('opens a voice reply with a clause first chunk and progress', async () => {
+      const store = await makeVoiceStore();
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', '**Paris** is the capital. More');
+
+      const [handle] = voiceHandles;
+      expect(handle!.opts).toEqual(
+        expect.objectContaining({
+          firstChunk: 'clause',
+          language: 'na',
+          onProgress: expect.any(Function),
+        }),
+      );
+      expect(appended(handle!)).toBe('**Paris** is the capital. More');
+    });
+
+    it('opens a chat reply with no voice options', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setAutoSpeak(true);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(voiceHandles[0]!.opts).not.toHaveProperty('firstChunk');
+      expect(voiceHandles[0]!.opts).not.toHaveProperty('onProgress');
+    });
+
+    it('marks the reply whose speech began playing', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+      expect(store.voiceSpeechStarted).toBeNull();
+
+      progress(voiceHandles[0]!);
+
+      expect(store.voiceSpeechStarted).toBe('msg-1');
+    });
+
+    it('marks a voice reply whose speech failed, until the next voice reply', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      voiceHandles[0]!.finalize.mockRejectedValueOnce(new Error('synth'));
+
+      store.onAssistantMessageComplete('msg-1', 'Paris.');
+      await flush();
+      expect(store.voiceStreamFailed).toBe('msg-1');
+
+      store.onAssistantMessageStart('msg-2');
+      expect(store.voiceStreamFailed).toBeNull();
+      expect(store.voiceSpeechStarted).toBeNull();
+    });
+
+    it('ignores progress from an earlier voice reply', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Old reply. ');
+      store.onAssistantMessageStart('msg-2');
+
+      progress(voiceHandles[0]!);
+
+      expect(store.voiceSpeechStarted).toBeNull();
+    });
+
+    describe('first-chunk hold for a local model', () => {
+      const makeHeldStore = async () => {
+        const store = await makeStore();
+        store.setCurrentVoice(SUPERTONIC_VOICE);
+        store.setVoiceOutputActive(true, {holdFirstChunk: true});
+        jest.useFakeTimers();
+        return store;
+      };
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('releases the held text when the reply settles first', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', '<think>hmm</think>Paris, ');
+        store.onAssistantMessageChunk('msg-1', 'the capital. ');
+
+        jest.advanceTimersByTime(900);
+        const handle = voiceHandles[0]!;
+        expect(handle.appendText).not.toHaveBeenCalled();
+
+        store.onAssistantMessageComplete('msg-1', 'Paris, the capital.');
+        expect(handle.finalize).toHaveBeenCalled();
+        expect(appended(handle)).toMatch(/Paris, the capital\.\s*$/);
+      });
+
+      it('releases the held text after the hold while the reply still decodes', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+        const handle = voiceHandles[0]!;
+
+        jest.advanceTimersByTime(1499);
+        expect(handle.appendText).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1);
+        expect(appended(handle)).toBe('Paris is the capital. ');
+
+        store.onAssistantMessageChunk('msg-1', 'It is old. ');
+        expect(appended(handle)).toBe('Paris is the capital. It is old. ');
+      });
+
+      it('drops the hold on stop', async () => {
+        const store = await makeHeldStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+
+        await store.stop();
+        jest.advanceTimersByTime(1500);
+
+        expect(voiceHandles[0]!.appendText).not.toHaveBeenCalled();
+      });
+
+      it('holds nothing for a remote model', async () => {
+        const store = await makeVoiceStore();
+        store.onAssistantMessageStart('msg-1');
+        store.onAssistantMessageChunk('msg-1', 'Paris is the capital. ');
+
+        expect(appended(voiceHandles[0]!)).toBe('Paris is the capital. ');
+      });
+    });
+
+    it('starts the next voice stream only after the previous one is cancelled', async () => {
+      const store = await makeVoiceStore();
+      store.onAssistantMessageStart('msg-1');
+      let cancelled!: () => void;
+      voiceHandles[0]!.cancel.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          cancelled = resolve;
+        }),
+      );
+
+      store.onAssistantMessageStart('msg-2');
+      let started = false;
+      voiceHandles[1]!.waitFor!.then(() => {
+        started = true;
+      });
+      await flush();
+      expect(started).toBe(false);
+
+      cancelled();
+      await flush();
+      expect(started).toBe(true);
+    });
+  });
+
   describe('thinking-tag stripping', () => {
     const setupEligible = async () => {
       const store = await makeStore();
@@ -1495,6 +1755,48 @@ describe('TTSStore', () => {
         '[TTSStore] finalize failed:',
         expect.any(Error),
       );
+      expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
+      expect(store.currentVoice).toBeNull();
+    });
+
+    it('opens a Phonon voice reply with the voice options and still re-probes on a failed finalize', async () => {
+      mockPhononIsInstalled.mockResolvedValue(true);
+      mockGetPhononSupport
+        .mockResolvedValueOnce(SUPPORTED)
+        .mockResolvedValueOnce(LOAD_FAILED);
+      track(jest.spyOn(console, 'warn')).mockImplementation(() => {});
+      const store = await storeWithVoice(ZOEY);
+      store.setVoiceOutputActive(true);
+      const failingHandle = {
+        appendText: jest.fn(),
+        finalize: jest.fn().mockRejectedValue(new Error('ERR_PHONON_LOAD')),
+        cancel: jest.fn().mockResolvedValue(undefined),
+      };
+      mockPhononPlayStreaming.mockReturnValueOnce(failingHandle);
+
+      store.onAssistantMessageStart('msg-1');
+
+      const [voice, , opts] = (mockPhononPlayStreaming.mock.calls as any[])[0];
+      expect(voice).toEqual(ZOEY);
+      expect(opts).toEqual(
+        expect.objectContaining({
+          firstChunk: 'clause',
+          onProgress: expect.any(Function),
+        }),
+      );
+      opts.onProgress({
+        chunkText: '',
+        streamRange: {start: 0, end: 1},
+        chunkIndex: 0,
+        batchIndex: 0,
+      });
+      expect(store.voiceSpeechStarted).toBe('msg-1');
+
+      store.onAssistantMessageComplete('msg-1', 'Hello there.');
+      await flush();
+      await flush();
+
+      expect(store.voiceStreamFailed).toBe('msg-1');
       expect(mockGetPhononSupport).toHaveBeenCalledTimes(2);
       expect(store.currentVoice).toBeNull();
     });

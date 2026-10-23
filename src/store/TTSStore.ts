@@ -4,7 +4,10 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
+import type {
+  StreamProgressEvent,
+  SupertonicLanguage,
+} from '@pocketpalai/react-native-speech';
 
 import {
   getEngine,
@@ -22,6 +25,7 @@ import {
 import type {
   EngineId,
   NeuralEngineId,
+  StreamOptions,
   StreamingHandle,
   SupertonicSteps,
   Voice,
@@ -30,6 +34,8 @@ import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
+import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -72,6 +78,14 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
 const previewMessageId = (voice: Voice): string =>
   `preview:${voice.engine}:${voice.id}`;
+
+/** A voice reply's stream and its first-chunk hold. */
+type VoiceStream = {
+  messageId: string;
+  held: string[] | null;
+  holdTimer: ReturnType<typeof setTimeout> | null;
+  chars: number;
+};
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -118,6 +132,15 @@ export class TTSStore {
 
   // Runtime playback state (discriminated union)
   playbackState: TTSPlaybackState = {mode: 'idle'};
+
+  /** True while a voice-mode session is open; it speaks every reply. */
+  voiceOutputActive: boolean = false;
+  private holdFirstChunk: boolean = false;
+  /** Message id of the voice reply whose speech has begun playing. */
+  voiceSpeechStarted: string | null = null;
+  /** Message id of the last voice reply whose speech failed. */
+  voiceStreamFailed: string | null = null;
+  private voiceStream: VoiceStream | null = null;
 
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
@@ -180,7 +203,11 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable(this, {}, {autoBind: true});
+    makeAutoObservable<TTSStore, 'holdFirstChunk' | 'voiceStream'>(
+      this,
+      {holdFirstChunk: false, voiceStream: false},
+      {autoBind: true},
+    );
     makePersistable(this, {
       name: 'TTSStore',
       properties: [
@@ -269,7 +296,7 @@ export class TTSStore {
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
-        this.stop();
+        this.stop('session_change');
       },
     );
   }
@@ -282,13 +309,28 @@ export class TTSStore {
       // Only react to 'background' — 'inactive' fires for transient
       // interruptions (Control Center, incoming call sheet, notification
       // tap) that shouldn't tear down a 200+ MB engine.
-      this.stop()
+      this.stop('background')
         .then(() => ttsRuntime.release())
         .catch(err => {
           console.warn('[TTSStore] background release failed:', err);
         });
     }
   };
+
+  /** Whether the next assistant reply opens a speech stream. */
+  get streamsReplies(): boolean {
+    return (
+      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+    );
+  }
+
+  setVoiceOutputActive(
+    active: boolean,
+    {holdFirstChunk = false}: {holdFirstChunk?: boolean} = {},
+  ) {
+    this.voiceOutputActive = active;
+    this.holdFirstChunk = active && holdFirstChunk;
+  }
 
   isEngineOffered(id: EngineId): boolean {
     return id !== 'phonon' || this.phononSupported;
@@ -508,14 +550,16 @@ export class TTSStore {
   /**
    * Stop any in-flight playback and reset state to idle.
    */
-  async stop(): Promise<void> {
+  async stop(by = 'other'): Promise<void> {
     const state = this.playbackState;
     const voice = this.currentVoice;
+    vtrace('tts.stop', {by, mode: state.mode});
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
     this.streamStripper = null;
     this.streamPlaceholderEmitted = false;
+    this.clearVoiceHold();
     if (state.mode === 'streaming') {
       try {
         await state.handle.cancel();
@@ -653,8 +697,7 @@ export class TTSStore {
   /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string): void {
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {
@@ -664,7 +707,7 @@ export class TTSStore {
     // promise is passed to the streaming handle so it waits for the old
     // `Speech.stop()` to complete before starting synthesis — prevents
     // the old stop flag from killing the new stream's first sentence.
-    const stopDone = this.stop().catch(err => {
+    const stopDone = this.stop('new_stream').catch(err => {
       console.warn('[TTSStore] stop before new stream failed:', err);
     });
 
@@ -672,14 +715,24 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
+    const voiceOpts = this.openVoiceStream(messageId);
     const engine = getEngine(voice.engine);
-    const engineHandle =
-      voice.engine === 'supertonic'
-        ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
-            language: this.supertonicLanguage,
-            inferenceSteps: this.supertonicSteps,
-          })
-        : engine.playStreaming(voice, stopDone);
+    let engineHandle: StreamingHandle;
+    if (voice.engine === 'supertonic') {
+      engineHandle = (engine as SupertonicEngine).playStreaming(
+        voice,
+        stopDone,
+        {
+          ...voiceOpts,
+          language: this.supertonicLanguage,
+          inferenceSteps: this.supertonicSteps,
+        },
+      );
+    } else if (voiceOpts) {
+      engineHandle = engine.playStreaming(voice, stopDone, voiceOpts);
+    } else {
+      engineHandle = engine.playStreaming(voice, stopDone);
+    }
     const handle =
       voice.engine === 'phonon'
         ? this.withPhononFailureHook(engineHandle)
@@ -687,6 +740,87 @@ export class TTSStore {
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
+    vtrace('tts.open', {voice: !!voiceOpts, engine: voice.engine});
+  }
+
+  private openVoiceStream(messageId: string): StreamOptions | undefined {
+    if (!this.voiceOutputActive) {
+      this.voiceStream = null;
+      return undefined;
+    }
+    this.voiceSpeechStarted = null;
+    this.voiceStreamFailed = null;
+    const stream: VoiceStream = {
+      messageId,
+      held: this.holdFirstChunk ? [] : null,
+      holdTimer: null,
+      chars: 0,
+    };
+    if (stream.held) {
+      stream.holdTimer = setTimeout(
+        () => this.releaseHeldVoiceText(messageId),
+        VOICE_FIRST_CHUNK_HOLD_MS,
+      );
+    }
+    this.voiceStream = stream;
+    return {
+      firstChunk: 'clause',
+      onProgress: event => this.onVoiceProgress(messageId, event),
+    };
+  }
+
+  private onVoiceProgress(messageId: string, event: StreamProgressEvent) {
+    vtrace('tts.chunk', {
+      i: event.chunkIndex,
+      chars: event.chunkText.length,
+      current: this.voiceStream?.messageId === messageId,
+    });
+    if (this.voiceStream?.messageId === messageId) {
+      this.voiceSpeechStarted = messageId;
+    }
+  }
+
+  private appendReplyText(handle: StreamingHandle, text: string) {
+    if (this.voiceStream) {
+      this.voiceStream.chars += text.length;
+    }
+    const held = this.voiceStream?.held;
+    if (held) {
+      held.push(text);
+    } else {
+      handle.appendText(text);
+    }
+  }
+
+  private appendPlaceholder(handle: StreamingHandle) {
+    this.streamPlaceholderEmitted = true;
+    this.appendReplyText(handle, `${pickThinkingPlaceholder()} `);
+  }
+
+  private releaseHeldVoiceText(messageId: string) {
+    const stream = this.voiceStream;
+    const state = this.playbackState;
+    if (stream?.messageId !== messageId || !stream.held) {
+      return;
+    }
+    this.clearVoiceHold();
+    const held = stream.held;
+    stream.held = null;
+    vtrace('tts.unhold', {parts: held.length});
+    if (state.mode !== 'streaming' || state.messageId !== messageId) {
+      return;
+    }
+    for (const text of held) {
+      state.handle.appendText(text);
+    }
+  }
+
+  private clearVoiceHold() {
+    const stream = this.voiceStream;
+    if (stream?.holdTimer) {
+      clearTimeout(stream.holdTimer);
+      stream.holdTimer = null;
+    }
   }
 
   /** Delta chunk from the LLM stream. */
@@ -701,7 +835,7 @@ export class TTSStore {
     }
     const stripper = this.streamStripper;
     if (stripper == null) {
-      state.handle.appendText(chunkText);
+      this.appendReplyText(state.handle, chunkText);
       return;
     }
     if (reasoningDelta) {
@@ -713,16 +847,14 @@ export class TTSStore {
       !this.streamPlaceholderEmitted &&
       cleaned.length === 0
     ) {
-      state.handle.appendText(`${pickThinkingPlaceholder()} `);
-      this.streamPlaceholderEmitted = true;
+      this.appendPlaceholder(state.handle);
       return;
     }
     if (cleaned.length > 0) {
       if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-        state.handle.appendText(`${pickThinkingPlaceholder()} `);
-        this.streamPlaceholderEmitted = true;
+        this.appendPlaceholder(state.handle);
       }
-      state.handle.appendText(cleaned);
+      this.appendReplyText(state.handle, cleaned);
     }
   }
 
@@ -739,23 +871,37 @@ export class TTSStore {
         const leftover = stripper.flush();
         if (leftover.length > 0) {
           if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-            state.handle.appendText(`${pickThinkingPlaceholder()} `);
-            this.streamPlaceholderEmitted = true;
+            this.appendPlaceholder(state.handle);
           }
-          state.handle.appendText(leftover);
+          this.appendReplyText(state.handle, leftover);
         }
       }
+      if (this.voiceStream) {
+        this.releaseHeldVoiceText(this.voiceStream.messageId);
+      }
+      const isVoiceReply = this.voiceStream?.messageId === messageId;
+      vtrace('tts.finalize', {
+        voice: isVoiceReply,
+        chars: this.voiceStream?.chars,
+      });
       state.handle
         .finalize()
         .catch(err => {
           console.warn('[TTSStore] finalize failed:', err);
+          vtrace('tts.finalize.fail', {err: String(err)});
+          if (isVoiceReply) {
+            runInAction(() => {
+              this.voiceStreamFailed = messageId;
+            });
+          }
         })
         .finally(() => {
           runInAction(() => {
-            if (
+            const owns =
               this.playbackState.mode === 'streaming' &&
-              this.playbackState.messageId === messageId
-            ) {
+              this.playbackState.messageId === messageId;
+            vtrace('tts.finalized', {owns});
+            if (owns) {
               this.playbackState = {mode: 'idle'};
               // Only reset stripper if this message still owns it —
               // a new message may have already set its own stripper.
@@ -768,8 +914,7 @@ export class TTSStore {
     }
 
     if (
-      !this.isTTSAvailable ||
-      !this.autoSpeakEnabled ||
+      !this.streamsReplies ||
       this.currentVoice == null ||
       messageId === this.lastSpokenMessageId
     ) {

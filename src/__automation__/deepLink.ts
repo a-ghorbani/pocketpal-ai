@@ -11,6 +11,7 @@
  *   pocketpal://asr?cmd=state::<ready|not-installed|unsupported|recording|
  *                              transcribing|waiting-chat|error-capture|
  *                              error-blocked|error-memory|error-disk>
+ *   pocketpal://voice?cmd=<verb>::<arg>   (voice mode, see voiceAutomation.ts)
  *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
  *   pocketpal://e2e/plus-feature   (locked feature behind Plus; Android
  *                                   routes it in useDeepLinking.ts too)
@@ -54,6 +55,11 @@ export async function dispatchAutomationDeepLink(
   if (params.host === 'asr' && params.queryParams?.cmd) {
     const {runAsrCommand} = require('./asrAutomation');
     await runAsrCommand(params.queryParams.cmd);
+    return true;
+  }
+  if (params.host === 'voice' && params.queryParams?.cmd) {
+    const {runVoiceCommand} = require('./voiceAutomation');
+    await runVoiceCommand(params.queryParams.cmd);
     return true;
   }
   if (params.host === 'iap' && params.queryParams?.cmd) {

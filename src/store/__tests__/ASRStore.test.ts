@@ -249,6 +249,14 @@ describe('ASRStore', () => {
       expect(store.selectedTier).toBe('base');
     });
 
+    it('keeps the selected tier when asked not to select', async () => {
+      await store.init();
+      store.setSelectedTier('small');
+      await store.downloadModel('base', {select: false});
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('small');
+    });
+
     it('records an error when the download throws', async () => {
       await store.init();
       mockDownloadModel.mockRejectedValueOnce(new Error('network'));

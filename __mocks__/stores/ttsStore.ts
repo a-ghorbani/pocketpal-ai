@@ -1,4 +1,4 @@
-import {makeAutoObservable} from 'mobx';
+import {makeAutoObservable, runInAction} from 'mobx';
 
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
@@ -21,6 +21,14 @@ class MockTTSStore {
     | {mode: 'streaming'; messageId: string}
     | {mode: 'playing'; messageId: string} = {mode: 'idle'};
   autoSpeakEnabled = false;
+  voiceOutputActive = false;
+  voiceSpeechStarted: string | null = null;
+  voiceStreamFailed: string | null = null;
+  get streamsReplies(): boolean {
+    return (
+      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+    );
+  }
   currentVoice: any = null;
   isSetupSheetOpen = false;
   lastSpokenMessageId: string | null = null;
@@ -51,6 +59,7 @@ class MockTTSStore {
   isPreviewingVoice: jest.Mock;
   stop: jest.Mock;
   setAutoSpeak: jest.Mock;
+  setVoiceOutputActive: jest.Mock;
   setUserTTSOverride: jest.Mock;
   setCurrentVoice: jest.Mock;
   setSupertonicSteps: jest.Mock;
@@ -86,6 +95,7 @@ class MockTTSStore {
       isPreviewingVoice: false,
       stop: false,
       setAutoSpeak: false,
+      setVoiceOutputActive: false,
       setUserTTSOverride: false,
       setCurrentVoice: false,
       setSupertonicSteps: false,
@@ -115,6 +125,11 @@ class MockTTSStore {
     this.isPreviewingVoice = jest.fn().mockReturnValue(false);
     this.stop = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
+    this.setVoiceOutputActive = jest.fn((active: boolean) => {
+      runInAction(() => {
+        this.voiceOutputActive = active;
+      });
+    });
     this.setUserTTSOverride = jest.fn();
     this.setCurrentVoice = jest.fn();
     this.setSupertonicSteps = jest.fn();

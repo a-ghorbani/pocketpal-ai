@@ -1,9 +1,11 @@
 import * as React from 'react';
+import {Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {user} from '../../../../jest/fixtures';
+import {textMessage, user} from '../../../../jest/fixtures';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
-import {asrStore, modelStore} from '../../../store';
+import {l10n} from '../../../locales';
+import {asrStore, modelStore, voiceModeStore} from '../../../store';
 import * as micPerm from '../../../utils/asrMicPermission';
 import {ChatView} from '../ChatView';
 
@@ -203,5 +205,214 @@ describe('ChatView voice-input append seam', () => {
       fireEvent.press(action);
     });
     expect(mockOpenMicSettings).toHaveBeenCalled();
+  });
+});
+
+describe('ChatView voice mode', () => {
+  const renderChat = (onVoiceModePress = jest.fn()) =>
+    render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        onVoiceModePress={onVoiceModePress}
+        user={user}
+      />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+  beforeEach(() => {
+    (voiceModeStore as any).reset();
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.deviceTier = 'high';
+      asrStore.captureState = 'idle';
+    });
+  });
+
+  it('hands the voice button ways to open the model picker and focus the composer', () => {
+    const onVoiceModePress = jest.fn();
+    const {getByTestId} = renderChat(onVoiceModePress);
+
+    fireEvent.press(getByTestId('voice-mode-button'));
+
+    expect(onVoiceModePress).toHaveBeenCalledWith({
+      openModelPicker: expect.any(Function),
+      focusInput: expect.any(Function),
+    });
+  });
+
+  it('closes the keyboard before voice mode opens a sheet over the chat', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const onVoiceModePress = jest.fn();
+    const {getByTestId} = renderChat(onVoiceModePress);
+
+    fireEvent.press(getByTestId('voice-mode-button'));
+
+    expect(dismiss).toHaveBeenCalled();
+    expect(dismiss.mock.invocationCallOrder[0]).toBeLessThan(
+      onVoiceModePress.mock.invocationCallOrder[0],
+    );
+    dismiss.mockRestore();
+  });
+
+  it('keeps the composer where no voice controls are wired', () => {
+    runInAction(() => {
+      voiceModeStore.phase = 'listening';
+      voiceModeStore.presentation = 'bar';
+    });
+    const {getByTestId, queryByTestId} = render(
+      <ChatView messages={[]} onSendPress={jest.fn()} user={user} />,
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    expect(getByTestId('chat-input')).toBeTruthy();
+    expect(queryByTestId('voice-bar')).toBeNull();
+  });
+
+  it('puts the voice bar in the composer slot while voice mode is open', () => {
+    runInAction(() => {
+      voiceModeStore.phase = 'listening';
+      voiceModeStore.presentation = 'bar';
+    });
+    const {getByTestId, queryByTestId} = renderChat();
+
+    expect(getByTestId('voice-bar')).toBeTruthy();
+    expect(queryByTestId('chat-input')).toBeNull();
+    expect(queryByTestId('mic-button')).toBeNull();
+  });
+
+  describe('message menu', () => {
+    const menuLabels = l10n.en.components.chatView.menuItems;
+    const answer = {
+      ...textMessage,
+      id: 'assistant-answer',
+      author: {id: 'assistant'},
+      text: 'answer',
+    };
+
+    const isDisabled = (label: string, getByText: (t: string) => any) => {
+      let node = getByText(label);
+      while (node) {
+        const state = node.props.accessibilityState;
+        if (state && 'disabled' in state) {
+          return state.disabled;
+        }
+        node = node.parent;
+      }
+      return undefined;
+    };
+
+    const openMenu = (message: typeof textMessage) => {
+      const view = render(
+        <ChatView
+          messages={[message]}
+          onSendPress={jest.fn()}
+          onVoiceModePress={jest.fn()}
+          user={user}
+        />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+          withBottomSheetProvider: true,
+        },
+      );
+      fireEvent(view.getAllByTestId('ContentContainer')[0], 'onLongPress', {
+        nativeEvent: {pageX: 0, pageY: 0},
+      });
+      return view;
+    };
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+      });
+    });
+
+    it.each([
+      [
+        'an assistant row',
+        answer,
+        [menuLabels.regenerate, menuLabels.regenerateWith],
+      ],
+      ['a user row', textMessage, [menuLabels.edit]],
+    ])(
+      'disables the items that generate on %s while voice mode is open',
+      (_row, message, generating) => {
+        runInAction(() => {
+          voiceModeStore.phase = 'listening';
+          voiceModeStore.presentation = 'bar';
+        });
+        const {getByText} = openMenu(message);
+
+        for (const label of generating) {
+          expect(isDisabled(label, getByText)).toBe(true);
+        }
+        expect(isDisabled(menuLabels.copy, getByText)).toBe(false);
+      },
+    );
+
+    it('keeps Regenerate enabled once voice mode is closed', () => {
+      const {getByText} = openMenu(answer);
+
+      expect(isDisabled(menuLabels.regenerate, getByText)).toBe(false);
+    });
+  });
+
+  describe('suggested prompts', () => {
+    const pal = {
+      id: 'pal',
+      name: 'Pal',
+      greeting: {text: '', suggestedPrompts: ['Tell me a joke']},
+    } as any;
+
+    const renderWithPal = () =>
+      render(
+        <ChatView
+          messages={[]}
+          activePal={pal}
+          onSendPress={jest.fn()}
+          onVoiceModePress={jest.fn()}
+          user={user}
+        />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+          withBottomSheetProvider: true,
+        },
+      );
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+      });
+    });
+
+    it('hides them while voice mode is open', () => {
+      runInAction(() => {
+        voiceModeStore.phase = 'listening';
+        voiceModeStore.presentation = 'bar';
+      });
+      const {queryByTestId} = renderWithPal();
+
+      expect(queryByTestId('suggested-prompts-row')).toBeNull();
+    });
+
+    it('shows them once voice mode is closed', () => {
+      const {getByTestId} = renderWithPal();
+
+      expect(getByTestId('suggested-prompts-row')).toBeTruthy();
+    });
   });
 });

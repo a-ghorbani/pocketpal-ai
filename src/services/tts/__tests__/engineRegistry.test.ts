@@ -1,3 +1,4 @@
+import {TTS_ENGINE_RUNTIME_BYTES} from '../constants';
 import {getAllEngines, getEngine, getNeuralEngine} from '../engineRegistry';
 import {KittenEngine} from '../engines/kitten';
 import {KokoroEngine} from '../engines/kokoro';
@@ -66,5 +67,13 @@ describe('engineRegistry', () => {
   it('returns stable singleton instances across calls', () => {
     expect(getEngine('kokoro')).toBe(getEngine('kokoro'));
     expect(getEngine('kitten')).toBe(getEngine('kitten'));
+  });
+
+  it('every neural engine has its own runtime size for the voice mode memory fit', () => {
+    const neural = getAllEngines().filter(e => e.id !== 'system');
+    expect(Object.keys(TTS_ENGINE_RUNTIME_BYTES).sort()).toEqual(
+      neural.map(e => e.id).sort(),
+    );
+    expect(TTS_ENGINE_RUNTIME_BYTES.phonon).toBe(200 * 1024 * 1024);
   });
 });
