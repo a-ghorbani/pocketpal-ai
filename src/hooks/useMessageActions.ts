@@ -23,8 +23,14 @@ type CopyableMessage = MessageType.Text | MessageType.AssistantTurn;
 interface UseMessageActionsProps {
   user: User;
   messages: MessageType.Any[];
-  /** Sends an existing row again; it must not touch the composer. */
-  resendPress: (message: MessageType.PartialText) => Promise<void>;
+  /**
+   * Sends an existing row again in place of `replaceFromId` and the rows
+   * after it; it must not touch the composer.
+   */
+  resendPress: (
+    message: MessageType.PartialText,
+    replaceFromId: string,
+  ) => Promise<void>;
   setInputText?: (text: string) => void;
   setInputImages?: (images: string[]) => void;
   setInputDocuments?: (documents: DocumentRef[]) => void;
@@ -103,8 +109,7 @@ export const useMessageActions = ({
         if (chatSessionStore.isStopping) {
           return;
         }
-        await chatSessionStore.removeMessagesFromId(row.id, true);
-        await resendPress(message);
+        await resendPress(message, row.id);
       } finally {
         releaseSendHold(documentIds);
       }

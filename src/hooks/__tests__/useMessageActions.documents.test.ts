@@ -99,16 +99,16 @@ describe('useMessageActions with documents', () => {
       expect.objectContaining({documents: [doc]}),
       {excludeFromId: 'u1'},
     );
-    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+    expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+    expect(t.handleSendPress).toHaveBeenCalledWith(
+      {
+        text: 'Summarise',
+        type: 'text',
+        imageUris: undefined,
+        documents: [doc],
+      },
       'u1',
-      true,
     );
-    expect(t.handleSendPress).toHaveBeenCalledWith({
-      text: 'Summarise',
-      type: 'text',
-      imageUris: undefined,
-      documents: [doc],
-    });
     expect(releaseDocuments).not.toHaveBeenCalled();
   });
 
@@ -133,18 +133,16 @@ describe('useMessageActions with documents', () => {
 
   it('holds the refs from before the check until the resend settles', async () => {
     const t = setup({kind: 'fits'});
-    let heldAtRemoval: boolean | undefined;
-    (chatSessionStore.removeMessagesFromId as jest.Mock).mockImplementationOnce(
-      async () => {
-        heldAtRemoval = documentStore.isHeld('a-pdf');
-      },
-    );
+    let heldAtResend: boolean | undefined;
+    t.handleSendPress.mockImplementationOnce(async () => {
+      heldAtResend = documentStore.isHeld('a-pdf');
+    });
 
     await act(async () => {
       await t.result.current.handleTryAgain(userRow);
     });
 
-    expect(heldAtRemoval).toBe(true);
+    expect(heldAtResend).toBe(true);
     expect(documentStore.isHeld('a-pdf')).toBe(false);
   });
 
@@ -157,6 +155,7 @@ describe('useMessageActions with documents', () => {
 
     expect(t.handleSendPress).toHaveBeenCalledWith(
       expect.objectContaining({documents: [doc]}),
+      'u1',
     );
   });
 

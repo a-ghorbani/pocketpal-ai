@@ -724,6 +724,11 @@ export type UndoneSend = {
   verdict?: Extract<BudgetVerdict, {kind: 'over'}>;
 };
 
+export type SendOptions = {
+  /** A resend: the row it replaces, removed with every later row once the send holds the lease. */
+  replaceFromId?: string;
+};
+
 export type EvaluateSendBudget = (
   message: MessageType.PartialText,
   options?: {excludeFromId?: string},
@@ -827,11 +832,16 @@ export const useChatSession = (
   /**
    * Returns a send cancelled by a chat switch: its text to the chat it was
    * typed in, its attachments to the composer, which stays with the user.
+   * A resend's row was never removed, so nothing comes back.
    */
   const unsent = (
     message: MessageType.PartialText,
     sentFrom: string | null,
+    {replaceFromId}: SendOptions,
   ): UndoneSend | undefined => {
+    if (replaceFromId !== undefined) {
+      return undefined;
+    }
     chatSessionStore.restoreUnsentText(sentFrom, message.text);
     if (!message.imageUris?.length && !message.documents?.length) {
       return undefined;
@@ -844,6 +854,7 @@ export const useChatSession = (
 
   const handleSendPress = async (
     message: MessageType.PartialText,
+    options: SendOptions = {},
   ): Promise<UndoneSend | undefined> => {
     const sentFrom = chatSessionStore.activeSessionId;
     if (modelStore.isGenerationBusy) {
@@ -853,7 +864,7 @@ export const useChatSession = (
     chatSessionStore.setIsStopping(false);
     if (chatSessionStore.activeSessionId !== sentFrom) {
       lease?.end();
-      return unsent(message, sentFrom);
+      return unsent(message, sentFrom, options);
     }
     if (!lease) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -886,7 +897,7 @@ export const useChatSession = (
     }
 
     try {
-      return await sendUnderLease(message, sentFrom, lease, {
+      return await sendUnderLease(message, sentFrom, options, lease, {
         stop: uiStop,
         isStopped: () => uiStopped,
       });
@@ -903,6 +914,7 @@ export const useChatSession = (
   const sendUnderLease = async (
     message: MessageType.PartialText,
     sentFrom: string | null,
+    options: SendOptions,
     lease: GenerationLease,
     runUi: {stop: () => void; isStopped: () => boolean},
   ): Promise<UndoneSend | undefined> => {
@@ -918,13 +930,19 @@ export const useChatSession = (
 
     const isMultimodalEnabled = modelStore.activeModelCaps.visionActive;
 
-    const currentMessages = toJS(chatSessionStore.currentSessionMessages);
+    const currentMessages = rowsBefore(
+      toJS(chatSessionStore.currentSessionMessages),
+      options.replaceFromId,
+    );
 
     const plan = hasDocuments(currentMessages, message)
       ? documentPlan(await planInputs(currentMessages, message))
       : undefined;
     if (chatSessionStore.activeSessionId !== sentFrom) {
-      return unsent(message, sentFrom);
+      return unsent(message, sentFrom, options);
+    }
+    if (options.replaceFromId !== undefined) {
+      await chatSessionStore.removeMessagesFromId(options.replaceFromId, true);
     }
     if (plan?.verdict.kind === 'over') {
       return {

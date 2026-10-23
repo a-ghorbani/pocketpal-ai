@@ -128,14 +128,14 @@ describe('useMessageActions', () => {
         await result.current.handleTryAgain(userMessage);
       });
 
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        {
+          text: 'Try again with this',
+          type: 'text',
+        },
         '1',
-        true,
       );
-      expect(mockHandleSendPress).toHaveBeenCalledWith({
-        text: 'Try again with this',
-        type: 'text',
-      });
     });
 
     it('resubmits last user message when retrying assistant message', async () => {
@@ -169,14 +169,14 @@ describe('useMessageActions', () => {
         await result.current.handleTryAgain(_messages[1]);
       });
 
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        {
+          text: 'User message',
+          type: 'text',
+        },
         '1',
-        true,
       );
-      expect(mockHandleSendPress).toHaveBeenCalledWith({
-        text: 'User message',
-        type: 'text',
-      });
     });
   });
 
@@ -198,8 +198,11 @@ describe('useMessageActions', () => {
       });
 
       expect(modelStore.selectModel).not.toHaveBeenCalled();
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
-      expect(mockHandleSendPress).toHaveBeenCalled();
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        expect.anything(),
+        messages[0].id,
+      );
     });
 
     it('initializes new model if model ID differs', async () => {
@@ -222,8 +225,11 @@ describe('useMessageActions', () => {
       });
 
       expect(modelStore.selectModel).toHaveBeenCalled();
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
-      expect(mockHandleSendPress).toHaveBeenCalled();
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        expect.anything(),
+        messages[0].id,
+      );
     });
   });
 
@@ -336,14 +342,14 @@ describe('useMessageActions', () => {
       await act(async () => {
         await result.current.handleTryAgain(turnMulti);
       });
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        {
+          text: 'What is 2+2?',
+          type: 'text',
+        },
         'u-1',
-        true,
       );
-      expect(mockHandleSendPress).toHaveBeenCalledWith({
-        text: 'What is 2+2?',
-        type: 'text',
-      });
     });
 
     it('#6 handleTryAgainWith(AssistantTurn) → parameter accepted, same walk-back behavior', async () => {
@@ -360,14 +366,14 @@ describe('useMessageActions', () => {
       await act(async () => {
         await result.current.handleTryAgainWith('model-1', turnMulti);
       });
-      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      expect(chatSessionStore.removeMessagesFromId).not.toHaveBeenCalled();
+      expect(mockHandleSendPress).toHaveBeenCalledWith(
+        {
+          text: 'What is 2+2?',
+          type: 'text',
+        },
         'u-1',
-        true,
       );
-      expect(mockHandleSendPress).toHaveBeenCalledWith({
-        text: 'What is 2+2?',
-        type: 'text',
-      });
     });
   });
 });

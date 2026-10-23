@@ -58,7 +58,11 @@ import {
   modelStore,
   uiStore,
 } from '../../store';
-import type {EvaluateSendBudget, UndoneSend} from '../../hooks/useChatSession';
+import type {
+  EvaluateSendBudget,
+  SendOptions,
+  UndoneSend,
+} from '../../hooks/useChatSession';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
@@ -173,6 +177,7 @@ export type ChatTopLevelProps = ChatInputTopLevelProps & MessageTopLevelProps;
 export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   onSendPress: (
     message: MessageType.PartialText,
+    options?: SendOptions,
   ) => Promise<UndoneSend | undefined> | void;
   /** Checks attached documents against the context window before a send.
    * Without it every send fits. */
@@ -883,7 +888,10 @@ export const ChatView = observer(
     const dispatchSend = React.useCallback(
       async (
         message: MessageType.PartialText,
-        {clear}: {clear: 'all' | 'text' | 'none'},
+        {
+          clear,
+          replaceFromId,
+        }: {clear: 'all' | 'text' | 'none'; replaceFromId?: string},
       ) => {
         const documentIds = (message.documents ?? []).map(ref => ref.id);
         holdForSend(documentIds);
@@ -893,7 +901,10 @@ export const ChatView = observer(
           if (chatSessionStore.isEditMode) {
             await chatSessionStore.commitEdit();
           }
-          const sent = onSendPress(message);
+          const sent =
+            replaceFromId === undefined
+              ? onSendPress(message)
+              : onSendPress(message, {replaceFromId});
           if (clear !== 'none') {
             setInputText('');
             syncedDraftRef.current = '';
@@ -952,11 +963,12 @@ export const ChatView = observer(
     );
 
     /**
-     * Resends an existing row; the resend gate has already checked the budget.
-     * Outside edit mode the composer is left as it is.
+     * Resends an existing row in place of `replaceFromId` and the rows after
+     * it; the resend gate has already checked the budget. Outside edit mode
+     * the composer is left as it is.
      */
     const resend = React.useCallback(
-      async (message: MessageType.PartialText) => {
+      async (message: MessageType.PartialText, replaceFromId: string) => {
         if (chatSessionStore.isStopping) {
           return;
         }
@@ -965,6 +977,7 @@ export const ChatView = observer(
             chatSessionStore.isEditMode && !editSnapshotRef.current
               ? 'all'
               : 'none',
+          replaceFromId,
         });
       },
       [dispatchSend],
