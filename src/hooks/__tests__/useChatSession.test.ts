@@ -161,6 +161,17 @@ describe('useChatSession', () => {
       expect(params.reasoning).toEqual({enabled: false});
     });
 
+    it('keeps the thinking params of a spoken and a typed send through the params filter', async () => {
+      const spokenParams = await sendWithThinkingOn({spoken: true});
+      (modelStore.engine!.completion as jest.Mock).mockClear();
+      const typedParams = await sendWithThinkingOn();
+
+      expect(spokenParams.enable_thinking).toBe(false);
+      expect(spokenParams.reasoning).toEqual({enabled: false});
+      expect(typedParams.enable_thinking).toBe(true);
+      expect(typedParams.reasoning).toEqual({enabled: true, effort: 'high'});
+    });
+
     it('asks a remote server for no thinking too', async () => {
       const params = await sendWithThinkingOn({spoken: true});
       const request = {samplers: {}, reasoning: params.reasoning};
