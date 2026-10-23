@@ -22,7 +22,6 @@ import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
 import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
-  VOICE_DONE_TAP_GRACE_MS,
   VOICE_MIC_WATCHDOG_MS,
   VOICE_START_TIMEOUT_MS,
   isMicGranted,
@@ -120,7 +119,6 @@ class VoiceModeController {
   private micWatchdog: ReturnType<typeof setTimeout> | null = null;
   private micRetried = false;
   private pausedByInterruption = false;
-  private autoEndedAt: number | null = null;
   private actions: VoiceEntryActions = {
     openModelPicker: noop,
     focusInput: noop,
@@ -318,12 +316,6 @@ class VoiceModeController {
       phase === 'thinking' ||
       phase === 'speaking'
     ) {
-      const sinceEndMs =
-        this.autoEndedAt == null ? null : Date.now() - this.autoEndedAt;
-      if (sinceEndMs != null && sinceEndMs < VOICE_DONE_TAP_GRACE_MS) {
-        vtrace('tap.ignored', {phase, sinceEndMs});
-        return;
-      }
       vtrace('interrupt', {src: 'tap', phase, turn: !!this.turn});
       this.turn?.interrupt();
     }
@@ -413,9 +405,6 @@ class VoiceModeController {
 
   private setPhase(phase: VoicePhase, reason: string): void {
     vtrace('phase', {to: phase, from: voiceModeStore.phase, r: reason});
-    if (phase === 'listening') {
-      this.autoEndedAt = null;
-    }
     voiceModeStore.setPhase(phase);
   }
 
@@ -539,7 +528,6 @@ class VoiceModeController {
   private endUtterance(session: number, by: 'auto' | 'tap'): void {
     vtrace('utt.end', {by, voicedMs: this.endpointer.voicedMs});
     const utterance = this.endpointer.take();
-    this.autoEndedAt = by === 'auto' ? Date.now() : null;
     this.stopCapture();
     this.setPhase('transcribing', by);
     const current = () => session === this.session;

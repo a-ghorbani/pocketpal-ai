@@ -27,7 +27,6 @@ import {acquireKeepAwake} from '../../utils/keepAwake';
 import {ModelOrigin} from '../../utils/types';
 import {
   VOICE_CAPTURE_SETTLE_MS,
-  VOICE_DONE_TAP_GRACE_MS,
   VOICE_MIC_WATCHDOG_MS,
   VOICE_START_TIMEOUT_MS,
 } from '../../services/voice';
@@ -749,6 +748,41 @@ describe('useVoiceMode', () => {
       expect(engine.runTurn).toHaveBeenCalledTimes(1);
     });
 
+    it('a tap while speaking interrupts the reply and listens again', async () => {
+      const {enter, hook, turns} = renderVoiceMode();
+      await enter();
+      speak(500);
+      speak(600, SILENT);
+      act(() => turns[0].on.transcribed('hi'));
+      act(() => turns[0].on.speechStarted());
+
+      act(() => hook.result.current.tapCloud());
+
+      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+      await flush();
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
+    it.each(['transcribing', 'thinking'] as const)(
+      'a tap while %s cancels the turn and listens again',
+      async phase => {
+        const {enter, hook, turns} = renderVoiceMode();
+        await enter();
+        speak(500);
+        speak(600, SILENT);
+        if (phase === 'thinking') {
+          act(() => turns[0].on.transcribed('hi'));
+        }
+        expect(voiceModeStore.phase).toBe(phase);
+
+        act(() => hook.result.current.tapCloud());
+
+        expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
+        await flush();
+        expect(voiceModeStore.phase).toBe('listening');
+      },
+    );
+
     it('a phase forced from outside starts no capture', async () => {
       renderVoiceMode();
 
@@ -760,96 +794,6 @@ describe('useVoiceMode', () => {
 
       expect(AudioRecord.init).not.toHaveBeenCalled();
       expect(AudioRecord.start).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('a tap after the utterance ended', () => {
-    let now = 0;
-    let clock: jest.SpyInstance<number, []>;
-
-    beforeEach(() => {
-      now = 1_000_000;
-      clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
-    });
-
-    afterEach(() => {
-      clock.mockRestore();
-    });
-
-    const reach = async (phase: 'transcribing' | 'thinking' | 'speaking') => {
-      const voice = renderVoiceMode();
-      await voice.enter();
-      speak(500);
-      speak(600, SILENT);
-      if (phase !== 'transcribing') {
-        act(() => voice.turns[0].on.transcribed('hi'));
-      }
-      if (phase === 'speaking') {
-        act(() => voice.turns[0].on.speechStarted());
-      }
-      expect(voiceModeStore.phase).toBe(phase);
-      return voice;
-    };
-
-    it.each(['transcribing', 'thinking', 'speaking'] as const)(
-      'is ignored while %s just after a pause ended it, and the reply goes on',
-      async phase => {
-        const {hook, turns} = await reach(phase);
-
-        now += 300;
-        act(() => hook.result.current.tapCloud());
-
-        expect(turns[0].interrupt).not.toHaveBeenCalled();
-        expect(voiceModeStore.phase).toBe(phase);
-        turns[0].finish('answered');
-        await flush();
-        expect(voiceModeStore.phase).toBe('listening');
-        expect(voiceModeStore.lastError).toBeNull();
-      },
-    );
-
-    it.each(['transcribing', 'thinking', 'speaking'] as const)(
-      'stops the turn while %s once the grace has passed, and listens again',
-      async phase => {
-        const {hook, turns} = await reach(phase);
-
-        now += VOICE_DONE_TAP_GRACE_MS + 100;
-        act(() => hook.result.current.tapCloud());
-
-        expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
-        await flush();
-        expect(voiceModeStore.phase).toBe('listening');
-      },
-    );
-
-    it('has no grace when a tap ended the utterance', async () => {
-      const {enter, hook, turns} = renderVoiceMode();
-      await enter();
-      speak(500);
-      act(() => hook.result.current.tapCloud());
-      act(() => turns[0].on.transcribed('hi'));
-
-      now += 300;
-      act(() => hook.result.current.tapCloud());
-
-      expect(turns[0].interrupt).toHaveBeenCalledTimes(1);
-    });
-
-    it('a pause-ended turn that finishes leaves no grace for the next tap-ended one', async () => {
-      const {enter, hook, turns} = renderVoiceMode();
-      await enter();
-      speak(500);
-      speak(600, SILENT);
-      turns[0].finish('empty');
-      await flush();
-      await settleMic();
-
-      speak(500);
-      act(() => hook.result.current.tapCloud());
-      now += 300;
-      act(() => hook.result.current.tapCloud());
-
-      expect(turns[1].interrupt).toHaveBeenCalledTimes(1);
     });
   });
 
