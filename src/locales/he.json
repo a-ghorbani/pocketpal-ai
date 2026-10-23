@@ -1711,10 +1711,10 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "קח את ה-AI המקומי צעד קדימה.",
-    "subline": "כלים נוספים כדי לבדוק עד לאן הטלפון שלך באמת מגיע, ודרך לתמוך בעבודה שמשאירה את PocketPal חינמי ובקוד פתוח.",
-    "unsupportedSubline": "תכונות Plus עדיין לא פועלות בטלפון הזה. אתה עדיין יכול לתמוך ב-PocketPal, וכל תכונה שתגיע לטלפון שלך בהמשך כלולה במחיר.",
-    "thanksHeadline": "תודה שאתה מקדם איתנו את ה-AI המקומי.",
-    "thanksSubline": "Plus פעיל במכשיר הזה. תכונות Plus חדשות יופיעו כאן אוטומטית.",
+    "subline": "Plus משאיר את PocketPal חינמי ובקוד פתוח. התכונות הנוספות הן התודה שלנו.",
+    "unsupportedSubline": "תכונות Plus עדיין לא פועלות בטלפון הזה. אתה עדיין יכול לתמוך ב-PocketPal.",
+    "thanksHeadline": "תודה שאתה עוזר ל-PocketPal להמשיך.",
+    "thanksSubline": "Plus פעיל במכשיר הזה.",
     "features": {
       "handsFreeVoice": "שיחה קולית ללא ידיים",
       "localApiServer": "שרת API מקומי"
