@@ -119,6 +119,7 @@ class VoiceModeController {
   private micStarting: Promise<void> | null = null;
   private micWatchdog: ReturnType<typeof setTimeout> | null = null;
   private micRetried = false;
+  private pausedByInterruption = false;
   private autoEndedAt: number | null = null;
   private actions: VoiceEntryActions = {
     openModelPicker: noop,
@@ -275,6 +276,7 @@ class VoiceModeController {
     this.open = false;
     this.session++;
     this.micRetried = false;
+    this.pausedByInterruption = false;
     this.setPhase('closed', reason);
     this.stopCapture();
     const turn = this.turn;
@@ -307,7 +309,9 @@ class VoiceModeController {
   tapCloud(): void {
     const phase = voiceModeStore.phase;
     vtrace('tap', {phase, speech: this.endpointer.hasSpeech});
-    if (phase === 'listening' && this.endpointer.tap()) {
+    if (this.pausedByInterruption) {
+      this.resumeAfterInterruption('tap');
+    } else if (phase === 'listening' && this.endpointer.tap()) {
       this.endUtterance(this.session, 'tap');
     } else if (
       phase === 'transcribing' ||
@@ -328,6 +332,7 @@ class VoiceModeController {
   toggleMute(): void {
     const muted = !voiceModeStore.micMuted;
     voiceModeStore.setMicMuted(muted);
+    this.pausedByInterruption = false;
     if (voiceModeStore.phase !== 'listening') {
       return;
     }
@@ -348,6 +353,8 @@ class VoiceModeController {
     }
     if (next === 'background') {
       this.exit('background');
+    } else if (next === 'active' && this.pausedByInterruption) {
+      this.resumeAfterInterruption('foreground');
     } else if (
       next === 'active' &&
       previous === 'inactive' &&
@@ -361,10 +368,11 @@ class VoiceModeController {
 
   /**
    * A call, alarm or Siri took the audio session: stop the mic and any turn.
-   * `ended` may never come (Android only holds focus while a chunk plays),
-   * so the next move into listening opens the mic again; while already
-   * listening, the watchdog retries it, then ends the session if it is
-   * still taken.
+   * `ended` may never come (Android only holds focus while a chunk plays;
+   * iOS skips it after Siri and often after a call). A turn's next move into
+   * listening opens the mic again. While listening, the mic shows as off
+   * until `ended`, a cloud tap, the app becoming active, or unmute; the
+   * session holding it can last minutes, so no watchdog runs meanwhile.
    */
   onAudioInterruption({type}: AudioInterruptionProps): void {
     vtrace('audio.int', {type, open: this.open, phase: voiceModeStore.phase});
@@ -376,16 +384,31 @@ class VoiceModeController {
       if (this.turn) {
         vtrace('interrupt', {src: 'audio_interruption'});
         this.turn.interrupt();
-      } else if (voiceModeStore.phase === 'listening') {
-        this.watchMic(this.session);
+      } else if (
+        voiceModeStore.phase === 'listening' &&
+        !voiceModeStore.micMuted
+      ) {
+        this.pausedByInterruption = true;
+        voiceModeStore.setMicMuted(true);
       }
       return;
     }
-    if (voiceModeStore.phase === 'listening') {
+    if (this.pausedByInterruption) {
+      this.resumeAfterInterruption('interruption_ended');
+    } else if (voiceModeStore.phase === 'listening') {
       vtrace('mic.restart', {why: 'interruption_ended'});
       this.stopCapture();
       this.startCapture(this.session);
     }
+  }
+
+  private resumeAfterInterruption(why: string): void {
+    vtrace('mic.restart', {why});
+    this.pausedByInterruption = false;
+    this.micRetried = false;
+    voiceModeStore.setMicMuted(false);
+    this.stopCapture();
+    this.startCapture(this.session);
   }
 
   private setPhase(phase: VoicePhase, reason: string): void {

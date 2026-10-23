@@ -1335,33 +1335,33 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
     });
 
-    it('while listening with no ended event, the watchdog reopens the mic, then gives up', async () => {
+    it('while listening, pause with the mic off and no watchdog until ended', async () => {
       jest.useFakeTimers();
       try {
         const {enter} = renderVoiceMode();
         await enter();
         interruption('began');
-        expect(AudioRecord.stop).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.micMuted).toBe(true);
 
         await act(async () => {
-          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS);
+          jest.advanceTimersByTime(60_000);
         });
+        expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
+
+        interruption('ended');
         await act(async () => {
           jest.advanceTimersByTime(VOICE_CAPTURE_SETTLE_MS);
         });
+        expect(voiceModeStore.micMuted).toBe(false);
         expect(AudioRecord.start).toHaveBeenCalledTimes(2);
         expect(voiceModeStore.phase).toBe('listening');
-
-        await act(async () => {
-          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS);
-        });
-        expect(voiceModeStore.phase).toBe('closed');
       } finally {
         jest.useRealTimers();
       }
     });
 
-    it('a began while the mic is reopening leaves one watchdog, so flowing audio keeps the mic', async () => {
+    it('a began while the mic is reopening keeps it closed until the next ended', async () => {
       jest.useFakeTimers();
       try {
         const {enter} = renderVoiceMode();
@@ -1370,17 +1370,16 @@ describe('useVoiceMode', () => {
         interruption('ended');
         interruption('began');
         await act(async () => {
+          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS * 3);
+        });
+        expect(AudioRecord.init).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
+
+        interruption('ended');
+        await act(async () => {
           jest.advanceTimersByTime(VOICE_CAPTURE_SETTLE_MS);
         });
         expect(AudioRecord.init).toHaveBeenCalledTimes(2);
-
-        speak(100, SILENT);
-        await act(async () => {
-          jest.advanceTimersByTime(VOICE_MIC_WATCHDOG_MS * 2);
-        });
-
-        expect(AudioRecord.init).toHaveBeenCalledTimes(2);
-        expect(voiceModeStore.phase).toBe('listening');
       } finally {
         jest.useRealTimers();
       }
@@ -1437,7 +1436,6 @@ describe('useVoiceMode', () => {
       await enter();
       interruption('began');
 
-      act(() => hook.result.current.toggleMute());
       await act(async () => hook.result.current.toggleMute());
       await settleMic();
 
@@ -1454,6 +1452,59 @@ describe('useVoiceMode', () => {
       await settleMic();
 
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+      expect(voiceModeStore.micMuted).toBe(false);
+    });
+
+    it('while listening with no ended event, the app becoming active opens the mic again', async () => {
+      const {enter} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      setAppState('active');
+      await settleMic();
+
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('while listening with no ended event, a cloud tap opens the mic again', async () => {
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      act(() => hook.result.current.tapCloud());
+      await settleMic();
+
+      expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+      expect(voiceModeStore.micMuted).toBe(false);
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
+    it('a muted mic stays off when one ends', async () => {
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      act(() => hook.result.current.toggleMute());
+      interruption('began');
+      interruption('ended');
+      await settleMic();
+
+      expect(voiceModeStore.micMuted).toBe(true);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('ending voice mode while paused closes it', async () => {
+      const {enter, hook} = renderVoiceMode();
+      await enter();
+      interruption('began');
+
+      await act(async () => {
+        await hook.result.current.end();
+      });
+      interruption('ended');
+      await settleMic();
+
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(voiceModeStore.micMuted).toBe(false);
+      expect(AudioRecord.start).toHaveBeenCalledTimes(1);
     });
 
     it('during starting, the mic still opens once loaded', async () => {
