@@ -74,7 +74,7 @@ import {
   setDocumentPageRange,
 } from '../../services/documents/store';
 import {hasDocuments} from '../../services/documents/budget';
-import {rowsBefore, type BudgetVerdict} from '../../services/documents/plan';
+import type {BudgetVerdict} from '../../services/documents/plan';
 import {documentKey} from '../../services/documents/render';
 import {documentCountingOptions} from '../../utils/documentCounting';
 import {createDocumentWarning} from '../../utils/errors';
@@ -387,8 +387,10 @@ export const ChatView = observer(
       [updateComposerDocuments],
     );
     const [rangeKey, setRangeKey] = React.useState<string | null>(null);
-    const [budgetVerdict, setBudgetVerdict] =
-      React.useState<OverVerdict | null>(null);
+    const [budgetSheet, setBudgetSheet] = React.useState<{
+      verdict: OverVerdict;
+      resend: boolean;
+    } | null>(null);
     const budgetCheckRef = React.useRef(false);
 
     const [documentModes, setDocumentModes] = React.useState<
@@ -860,34 +862,6 @@ export const ChatView = observer(
       [l10n, updateComposerDocuments],
     );
 
-    /** Puts a row in edit mode while keeping what the composer already holds. */
-    const editRowKeepingComposer = React.useCallback(
-      (row: MessageType.Text) => {
-        if (row.id === chatSessionStore.editingMessageId) {
-          return;
-        }
-        const wasEditing = chatSessionStore.isEditMode;
-        const pending: EditSnapshot | null =
-          wasEditing || !chatSessionStore.activeSessionId
-            ? null
-            : {
-                sessionId: chatSessionStore.activeSessionId,
-                text: inputTextRef.current,
-                images: inputImagesRef.current,
-                documents: inputDocumentsRef.current,
-              };
-        chatSessionStore.enterEditMode(row.id);
-        if (pending && chatSessionStore.editingMessageId === row.id) {
-          editSnapshotRef.current = pending;
-        }
-        mergeIntoComposer(
-          {text: row.text, images: row.imageUris, documents: row.documents},
-          'pendingFirst',
-        );
-      },
-      [mergeIntoComposer],
-    );
-
     const restoreUndone = React.useCallback(
       ({message, sessionId, verdict}: UndoneSend) => {
         const isOpenChat =
@@ -900,7 +874,7 @@ export const ChatView = observer(
         }
         if (isOpenChat) {
           if (verdict) {
-            setBudgetVerdict(verdict);
+            setBudgetSheet({verdict, resend: false});
           }
           mergeIntoComposer(
             {
@@ -927,7 +901,12 @@ export const ChatView = observer(
         {
           clear,
           replaceFromId,
-        }: {clear: 'all' | 'text' | 'none'; replaceFromId?: string},
+          resend = false,
+        }: {
+          clear: 'all' | 'text' | 'none';
+          replaceFromId?: string;
+          resend?: boolean;
+        },
       ) => {
         const documentIds = (message.documents ?? []).map(ref => ref.id);
         holdForSend(documentIds);
@@ -940,7 +919,7 @@ export const ChatView = observer(
           const sent =
             replaceFromId === undefined
               ? onSendPress(message)
-              : onSendPress(message, {replaceFromId, resend: true});
+              : onSendPress(message, {replaceFromId, resend});
           if (clear !== 'none') {
             setInputText('');
             syncedDraftRef.current = '';
@@ -952,7 +931,14 @@ export const ChatView = observer(
             updateComposerDocuments(() => []);
           }
           const undone = await sent;
-          if (undone) {
+          if (resend) {
+            if (
+              undone?.verdict &&
+              undone.sessionId === (chatSessionStore.activeSessionId ?? '')
+            ) {
+              setBudgetSheet({verdict: undone.verdict, resend: true});
+            }
+          } else if (undone) {
             restoreUndone(undone);
           }
         } finally {
@@ -988,7 +974,7 @@ export const ChatView = observer(
             return;
           }
           if (verdict.kind === 'over') {
-            setBudgetVerdict(verdict);
+            setBudgetSheet({verdict, resend: false});
             return;
           }
         }
@@ -1014,6 +1000,7 @@ export const ChatView = observer(
               ? 'all'
               : 'none',
           replaceFromId,
+          resend: true,
         });
       },
       [dispatchSend],
@@ -1045,29 +1032,8 @@ export const ChatView = observer(
         setInputImages,
         setInputDocuments: setComposerRefs,
         evaluateSendBudget,
-        onBudgetOver: (verdict, row) => {
-          editRowKeepingComposer(row);
-          setBudgetVerdict(verdict);
-        },
+        onBudgetOver: verdict => setBudgetSheet({verdict, resend: true}),
       });
-
-    const editTargetForBudget = rowsBefore(
-      messages,
-      chatSessionStore.editingMessageId ?? undefined,
-    ).find(
-      (row): row is MessageType.Text =>
-        row.type === 'text' &&
-        row.author.id === user.id &&
-        !!row.documents?.length,
-    );
-
-    const editMessageWithDocuments = React.useCallback(() => {
-      if (!editTargetForBudget) {
-        return;
-      }
-      setBudgetVerdict(null);
-      editRowKeepingComposer(editTargetForBudget);
-    }, [editTargetForBudget, editRowKeepingComposer]);
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
     // Scroll to bottom when user sends a new message
@@ -1761,12 +1727,13 @@ export const ChatView = observer(
             />
           ) : null}
 
-          {budgetVerdict ? (
+          {budgetSheet ? (
             <DocumentBudgetSheet
               isVisible
-              verdict={budgetVerdict}
+              verdict={budgetSheet.verdict}
+              resend={budgetSheet.resend}
               onChoosePages={documentRef => {
-                setBudgetVerdict(null);
+                setBudgetSheet(null);
                 setRangeKey(
                   inputDocumentsRef.current.find(
                     doc => doc.ref?.id === documentRef.id,
@@ -1774,7 +1741,7 @@ export const ChatView = observer(
                 );
               }}
               onSearchInstead={documentRef => {
-                setBudgetVerdict(null);
+                setBudgetSheet(null);
                 updateComposerDocuments(prev =>
                   prev.map(doc =>
                     doc.ref?.id === documentRef.id
@@ -1787,32 +1754,34 @@ export const ChatView = observer(
                 updateComposerDocuments(prev =>
                   prev.filter(doc => doc.ref?.id !== documentRef.id),
                 );
-                const newDocs = budgetVerdict.newDocs.filter(
+                const newDocs = budgetSheet.verdict.newDocs.filter(
                   doc => doc.ref.id !== documentRef.id,
                 );
-                setBudgetVerdict(
-                  newDocs.length > 0 ? {...budgetVerdict, newDocs} : null,
+                setBudgetSheet(
+                  newDocs.length > 0
+                    ? {
+                        ...budgetSheet,
+                        verdict: {...budgetSheet.verdict, newDocs},
+                      }
+                    : null,
                 );
               }}
               onIncreaseContext={
                 canIncreaseContext && activeModel?.origin !== ModelOrigin.REMOTE
                   ? () => {
-                      setBudgetVerdict(null);
+                      setBudgetSheet(null);
                       setIncreaseSheetOpen(true);
                     }
                   : undefined
               }
               onNewChat={() => {
-                setBudgetVerdict(null);
+                setBudgetSheet(null);
                 if (chatSessionStore.activeSessionId) {
                   carriedTextRef.current = inputTextRef.current;
                 }
                 chatSessionStore.resetActiveSession();
               }}
-              onEditMessage={
-                editTargetForBudget ? editMessageWithDocuments : undefined
-              }
-              onClose={() => setBudgetVerdict(null)}
+              onClose={() => setBudgetSheet(null)}
             />
           ) : null}
 

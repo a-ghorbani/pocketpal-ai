@@ -16,26 +16,26 @@ type OverVerdict = Extract<BudgetVerdict, {kind: 'over'}>;
 interface DocumentBudgetSheetProps {
   isVisible: boolean;
   verdict: OverVerdict;
+  /** Opened by Try again: it explains, since its actions act on the composer. */
+  resend?: boolean;
   onChoosePages: (ref: DocumentRef) => void;
   onRemove: (ref: DocumentRef) => void;
   onSearchInstead: (ref: DocumentRef) => void;
   /** Present only when the active model is local and a larger context fits. */
   onIncreaseContext?: () => void;
   onNewChat: () => void;
-  /** Present only when an earlier user message carries documents. */
-  onEditMessage?: () => void;
   onClose: () => void;
 }
 
 export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
   isVisible,
   verdict,
+  resend = false,
   onChoosePages,
   onRemove,
   onSearchInstead,
   onIncreaseContext,
   onNewChat,
-  onEditMessage,
   onClose,
 }) => {
   const theme = useTheme();
@@ -76,47 +76,61 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
       snapPoints={['70%']}>
       <Sheet.ScrollView contentContainerStyle={styles.container}>
         <Text variant="bodyMedium" style={styles.body} testID="budget-body">
-          {t(historyOverflow ? strings.historyBody : strings.newBody, amounts)}
+          {t(
+            resend
+              ? strings.resendBody
+              : historyOverflow
+                ? strings.historyBody
+                : strings.newBody,
+            amounts,
+          )}
         </Text>
 
-        {(historyOverflow ? [] : verdict.newDocs).map(({ref, tokens, mode}) => (
-          <View key={ref.id} style={styles.doc} testID="budget-new-doc">
-            <Text variant="labelLarge" numberOfLines={1} style={styles.docName}>
-              {mode === 'searched'
-                ? `${ref.name} · ${l10n.chat.documents.searched}`
-                : `${ref.name} · ${t(l10n.chat.documents.tokens, {
-                    tokens: formatTokenCount(tokens),
-                  })}`}
-            </Text>
-            <View style={styles.docActions}>
-              {mode === 'full' ? (
-                <Button
-                  mode="outlined"
-                  compact
-                  onPress={() => onSearchInstead(ref)}
-                  testID="budget-search-instead">
-                  {strings.searchInstead}
-                </Button>
-              ) : null}
-              {ref.kind === 'pdf' ? (
-                <Button
-                  mode="outlined"
-                  compact
-                  onPress={() => onChoosePages(ref)}
-                  testID="budget-choose-pages">
-                  {strings.choosePages}
-                </Button>
-              ) : null}
-              <Button
-                mode="outlined"
-                compact
-                onPress={() => onRemove(ref)}
-                testID="budget-remove">
-                {strings.remove}
-              </Button>
+        {(historyOverflow && !resend ? [] : verdict.newDocs).map(
+          ({ref, tokens, mode}) => (
+            <View key={ref.id} style={styles.doc} testID="budget-new-doc">
+              <Text
+                variant="labelLarge"
+                numberOfLines={1}
+                style={styles.docName}>
+                {mode === 'searched'
+                  ? `${ref.name} · ${l10n.chat.documents.searched}`
+                  : `${ref.name} · ${t(l10n.chat.documents.tokens, {
+                      tokens: formatTokenCount(tokens),
+                    })}`}
+              </Text>
+              {resend ? null : (
+                <View style={styles.docActions}>
+                  {mode === 'full' ? (
+                    <Button
+                      mode="outlined"
+                      compact
+                      onPress={() => onSearchInstead(ref)}
+                      testID="budget-search-instead">
+                      {strings.searchInstead}
+                    </Button>
+                  ) : null}
+                  {ref.kind === 'pdf' ? (
+                    <Button
+                      mode="outlined"
+                      compact
+                      onPress={() => onChoosePages(ref)}
+                      testID="budget-choose-pages">
+                      {strings.choosePages}
+                    </Button>
+                  ) : null}
+                  <Button
+                    mode="outlined"
+                    compact
+                    onPress={() => onRemove(ref)}
+                    testID="budget-remove">
+                    {strings.remove}
+                  </Button>
+                </View>
+              )}
             </View>
-          </View>
-        ))}
+          ),
+        )}
 
         {verdict.historyDocTokens > 0 ? (
           <Text
@@ -129,23 +143,10 @@ export const DocumentBudgetSheet: React.FC<DocumentBudgetSheetProps> = ({
           </Text>
         ) : null}
 
-        {historyOverflow ? (
-          <>
-            <Button
-              mode="contained"
-              onPress={onNewChat}
-              testID="budget-new-chat">
-              {strings.newChat}
-            </Button>
-            {onEditMessage ? (
-              <Button
-                mode="outlined"
-                onPress={onEditMessage}
-                testID="budget-edit-message">
-                {strings.editMessage}
-              </Button>
-            ) : null}
-          </>
+        {historyOverflow && !resend ? (
+          <Button mode="contained" onPress={onNewChat} testID="budget-new-chat">
+            {strings.newChat}
+          </Button>
         ) : null}
 
         {onIncreaseContext ? (

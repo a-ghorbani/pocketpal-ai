@@ -96,7 +96,6 @@ describe('DocumentBudgetSheet', () => {
 
   it('switches to the history-overflow actions', () => {
     const h = handlers();
-    const onEditMessage = jest.fn();
     const {getByTestId, queryByTestId} = render(
       <DocumentBudgetSheet
         isVisible
@@ -108,16 +107,51 @@ describe('DocumentBudgetSheet', () => {
           historyDocTokens: 6000,
           reason: 'history',
         }}
-        onEditMessage={onEditMessage}
         {...h}
       />,
     );
     expect(queryByTestId('budget-remove')).toBeNull();
+    expect(queryByTestId('budget-edit-message')).toBeNull();
     fireEvent.press(getByTestId('budget-new-chat'));
     expect(h.onNewChat).toHaveBeenCalled();
-    fireEvent.press(getByTestId('budget-edit-message'));
-    expect(onEditMessage).toHaveBeenCalled();
   });
+
+  it.each(['new', 'history'] as const)(
+    'only explains a %s overflow on a resend',
+    reason => {
+      const h = handlers();
+      const onIncreaseContext = jest.fn();
+      const {getByTestId, queryByTestId, getByText} = render(
+        <DocumentBudgetSheet
+          isVisible
+          resend
+          verdict={{
+            kind: 'over',
+            needed: 9100,
+            available: 3072,
+            newDocs: [{ref: pdf, tokens: 9000, mode: 'full'}],
+            historyDocTokens: 6000,
+            reason,
+          }}
+          onIncreaseContext={onIncreaseContext}
+          {...h}
+        />,
+      );
+      expect(getByTestId('budget-body').props.children).toContain(
+        'Nothing was removed or sent.',
+      );
+      expect(getByText('big.pdf · ~9k tokens')).toBeTruthy();
+      expect(queryByTestId('budget-search-instead')).toBeNull();
+      expect(queryByTestId('budget-choose-pages')).toBeNull();
+      expect(queryByTestId('budget-remove')).toBeNull();
+      expect(queryByTestId('budget-new-chat')).toBeNull();
+      expect(queryByTestId('budget-edit-message')).toBeNull();
+      fireEvent.press(getByTestId('budget-increase-context'));
+      expect(onIncreaseContext).toHaveBeenCalled();
+      fireEvent.press(getByTestId('budget-cancel'));
+      expect(h.onClose).toHaveBeenCalled();
+    },
+  );
 
   it('offers no Search instead next to the history actions', () => {
     const small = {...text, id: 'small', name: 'small.md', tokenEstimate: 300};

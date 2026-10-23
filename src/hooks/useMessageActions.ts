@@ -35,11 +35,8 @@ interface UseMessageActionsProps {
   setInputImages?: (images: string[]) => void;
   setInputDocuments?: (documents: DocumentRef[]) => void;
   evaluateSendBudget?: EvaluateSendBudget;
-  /** The resend no longer fits; the caller puts `row` in edit mode. */
-  onBudgetOver?: (
-    verdict: Extract<BudgetVerdict, {kind: 'over'}>,
-    row: MessageType.Text,
-  ) => void;
+  /** The resend no longer fits; nothing was removed or sent. */
+  onBudgetOver?: (verdict: Extract<BudgetVerdict, {kind: 'over'}>) => void;
 }
 
 export const useMessageActions = ({
@@ -102,7 +99,7 @@ export const useMessageActions = ({
             return;
           }
           if (verdict.kind === 'over') {
-            onBudgetOver?.(verdict, row);
+            onBudgetOver?.(verdict);
             return;
           }
         }

@@ -112,7 +112,7 @@ describe('useMessageActions with documents', () => {
     expect(releaseDocuments).not.toHaveBeenCalled();
   });
 
-  it('removes nothing and opens the row in edit mode when it no longer fits', async () => {
+  it('removes nothing and reports the verdict when it no longer fits', async () => {
     const t = setup(over);
     let heldWhenHandedOver: boolean | undefined;
     t.onBudgetOver.mockImplementation(() => {
@@ -127,7 +127,7 @@ describe('useMessageActions with documents', () => {
     expect(t.handleSendPress).not.toHaveBeenCalled();
     expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
     expect(t.setInputText).not.toHaveBeenCalled();
-    expect(t.onBudgetOver).toHaveBeenCalledWith(over, userRow);
+    expect(t.onBudgetOver).toHaveBeenCalledWith(over);
     expect(heldWhenHandedOver).toBe(true);
   });
 
