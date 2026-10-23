@@ -1007,6 +1007,20 @@ describe('ChatView resend', () => {
     });
   });
 
+  it('puts a resend the server withdrew back in the composer', async () => {
+    const chat = renderChat({
+      messages: [answer, question],
+      evaluateSendBudget: jest.fn().mockResolvedValue(fits),
+    });
+    (chat.onSendPress as jest.Mock).mockImplementationOnce(
+      async (message: any) => ({message, sessionId: 'session-1'}),
+    );
+
+    await regenerateAnswer(chat);
+
+    expect(chat.input().props.value).toBe('Earlier question');
+  });
+
   it('Try again keeps the composer text, image and chip, and the chip stays held', async () => {
     const staged = ref('staged-chip');
     let heldDuringSend: boolean | undefined;

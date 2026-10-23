@@ -870,11 +870,8 @@ export const ChatView = observer(
               );
             }
           }
-          if (resend) {
-            if (
-              undone?.verdict &&
-              undone.sessionId === (chatSessionStore.activeSessionId ?? '')
-            ) {
+          if (resend && undone?.verdict) {
+            if (undone.sessionId === (chatSessionStore.activeSessionId ?? '')) {
               setBudgetSheet({verdict: undone.verdict, resend: true});
             }
           } else if (undone) {
