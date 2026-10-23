@@ -11,8 +11,12 @@
  * ~380 MB), so completion is awaited by polling a status file the app writes:
  * - Android: read::status round-trip through a result element
  * - iOS simulator: direct filesystem read via simctl
+ * - iOS real device: ios-deploy --download
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {execSync} from 'child_process';
 import {byTestId} from './selectors';
 import {withBridgeElements} from './automation-bridge';
@@ -62,9 +66,32 @@ async function readStatus(): Promise<TtsStatus> {
     }
     return JSON.parse(data) as TtsStatus;
   }
+  const udid = process.env.E2E_DEVICE_UDID || '';
+  const isSimulator =
+    !udid ||
+    /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(
+      udid,
+    );
+  if (!isSimulator) {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tts-status-'));
+    try {
+      execSync(
+        `ios-deploy --id ${udid} --bundle_id ${IOS_BUNDLE_ID} --download=/Documents/${STATUS_FILENAME} --to ${tmpDir}`,
+        {timeout: 30000, stdio: 'ignore'},
+      );
+      const data = fs
+        .readFileSync(path.join(tmpDir, 'Documents', STATUS_FILENAME), 'utf8')
+        .trim();
+      return data.startsWith('{') ? (JSON.parse(data) as TtsStatus) : {};
+    } catch {
+      return {};
+    } finally {
+      fs.rmSync(tmpDir, {recursive: true, force: true});
+    }
+  }
   // Prefer the explicit UDID — `booted` is ambiguous when several
   // simulators are running at once.
-  const target = process.env.E2E_DEVICE_UDID || 'booted';
+  const target = udid || 'booted';
   const container = execSync(
     `xcrun simctl get_app_container ${target} ${IOS_BUNDLE_ID} data`,
     {encoding: 'utf8', timeout: 5000},

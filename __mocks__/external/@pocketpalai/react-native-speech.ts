@@ -11,6 +11,33 @@
 type FinishListener = (event: {utteranceId?: string}) => void;
 const finishListeners = new Set<FinishListener>();
 
+type StartListener = (event: {utteranceId?: string}) => void;
+const startListeners = new Set<StartListener>();
+
+const onStart = jest.fn((listener: StartListener) => {
+  startListeners.add(listener);
+  return {
+    remove: jest.fn(() => {
+      startListeners.delete(listener);
+    }),
+  };
+});
+
+/** Test helper: emit an `onStart` event to all registered listeners. */
+export const __emitStart = (utteranceId?: string) => {
+  for (const l of Array.from(startListeners)) {
+    l({utteranceId});
+  }
+};
+
+/** Test helper: number of currently-registered onStart listeners. */
+export const __startListenerCount = () => startListeners.size;
+
+/** Test helper: clear onStart listeners between tests. */
+export const __resetStartListeners = () => {
+  startListeners.clear();
+};
+
 const onFinish = jest.fn((listener: FinishListener) => {
   finishListeners.add(listener);
   return {
@@ -87,7 +114,12 @@ const Speech = {
     },
   ]),
   createSpeechStream,
+  onStart,
   onFinish,
+  registerEngine: jest.fn(),
+  getEngineSupport: jest
+    .fn()
+    .mockResolvedValue({supported: false, reason: 'not-compiled'}),
 };
 
 export default Speech;

@@ -1,7 +1,9 @@
 import {Platform} from 'react-native';
 
+import Speech from '@pocketpalai/react-native-speech';
+
 import {getEngine, ttsRuntime} from '../services/tts';
-import type {EngineId} from '../services/tts';
+import type {NeuralEngineId} from '../services/tts';
 import {ttsStore} from '../store/TTSStore';
 
 /**
@@ -15,17 +17,31 @@ import {ttsStore} from '../store/TTSStore';
  * single deep-link / TextInput round-trip.
  */
 
-type NeuralEngineId = Exclude<EngineId, 'system'>;
-
 const STATUS_FILENAME = 'tts-command-status.json';
 
 const SAMPLE_TEXT =
   'PocketPal runs language models on your phone, fully offline.';
 
+const TIMING_RUNS = 3;
+
+interface TimingRun {
+  ttfaMs: number;
+  audioMs: number;
+  rtf: number;
+  /** More than 1 means the sample played as several chunks. */
+  starts: number;
+}
+
+interface TimingDetail {
+  runs: TimingRun[];
+  medianTtfaMs: number;
+  medianRtf: number;
+}
+
 interface TtsStatus {
   cmd: string;
   state: 'running' | 'done' | 'error';
-  detail?: string;
+  detail?: string | TimingDetail;
 }
 
 const statusFilePath = (): string => {
@@ -53,23 +69,37 @@ export async function readTtsStatus(): Promise<string> {
 }
 
 const downloadFor = (id: NeuralEngineId): (() => Promise<void>) => {
-  if (id === 'kokoro') {
-    return ttsStore.downloadKokoro;
+  switch (id) {
+    case 'kokoro':
+      return ttsStore.downloadKokoro;
+    case 'supertonic':
+      return ttsStore.downloadSupertonic;
+    case 'kitten':
+      return ttsStore.downloadKitten;
+    case 'phonon':
+      return ttsStore.downloadPhonon;
+    default: {
+      const unhandled: never = id;
+      throw new Error(`unknown tts engine: ${String(unhandled)}`);
+    }
   }
-  if (id === 'supertonic') {
-    return ttsStore.downloadSupertonic;
-  }
-  return ttsStore.downloadKitten;
 };
 
 const installedStateFor = (id: NeuralEngineId): boolean => {
-  if (id === 'kokoro') {
-    return ttsStore.kokoroDownloadState === 'ready';
+  switch (id) {
+    case 'kokoro':
+      return ttsStore.kokoroDownloadState === 'ready';
+    case 'supertonic':
+      return ttsStore.supertonicDownloadState === 'ready';
+    case 'kitten':
+      return ttsStore.kittenDownloadState === 'ready';
+    case 'phonon':
+      return ttsStore.phononDownloadState === 'ready';
+    default: {
+      const unhandled: never = id;
+      throw new Error(`unknown tts engine: ${String(unhandled)}`);
+    }
   }
-  if (id === 'supertonic') {
-    return ttsStore.supertonicDownloadState === 'ready';
-  }
-  return ttsStore.kittenDownloadState === 'ready';
 };
 
 /** Download `engineId` (if not already installed) and leave it ready. */
@@ -94,9 +124,66 @@ async function synthesize(engineId: NeuralEngineId): Promise<void> {
   await engine.play(SAMPLE_TEXT, voice);
 }
 
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+};
+
+/**
+ * One timed utterance. The sample is a single chunk, so synthesis time is
+ * about the time to first audio, and the audio lasts from the first onStart
+ * to the last onFinish (or to `speak` resolving when no onFinish arrives).
+ */
+async function timeOneRun(engineId: NeuralEngineId, voiceId: string) {
+  const engine = getEngine(engineId);
+  let starts = 0;
+  let firstStartAt: number | null = null;
+  let lastFinishAt: number | null = null;
+  const startSub = Speech.onStart(() => {
+    starts++;
+    firstStartAt ??= Date.now();
+  });
+  const finishSub = Speech.onFinish(() => {
+    lastFinishAt = Date.now();
+  });
+  const t0 = Date.now();
+  try {
+    await ttsRuntime.acquire(engine, () => Speech.speak(SAMPLE_TEXT, voiceId));
+  } finally {
+    startSub.remove();
+    finishSub.remove();
+  }
+  const resolvedAt = Date.now();
+  if (firstStartAt === null) {
+    throw new Error(`no onStart from ${engineId}`);
+  }
+  const ttfaMs = firstStartAt - t0;
+  const audioMs = (lastFinishAt ?? resolvedAt) - firstStartAt;
+  return {ttfaMs, audioMs, rtf: ttfaMs / audioMs, starts};
+}
+
+/** Time to first audio and real-time factor, the median of 3 warm runs. */
+async function timeEngine(engineId: NeuralEngineId): Promise<TimingDetail> {
+  const engine = getEngine(engineId);
+  const voice = (await engine.getVoices())[0];
+  if (!voice) {
+    throw new Error(`no voices for ${engineId}`);
+  }
+  await ttsRuntime.acquire(engine, async () => {});
+  const runs: TimingRun[] = [];
+  for (let i = 0; i < TIMING_RUNS; i++) {
+    runs.push(await timeOneRun(engineId, voice.id));
+  }
+  return {
+    runs,
+    medianTtfaMs: median(runs.map(r => r.ttfaMs)),
+    medianRtf: median(runs.map(r => r.rtf)),
+  };
+}
+
 /**
  * Dispatch a `pocketpal://tts?cmd=...` command. Supported:
- *   download::<engine>   synthesize::<engine>   release
+ *   download::<engine>   synthesize::<engine>   time::<engine>   release
  * Writes a status file the spec polls for completion.
  */
 export async function runTtsCommand(cmd: string): Promise<void> {
@@ -106,6 +193,12 @@ export async function runTtsCommand(cmd: string): Promise<void> {
       await downloadEngine(cmd.slice('download::'.length) as NeuralEngineId);
     } else if (cmd.startsWith('synthesize::')) {
       await synthesize(cmd.slice('synthesize::'.length) as NeuralEngineId);
+    } else if (cmd.startsWith('time::')) {
+      const detail = await timeEngine(
+        cmd.slice('time::'.length) as NeuralEngineId,
+      );
+      await writeStatus({cmd, state: 'done', detail});
+      return;
     } else if (cmd === 'release') {
       await ttsRuntime.release();
     } else {
