@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
-import {AppState, Platform, type AppStateStatus} from 'react-native';
+import {AppState, type AppStateStatus} from 'react-native';
 
 import {toByteArray} from 'base64-js';
 import {comparer, reaction} from 'mobx';
@@ -24,7 +24,6 @@ import {
   VOICE_CAPTURE_SETTLE_MS,
   VOICE_DONE_TAP_GRACE_MS,
   VOICE_MIC_WATCHDOG_MS,
-  VOICE_PLAYBACK_TAIL_MS,
   VOICE_START_TIMEOUT_MS,
   isMicGranted,
   isVoiceModeVoice,
@@ -535,9 +534,6 @@ class VoiceModeController {
           return;
         }
         this.turn = null;
-        if (outcome === 'answered' && Platform.OS === 'ios') {
-          this.holdMic(VOICE_PLAYBACK_TAIL_MS);
-        }
         this.setPhase('listening', outcome);
         const error = FAILURES[outcome];
         if (error) {
