@@ -555,7 +555,9 @@
     "tourDescription": "Replay the welcome screens to see what PocketPal AI offers.",
     "showIntroButton": "Show intro again",
     "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service"
+    "termsOfService": "Terms of Service",
+    "openSourceNotices": "Open-source notices",
+    "phononNoticesCredit": "Phonon voice model and voices by Gradium, licensed under Apache-2.0. Built on Pocket TTS and the Mimi codec by Kyutai."
   },
   "feedback": {
     "title": "Send Feedback",
@@ -1545,11 +1547,14 @@
     "engineChipKitten": "Kitten",
     "engineChipKokoro": "Kokoro",
     "engineChipSupertonic": "Supertonic",
+    "engineChipPhonon": "Phonon",
     "engineChipSystem": "System",
     "stepsCount": "{{steps}} steps",
     "engineKittenTagline": "Smallest footprint. Reliable. Best on older devices.",
     "engineKokoroTagline": "Highest quality. Slower to start. Some voices may not work on all devices.",
     "engineSupertonicTagline": "Fastest to start. Uses more RAM. May occasionally drop words.",
+    "enginePhononTagline": "Quick to start and light on RAM. English only.",
+    "enginePhononCredit": "Model and voices by Gradium (Apache-2.0), built on Kyutai's Mimi.",
     "engineSystemTagline": "Built-in OS voices. Always available, zero install.",
     "engineSystemTitleIos": "iOS Voices",
     "engineSystemTitleAndroid": "Android Voices",
@@ -1557,6 +1562,7 @@
     "engineTierLightest": "lightest",
     "engineTierBestQuality": "best quality",
     "engineTierFastestStart": "fastest start",
+    "engineTierNatural": "natural English",
     "engineSpecsLine": "{{voices}} voices  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
     "engineSystemSpecsLine": "{{voices}} voices",
     "engineRemoveTitle": "Remove {{engineTitle}}?",

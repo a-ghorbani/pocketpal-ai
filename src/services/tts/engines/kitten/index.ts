@@ -13,7 +13,7 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import type {NeuralEngine, StreamingHandle, Voice} from '../../types';
 import {KITTEN_VOICES} from './voices';
 
 export type KittenProgressCallback = (progress: number) => void;
@@ -27,7 +27,7 @@ export type KittenProgressCallback = (progress: number) => void;
  *
  * CPU-only execution is forced to match the other neural engines.
  */
-export class KittenEngine implements Engine {
+export class KittenEngine implements NeuralEngine {
   readonly id = 'kitten' as const;
 
   private getParentDir(): string {

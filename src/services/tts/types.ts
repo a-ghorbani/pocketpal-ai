@@ -5,7 +5,10 @@
  * rest of the app doesn't touch that package directly.
  */
 
-export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'system';
+export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'phonon' | 'system';
+
+/** Engines whose model files the app downloads and manages. */
+export type NeuralEngineId = Exclude<EngineId, 'system'>;
 
 /**
  * Discrete set of diffusion-step counts exposed in the Supertonic UI.
@@ -82,4 +85,12 @@ export interface Engine {
   playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle;
   /** Stop any in-flight playback. Safe to call when idle. */
   stop(): Promise<void>;
+}
+
+export interface NeuralEngine extends Engine {
+  readonly id: NeuralEngineId;
+  downloadModel(onProgress?: (progress: number) => void): Promise<void>;
+  deleteModel(): Promise<void>;
+  /** Frees an outdated install before the disk-space preflight. */
+  reclaimLegacySpace?(): Promise<void>;
 }

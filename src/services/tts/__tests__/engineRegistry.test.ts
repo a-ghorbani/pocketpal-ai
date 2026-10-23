@@ -1,6 +1,7 @@
-import {getAllEngines, getEngine} from '../engineRegistry';
+import {getAllEngines, getEngine, getNeuralEngine} from '../engineRegistry';
 import {KittenEngine} from '../engines/kitten';
 import {KokoroEngine} from '../engines/kokoro';
+import {PhononEngine} from '../engines/phonon';
 import {SupertonicEngine} from '../engines/supertonic';
 import {SystemEngine} from '../engines/system';
 
@@ -29,15 +30,37 @@ describe('engineRegistry', () => {
     expect(engine.id).toBe('kitten');
   });
 
-  it('getAllEngines returns the four engines in setup-sheet order: kitten, kokoro, supertonic, system', () => {
+  it('returns the Phonon engine for id "phonon"', () => {
+    const engine = getEngine('phonon');
+    expect(engine).toBeInstanceOf(PhononEngine);
+    expect(engine.id).toBe('phonon');
+  });
+
+  it('getAllEngines returns the five engines in setup-sheet order: phonon, kitten, kokoro, supertonic, system', () => {
     const all = getAllEngines();
-    expect(all).toHaveLength(4);
+    expect(all).toHaveLength(5);
     expect(all.map(e => e.id)).toEqual([
+      'phonon',
       'kitten',
       'kokoro',
       'supertonic',
       'system',
     ]);
+  });
+
+  it('getNeuralEngine returns the Phonon engine for id "phonon"', () => {
+    const engine = getNeuralEngine('phonon');
+    expect(engine).toBeInstanceOf(PhononEngine);
+    expect(engine).toBe(getEngine('phonon'));
+  });
+
+  it('getNeuralEngine throws for an unknown or non-neural id', () => {
+    expect(() => getNeuralEngine('system' as any)).toThrow(
+      /Unknown neural engine id: system/,
+    );
+    expect(() => getNeuralEngine('nope' as any)).toThrow(
+      /Unknown neural engine id: nope/,
+    );
   });
 
   it('returns stable singleton instances across calls', () => {

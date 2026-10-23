@@ -1,13 +1,13 @@
 import React from 'react';
 import {Image, View, StyleSheet} from 'react-native';
-import Svg, {Circle} from 'react-native-svg';
+import Svg, {Circle, Rect} from 'react-native-svg';
 
 import {useTheme} from '../../hooks';
 import type {EngineId} from '../../services/tts';
 
 import {createStyles} from './styles';
 
-const LOGO_SOURCES: Record<Exclude<EngineId, 'system'>, number> = {
+const LOGO_SOURCES: Record<Exclude<EngineId, 'system' | 'phonon'>, number> = {
   kitten: require('../../assets/images/engines/kitten.png'),
   kokoro: require('../../assets/images/engines/kokoro.png'),
   supertonic: require('../../assets/images/engines/supertonic.png'),
@@ -17,10 +17,36 @@ const BRAND_BG: Record<EngineId, string> = {
   kitten: '#FFF3EC',
   kokoro: '#17151F',
   supertonic: '#1E4DF6',
+  phonon: '#0E9F8E',
   system: '#F1F2F5',
 };
 
 const RING_FALLBACK = '#1E4DF6';
+
+const PHONON_BAR_HEIGHTS = [0.4, 0.7, 0.4];
+
+const PhononGlyph: React.FC<{size: number}> = ({size}) => {
+  const barWidth = size * 0.12;
+  const pitch = size * 0.2;
+  return (
+    <Svg width={size} height={size}>
+      {PHONON_BAR_HEIGHTS.map((ratio, i) => {
+        const height = size * ratio;
+        return (
+          <Rect
+            key={i}
+            x={size / 2 + (i - 1) * pitch - barWidth / 2}
+            y={(size - height) / 2}
+            width={barWidth}
+            height={height}
+            rx={barWidth / 2}
+            fill="#FFFFFF"
+          />
+        );
+      })}
+    </Svg>
+  );
+};
 
 interface EngineLogoProps {
   engineId: EngineId;
@@ -81,11 +107,15 @@ export const EngineLogo: React.FC<EngineLogoProps> = ({
             backgroundColor: bg,
           },
         ]}>
-        <Image
-          source={LOGO_SOURCES[engineId]}
-          style={{width: inner * 0.72, height: inner * 0.72}}
-          resizeMode="contain"
-        />
+        {engineId === 'phonon' ? (
+          <PhononGlyph size={inner} />
+        ) : (
+          <Image
+            source={LOGO_SOURCES[engineId]}
+            style={{width: inner * 0.72, height: inner * 0.72}}
+            resizeMode="contain"
+          />
+        )}
       </View>
     );
   };
