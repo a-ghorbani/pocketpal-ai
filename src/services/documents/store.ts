@@ -85,6 +85,48 @@ const utf16Order = ([first, second]: number[]): 'le' | 'be' | undefined =>
       ? 'be'
       : undefined;
 
+/** Windows-1252 code points for bytes 0x80–0x9F; the rest match Latin-1. */
+const CP1252_HIGH = [
+  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030,
+  0x160, 0x2039, 0x152, 0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c,
+  0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d,
+  0x17e, 0x178,
+]; // prettier-ignore
+
+const decodeWindows1252 = (bytes: number[]): string => {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    text += String.fromCharCode(
+      ...bytes
+        .slice(i, i + 8192)
+        .map(byte =>
+          byte >= 0x80 && byte <= 0x9f ? CP1252_HIGH[byte - 0x80] : byte,
+        ),
+    );
+  }
+  return text;
+};
+
+/** True when the bytes hold the UTF-8 encoding of U+FFFD itself. */
+const hasReplacementCharacter = (bytes: number[]): boolean =>
+  bytes.some(
+    (byte, i) =>
+      byte === 0xef && bytes[i + 1] === 0xbf && bytes[i + 2] === 0xbd,
+  );
+
+/**
+ * Reads a text file as UTF-8; a file that is not valid UTF-8 (decoding added
+ * replacement characters it did not contain) is read as Windows-1252.
+ */
+const readTextAsUtf8OrWindows1252 = async (path: string): Promise<string> => {
+  const text = await RNFS.readFile(path, 'utf8');
+  if (!text.includes('\uFFFD')) {
+    return text;
+  }
+  const bytes = bytesOf(await RNFS.readFile(path, 'base64'));
+  return hasReplacementCharacter(bytes) ? text : decodeWindows1252(bytes);
+};
+
 const decodeUtf16 = (bytes: number[], order: 'le' | 'be'): string => {
   const units: number[] = [];
   for (let i = 2; i + 1 < bytes.length; i += 2) {
@@ -333,7 +375,7 @@ const importText = async (
   const pages = [
     order
       ? decodeUtf16(bytesOf(await RNFS.readFile(path, 'base64')), order)
-      : await RNFS.readFile(path, 'utf8'),
+      : await readTextAsUtf8OrWindows1252(path),
   ];
   if (!hasText(pages)) {
     throw new Refusal('no_text');

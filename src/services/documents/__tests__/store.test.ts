@@ -305,6 +305,58 @@ describe('importDocument', () => {
     });
   });
 
+  describe('Windows-1252 text', () => {
+    const asBytes = (text: string) => {
+      const read = fs.read.getMockImplementation()!;
+      const readFile = fs.readFile.getMockImplementation()!;
+      const isSource = (p: string) => p.endsWith('/source.txt');
+      fs.read.mockImplementation(
+        async (
+          p: string,
+          length: number,
+          position: number,
+          encoding: string,
+        ) =>
+          isSource(p) && encoding === 'base64'
+            ? Buffer.from(files.get(p)!.slice(0, length), 'latin1').toString(
+                'base64',
+              )
+            : read(p, length, position, encoding),
+      );
+      fs.readFile.mockImplementation(async (p: string, encoding: string) => {
+        if (!isSource(p)) {
+          return readFile(p, encoding);
+        }
+        const raw = Buffer.from(files.get(p)!, 'latin1');
+        return encoding === 'base64'
+          ? raw.toString('base64')
+          : raw.toString('utf8');
+      });
+      return text;
+    };
+
+    it('decodes text that is not valid UTF-8 as Windows-1252', async () => {
+      const content = asBytes('M\xfcller, caf\xe9 \x93quoted\x94 \x80');
+
+      const ref = ready(await importDocument(picked('names.txt', content)));
+
+      expect(
+        JSON.parse(files.get(`${ROOT}/${ref.id}/text.all.json`)!).pages,
+      ).toEqual(['Müller, café \u201cquoted\u201d €']);
+    });
+
+    it('keeps valid UTF-8 as UTF-8', async () => {
+      const utf8 = Buffer.from('Müller, café', 'utf8').toString('latin1');
+      const ref = ready(
+        await importDocument(picked('names.txt', asBytes(utf8))),
+      );
+
+      expect(
+        JSON.parse(files.get(`${ROOT}/${ref.id}/text.all.json`)!).pages,
+      ).toEqual(['Müller, café']);
+    });
+  });
+
   it('refuses a text file over the byte cap without decoding it', async () => {
     const result = await importDocument(
       picked('huge.txt', 'x'.repeat(3_000_001)),
