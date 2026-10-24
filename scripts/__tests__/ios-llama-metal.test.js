@@ -223,6 +223,12 @@ describe('the patched llama.rn Metal lookup', () => {
     );
   });
 
+  it('logs the kernel-source fallback without naming a library file', () => {
+    expect(metalDevice).toMatch(
+      /GGML_LOG_INFO\("%s: no precompiled metallib, loading kernel sources\\n"/,
+    );
+  });
+
   it('skips the precompiled library on tensor GPUs', () => {
     expect(metalDevice).toMatch(
       /if \(ggml_metal_device_get_props\(dev\)->has_tensor\) \{\s*GGML_LOG_INFO\([^;]*\);\s*\} else \{\s*path_lib = ggml_metal_find_metallib\(bundle, @"rnllama"\);\s*\}/,
