@@ -49,11 +49,6 @@ export function orderEffortValues(values: string[]): string[] {
   return EFFORT_LEVELS.filter(level => values.includes(level));
 }
 
-/**
- * Clamp an effort to the model's value set: kept when supported, otherwise the
- * nearest lower supported level, else the lowest one. `undefined` when the
- * model does not grade effort.
- */
 export function clampEffort(
   effort: string | undefined,
   effortValues: string[],
