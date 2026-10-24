@@ -79,6 +79,25 @@ describe('the parse itself', () => {
   });
 });
 
+describe('the parsed kernel set', () => {
+  it('is every kernel source that no other kernel includes', () => {
+    const included = new Set(
+      kernelFiles.flatMap(name =>
+        [
+          ...fs
+            .readFileSync(path.join(GGML_METAL, 'kernels', name), 'utf-8')
+            .matchAll(/#include\s+"([^"]+\.metal)"/g),
+        ].map(match => match[1]),
+      ),
+    );
+    const entryPoints = kernelFiles
+      .filter(name => name.endsWith('.metal') && !included.has(name))
+      .map(name => name.replace(/\.metal$/, ''));
+    expect(included.size).toBeGreaterThan(0);
+    expect([...kernelSet].sort()).toEqual(entryPoints);
+  });
+});
+
 describe('the iOS version the Metal library and its gates agree on', () => {
   const versions = {
     appDelegate: appDelegate.match(/#available\(iOS (\d+)\.0, \*\)/),
