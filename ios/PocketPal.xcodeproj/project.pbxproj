@@ -12,7 +12,6 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1A0D5411C2B6438BA6761FA8 /* Fraunces-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E99C8033A91D40AB8D2BD167 /* Fraunces-Medium.ttf */; };
 		212EA6EA37D90DE18EF6282E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		321B5096BCB1E35F8BCDE747 /* Pods_PocketPal_PocketPalTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */; };
 		3B10D24523854FB69C0BBFD0 /* Fraunces-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EF0088E7A2A54A98B6421742 /* Fraunces-Regular.ttf */; };
 		3EDC514D4078B7A89BED1E2B /* LlamaMetalGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CA3E88E37942C2F4847E70 /* LlamaMetalGateTests.swift */; };
 		468C5914EED04BB8A4C21D62 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 31A359F6A91445EA88D5326B /* Inter-Medium.ttf */; };
@@ -47,6 +46,7 @@
 		D2383657A264CC8550057BF7 /* Pods_PocketPal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */; };
 		D8E18E11449A09A8A897589A /* LlamaMetalGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */; };
 		EB8350408C2C4824B1AEDD41 /* Fraunces-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5CA7744EABD04174A8E4568B /* Fraunces-Italic.ttf */; };
+		F445F07A7EF35EE42F33E70E /* Pods_PocketPalTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */; };
 		FF002F1D6D914619BAB71A78 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */; };
 /* End PBXBuildFile section */
 
@@ -67,9 +67,9 @@
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = PocketPal/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1C8910232AC14C2091248E32 /* Inter-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.ttf"; path = "../src/assets/fonts/Inter-Bold.ttf"; sourceTree = "<group>"; };
 		1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal-PocketPalTests.debug.xcconfig"; path = "Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests.debug.xcconfig"; sourceTree = "<group>"; };
-		2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPal_PocketPalTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		31A359F6A91445EA88D5326B /* Inter-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.ttf"; path = "../src/assets/fonts/Inter-Medium.ttf"; sourceTree = "<group>"; };
 		4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPal.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPalTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CA7744EABD04174A8E4568B /* Fraunces-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Italic.ttf"; path = "../src/assets/fonts/Fraunces-Italic.ttf"; sourceTree = "<group>"; };
 		5D438B7E51F640E5B4532B88 /* Inter-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.ttf"; path = "../src/assets/fonts/Inter-Regular.ttf"; sourceTree = "<group>"; };
 		7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal-PocketPalTests.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests.profiling.xcconfig"; sourceTree = "<group>"; };
@@ -102,11 +102,14 @@
 		B6CA3E88E37942C2F4847E70 /* LlamaMetalGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LlamaMetalGateTests.swift; path = PocketPalTests/LlamaMetalGateTests.swift; sourceTree = "<group>"; };
 		BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LlamaMetalGate.swift; path = PocketPal/LlamaMetalGate.swift; sourceTree = "<group>"; };
 		C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.ttf"; path = "../src/assets/fonts/Inter-SemiBold.ttf"; sourceTree = "<group>"; };
+		CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.release.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.release.xcconfig"; sourceTree = "<group>"; };
+		DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.profiling.xcconfig"; sourceTree = "<group>"; };
 		E99C8033A91D40AB8D2BD167 /* Fraunces-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Medium.ttf"; path = "../src/assets/fonts/Fraunces-Medium.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EE113D56B0AD433688D66860 /* Fraunces-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-MediumItalic.ttf"; path = "../src/assets/fonts/Fraunces-MediumItalic.ttf"; sourceTree = "<group>"; };
 		EF0088E7A2A54A98B6421742 /* Fraunces-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Regular.ttf"; path = "../src/assets/fonts/Fraunces-Regular.ttf"; sourceTree = "<group>"; };
 		F97DC2F923F71476344DBEAF /* Pods-PocketPal.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.debug.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.debug.xcconfig"; sourceTree = "<group>"; };
+		FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.debug.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FF9D2CC3DF0F4073AB223CC1 /* JetBrainsMono-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "JetBrainsMono-Regular.ttf"; path = "../src/assets/fonts/JetBrainsMono-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -123,7 +126,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				321B5096BCB1E35F8BCDE747 /* Pods_PocketPal_PocketPalTests.framework in Frameworks */,
+				F445F07A7EF35EE42F33E70E /* Pods_PocketPalTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,7 +185,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */,
-				2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */,
+				5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -238,6 +241,9 @@
 				1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */,
 				7679C04803B13C51110CF733 /* Pods-PocketPal-PocketPalTests.release.xcconfig */,
 				7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */,
+				FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */,
+				CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */,
+				DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -276,8 +282,6 @@
 				A826FC262E9ECA9B003F1572 /* Sources */,
 				A826FC272E9ECA9B003F1572 /* Frameworks */,
 				A826FC282E9ECA9B003F1572 /* Resources */,
-				D73BE89C66CAB1195A21EE23 /* [CP] Embed Pods Frameworks */,
-				D95D7475BD650A9CB6841F04 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -433,7 +437,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-PocketPal-PocketPalTests-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-PocketPalTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -571,40 +575,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
-		};
-		D73BE89C66CAB1195A21EE23 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D95D7475BD650A9CB6841F04 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -950,7 +920,7 @@
 		};
 		A826FC312E9ECA9B003F1572 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */;
+			baseConfigurationReference = FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -983,7 +953,7 @@
 		};
 		A826FC322E9ECA9B003F1572 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7679C04803B13C51110CF733 /* Pods-PocketPal-PocketPalTests.release.xcconfig */;
+			baseConfigurationReference = CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1161,7 +1131,7 @@
 		};
 		A826FC372E9ECB47003F1572 /* Profiling */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */;
+			baseConfigurationReference = DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
