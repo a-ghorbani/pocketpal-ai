@@ -70,6 +70,44 @@ function parseArm64Rungs() {
   }));
 }
 
+function loadNativeBody() {
+  const signature = javaSource.search(
+    /\bboolean\s+loadNative\s*\([^)]*\)\s*\{/,
+  );
+  if (signature === -1) {
+    return '';
+  }
+  const open = javaSource.indexOf('{', signature);
+  let depth = 0;
+  for (let i = open; i < javaSource.length; i++) {
+    if (javaSource[i] === '{') {
+      depth += 1;
+    } else if (javaSource[i] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return javaSource.slice(open + 1, i);
+      }
+    }
+  }
+  return '';
+}
+
+const loadNative = loadNativeBody();
+
+function assignmentsTo(flag) {
+  return [
+    ...loadNative.matchAll(
+      new RegExp(`\\b${flag}\\s*([|&^]?=)(?!=)\\s*([^;]*);`, 'g'),
+    ),
+  ].map(([, operator, expression]) => ({
+    operator,
+    terms: expression
+      .split('||')
+      .map(term => term.trim())
+      .sort(),
+  }));
+}
+
 const buildSites = parseArm64BuildSites();
 const rungs = parseArm64Rungs();
 const hasDotProd = javaSource.match(/boolean\s+hasDotProd\s*=\s*([^;]+);/);
@@ -109,6 +147,19 @@ describe('the arm64 dotprod rung', () => {
   it('detects dotprod from the asimddp cpuinfo feature', () => {
     expect(hasDotProd).not.toBeNull();
     expect(hasDotProd[1]).toContain('cpuFeatures.contains("asimddp")');
+  });
+
+  it.each([
+    [
+      'hasDotProd',
+      ['cpuFeatures.contains("asimddp")', 'cpuFeatures.contains("dotprod")'],
+    ],
+    [
+      'hasFp16',
+      ['cpuFeatures.contains("fp16")', 'cpuFeatures.contains("fphp")'],
+    ],
+  ])('sets %s once, from its cpuinfo features alone', (flag, terms) => {
+    expect(assignmentsTo(flag)).toEqual([{operator: '=', terms}]);
   });
 });
 
