@@ -212,7 +212,7 @@
       "openLinkError": "無法開啟此連結。"
     },
     "contextFullRemote": "對話空間不足。請開始新對話。",
-    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼，很可能是草稿模型的上下文記憶體不足。請在「設定 → 進階設定」中關閉推測解碼後再試一次。",
+    "speculativeInitFailed": "此裝置無法為此模型啟動推測解碼（Speculative Decoding）——最可能的原因是記憶體不足以容納草稿內容。請在「設定」→「進階設定」中關閉「推測解碼」，然後再試一次。",
     "routerLoading": "載入模型中…",
     "routerLoadingPercent": "載入模型中 · {{percent}}%"
   },
@@ -453,7 +453,7 @@
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
       "saveChanges": "儲存更改",
-      "reasoningSection": "推理中",
+      "reasoningSection": "推理",
       "isReasoningModel": "推理模型",
       "effortLevels": {
         "minimal": "最低",
@@ -1593,7 +1593,7 @@
         "balanced": "平衡",
         "best": "最佳"
       },
-      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行推理——請選擇適合的選項。",
+      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行推理 - 請選擇適合的選項。",
       "pal": {
         "pip": {
           "body": "我們為您找到了完美的 Pal - 一位親切的日常伴侶。它足夠聰明以應對大多數需求，且運作輕巧，適合任何手機使用。"
@@ -1709,7 +1709,18 @@
     "errorMicUnavailable": "麥克風沒有回應。請再試一次，或改用較小的聊天模型。",
     "errorTranscriptPartial": "您的部分語音內容無法轉錄。",
     "openSettingsLabel": "開啟設定",
-    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此模型（目前剩餘 {{freeMb}} MB）。"
+    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此模型（目前剩餘 {{freeMb}} MB）。",
+    "setupSheetTitle": "設定語音輸入",
+    "setupSheetBody": "只需下載一次，即可在離線狀態下進行語音辨識。",
+    "tierNameBase": "Base",
+    "tierNameSmall": "Small",
+    "tierNameLargeTurbo": "Large Turbo",
+    "tierHintBase": "預設，快速",
+    "tierHintSmall": "更精準、較慢。適合其他語言",
+    "tierHintLargeTurbo": "在多數手機上跑起來會很慢",
+    "useCta": "使用",
+    "inUseLabel": "正在使用",
+    "modelSectionHelper": "由語音輸入與免持語音所使用。"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1768,25 +1779,25 @@
     "startFailed": "無法啟動語音模式。請再試一次。",
     "micFailed": "無法使用麥克風，語音模式已結束。",
     "listeningTitle": "聆聽中",
-    "listeningHint": "講完後按暫停，或點擊雲端以發送",
+    "listeningHint": "講完後稍作停頓，或點擊雲朵以發送",
     "thinkingTitle": "思考中",
-    "thinkingHint": "點擊雲端以取消",
+    "thinkingHint": "點擊雲朵以取消",
     "speakingTitle": "發音中",
-    "speakingHint": "點擊雲端以中斷",
+    "speakingHint": "點擊雲朵以中斷",
     "mutedTitle": "麥克風已關閉",
     "mutedHint": "點擊麥克風重新開始對話",
     "errorTranscribe": "聽不清楚。請再試一次。",
     "errorReply": "無法取得回答。請再試一次。",
-    "errorSpeech": "無法取得回答，請再試一次。",
+    "errorSpeech": "無法朗讀回答。",
     "pullDownHint": "下拉查看聊天記錄",
     "showChatLabel": "顯示聊天",
     "swipeUpHint": "向上滑動可查看語音",
-    "cloudLabel": "語音模式雲端",
+    "cloudLabel": "語音模式雲朵",
     "openViewLabel": "開啟語音檢視",
     "micSwitchLabel": "麥克風",
     "endLabel": "結束語音模式",
     "setupTitle": "設定語音模式",
-    "setupBody": "在您的手機上執行兩個 small 模型，讓您可以進行離線對話。",
+    "setupBody": "在您的手機上執行兩個小型模型，讓您可以進行離線對話。",
     "sttRowTitle": "語音辨識",
     "sttProgress": "已完成 {{done}} / 共 {{total}}",
     "sttDownloadFailed": "下載失敗。請再試一次。",
@@ -1798,22 +1809,24 @@
     "micNote": "接下來將請求麥克風權限。",
     "micDenied": "開啟語音模式時，需要取得麥克風權限。",
     "continueCta": "繼續",
-    "memoryTightTitle": "記憶體不足",
+    "memoryTightTitle": "記憶體吃緊",
     "memoryTightBody": "語音模式會同時載入三個模型。在您的手機上可能會跑得比較慢，或者 App 可能會自動閃退。",
     "memoryWontFitTitle": "記憶體不足",
     "memoryWontFitBody": "由於記憶體限制，此對話模型無法與語音辨識同時運作。請切換到較小的模型以開啟語音模式。",
     "memoryChatRow": "對話模型 · {{name}}",
     "memoryVoiceRow": "語音 · {{name}}",
     "memoryNeeded": "需要",
-    "memoryNeededValue": "已用 {{needed}} / 可用 {{available}}",
+    "memoryNeededValue": "需要 {{needed}} / 可用 {{available}}",
     "continueAnywayCta": "不論如何繼續",
     "chooseSmallerModelCta": "選擇較小的模型",
     "startLabel": "開啟語音模式",
     "startLockedLabel": "免持語音，PocketPal Plus",
-    "startLockedHint": "開啟簡短預覽。輸入與語音辨識仍可自由切換。",
+    "startLockedHint": "開啟簡短預覽。打字與語音輸入仍可免費使用。",
     "teaserTitle": "語音對話 (Plus 功能)",
     "teaserBody": "免持對話。它會以語音回答。",
     "teaserGetPlus": "獲取 Plus",
-    "teaserKeepTyping": "持續輸入，免費使用"
+    "teaserKeepTyping": "持續輸入，免費使用",
+    "sttRowModel": "Whisper {{tier}} · {{size}}",
+    "memorySttRowModel": "語音辨識 · Whisper {{tier}}"
   }
 }
