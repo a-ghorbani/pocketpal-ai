@@ -26,7 +26,8 @@ const kernelSet = [
 ].map(match => match[1]);
 
 const XCRUN = `#!/bin/bash
-{ printf '%s\\x1f' "$@"; printf '\\n'; } >> "$XCRUN_LOG"
+line=$(printf '%s\\x1f' "$@")
+printf '%s\\n' "$line" >> "$XCRUN_LOG"
 [ "$1" = -sdk ] && shift 2
 tool=$1
 shift
@@ -94,6 +95,8 @@ function run({
 
 const compiles = calls =>
   calls.filter(call => call[2] === 'metal' && call[3] !== '-v');
+const sorted = calls =>
+  [...calls].sort((a, b) => a.join('\x1f').localeCompare(b.join('\x1f')));
 const appMetallibs = () =>
   fs.readdirSync(app).filter(name => name.endsWith('.metallib'));
 
@@ -110,29 +113,32 @@ describe.each([
   it('compiles each kernel for iOS 18 with bf16, and nothing else', () => {
     const {status, calls} = run({platform});
     expect(status).toBe(0);
-    expect(compiles(calls)).toEqual(
-      kernelSet.map(kernel => [
-        '-sdk',
-        platform,
-        'metal',
-        '-O3',
-        target,
-        '-DGGML_METAL_HAS_BF16',
-        '-I',
-        GGML_METAL,
-        '-I',
-        GGML_SRC,
-        '-c',
-        path.join(KERNELS, `${kernel}.metal`),
-        '-o',
-        path.join(derived, 'rnllama-metal', `${kernel}.air`),
-      ]),
+    expect(sorted(compiles(calls))).toEqual(
+      sorted(
+        kernelSet.map(kernel => [
+          '-sdk',
+          platform,
+          'metal',
+          '-O3',
+          target,
+          '-DGGML_METAL_HAS_BF16',
+          '-I',
+          GGML_METAL,
+          '-I',
+          GGML_SRC,
+          '-c',
+          path.join(KERNELS, `${kernel}.metal`),
+          '-o',
+          path.join(derived, 'rnllama-metal', `${kernel}.air`),
+        ]),
+      ),
     );
   });
 
-  it('links every kernel into one rnllama.metallib', () => {
+  it('links every kernel into one rnllama.metallib, after every compile', () => {
     const {calls} = run({platform});
     const links = calls.filter(call => call[2] === 'metallib');
+    expect(calls[calls.length - 1][2]).toBe('metallib');
     expect(links).toEqual([
       [
         '-sdk',

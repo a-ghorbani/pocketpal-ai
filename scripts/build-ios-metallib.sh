@@ -24,10 +24,13 @@ fi
 air_dir="$DERIVED_FILE_DIR/rnllama-metal"
 mkdir -p "$air_dir"
 
+ncpu=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+printf '%s\n' "$@" | xargs -P "$ncpu" -I {} \
+  xcrun -sdk "$PLATFORM_NAME" metal -O3 "-mtargetos=ios18.0$target_suffix" -DGGML_METAL_HAS_BF16 \
+  -I "$ggml_metal" -I "$ggml_src" -c "$ggml_metal/kernels/{}.metal" -o "$air_dir/{}.air"
+
 airs=()
 for kernel in "$@"; do
-  xcrun -sdk "$PLATFORM_NAME" metal -O3 "-mtargetos=ios18.0$target_suffix" -DGGML_METAL_HAS_BF16 \
-    -I "$ggml_metal" -I "$ggml_src" -c "$ggml_metal/kernels/$kernel.metal" -o "$air_dir/$kernel.air"
   airs+=("$air_dir/$kernel.air")
 done
 xcrun -sdk "$PLATFORM_NAME" metallib "${airs[@]}" -o "$DERIVED_FILE_DIR/rnllama.metallib"
