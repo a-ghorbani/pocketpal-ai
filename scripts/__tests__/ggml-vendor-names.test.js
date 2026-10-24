@@ -15,6 +15,7 @@ const MAIN_APPLICATION = path.join(
   ROOT,
   'android/app/src/main/java/com/pocketpalai/MainApplication.kt',
 );
+const APP_DELEGATE = path.join(ROOT, 'ios/PocketPal/AppDelegate.swift');
 const MANIFEST = JSON.parse(
   fs.readFileSync(
     path.join(__dirname, '..', 'android-payload-manifest.json'),
@@ -60,11 +61,17 @@ function vendoredGgmlSources(dir = path.join(VENDORED_GGML, 'src')) {
   });
 }
 
-const setenvNames = [
+const androidSetenvNames = [
   ...fs
     .readFileSync(MAIN_APPLICATION, 'utf-8')
     .matchAll(/Os\.setenv\(\s*"([^"]+)"/g),
 ].map(match => match[1]);
+
+const iosSetenvNames = [
+  ...fs.readFileSync(APP_DELEGATE, 'utf-8').matchAll(/\bsetenv\(\s*"([^"]+)"/g),
+].map(match => match[1]);
+
+const setenvNames = [...androidSetenvNames, ...iosSetenvNames];
 
 const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
   abi.requiredSymbols
@@ -75,8 +82,12 @@ const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
 describe('the parse itself', () => {
   // Without these, a rename on either side makes every assertion below pass
   // over an empty set.
-  it('finds the env vars the app sets for ggml', () => {
-    expect(setenvNames.length).toBeGreaterThan(0);
+  it('finds the env vars Android sets for ggml', () => {
+    expect(androidSetenvNames.length).toBeGreaterThan(0);
+  });
+
+  it('finds the env vars iOS sets for ggml', () => {
+    expect(iosSetenvNames.length).toBeGreaterThan(0);
   });
 
   it('finds the Hexagon symbols the payload gate requires', () => {
