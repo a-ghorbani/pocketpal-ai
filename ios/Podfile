@@ -1,3 +1,5 @@
+require 'shellwords'
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -31,6 +33,34 @@ use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+ENV['RNLLAMA_BUILD_FROM_SOURCE'] = '1'
+
+def exclude_x86_64_simulator(project)
+  project.build_configurations.each do |config|
+    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+  end
+end
+
+# The AppIntents wrapper includes llama.rn's core headers, which only the
+# llama-rn pod's own header paths resolve (common.h before ggml-cpu/common.h).
+def add_llama_rn_headers_to_wrapper(installer, user_project)
+  pod_target = installer.pod_targets.find { |t| t.name == 'llama-rn' } or
+    raise Pod::Informative, 'llama-rn pod target not found'
+  search_paths = pod_target.root_spec.consumer(:ios).pod_target_xcconfig['HEADER_SEARCH_PATHS'] or
+    raise Pod::Informative, 'llama-rn sets no HEADER_SEARCH_PATHS'
+  pod_dir = Pathname.new(installer.sandbox.pod_dir('llama-rn')).realpath
+  pod_dir_from_srcroot = pod_dir.relative_path_from(Pathname.new(user_project.project_dir).realpath)
+  flags = Shellwords.split(search_paths)
+    .reject { |path| path == '$(inherited)' }
+    .map { |path| %(-I"#{path.sub('$(PODS_TARGET_SRCROOT)', "$(SRCROOT)/#{pod_dir_from_srcroot}")}") }
+    .join(' ')
+
+  app_target = user_project.native_targets.find { |t| t.name == 'PocketPal' } or
+    raise Pod::Informative, 'PocketPal target not found'
+  wrapper = app_target.source_build_phase.files.find { |f| f.file_ref&.display_name == 'LlamaContextWrapper.mm' } or
+    raise Pod::Informative, 'LlamaContextWrapper.mm is not in the PocketPal Sources phase'
+  wrapper.settings = (wrapper.settings || {}).merge('COMPILER_FLAGS' => flags)
+end
 
 target 'PocketPal' do
   config = use_native_modules!
@@ -128,6 +158,13 @@ target 'PocketPal' do
           config.build_settings['MODULEMAP_FILE'] = '${PODS_ROOT}/Target Support Files/glog/glog-textual.modulemap'
         end
       end
+    end
+
+    exclude_x86_64_simulator(installer.pods_project)
+    installer.aggregate_targets.map(&:user_project).uniq(&:path).each do |user_project|
+      exclude_x86_64_simulator(user_project)
+      add_llama_rn_headers_to_wrapper(installer, user_project)
+      user_project.save
     end
   end
 
