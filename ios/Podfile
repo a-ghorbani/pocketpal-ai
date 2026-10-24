@@ -112,7 +112,7 @@ target 'PocketPal' do
   # pod 'RNFBAppCheck', :path => '../node_modules/@react-native-firebase/app-check'
 
   target 'PocketPalTests' do
-    inherit! :complete
+    inherit! :search_paths
     # Pods for testing
   end
 
