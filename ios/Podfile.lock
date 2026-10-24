@@ -2411,7 +2411,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeechPhonon (0.1.2):
+  - RNSpeechPhonon (0.1.3):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3146,7 +3146,7 @@ SPEC CHECKSUMS:
   RNScreens: 4bac14b997bcf160be0a967bfdae27956847f289
   RNShare: 765191a3c96beb2955ed961643db333b1ddf257a
   RNSpeech: e1e61c20899aa70ea07cd7ed40a39e3d0189b40e
-  RNSpeechPhonon: 8199fd18549224aa30b1c2e6bd7138f50818c980
+  RNSpeechPhonon: d956216a184b84ea08a09a333b8817a649d56049
   RNSVG: ea960a71afc1707bd14dead3ec578763321f7096
   RNVectorIcons: c7cd45980aad8bbd77a47b906f62957c9494dcb6
   RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e
