@@ -30,7 +30,7 @@
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
 		A862F7232EE04CE50062E673 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A862F7222EE04CE50062E673 /* GoogleService-Info.plist */; };
-		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; };
+		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../node_modules/llama.rn/cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/common\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/tools/mtmd\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor/hash\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/common\" -I\"$(PODS_ROOT)/Headers/Private/Yoga\" -I\"${PODS_ROOT}/React-graphics\" -I\"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios\" -I\"${PODS_ROOT}/React-Fabric\" -I\"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx\" -I\"${PODS_ROOT}/React-FabricImage\" -I\"${PODS_ROOT}/ReactCommon\" -I\"${PODS_ROOT}/ReactCommon/react/nativemodule/core\" -I\"${PODS_ROOT}/React-runtimeexecutor\" -I\"${PODS_ROOT}/React-runtimeexecutor/platform/ios\" -I\"${PODS_ROOT}/React-NativeModulesApple\" -I\"${PODS_ROOT}/React-RCTFabric\" -I\"${PODS_ROOT}/React-utils\" -I\"${PODS_ROOT}/React-featureflags\" -I\"${PODS_ROOT}/React-debug\" -I\"${PODS_ROOT}/React-ImageManager\" -I\"${PODS_ROOT}/React-rendererdebug\" -I\"${PODS_ROOT}/React-renderercss\" -I\"$(PODS_ROOT)/ReactNativeDependencies/Headers\""; }; };
 		A86CF0D62EA9567800BFFCEE /* MustacheRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D52EA9567800BFFCEE /* MustacheRenderer.swift */; };
 		A8B4FFD32EA5731700CD3B4C /* LlamaInferenceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */; };
 		A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */; };
@@ -250,6 +250,7 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "PocketPal" */;
 			buildPhases = (
 				4AD29747771C45CD72B7462F /* [CP] Check Pods Manifest.lock */,
+				68A1F403B724203FB5050A52 /* [CP-User] Compile llama.rn Metal libraries */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
@@ -438,6 +439,64 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		68A1F403B724203FB5050A52 /* [CP-User] Compile llama.rn Metal libraries */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/argsort.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/binbcast.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/common.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/conv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/dequantize.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_aux.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_common.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_f16.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_f32.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q4_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q4_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_common.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f16.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f32.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q4_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q4_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q5_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q5_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/gated_delta_net.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/misc.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/norm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/pool.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/reduce.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/rope.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/softmax.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/solve_tri.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/ssm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/tri.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/unary.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/upscale.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/wkv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-impl.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-common.h",
+				"$(SRCROOT)/../scripts/build-ios-metallib.sh",
+			);
+			name = "[CP-User] Compile llama.rn Metal libraries";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama.metallib",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama-tensor.metallib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
 		};
 		B76F19E92D8D12BA8FEC75B9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -661,7 +720,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -776,7 +835,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -951,7 +1010,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
