@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const LLAMA_RN = path.join(ROOT, 'node_modules', 'llama.rn');
@@ -14,6 +15,7 @@ const GGML_METAL = path.join(
 const read = file => fs.readFileSync(path.join(ROOT, file), 'utf-8');
 
 const appDelegate = read('ios/PocketPal/AppDelegate.swift');
+const metalGate = read('ios/PocketPal/LlamaMetalGate.swift');
 const podfile = read('ios/Podfile');
 const pbxproj = read('ios/PocketPal.xcodeproj/project.pbxproj');
 const metallibScript = read('scripts/build-ios-metallib.sh');
@@ -116,6 +118,57 @@ describe('the launch-time Metal gate', () => {
 
   it('reads the iOS version, not the host OS version', () => {
     expect(appDelegate).not.toMatch(/operatingSystemVersion/);
+  });
+});
+
+describe('the Metal gate logic', () => {
+  const predicate = metalGate.match(
+    /func disablesLlamaMetal\(iOS18OrLater: Bool, supportsApple6: Bool\) -> Bool \{\s*([^}]*?)\s*\}/,
+  );
+  const launchGate = appDelegate.match(
+    /func keepLlamaOffUnsupportedMetal\(\) \{([\s\S]*?)\n {2}\}/,
+  );
+
+  it('finds the predicate and the launch gate', () => {
+    expect(predicate).not.toBeNull();
+    expect(launchGate).not.toBeNull();
+  });
+
+  it.each([
+    [false, true, true],
+    [false, false, true],
+    [true, false, true],
+    [true, true, false],
+  ])(
+    'with iOS18OrLater %s and supportsApple6 %s, disables Metal: %s',
+    (iOS18OrLater, supportsApple6, disables) => {
+      const body = predicate[1];
+      expect(body).toMatch(
+        /^[\s!|&()]*(?:(?:iOS18OrLater|supportsApple6)[\s!|&()]*)+$/,
+      );
+      expect(vm.runInNewContext(body, {iOS18OrLater, supportsApple6})).toBe(
+        disables,
+      );
+    },
+  );
+
+  it('sets iOS18OrLater only from #available(iOS 18.0, *)', () => {
+    expect(launchGate[1]).toMatch(
+      /var iOS18OrLater = false\s*if #available\(iOS 18\.0, \*\) \{\s*iOS18OrLater = true\s*\}/,
+    );
+    expect(launchGate[1].match(/iOS18OrLater = /g)).toHaveLength(2);
+  });
+
+  it('reads Apple6 support from the Metal device, and only on iOS 18 and later', () => {
+    expect(launchGate[1]).toMatch(
+      /let supportsApple6 = iOS18OrLater && \(MTLCreateSystemDefaultDevice\(\)\?\.supportsFamily\(\.apple6\) \?\? false\)/,
+    );
+  });
+
+  it('passes the iOS check as the first input and Apple6 as the second', () => {
+    expect(launchGate[1]).toMatch(
+      /if disablesLlamaMetal\(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6\) \{/,
+    );
   });
 });
 
