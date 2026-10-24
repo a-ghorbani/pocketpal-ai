@@ -3,9 +3,6 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 
-// A wire-supplied path part (author, repo, filename) flows into both the derived
-// download URL and the local model path, so reject anything that is not a plain
-// segment (no path separators, no parent-dir traversal).
 export const isSafePathSegment = (
   v: unknown,
   {allowBackslash = false}: {allowBackslash?: boolean} = {},

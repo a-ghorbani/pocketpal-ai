@@ -13,6 +13,7 @@ const IOS_PICK = `file://${TMP}${IOS_NAME}`;
 describe('isAllowedChatImageUri', () => {
   afterEach(() => {
     Platform.OS = savedOS;
+    jest.restoreAllMocks();
   });
 
   describe('android', () => {
@@ -49,6 +50,16 @@ describe('isAllowedChatImageUri', () => {
         expect(isAllowedChatImageUri(uri)).toBe(true);
       },
     );
+
+    it('allows a picker file without /private when the tmp root has it', () => {
+      const root = '/private/var/mobile/Containers/Data/Application/X/tmp/';
+      jest.replaceProperty(RNFS, 'TemporaryDirectoryPath', root);
+      expect(
+        isAllowedChatImageUri(
+          `file:///var/mobile/Containers/Data/Application/X/tmp/${IOS_NAME}`,
+        ),
+      ).toBe(true);
+    });
 
     it.each([
       `file://${TMP}..`,

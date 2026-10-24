@@ -12,6 +12,12 @@ jest.mock('../../services/deviceRules/rules', () => ({
   fetchRules: jest.fn().mockResolvedValue(null),
 }));
 
+jest.mock('../../services/downloads', () => ({
+  DownloadCancelledError: class extends Error {},
+  downloadManager: require('../../../__mocks__/services/downloads')
+    .downloadManager,
+}));
+
 const DOCS = RNFS.DocumentDirectoryPath;
 const hfPath = (author: string, repo: string, filename: string) =>
   `${DOCS}/models/hf/${author}/${repo}/${filename}`;
@@ -35,6 +41,7 @@ beforeEach(() => {
   runInAction(() => {
     modelStore.models = [];
     modelStore.activeModelId = undefined;
+    modelStore.downloadError = null;
   });
 });
 
@@ -84,8 +91,11 @@ const expectDownloadsAndDeletes = async (id: string, path: string) => {
 
 const expectRefusedAndKept = async () => {
   files.add(await modelStore.getModelFullPath(storeModel('m')));
-  await expect(modelStore.checkSpaceAndDownload('m')).rejects.toThrow();
+  await expect(modelStore.checkSpaceAndDownload('m')).rejects.toThrow(
+    'Invalid model download path',
+  );
   expect(downloadManager.startDownload).not.toHaveBeenCalled();
+  expect(modelStore.downloadError).not.toBeNull();
   await markDownloadedAndDelete('m');
   expect(RNFS.unlink).not.toHaveBeenCalled();
   expect(storeModel('m').isDownloaded).toBe(true);

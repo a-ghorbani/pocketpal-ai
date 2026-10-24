@@ -35,6 +35,11 @@ describe('isModelFilePath', () => {
   it.each([
     `${docs}/models/hf/a/r/x.gguf`,
     `${docs}/models/local/a\\b.gguf`,
+    `${docs}/models/local/x.bin`,
+    `${docs}/models/x.gguf`,
+    `${docs}/models/hf/a/x.gguf`,
+    `${docs}/models/preset/a/x.gguf`,
+    `${docs}/models/preset/a/r/x.gguf`,
     `${docs}/x.gguf`,
   ])('accepts %j', path => {
     expect(isModelFilePath(path)).toBe(true);

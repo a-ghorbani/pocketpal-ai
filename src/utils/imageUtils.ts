@@ -140,6 +140,9 @@ export const downloadPalThumbnail = async (
  * @param filename - The thumbnail filename like "palId_thumbnail.jpg"
  */
 export const deletePalThumbnail = async (filename: string): Promise<void> => {
+  if (isRemoteThumbnailUrl(filename)) {
+    return;
+  }
   try {
     const absolutePath = getAbsoluteThumbnailPath(filename);
     if (!absolutePath) {

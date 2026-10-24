@@ -359,9 +359,8 @@ export function __clearRemoteImageCache(): void {
 
 /**
  * Encode a single content part's local image path to a data URI. Returns the
- * part unchanged when it is not a local image, when the path is not an image
- * picker file (isAllowedChatImageUri), when a successful stat reports
- * an over-cap file, or when the read fails. A stat throw or a size-less result
+ * part unchanged when it is not a local image picker file, when a successful
+ * stat reports an over-cap file, or when the read fails. A stat throw or a size-less result
  * FALLS THROUGH to encoding so a healthy image is never dropped on a stat
  * hiccup — only a successful over-cap stat skips.
  */
