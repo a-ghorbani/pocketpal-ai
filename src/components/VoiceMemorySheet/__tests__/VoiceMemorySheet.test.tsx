@@ -56,7 +56,7 @@ describe('VoiceMemorySheet', () => {
 
     expect(getByText(strings.memoryTightTitle)).toBeTruthy();
     expect(getByText('Chat model · Gemma')).toBeTruthy();
-    expect(getByText(strings.memorySttRow)).toBeTruthy();
+    expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByText('Voice · Supertonic')).toBeTruthy();
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
       /3\.7 GB of 3\.3 GB available/,
@@ -95,11 +95,20 @@ describe('VoiceMemorySheet', () => {
     });
 
     expect(queryByText('Chat model · Gemma')).toBeNull();
-    expect(getByText(strings.memorySttRow)).toBeTruthy();
+    expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByTestId('voice-memory-tts')).toHaveTextContent(/600 MB/);
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
       /1 GB of 800 MB available/,
     );
+  });
+
+  it('names the Whisper tier the fit counted', () => {
+    const {getByText} = renderSheet({
+      status: 'tight',
+      sttTier: 'small',
+      breakdown,
+    });
+    expect(getByText('Speech recognition · Whisper Small')).toBeTruthy();
   });
 
   it('is hidden without a fit to show', () => {

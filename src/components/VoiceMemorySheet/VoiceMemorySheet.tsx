@@ -6,6 +6,7 @@ import {Button, Text} from 'react-native-paper';
 import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
 import {L10nContext, formatBytes} from '../../utils';
+import {asrTierLabel} from '../../utils/asrTierLabel';
 import {t} from '../../locales';
 import type {VoiceMemoryFit} from '../../services/voice';
 
@@ -47,7 +48,12 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
       label: t(strings.memoryChatRow, {name: chatModelName}),
       color: theme.colors.primary,
     },
-    stt: {label: strings.memorySttRow, color: theme.colors.tertiary},
+    stt: {
+      label: fit
+        ? t(strings.memorySttRowModel, {tier: asrTierLabel(fit.sttTier, l10n)})
+        : '',
+      color: theme.colors.tertiary,
+    },
     tts: {
       label: t(strings.memoryVoiceRow, {name: voiceName}),
       color: theme.colors.iconModelTypeAudio,

@@ -75,6 +75,7 @@ export * from './VoiceModeButton';
 export * from './VoiceTeaser';
 export * from './VoiceSetupSheet';
 export * from './VoiceMemorySheet';
+export * from './WhisperModelRow';
 export * from './VoiceRecordingBar';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';

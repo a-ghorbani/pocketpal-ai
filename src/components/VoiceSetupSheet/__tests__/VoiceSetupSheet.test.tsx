@@ -56,6 +56,8 @@ describe('VoiceSetupSheet', () => {
     (isMicGranted as jest.Mock).mockResolvedValue(false);
     appStateHandlers.length = 0;
     runInAction(() => {
+      asr.selectedTier = 'base';
+      asr.downloadStates.small = 'not_installed';
       asr.downloadStates.base = 'not_installed';
       asr.downloadProgress.base = 0;
       asr.downloadError.base = null;
@@ -68,8 +70,33 @@ describe('VoiceSetupSheet', () => {
   it('shows the whisper base row, the voice row and the mic step', () => {
     const {getByText} = renderSheet();
     expect(getByText(strings.sttRowTitle)).toBeTruthy();
+    expect(getByText(/^Whisper Base · /)).toBeTruthy();
     expect(getByText('Sarah · ready')).toBeTruthy();
     expect(getByText(strings.micNote)).toBeTruthy();
+  });
+
+  it('shows the in-use tier when it is installed', () => {
+    runInAction(() => {
+      asr.selectedTier = 'small';
+      asr.downloadStates.small = 'ready';
+    });
+    const {getByText} = renderSheet();
+    expect(getByText(/^Whisper Small · /)).toBeTruthy();
+    expect(getByText(strings.installedLabel)).toBeTruthy();
+  });
+
+  it('offers base while another tier downloads and none is installed', async () => {
+    runInAction(() => {
+      asr.downloadStates.small = 'downloading';
+    });
+    const {getByText, getByTestId} = renderSheet();
+    expect(getByText(/^Whisper Base · /)).toBeTruthy();
+
+    fireEvent.press(getByTestId('voice-setup-continue'));
+
+    await waitFor(() =>
+      expect(asrStore.downloadModel).toHaveBeenCalledWith('base'),
+    );
   });
 
   it('downloads base, asks for the mic, then finishes', async () => {
