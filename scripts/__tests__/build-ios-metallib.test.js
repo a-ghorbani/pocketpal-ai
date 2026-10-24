@@ -40,9 +40,39 @@ prev=""
 for arg in "$@"; do
   [ "$prev" = -o ] && out=$arg
   [ "$arg" = "$KERNELS_DIR/\${STUB_FAIL_KERNEL:-none}.metal" ] && { echo "error: stub" >&2; exit 1; }
+  [ "$arg" = "$KERNELS_DIR/\${STUB_NO_OUTPUT_KERNEL:-none}.metal" ] && exit 0
   prev=$arg
 done
 echo "$tool" > "$out"
+`;
+
+// BSD xargs substitutes -I's replacement only into arguments of up to 255
+// bytes; GNU xargs has no such limit, so the tests that need it install this.
+const BSD_XARGS = `#!/bin/bash
+real_xargs=$(PATH="\${PATH#*:}" command -v xargs)
+args=("$@")
+repl=""
+for ((i = 0; i < \${#args[@]}; i++)); do
+  [ "\${args[i]}" = -I ] && repl=\${args[i+1]}
+done
+[ -z "$repl" ] && exec "$real_xargs" "$@"
+i=0
+while [ "$i" -lt "\${#args[@]}" ]; do
+  case "\${args[i]}" in
+    -I | -P | -n | -S) i=$((i + 2)) ;;
+    *) break ;;
+  esac
+done
+cmd=("\${args[@]:i}")
+status=0
+while IFS= read -r item; do
+  argv=()
+  for arg in "\${cmd[@]}"; do
+    if [ "\${#arg}" -le 255 ]; then argv+=("\${arg//"$repl"/$item}"); else argv+=("$arg"); fi
+  done
+  "\${argv[@]}" || status=123
+done
+exit "$status"
 `;
 
 let tmp;
@@ -203,6 +233,49 @@ describe('the app bundle it writes', () => {
   });
 });
 
+describe("a DerivedSources path as long as an archive build's", () => {
+  let longDerived;
+  let airDir;
+
+  beforeEach(() => {
+    longDerived = path.join(
+      tmp,
+      ...Array(6).fill(
+        'ArchiveIntermediates-PocketPal-IntermediateBuildFilesPath',
+      ),
+      'DerivedSources',
+    );
+    airDir = path.join(longDerived, 'rnllama-metal');
+    fs.mkdirSync(longDerived, {recursive: true});
+    fs.writeFileSync(path.join(tmp, 'bin', 'xargs'), BSD_XARGS, {mode: 0o755});
+  });
+
+  it('compiles one .air per kernel at its real path and links them', () => {
+    expect(path.join(airDir, 'fa_aux.air').length).toBeGreaterThan(300);
+    const {status, calls} = run({env: {DERIVED_FILE_DIR: longDerived}});
+    expect(calls.flat().filter(arg => arg.includes('{}'))).toEqual([]);
+    expect(
+      compiles(calls)
+        .map(call => call[call.indexOf('-o') + 1])
+        .sort(),
+    ).toEqual(
+      kernelSet.map(kernel => path.join(airDir, `${kernel}.air`)).sort(),
+    );
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([
+      [
+        '-sdk',
+        'iphoneos',
+        'metallib',
+        ...kernelSet.map(kernel => path.join(airDir, `${kernel}.air`)),
+        '-o',
+        path.join(longDerived, 'rnllama.metallib'),
+      ],
+    ]);
+    expect(status).toBe(0);
+    expect(appMetallibs()).toEqual(['rnllama.metallib']);
+  });
+});
+
 describe('failures', () => {
   it('fails with the install command when the Metal toolchain is missing', () => {
     const {status, stderr, calls} = run({env: {STUB_NO_METAL: '1'}});
@@ -214,6 +287,25 @@ describe('failures', () => {
 
   it('fails without writing a partial library when a kernel does not compile', () => {
     const {status, calls} = run({env: {STUB_FAIL_KERNEL: 'mul_mm'}});
+    expect(status).not.toBe(0);
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it('fails naming the kernel when a compile exits 0 without its .air', () => {
+    const {status, stderr, calls} = run({
+      env: {STUB_NO_OUTPUT_KERNEL: 'mul_mm'},
+    });
+    expect(status).not.toBe(0);
+    expect(stderr).toContain('mul_mm.metal produced no');
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it('does not count an .air left over from an earlier build', () => {
+    fs.mkdirSync(path.join(derived, 'rnllama-metal'));
+    fs.writeFileSync(path.join(derived, 'rnllama-metal', 'mul_mm.air'), 'old');
+    const {status, calls} = run({env: {STUB_NO_OUTPUT_KERNEL: 'mul_mm'}});
     expect(status).not.toBe(0);
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
     expect(fs.readdirSync(app)).toEqual([]);

@@ -22,15 +22,23 @@ if [ "$PLATFORM_NAME" = iphonesimulator ]; then
 fi
 
 air_dir="$DERIVED_FILE_DIR/rnllama-metal"
+rm -rf "$air_dir"
 mkdir -p "$air_dir"
 
+# Paths go in as positional arguments: BSD xargs -I substitutes only into
+# arguments of up to 255 bytes, which archive paths exceed.
 ncpu=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
-printf '%s\n' "$@" | xargs -P "$ncpu" -I {} \
-  xcrun -sdk "$PLATFORM_NAME" metal -O3 "-mtargetos=ios18.0$target_suffix" -DGGML_METAL_HAS_BF16 \
-  -I "$ggml_metal" -I "$ggml_src" -c "$ggml_metal/kernels/{}.metal" -o "$air_dir/{}.air"
+printf '%s\n' "$@" | xargs -n 1 -P "$ncpu" sh -c '
+  xcrun -sdk "$1" metal -O3 "-mtargetos=ios18.0$2" -DGGML_METAL_HAS_BF16 \
+    -I "$3" -I "$4" -c "$3/kernels/$6.metal" -o "$5/$6.air"
+' _ "$PLATFORM_NAME" "$target_suffix" "$ggml_metal" "$ggml_src" "$air_dir"
 
 airs=()
 for kernel in "$@"; do
+  if [ ! -f "$air_dir/$kernel.air" ]; then
+    echo "error: compiling $kernel.metal produced no $air_dir/$kernel.air" >&2
+    exit 1
+  fi
   airs+=("$air_dir/$kernel.air")
 done
 xcrun -sdk "$PLATFORM_NAME" metallib "${airs[@]}" -o "$DERIVED_FILE_DIR/rnllama.metallib"
