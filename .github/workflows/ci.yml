@@ -496,6 +496,11 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
+      - name: Ensure Metal toolchain
+        run: |
+          xcrun -sdk iphoneos metal -v || xcodebuild -downloadComponent MetalToolchain
+          xcrun -sdk iphonesimulator metal -v
+
       - name: Build iOS Release
         run: |
           cd ios
@@ -507,6 +512,7 @@ jobs:
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -520,3 +526,28 @@ jobs:
             echo "::endgroup::"
             exit $EXIT_CODE
           fi
+
+      - name: Verify iOS payload
+        run: scripts/verify-ios-payload.sh ios/build/Build/Products/Release-iphonesimulator/PocketPal.app --require-marker
+
+      - name: AMX scan (llama-rn)
+        shell: bash -eo pipefail {0}
+        run: |
+          llvm_objdump="$(brew --prefix llvm 2>/dev/null || true)/bin/llvm-objdump"
+          if [ -x "$llvm_objdump" ]; then objdump=("$llvm_objdump"); else objdump=(xcrun llvm-objdump); fi
+          "${objdump[@]}" --version
+
+          # A known AMX instruction must be flagged, or a clean scan proves nothing.
+          printf '.text\n.globl _amx\n_amx:\n.inst 0x00201220\n' |
+            xcrun clang -arch arm64 -x assembler -c - -o "$RUNNER_TEMP/amx.o"
+          n=$("${objdump[@]}" -d --mattr=+all "$RUNNER_TEMP/amx.o" | grep -c '<unknown>' || true)
+          echo "calibration object: $n <unknown>"
+          test "$n" -gt 0
+
+          lib=ios/build/Build/Products/Release-iphonesimulator/llama-rn/libllama-rn.a
+          test -f "$lib"
+          out="$RUNNER_TEMP/libllama-rn.objdump.txt"
+          "${objdump[@]}" -d --mattr=+all "$lib" > "$out"
+          n=$(grep -c '<unknown>' "$out" || true)
+          echo "$lib: $n <unknown>"
+          test "$n" -eq 0
