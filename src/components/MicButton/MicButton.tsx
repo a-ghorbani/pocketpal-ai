@@ -1,5 +1,10 @@
 import React, {useContext, useState} from 'react';
-import {Pressable, type StyleProp, type ViewStyle} from 'react-native';
+import {
+  Keyboard,
+  Pressable,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import {observer} from 'mobx-react';
 
@@ -58,7 +63,10 @@ export const MicButton: React.FC<MicButtonProps> = observer(
         ) : (
           <Pressable
             style={[styles.button, style]}
-            onPress={() => setSetupOpen(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setSetupOpen(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel={l10n.voiceInput.setupLabel}
             testID="mic-button-setup">

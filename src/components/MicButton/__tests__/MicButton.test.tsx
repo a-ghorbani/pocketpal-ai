@@ -1,4 +1,5 @@
 import React from 'react';
+import {Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {act, fireEvent, render} from '../../../../jest/test-utils';
@@ -72,6 +73,23 @@ describe('MicButton', () => {
         asrStore.selectedTier = 'base';
         asrStore.downloadStates.small = 'not_installed';
       });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('closes the keyboard before the setup sheet opens', () => {
+      const sheetShownAtDismiss: boolean[] = [];
+      const {getByTestId, queryByTestId} = renderMic();
+      jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {
+        sheetShownAtDismiss.push(queryByTestId('mic-setup-sheet') !== null);
+      });
+
+      fireEvent.press(getByTestId('mic-button-setup'));
+
+      expect(sheetShownAtDismiss).toEqual([false]);
+      expect(getByTestId('mic-setup-sheet')).toBeTruthy();
     });
 
     it('opens the setup sheet in place instead of recording', () => {
