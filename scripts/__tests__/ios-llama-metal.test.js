@@ -171,23 +171,17 @@ describe('the Metal gate logic', () => {
     },
   );
 
-  it('sets iOS18OrLater only from #available(iOS 18.0, *)', () => {
-    expect(launchGate[1]).toMatch(
-      /var iOS18OrLater = false\s*if #available\(iOS 18\.0, \*\) \{\s*iOS18OrLater = true\s*\}/,
-    );
-    expect(launchGate[1].match(/iOS18OrLater = /g)).toHaveLength(2);
-  });
-
-  it('reads Apple6 support from the Metal device, and only on iOS 18 and later', () => {
-    expect(launchGate[1]).toMatch(
-      /let supportsApple6 = iOS18OrLater && \(MTLCreateSystemDefaultDevice\(\)\?\.supportsFamily\(\.apple6\) \?\? false\)/,
-    );
-  });
-
-  it('passes the iOS check as the first input and Apple6 as the second', () => {
-    expect(launchGate[1]).toMatch(
-      /if disablesLlamaMetal\(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6\) \{/,
-    );
+  it('is only the iOS check, the Apple6 probe on iOS 18 and later, and the setenv', () => {
+    expect(launchGate[1].trim().split(/\s*\n\s*/)).toEqual([
+      'var iOS18OrLater = false',
+      'if #available(iOS 18.0, *) {',
+      'iOS18OrLater = true',
+      '}',
+      'let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)',
+      'if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {',
+      'setenv("GGML_METAL_DEVICES", "0", 1)',
+      '}',
+    ]);
   });
 });
 
