@@ -54,6 +54,8 @@ platform :ios do
       }
     )
 
+    verify_ios_payload(ipa: lane_context[SharedValues::IPA_OUTPUT_PATH])
+
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: false,
@@ -61,6 +63,18 @@ platform :ios do
       wait_for_uploaded_build: true,
       wait_processing_timeout_duration: 1800 # 30 minutes timeout
     )
+  end
+
+  desc "Check an exported IPA's app with scripts/verify-ios-payload.sh"
+  lane :verify_ios_payload do |options|
+    ipa = options[:ipa]
+    UI.user_error!("verify_ios_payload needs ipa: <path to an .ipa file>") unless ipa && File.file?(ipa)
+
+    require 'tmpdir'
+    Dir.mktmpdir do |dir|
+      sh("unzip", "-q", File.expand_path(ipa), "-d", dir)
+      sh(File.expand_path("../../scripts/verify-ios-payload.sh", Dir.pwd), File.join(dir, "Payload/PocketPal.app"))
+    end
   end
 
   desc "Build IPA for AWS Device Farm testing"

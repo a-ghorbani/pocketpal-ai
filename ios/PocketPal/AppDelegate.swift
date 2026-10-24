@@ -1,4 +1,5 @@
 import UIKit
+import Metal
 import RNFBAppCheck
 import FirebaseCore
 import React
@@ -16,6 +17,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    keepLlamaOffUnsupportedMetal()
+
     // Initialize Firebase
     // This is used exclusively for sending model benchmarks (with user consent) to Firebase.
     // Firebase is used for App Check functionality, allowing unauthenticated users to submit their benchmark data securely.
@@ -38,6 +41,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
 
     return true
+  }
+
+  private func keepLlamaOffUnsupportedMetal() {
+    var iOS18OrLater = false
+    if #available(iOS 18.0, *) {
+      iOS18OrLater = true
+    }
+    let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)
+    if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {
+      setenv("GGML_METAL_DEVICES", "0", 1)
+    }
   }
 
   // MARK: - Deep Linking Support

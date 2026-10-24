@@ -181,6 +181,9 @@ PocketPal is a standard React Native app. If you can build a React Native projec
 - **Node.js** — version is pinned in [`.nvmrc`](.nvmrc) (currently `22.21.0`); run `nvm use` to match it. Older Node will fail the `engines` check.
 - **Yarn 1 (Classic)** — `packageManager` is pinned to `yarn@1.22.22`.
 - **Xcode** + **CocoaPods**, and **Ruby + Bundler** (for iOS / Fastlane tooling).
+  - Xcode 26 needs the Metal Toolchain: `xcodebuild -downloadComponent MetalToolchain`.
+  - The iOS simulator build needs an Apple silicon Mac.
+  - After a change to `patches/llama.rn+*.patch`, remove `node_modules/llama.rn` and run `yarn --check-files` so the patch applies to fresh sources.
 - **Android Studio** + Android SDK/NDK.
 
 See the [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment) for platform details.
