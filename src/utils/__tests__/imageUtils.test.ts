@@ -16,6 +16,7 @@ import {
   localThumbnailExists,
   getLocalThumbnailPath,
   cleanupOrphanedThumbnails,
+  getAbsoluteThumbnailPath,
 } from '../imageUtils';
 
 const mockRNFS = RNFS as jest.Mocked<typeof RNFS>;
@@ -197,5 +198,45 @@ describe('imageUtils', () => {
       expect((mockRNFS as any).readDir).not.toHaveBeenCalled();
       expect(mockRNFS.unlink).not.toHaveBeenCalled();
     });
+  });
+
+  describe('thumbnail paths stay inside pal-images', () => {
+    const UNSAFE_NAMES = [
+      '..',
+      '../..',
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      '',
+      'a\u0000b.jpg',
+    ];
+
+    it.each(UNSAFE_NAMES)('%j has no absolute path', name => {
+      expect(getAbsoluteThumbnailPath(name)).toBeNull();
+    });
+
+    it('a plain name maps into pal-images', () => {
+      expect(getAbsoluteThumbnailPath(expectedFilename)).toBe(
+        expectedLocalPath,
+      );
+    });
+
+    it.each(UNSAFE_NAMES)('%j is neither checked nor deleted', async name => {
+      mockRNFS.exists.mockResolvedValue(true);
+      await deletePalThumbnail(name);
+      expect(await localThumbnailExists(name)).toBe(false);
+      expect(mockRNFS.exists).not.toHaveBeenCalled();
+      expect(mockRNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it.each(['https://h/a.b/../x', 'https://h/a.b//etc/hosts'])(
+      'download from %s throws before touching disk',
+      async url => {
+        await expect(downloadPalThumbnail(mockPalId, url)).rejects.toThrow(
+          'Invalid thumbnail filename',
+        );
+        expect(mockRNFS.exists).not.toHaveBeenCalled();
+        expect(mockRNFS.downloadFile).not.toHaveBeenCalled();
+      },
+    );
   });
 });
