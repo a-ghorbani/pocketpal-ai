@@ -2497,10 +2497,10 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
-"@pocketpalai/react-native-speech-phonon@0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.1.2.tgz#40fc360012b6f0512be15788a1759fe1499d5323"
-  integrity sha512-nte1jxyWe96lI9zhEzSHkcDT3sqOOM6z5CE/YH525J63oH+cjJ5Qq1wU4YTpJ12ccXF0ixioJpOZ/M0JPIc1og==
+"@pocketpalai/react-native-speech-phonon@0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.1.3.tgz#cd9daa9cf8024e8fc3ca5bd0b2b79d4d4c74735c"
+  integrity sha512-WaC3HDBY7dPfGziRP8HROe+qFNEbpXl6+a+z4PaKrXhKw/KCSqvfH+M3+jYg2mUqNqX3oRNCPH4al5vBTg7WxA==
 
 "@pocketpalai/react-native-speech@2.8.2":
   version "2.8.2"
