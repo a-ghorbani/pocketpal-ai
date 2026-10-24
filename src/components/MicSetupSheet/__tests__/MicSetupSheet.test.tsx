@@ -77,6 +77,19 @@ describe('MicSetupSheet', () => {
     expect(asrStore.downloadModel).toHaveBeenCalledWith('base');
   });
 
+  it('offers base, not a stale uninstalled tier, before init reconciles', () => {
+    runInAction(() => {
+      asr.selectedTier = 'small';
+    });
+    const {getByTestId, getByText} = renderSheet();
+
+    expect(getByText(/^Whisper Base · /)).toBeTruthy();
+    fireEvent.press(getByTestId('mic-setup-download'));
+
+    expect(asrStore.downloadModel).toHaveBeenCalledWith('base');
+    expect(asrStore.selectTier).not.toHaveBeenCalled();
+  });
+
   it('shows progress and holds the button while downloading', () => {
     runInAction(() => {
       asr.downloadStates.base = 'downloading';

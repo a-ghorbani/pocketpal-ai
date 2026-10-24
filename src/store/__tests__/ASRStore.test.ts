@@ -454,6 +454,22 @@ describe('ASRStore', () => {
       });
       expect(store.setupTier).toBe('base');
     });
+
+    it('setupTier offers the default before reconcile, not a hydrated stale tier', async () => {
+      const hydration = deferred();
+      (makePersistable as jest.Mock).mockImplementationOnce(
+        () => hydration.promise,
+      );
+      const early = new ASRStore();
+      const init = early.init();
+      forceSelected('small', early);
+
+      expect(early.setupTier).toBe('base');
+
+      hydration.resolve();
+      await init;
+      expect(early.selectedTier).toBe('base');
+    });
   });
 
   describe('deleteModel', () => {

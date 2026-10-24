@@ -99,6 +99,22 @@ describe('VoiceSetupSheet', () => {
     );
   });
 
+  it('downloads base, not a stale uninstalled tier, before init reconciles', async () => {
+    runInAction(() => {
+      asr.selectedTier = 'small';
+    });
+    const {getByText, getByTestId} = renderSheet();
+    expect(getByText(/^Whisper Base · /)).toBeTruthy();
+
+    fireEvent.press(getByTestId('voice-setup-continue'));
+
+    await waitFor(() =>
+      expect(asrStore.downloadModel).toHaveBeenCalledWith('base'),
+    );
+    expect(asrStore.downloadModel).not.toHaveBeenCalledWith('small');
+    expect(asrStore.selectTier).not.toHaveBeenCalled();
+  });
+
   it('downloads base, asks for the mic, then finishes', async () => {
     asr.downloadModel.mockImplementationOnce(async () => {
       runInAction(() => {
