@@ -537,17 +537,23 @@ jobs:
           if [ -x "$llvm_objdump" ]; then objdump=("$llvm_objdump"); else objdump=(xcrun llvm-objdump); fi
           "${objdump[@]}" --version
 
+          # Only undecoded words in AMX opcode space count (0x00201000 | op << 5 | operand):
+          # jump tables inside __text also show as <unknown>.
+          scan() {
+            local dump="$RUNNER_TEMP/$(basename "$1").objdump.txt"
+            "${objdump[@]}" -d --mattr=+all "$1" > "$dump"
+            raw=$(grep -c '<unknown>' "$dump" || true)
+            amx=$(awk '$1 ~ /^[0-9a-fA-F]+:$/ && $NF == "<unknown>" && tolower($2) ~ /^00201[0-3][0-9a-f][0-9a-f]$/' "$dump" | wc -l | tr -d ' ')
+            echo "$1: $raw <unknown>, $amx in AMX opcode space"
+          }
+
           # A known AMX instruction must be flagged, or a clean scan proves nothing.
           printf '.text\n.globl _amx\n_amx:\n.inst 0x00201220\n' |
             xcrun clang -arch arm64 -x assembler -c - -o "$RUNNER_TEMP/amx.o"
-          n=$("${objdump[@]}" -d --mattr=+all "$RUNNER_TEMP/amx.o" | grep -c '<unknown>' || true)
-          echo "calibration object: $n <unknown>"
-          test "$n" -gt 0
+          scan "$RUNNER_TEMP/amx.o"
+          test "$amx" -gt 0
 
           lib=ios/build/Build/Products/Release-iphonesimulator/llama-rn/libllama-rn.a
           test -f "$lib"
-          out="$RUNNER_TEMP/libllama-rn.objdump.txt"
-          "${objdump[@]}" -d --mattr=+all "$lib" > "$out"
-          n=$(grep -c '<unknown>' "$out" || true)
-          echo "$lib: $n <unknown>"
-          test "$n" -eq 0
+          scan "$lib"
+          test "$amx" -eq 0
