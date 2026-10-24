@@ -81,7 +81,7 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
       setBusy(true);
       try {
         if (!baseReady()) {
-          await asrStore.downloadModel('base', {select: false});
+          await asrStore.downloadModel('base');
           if (
             !baseReady() ||
             !visible.current ||

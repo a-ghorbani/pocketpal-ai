@@ -72,7 +72,7 @@ describe('VoiceSetupSheet', () => {
     expect(getByText(strings.micNote)).toBeTruthy();
   });
 
-  it('downloads base without selecting it, asks for the mic, then finishes', async () => {
+  it('downloads base, asks for the mic, then finishes', async () => {
     asr.downloadModel.mockImplementationOnce(async () => {
       runInAction(() => {
         asr.downloadStates.base = 'ready';
@@ -83,9 +83,7 @@ describe('VoiceSetupSheet', () => {
     fireEvent.press(getByTestId('voice-setup-continue'));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
-    expect(asrStore.downloadModel).toHaveBeenCalledWith('base', {
-      select: false,
-    });
+    expect(asrStore.downloadModel).toHaveBeenCalledWith('base');
     expect(ensureMicPermission).toHaveBeenCalledTimes(1);
   });
 
