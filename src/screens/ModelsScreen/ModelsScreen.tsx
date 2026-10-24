@@ -194,7 +194,7 @@ export const ModelsScreen: React.FC = observer(() => {
         let [file] = res;
         if (file) {
           const pickedName = file.name || file.uri.split('/').pop();
-          let fileName = isSafePathSegment(pickedName)
+          let fileName = isSafePathSegment(pickedName, {allowBackslash: true})
             ? pickedName
             : `file_${uuidv4()}`;
 

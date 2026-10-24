@@ -15,7 +15,6 @@ import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
-import {toImportedModelRef} from './modelPathGuard';
 import {isAllowedChatImageUri} from './chatImageUri';
 import type {Pal, ParameterDefinition} from '../types/pal';
 
@@ -447,8 +446,8 @@ const transformImportPal = async (
     originalSystemPrompt: pal.originalSystemPrompt,
     isSystemPromptChanged: pal.isSystemPromptChanged,
     useAIPrompt: pal.useAIPrompt,
-    defaultModel: toImportedModelRef(pal.defaultModel),
-    promptGenerationModel: toImportedModelRef(pal.promptGenerationModel),
+    defaultModel: pal.defaultModel,
+    promptGenerationModel: pal.promptGenerationModel,
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities || {},

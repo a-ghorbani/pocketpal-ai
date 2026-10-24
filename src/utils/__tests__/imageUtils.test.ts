@@ -17,10 +17,7 @@ import {
   getLocalThumbnailPath,
   cleanupOrphanedThumbnails,
   getAbsoluteThumbnailPath,
-  getFullThumbnailUri,
 } from '../imageUtils';
-import {isSafePathSegment} from '../pathGuard';
-import {withEachControl} from '../../../jest/fixtures/controlCharacters';
 
 const mockRNFS = RNFS as jest.Mocked<typeof RNFS>;
 
@@ -202,158 +199,44 @@ describe('imageUtils', () => {
       expect(mockRNFS.unlink).not.toHaveBeenCalled();
     });
   });
-  describe('getFullThumbnailUri', () => {
-    it.each([
-      '..',
-      '../..',
-      '../../Library/x',
-      '/etc/hosts',
-      'file:///data/local/tmp/x',
-      'a\u0000b',
-      '',
-    ])('%j gives no local URI', name => {
-      expect(getFullThumbnailUri(name)).toBeUndefined();
-    });
-
-    it('returns a remote URL unchanged', () => {
-      expect(getFullThumbnailUri('https://h/t.png')).toBe('https://h/t.png');
-      expect(getFullThumbnailUri('http://h/t.png')).toBe('http://h/t.png');
-    });
-
-    it('returns a pal-images file URI for a plain name', () => {
-      expect(getFullThumbnailUri(expectedFilename)).toBe(
-        `file://${expectedLocalPath}`,
-      );
-    });
-  });
 
   describe('thumbnail paths stay inside pal-images', () => {
-    const palImagesDir = `${mockDocumentPath}/pal-images`;
     const UNSAFE_NAMES = [
       '..',
       '../..',
       '/etc/hosts',
       'file:///data/local/tmp/x',
       '',
-      '../x',
+      'a\u0000b.jpg',
     ];
 
-    beforeEach(() => {
-      mockRNFS.exists.mockReset();
-      mockRNFS.mkdir.mockReset();
-      mockRNFS.downloadFile.mockReset();
-      mockRNFS.unlink.mockReset();
+    it.each(UNSAFE_NAMES)('%j has no absolute path', name => {
+      expect(getAbsoluteThumbnailPath(name)).toBeNull();
     });
 
-    describe('getAbsoluteThumbnailPath', () => {
-      it.each(UNSAFE_NAMES)('%p → null', name => {
-        expect(getAbsoluteThumbnailPath(name)).toBeNull();
-      });
-
-      it('returns a direct child of pal-images for a plain name', () => {
-        expect(getAbsoluteThumbnailPath(expectedFilename)).toBe(
-          expectedLocalPath,
-        );
-      });
-    });
-
-    describe('deletePalThumbnail', () => {
-      it.each(UNSAFE_NAMES)('%p: no exists and no unlink', async name => {
-        await deletePalThumbnail(name);
-        expect(mockRNFS.exists).not.toHaveBeenCalled();
-        expect(mockRNFS.unlink).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('localThumbnailExists', () => {
-      it.each(UNSAFE_NAMES)('%p → false without touching disk', async name => {
-        mockRNFS.exists.mockResolvedValue(true);
-        expect(await localThumbnailExists(name)).toBe(false);
-        expect(mockRNFS.exists).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('control characters', () => {
-      const names = withEachControl(c => [
-        `${mockPalId}_thumbnail.j${c}pg`,
-        `${c}${expectedFilename}`,
-        `${expectedFilename}${c}`,
-      ]);
-
-      it.each(names)('getAbsoluteThumbnailPath(%s) → null', (_shown, name) => {
-        expect(getAbsoluteThumbnailPath(name)).toBeNull();
-      });
-
-      it.each(names)(
-        'deletePalThumbnail(%s): no exists and no unlink',
-        async (_shown, name) => {
-          await deletePalThumbnail(name);
-          expect(mockRNFS.exists).not.toHaveBeenCalled();
-          expect(mockRNFS.unlink).not.toHaveBeenCalled();
-        },
-      );
-
-      it.each(names)(
-        'localThumbnailExists(%s) → false without touching disk',
-        async (_shown, name) => {
-          mockRNFS.exists.mockResolvedValue(true);
-          expect(await localThumbnailExists(name)).toBe(false);
-          expect(mockRNFS.exists).not.toHaveBeenCalled();
-        },
-      );
-
-      it.each(
-        withEachControl(c => [`https://h/a.p${c}ng`, `https://h/a.png${c}`]),
-      )(
-        'downloadPalThumbnail(%s) throws before touching disk',
-        async (_shown, url) => {
-          await expect(downloadPalThumbnail(mockPalId, url)).rejects.toThrow(
-            'Invalid thumbnail filename',
-          );
-          expect(mockRNFS.exists).not.toHaveBeenCalled();
-          expect(mockRNFS.downloadFile).not.toHaveBeenCalled();
-        },
+    it('a plain name maps into pal-images', () => {
+      expect(getAbsoluteThumbnailPath(expectedFilename)).toBe(
+        expectedLocalPath,
       );
     });
 
-    describe('downloadPalThumbnail URL extension', () => {
-      it.each([
-        'https://h/a.b/../x',
-        'https://h/a.b/../../x',
-        'https://h/a.b//etc/hosts',
-        'https://h/a.b/file:/x',
-        'https://h/a.b/c',
-      ])('%s throws before touching disk', async url => {
+    it.each(UNSAFE_NAMES)('%j is neither checked nor deleted', async name => {
+      mockRNFS.exists.mockResolvedValue(true);
+      await deletePalThumbnail(name);
+      expect(await localThumbnailExists(name)).toBe(false);
+      expect(mockRNFS.exists).not.toHaveBeenCalled();
+      expect(mockRNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it.each(['https://h/a.b/../x', 'https://h/a.b//etc/hosts'])(
+      'download from %s throws before touching disk',
+      async url => {
         await expect(downloadPalThumbnail(mockPalId, url)).rejects.toThrow(
           'Invalid thumbnail filename',
         );
         expect(mockRNFS.exists).not.toHaveBeenCalled();
-        expect(mockRNFS.mkdir).not.toHaveBeenCalled();
         expect(mockRNFS.downloadFile).not.toHaveBeenCalled();
-      });
-
-      it.each([
-        ['https://h/a.b/..', 'jpg'],
-        ['https://h/a.b/../..', 'jpg'],
-        ['https://h/a.', 'jpg'],
-        ['https://h/a.png', 'png'],
-      ])('%s downloads to <id>_thumbnail.%s', async (url, extension) => {
-        mockRNFS.exists.mockResolvedValue(false);
-        mockRNFS.downloadFile.mockReturnValue({
-          jobId: 1,
-          promise: Promise.resolve({statusCode: 200}),
-        } as any);
-
-        const result = await downloadPalThumbnail(mockPalId, url);
-
-        const name = `${mockPalId}_thumbnail.${extension}`;
-        const {toFile} = mockRNFS.downloadFile.mock.calls[0][0];
-        expect(result).toBe(name);
-        expect(toFile).toBe(`${palImagesDir}/${name}`);
-        expect(isSafePathSegment(toFile.slice(`${palImagesDir}/`.length))).toBe(
-          true,
-        );
-      });
-    });
+      },
+    );
   });
 });

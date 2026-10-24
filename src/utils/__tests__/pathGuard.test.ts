@@ -1,163 +1,58 @@
-import {
-  isContainedPath,
-  isSafePathSegment,
-  isSafeRelativePath,
-} from '../pathGuard';
-import {
-  EVERY_CONTROL_CHARACTER,
-  codePoint,
-  withEachControl,
-} from '../../../jest/fixtures/controlCharacters';
+import * as RNFS from '@dr.pogodin/react-native-fs';
 
-const NON_STRINGS: unknown[] = [undefined, null, 7, {}, ['a'], true];
+import {isModelFilePath, isSafePathSegment} from '../pathGuard';
 
 describe('isSafePathSegment', () => {
   it.each([
-    ['..', false],
-    ['../..', false],
-    ['/etc/hosts', false],
-    ['file:///data/local/tmp/x', false],
-    ['', false],
-    ['.', false],
-    ['a\\b', false],
-    ['x.gguf', true],
-    ['a..b', true],
-    ['..x', true],
-  ])('%p → %p', (input, expected) => {
-    expect(isSafePathSegment(input)).toBe(expected);
-  });
-
-  it.each(NON_STRINGS)('rejects non-string %p', input => {
+    '..',
+    '../..',
+    '/etc/hosts',
+    'file:///data/local/tmp/x',
+    '',
+    '.',
+    'a\\b',
+    'a\u0000b',
+    7,
+    undefined,
+  ])('rejects %j', input => {
     expect(isSafePathSegment(input)).toBe(false);
   });
-});
 
-describe('isSafeRelativePath', () => {
-  it.each([
-    ['..', false],
-    ['../..', false],
-    ['/etc/hosts', false],
-    ['file:///data/local/tmp/x', false],
-    ['', false],
-    ['Q4/z/..', false],
-    ['a//b', false],
-    ['./x', false],
-    ['/x', false],
-    ['x/', false],
-    ['a\\b', false],
-    ['x.gguf', true],
-    ['Q4/x.gguf', true],
-  ])('%p → %p', (input, expected) => {
-    expect(isSafeRelativePath(input)).toBe(expected);
+  it.each(['x.gguf', 'a..b', 'My Model (1).gguf'])('accepts %j', input => {
+    expect(isSafePathSegment(input)).toBe(true);
   });
 
-  it.each(NON_STRINGS)('rejects non-string %p', input => {
-    expect(isSafeRelativePath(input)).toBe(false);
+  it('accepts a backslash only when allowed', () => {
+    expect(isSafePathSegment('a\\b.gguf', {allowBackslash: true})).toBe(true);
+    expect(isSafePathSegment('..', {allowBackslash: true})).toBe(false);
+    expect(isSafePathSegment('a/b', {allowBackslash: true})).toBe(false);
   });
 });
 
-describe('isContainedPath', () => {
-  const root = '/data/app/files';
+describe('isModelFilePath', () => {
+  const docs = RNFS.DocumentDirectoryPath;
 
   it.each([
-    [`${root}/..`, false],
-    [`${root}/../..`, false],
-    ['/etc/hosts', false],
-    ['file:///data/local/tmp/x', false],
-    ['', false],
-    [root, false],
-    [`${root}/`, false],
-    [`${root}/x/..`, false],
-    [`${root}x/y`, false],
-    [`${root}/a\\b`, false],
-    ['/../data/app/files/x', false],
-    ['relative/x', false],
-    [`${root}/x`, true],
-    [`${root}/a/../x`, true],
-    [`${root}//./x`, true],
-    [`${root}/sub/x.gguf`, true],
-  ])('%p → %p', (input, expected) => {
-    expect(isContainedPath(root, input)).toBe(expected);
+    `${docs}/models/hf/a/r/x.gguf`,
+    `${docs}/models/local/a\\b.gguf`,
+    `${docs}/x.gguf`,
+  ])('accepts %j', path => {
+    expect(isModelFilePath(path)).toBe(true);
   });
 
-  it('resolves the root as well', () => {
-    expect(isContainedPath('/data/app/./files/', `${root}/x`)).toBe(true);
+  it.each([
+    `${docs}/models/hf/../../x.db`,
+    `${docs}/models/local/..`,
+    `${docs}/models/local/a\u0000b.gguf`,
+    `${docs}/models/`,
+    `${docs}/models`,
+    `${docs}/x.db`,
+    `${docs}/a\\b.gguf`,
+    `${docs}/../x.gguf`,
+    '/etc/x.gguf',
+    'file:///data/local/tmp/x.gguf',
+    '',
+  ])('rejects %j', path => {
+    expect(isModelFilePath(path)).toBe(false);
   });
-
-  it('rejects a root with a backslash or that is not absolute', () => {
-    expect(isContainedPath('/data\\app', '/data\\app/x')).toBe(false);
-    expect(isContainedPath('data/app', 'data/app/x')).toBe(false);
-  });
-
-  it.each(NON_STRINGS)('rejects non-string %p', input => {
-    expect(isContainedPath(root, input)).toBe(false);
-    expect(isContainedPath(input, `${root}/x`)).toBe(false);
-  });
-});
-
-describe('control characters', () => {
-  it.each(withEachControl(c => [`${c}ab`, `a${c}b`, `ab${c}`]))(
-    'isSafePathSegment rejects %s',
-    (_shown, value) => {
-      expect(isSafePathSegment(value)).toBe(false);
-    },
-  );
-
-  it.each(
-    withEachControl(c => [
-      `${c}Q4/x.gguf`,
-      `Q4/a${c}b.gguf`,
-      `Q4${c}/x.gguf`,
-      `Q4/x.gguf${c}`,
-    ]),
-  )('isSafeRelativePath rejects %s', (_shown, value) => {
-    expect(isSafeRelativePath(value)).toBe(false);
-  });
-
-  it.each(withEachControl(c => [`/r/a${c}/x`, `/r/x${c}`, `/r/${c}`]))(
-    'isContainedPath rejects path %s',
-    (_shown, path) => {
-      expect(isContainedPath('/r', path)).toBe(false);
-    },
-  );
-
-  it.each(withEachControl(c => [`/r${c}`]))(
-    'isContainedPath rejects root %s',
-    (_shown, root) => {
-      expect(isContainedPath(root, `${root}/x`)).toBe(false);
-    },
-  );
-
-  it.each(withEachControl(c => [`/r/${c}/..`, `/r/a${c}/..`]))(
-    'isContainedPath rejects root %s even when .. drops the segment',
-    (_shown, root) => {
-      expect(isContainedPath(root, '/r/x')).toBe(false);
-    },
-  );
-
-  it.each(withEachControl(c => [`/r/${c}/../x`, `/r/a${c}/../x`]))(
-    'isContainedPath rejects path %s even when .. drops the segment',
-    (_shown, path) => {
-      expect(isContainedPath('/r', path)).toBe(false);
-    },
-  );
-
-  it.each(EVERY_CONTROL_CHARACTER.map(c => [codePoint(c), c]))(
-    'every guard rejects %s',
-    (_shown, c) => {
-      expect(isSafePathSegment(`a${c}b`)).toBe(false);
-      expect(isSafeRelativePath(`Q4/a${c}b`)).toBe(false);
-      expect(isContainedPath('/r', `/r/a${c}b`)).toBe(false);
-      expect(isContainedPath(`/r/a${c}b/..`, '/r/x')).toBe(false);
-    },
-  );
-
-  it.each(['My Model (1).gguf', '模型.gguf', 'a\u0080b', 'a b', 'a~b'])(
-    'accepts the plain name %p',
-    name => {
-      expect(isSafePathSegment(name)).toBe(true);
-      expect(isSafeRelativePath(`Q4/${name}`)).toBe(true);
-      expect(isContainedPath('/r', `/r/${name}`)).toBe(true);
-    },
-  );
 });

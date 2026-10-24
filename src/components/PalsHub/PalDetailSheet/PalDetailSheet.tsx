@@ -115,10 +115,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       }
     };
 
-    const thumbnailUri = displayPal.thumbnail_url
-      ? getFullThumbnailUri(displayPal.thumbnail_url)
-      : undefined;
-
     const formatDate = (dateString: string) => {
       return new Date(dateString).toLocaleDateString();
     };
@@ -127,8 +123,11 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       <View style={styles.headerSection}>
         <View style={styles.headerRow}>
           <View style={styles.thumbnailContainer}>
-            {thumbnailUri ? (
-              <Image source={{uri: thumbnailUri}} style={styles.thumbnail} />
+            {displayPal.thumbnail_url ? (
+              <Image
+                source={{uri: getFullThumbnailUri(displayPal.thumbnail_url)}}
+                style={styles.thumbnail}
+              />
             ) : (
               <View style={styles.thumbnailPlaceholder}>
                 <UserIcon stroke={theme.colors.onSurfaceVariant} />

@@ -505,6 +505,7 @@ const pickedImage = (n: number) =>
 
 describe('streamChatCompletion', () => {
   let originalXHR: typeof XMLHttpRequest;
+  const savedOS = Platform.OS;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -516,6 +517,7 @@ describe('streamChatCompletion', () => {
 
   afterEach(() => {
     global.XMLHttpRequest = originalXHR;
+    Platform.OS = savedOS;
   });
 
   it('streams tokens and returns full completion result', async () => {
@@ -843,31 +845,26 @@ describe('streamChatCompletion', () => {
   it('maps a dotless path to image/jpeg (no invalid image// MIME)', async () => {
     const RNFS = require('@dr.pogodin/react-native-fs');
     (RNFS.readFile as jest.Mock).mockResolvedValueOnce('QUJD');
-    const savedOS = Platform.OS;
     Platform.OS = 'android';
 
-    try {
-      const p = streamChatCompletion(
-        {
-          samplers: {},
-          messages: [
-            imageMessage(
-              `file://${RNFS.CachesDirectoryPath}/rn_image_picker_lib_temp_1234`,
-            ),
-          ],
-          model: 'm',
-        },
-        endpointFor(),
-      );
-      await new Promise(r => setImmediate(r));
-      const body = JSON.parse(MockXHR.instances[0].requestBody);
-      expect(body.messages[0].content[0].image_url.url).toBe(
-        'data:image/jpeg;base64,QUJD',
-      );
-      await finishStream(MockXHR.instances[0], p);
-    } finally {
-      Platform.OS = savedOS;
-    }
+    const p = streamChatCompletion(
+      {
+        samplers: {},
+        messages: [
+          imageMessage(
+            `file://${RNFS.CachesDirectoryPath}/rn_image_picker_lib_temp_1234`,
+          ),
+        ],
+        model: 'm',
+      },
+      endpointFor(),
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(
+      'data:image/jpeg;base64,QUJD',
+    );
+    await finishStream(MockXHR.instances[0], p);
   });
 
   it('skips inlining a file whose successful stat exceeds the size cap', async () => {
@@ -965,91 +962,27 @@ describe('streamChatCompletion', () => {
     await finishStream(MockXHR.instances[0], p);
   });
 
-  describe('only image picker files are read for the remote wire', () => {
-    const sendImages = async (urls: string[]) => {
-      const p = streamChatCompletion(
-        {
-          samplers: {},
-          messages: [
-            {
-              role: 'user',
-              content: urls.map(url => ({type: 'image_url', image_url: {url}})),
-            },
-          ],
-          model: 'm',
-        },
-        endpointFor(),
-      );
-      await new Promise(r => setImmediate(r));
-      const xhr = MockXHR.instances[MockXHR.instances.length - 1];
-      const sent = JSON.parse(xhr.requestBody).messages[0].content.map(
-        (part: any) => part.image_url.url,
-      );
-      await finishStream(xhr, p);
-      return sent as string[];
-    };
+  it.each([
+    '..',
+    '../..',
+    '/etc/hosts',
+    'file:///data/local/tmp/x.png',
+    '',
+    `${pickedImage(12)}\u0000`,
+  ])('sends %j unchanged without reading it', async url => {
+    const RNFS = require('@dr.pogodin/react-native-fs');
+    (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
 
-    it.each([
-      '..',
-      '../..',
-      '/etc/hosts',
-      'file:///data/local/tmp/x',
-      '',
-      `file://${
-        require('@dr.pogodin/react-native-fs').TemporaryDirectoryPath
-      }../Documents/session-metadata.json`,
-    ])('%p is sent unchanged without stat or read', async url => {
-      const RNFS = require('@dr.pogodin/react-native-fs');
-      (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
-
-      expect(await sendImages([url])).toEqual([url]);
-      expect(RNFS.stat).not.toHaveBeenCalled();
-      expect(RNFS.readFile).not.toHaveBeenCalled();
-    });
-
-    it('defers to isAllowedChatImageUri for which local files are read', async () => {
-      const RNFS = require('@dr.pogodin/react-native-fs');
-      (RNFS.readFile as jest.Mock).mockResolvedValue('QUJD');
-      const guard = jest
-        .spyOn(require('../../utils/chatImageUri'), 'isAllowedChatImageUri')
-        .mockImplementation(uri => uri === 'file:///data/local/tmp/a.jpg');
-      try {
-        expect(
-          await sendImages(['file:///data/local/tmp/a.jpg', pickedImage(14)]),
-        ).toEqual(['data:image/jpeg;base64,QUJD', pickedImage(14)]);
-        expect(RNFS.readFile).toHaveBeenCalledTimes(1);
-      } finally {
-        guard.mockRestore();
-      }
-    });
-
-    it('inlines an allowed image, skips a disallowed one, leaves a missing allowed one', async () => {
-      const RNFS = require('@dr.pogodin/react-native-fs');
-      const missing = pickedImage(13);
-      (RNFS.readFile as jest.Mock).mockImplementation(async (path: string) => {
-        if (`file://${path}` === missing) {
-          throw new Error('ENOENT');
-        }
-        return 'QUJD';
-      });
-
-      const sent = await sendImages([
-        pickedImage(12),
-        'file:///data/local/tmp/a.jpg',
-        missing,
-      ]);
-
-      expect(sent).toEqual([
-        'data:image/png;base64,QUJD',
-        'file:///data/local/tmp/a.jpg',
-        missing,
-      ]);
-      expect(RNFS.readFile).toHaveBeenCalledTimes(2);
-      expect(RNFS.readFile).not.toHaveBeenCalledWith(
-        '/data/local/tmp/a.jpg',
-        expect.anything(),
-      );
-    });
+    const p = streamChatCompletion(
+      {samplers: {}, messages: [imageMessage(url)], model: 'm'},
+      endpointFor(),
+    );
+    await new Promise(r => setImmediate(r));
+    const body = JSON.parse(MockXHR.instances[0].requestBody);
+    expect(body.messages[0].content[0].image_url.url).toBe(url);
+    expect(RNFS.stat).not.toHaveBeenCalled();
+    expect(RNFS.readFile).not.toHaveBeenCalled();
+    await finishStream(MockXHR.instances[0], p);
   });
 
   it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {

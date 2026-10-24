@@ -45,7 +45,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
-import {isModelFilePath, MODEL_PATH_REFUSED} from '../utils/modelPathGuard';
+import {isModelFilePath} from '../utils/pathGuard';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import {stopQuietly} from '../utils/stopQuietly';
@@ -178,9 +178,6 @@ const isRegularFile = async (path: string): Promise<boolean> => {
     return false;
   }
 };
-
-const isLocalModel = (model: Model): boolean =>
-  model.isLocal || model.origin === ModelOrigin.LOCAL;
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
@@ -1654,7 +1651,7 @@ class ModelStore {
 
     try {
       const destinationPath = await this.getModelFullPath(model);
-      if (!isModelFilePath(destinationPath, {local: false})) {
+      if (!isModelFilePath(destinationPath)) {
         throw new Error(`Invalid model download path: ${destinationPath}`);
       }
       const authToken = hfStore.shouldUseToken ? hfStore.hfToken : null;
@@ -1819,10 +1816,7 @@ class ModelStore {
         await this.releaseContext(true); // Clear active model and all related state
       }
 
-      if (
-        isModelFilePath(filePath, {local: true}) &&
-        (await isRegularFile(filePath))
-      ) {
+      if (isModelFilePath(filePath) && (await isRegularFile(filePath))) {
         try {
           await RNFS.unlink(filePath);
         } catch (err) {
@@ -1839,10 +1833,7 @@ class ModelStore {
       console.log('deleting: ', filePath);
 
       try {
-        if (
-          isModelFilePath(filePath, {local: false}) &&
-          (await isRegularFile(filePath))
-        ) {
+        if (isModelFilePath(filePath) && (await isRegularFile(filePath))) {
           await RNFS.unlink(filePath);
 
           // Check if we need to release context (if this model is currently active)
@@ -1896,11 +1887,6 @@ class ModelStore {
         console.warn(
           '[ModelStore] Cannot fetch GGUF metadata: model path is undefined',
         );
-        return;
-      }
-
-      if (!isModelFilePath(filePath, {local: isLocalModel(model)})) {
-        console.warn(`[ModelStore] ${MODEL_PATH_REFUSED}:`, filePath);
         return;
       }
 
@@ -2378,23 +2364,6 @@ class ModelStore {
     );
 
     try {
-      const draftModel = pairedDraftModel(draftConfig);
-      const nativePaths: [string | undefined, boolean][] = [
-        [filePath, isLocalModel(model)],
-        [
-          effectiveSettings.model_draft,
-          !!draftModel && isLocalModel(draftModel),
-        ],
-        [isMultimodalInit ? mmProjPath : undefined, false],
-      ];
-      if (
-        nativePaths.some(
-          ([path, local]) => !!path && !isModelFilePath(path, {local}),
-        )
-      ) {
-        throw new Error(uiStore.l10n.errors.modelPathRefused);
-      }
-
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);
 
@@ -4032,10 +4001,6 @@ class ModelStore {
         return;
       }
       const filePath = await this.getModelFullPath(model);
-      if (!isModelFilePath(filePath, {local: isLocalModel(model)})) {
-        console.warn(`[ModelStore] ${MODEL_PATH_REFUSED}:`, filePath);
-        return;
-      }
       const hash = await getSHA256Hash(filePath);
       runInAction(() => {
         model.hash = hash;

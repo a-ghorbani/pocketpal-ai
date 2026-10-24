@@ -11,8 +11,6 @@ import {
 } from '../../../../jest/test-utils';
 
 import {ModelsScreen} from '../ModelsScreen';
-import {isModelFilePath} from '../../../utils/modelPathGuard';
-import {withEachControl} from '../../../../jest/fixtures/controlCharacters';
 
 import {modelStore, uiStore} from '../../../store';
 import {
@@ -132,54 +130,35 @@ describe('ModelsScreen', () => {
   describe('picked file name', () => {
     const localDir = `${RNFS.DocumentDirectoryPath}/models/local`;
 
-    const pickAndCopy = async (file: {uri: string; name: string}) => {
-      (pick as jest.Mock).mockResolvedValue([file]);
-      (RNFS.exists as jest.Mock).mockImplementation(
-        async (path: string) => !path.startsWith(`${localDir}/`),
-      );
+    const copyTarget = async (name: string, uri = '/mock/file/path') => {
+      (pick as jest.Mock).mockResolvedValue([{uri, name}]);
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
       const {getByTestId} = render(<ModelsScreen />);
       fireEvent.press(getByTestId('fab-group'));
-      await waitFor(() =>
-        expect(
-          getByTestId('local-fab', {includeHiddenElements: true}),
-        ).toBeTruthy(),
-      );
       await act(async () => {
         fireEvent.press(
           getByTestId('local-fab', {includeHiddenElements: true}),
         );
       });
       await waitFor(() => expect(RNFS.copyFile).toHaveBeenCalled());
-      const [, target] = (RNFS.copyFile as jest.Mock).mock.calls[0];
-      expect(isModelFilePath(target, {local: true})).toBe(true);
-      return target as string;
+      return (RNFS.copyFile as jest.Mock).mock.calls[0][1] as string;
     };
 
     it.each([
-      ['..', '/mock/file/path'],
-      ['../..', '/mock/file/path'],
-      ['/etc/hosts', '/mock/file/path'],
-      ['file:///data/local/tmp/x', '/mock/file/path'],
-      ['../x.gguf', '/mock/file/path'],
+      ['..', undefined],
+      ['../x.gguf', undefined],
+      ['/etc/hosts', undefined],
+      ['file:///data/local/tmp/x', undefined],
       ['', 'file:///mock/dir/'],
-      ['', 'file:///mock/dir/..'],
-    ])('name %p (uri %s) falls back to file_<uuid>', async (name, uri) => {
-      const target = await pickAndCopy({uri, name});
-      expect(target).toMatch(new RegExp(`^${localDir}/file_[^/]+$`));
+      ['a\u0000b.gguf', undefined],
+    ])('name %j falls back to file_<uuid>', async (name, uri) => {
+      expect(await copyTarget(name, uri)).toMatch(
+        new RegExp(`^${localDir}/file_[^/]+$`),
+      );
     });
 
-    it.each(withEachControl(c => [`a${c}b.gguf`, `${c}x.gguf`, `x.gguf${c}`]))(
-      'name %s falls back to file_<uuid>',
-      async (_shown, name) => {
-        const target = await pickAndCopy({uri: '/mock/file/path', name});
-        expect(target).toMatch(new RegExp(`^${localDir}/file_[^/]+$`));
-      },
-    );
-
-    it('keeps a plain file name', async () => {
-      expect(await pickAndCopy({uri: '/mock/file/path', name: 'x.gguf'})).toBe(
-        `${localDir}/x.gguf`,
-      );
+    it.each(['x.gguf', 'a\\b.gguf'])('keeps the name %j', async name => {
+      expect(await copyTarget(name)).toBe(`${localDir}/${name}`);
     });
   });
 
