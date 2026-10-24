@@ -1583,6 +1583,8 @@
     "cancelLabel": "Cancel voice input",
     "transcribingLabel": "Transcribing…",
     "setupLabel": "Set up voice input",
+    "setupSheetTitle": "Set up voice input",
+    "setupSheetBody": "One quick download, then you can dictate offline.",
     "settingTitle": "Voice input",
     "settingDescription": "Tap the mic in chat to dictate; speech is transcribed on your device.",
     "unsupportedDeviceHelper": "This device is below the recommended spec. Voice input will likely be slow or may fail.",

@@ -68,6 +68,7 @@ export * from './ToolErrorBlock';
 export * from './ToolMetricsFooter';
 export * from './ToolUsedChip';
 export * from './MicButton';
+export * from './MicSetupSheet';
 export * from './VoiceCloud';
 export * from './VoiceModeView';
 export * from './VoiceBar';
