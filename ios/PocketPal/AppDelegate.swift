@@ -48,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     if #available(iOS 18.0, *) {
       iOS18OrLater = true
     }
-    let supportsApple6 = MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false
+    let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)
     if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {
       setenv("GGML_METAL_DEVICES", "0", 1)
     }
