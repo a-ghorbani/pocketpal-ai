@@ -1,0 +1,32 @@
+diff --git a/node_modules/whisper.rn/android/src/main/CMakeLists.txt b/node_modules/whisper.rn/android/src/main/CMakeLists.txt
+index 8d17d4f..c5a3772 100644
+--- a/node_modules/whisper.rn/android/src/main/CMakeLists.txt
++++ b/node_modules/whisper.rn/android/src/main/CMakeLists.txt
+@@ -114,6 +114,7 @@ endfunction()
+ build_library("rnwhisper" "generic" "")
+ 
+ if (${ANDROID_ABI} STREQUAL "arm64-v8a")
++    build_library("rnwhisper_v8fp16_va_2_dotprod" "arm" "-march=armv8.2-a+fp16+dotprod")
+     build_library("rnwhisper_v8fp16_va_2" "arm" "-march=armv8.2-a+fp16")
+     build_library("rnwhisper_v8" "arm" "-march=armv8-a")
+ elseif (${ANDROID_ABI} STREQUAL "armeabi-v7a")
+diff --git a/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java b/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
+index 10e4aa2..facf488 100644
+--- a/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
++++ b/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
+@@ -38,9 +38,15 @@ public class RNWhisper {
+ 
+     String cpuFeatures = getCpuFeatures();
+     boolean hasFp16 = cpuFeatures.contains("fp16") || cpuFeatures.contains("fphp");
++    boolean hasDotProd = cpuFeatures.contains("asimddp") || cpuFeatures.contains("dotprod");
+ 
+     try {
+       if (isArm64V8a()) {
++        if (hasFp16 && hasDotProd && tryLoadLibrary("rnwhisper_v8fp16_va_2_dotprod")) {
++          libsLoaded = true;
++          return true;
++        }
++
+         if (hasFp16 && tryLoadLibrary("rnwhisper_v8fp16_va_2")) {
+           libsLoaded = true;
+           return true;
