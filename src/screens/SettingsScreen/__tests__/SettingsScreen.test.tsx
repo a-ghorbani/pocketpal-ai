@@ -1507,6 +1507,7 @@ describe('SettingsScreen', () => {
         });
         const {queryByTestId} = renderSettings();
         expect(queryByTestId('asr-install-small') != null).toBe(shown);
+        expect(queryByTestId('asr-models-header') != null).toBe(shown);
       },
     );
 
@@ -1520,6 +1521,9 @@ describe('SettingsScreen', () => {
         getByText('More accurate, slower. Better for other languages'),
       ).toBeTruthy();
       expect(getByText('Very slow on most phones')).toBeTruthy();
+      expect(
+        getByText('Used by voice input and hands-free voice.'),
+      ).toBeTruthy();
     });
 
     it('marks the in-use tier and switches to another installed one', () => {
