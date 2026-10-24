@@ -185,7 +185,10 @@ describe('useVoiceMode', () => {
       model.loadedModelBytes = 1e9;
       model.availableMemoryCeiling = 5e9;
       model.largestSuccessfulLoad = 4e9;
+      asrStore.selectedTier = 'base';
       asrStore.downloadStates.base = 'ready';
+      asrStore.downloadStates.small = 'not_installed';
+      asrStore.downloadStates['large-turbo'] = 'not_installed';
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
       tts.phononSupported = false;
     });
@@ -639,6 +642,108 @@ describe('useVoiceMode', () => {
       });
       expect(voiceModeStore.phase).toBe('listening');
       expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).toHaveBeenCalledWith('base');
+    });
+
+    describe('with Small in use', () => {
+      const tightFor = (tier: 'base' | 'small') =>
+        5e9 * ASR_IOS_CEILING_SHARE -
+        ASR_TIERS[tier].runtimeBytes -
+        TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+
+      beforeEach(() => {
+        runInAction(() => {
+          asrStore.selectedTier = 'small';
+          asrStore.downloadStates.small = 'ready';
+        });
+      });
+
+      it('prepares Small', async () => {
+        const {enter, engine} = renderVoiceMode();
+        await enter();
+        expect(engine.prepare).toHaveBeenCalledWith('small');
+      });
+
+      it('opens setup when Small is not installed, even with base ready', async () => {
+        runInAction(() => {
+          asrStore.downloadStates.small = 'not_installed';
+        });
+        const {enter, hook, engine} = renderVoiceMode();
+        await enter();
+        expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it("budgets Small's memory and names it on the memory sheet", async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook} = renderVoiceMode();
+        await enter();
+        expect(hook.result.current.sheet).toMatchObject({
+          kind: 'memory',
+          fit: {status: 'tight', sttTier: 'small'},
+        });
+        const sheet = hook.result.current.sheet;
+        expect(
+          sheet?.kind === 'memory' && sheet.fit.breakdown.rows,
+        ).toContainEqual({kind: 'stt', bytes: ASR_TIERS.small.runtimeBytes});
+      });
+
+      it('Continue anyway re-checks entry when the tier changed under the sheet', async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook, engine} = renderVoiceMode();
+        await enter();
+        runInAction(() => {
+          asrStore.downloadStates['large-turbo'] = 'ready';
+          asrStore.selectedTier = 'large-turbo';
+        });
+
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        expect(hook.result.current.sheet).toMatchObject({
+          kind: 'memory',
+          fit: {sttTier: 'large-turbo'},
+        });
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it('Continue anyway re-checks entry when the tier is no longer installed', async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook, engine} = renderVoiceMode();
+        await enter();
+        runInAction(() => {
+          asrStore.downloadStates.small = 'not_installed';
+        });
+
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it('Continue anyway enters with Small when nothing changed', async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook, engine} = renderVoiceMode();
+        await enter();
+
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        expect(engine.prepare).toHaveBeenCalledWith('small');
+        expect(voiceModeStore.phase).toBe('listening');
+      });
     });
 
     describe('when the model changed while the memory sheet was open', () => {

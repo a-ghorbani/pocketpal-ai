@@ -13,7 +13,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: android(7.4e9),
       chatBytes: 3.23e9,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('wont_fit');
@@ -23,7 +23,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: android(7.4e9),
       chatBytes: 1.4e9,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('fits');
@@ -43,7 +43,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: android(7.4e9),
       chatBytes: budget - sttBytes - ttsBytes / 2,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('tight');
@@ -53,7 +53,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 2e9,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('fits');
@@ -72,7 +72,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 4e9 * ASR_IOS_CEILING_SHARE - sttBytes - ttsBytes / 2,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('tight');
@@ -82,7 +82,7 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: ios(4e9),
       chatBytes: 4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('wont_fit');
@@ -97,7 +97,7 @@ describe('voiceMemoryFit', () => {
       const fit = voiceMemoryFit({
         memory: ios(4.2e9),
         chatBytes,
-        sttBytes,
+        sttTier: 'base',
         ttsBytes,
       });
       expect(fit.status).toBe(status);
@@ -108,17 +108,41 @@ describe('voiceMemoryFit', () => {
     const fit = voiceMemoryFit({
       memory: ios(0),
       chatBytes: 9e9,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('fits');
+  });
+
+  it('counts the given tier and names it on the fit', () => {
+    const fit = voiceMemoryFit({
+      memory: android(7.4e9),
+      chatBytes: 1.4e9,
+      sttTier: 'small',
+      ttsBytes,
+    });
+    expect(fit.sttTier).toBe('small');
+    expect(fit.breakdown.rows).toContainEqual({
+      kind: 'stt',
+      bytes: 650_000_000,
+    });
+  });
+
+  it('names the tier on the early fits result too', () => {
+    const fit = voiceMemoryFit({
+      memory: null,
+      chatBytes: 0,
+      sttTier: 'large-turbo',
+      ttsBytes,
+    });
+    expect(fit.sttTier).toBe('large-turbo');
   });
 
   it('fits when memory could not be read', () => {
     const fit = voiceMemoryFit({
       memory: null,
       chatBytes: 9e9,
-      sttBytes,
+      sttTier: 'base',
       ttsBytes,
     });
     expect(fit.status).toBe('fits');
@@ -137,7 +161,7 @@ describe('voiceMemoryFit', () => {
       const fit = voiceMemoryFit({
         memory,
         chatBytes,
-        sttBytes,
+        sttTier: 'base',
         ttsBytes,
       });
       expect(fit.status === 'wont_fit').toBe(

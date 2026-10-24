@@ -1,3 +1,5 @@
+import type {AsrTier} from '../asr';
+
 /** How one voice turn ended. Failures name the stage that failed. */
 export type VoiceTurnOutcome =
   | 'empty'
@@ -37,8 +39,8 @@ export interface VoiceTurn {
  */
 export interface VoiceEngine {
   readonly id: 'cascade';
-  /** Makes the speech models resident for the session. */
-  prepare(): Promise<void>;
+  /** Makes the speech models resident for the session; turns use `tier`. */
+  prepare(tier: AsrTier): Promise<void>;
   /** Frees them; resolves once any in-flight decode has stopped. */
   release(): Promise<void>;
   runTurn(

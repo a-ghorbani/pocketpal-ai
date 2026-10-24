@@ -48,7 +48,11 @@ const renderSheet = (fit: VoiceMemoryFit | null) =>
 
 describe('VoiceMemorySheet', () => {
   it('when tight, shows the three models, needed vs available and both actions', () => {
-    const {getByText, getByTestId} = renderSheet({status: 'tight', breakdown});
+    const {getByText, getByTestId} = renderSheet({
+      status: 'tight',
+      sttTier: 'base',
+      breakdown,
+    });
 
     expect(getByText(strings.memoryTightTitle)).toBeTruthy();
     expect(getByText('Chat model · Gemma')).toBeTruthy();
@@ -67,6 +71,7 @@ describe('VoiceMemorySheet', () => {
   it("when it won't fit, offers no Continue anyway", () => {
     const {getByText, queryByTestId, getByTestId} = renderSheet({
       status: 'wont_fit',
+      sttTier: 'base',
       breakdown,
     });
 
@@ -78,6 +83,7 @@ describe('VoiceMemorySheet', () => {
   it('shows only the rows the fit counts', () => {
     const {queryByText, getByTestId, getByText} = renderSheet({
       status: 'tight',
+      sttTier: 'base',
       breakdown: {
         rows: [
           {kind: 'stt', bytes: 0.4e9},
