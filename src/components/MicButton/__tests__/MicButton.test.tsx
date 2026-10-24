@@ -153,6 +153,23 @@ describe('MicButton', () => {
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 
+  describe('with a tier ready', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('keeps the keyboard open when it starts a capture', () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      const onStart = jest.fn();
+      const {getByTestId} = renderMic(onStart);
+
+      fireEvent.press(getByTestId('mic-button'));
+
+      expect(onStart).toHaveBeenCalledTimes(1);
+      expect(dismiss).not.toHaveBeenCalled();
+    });
+  });
+
   it('colours the icon through `color`, which its currentColor strokes use', () => {
     const {getByTestId} = renderMic();
     const icon = getByTestId('mic-button').findAll(

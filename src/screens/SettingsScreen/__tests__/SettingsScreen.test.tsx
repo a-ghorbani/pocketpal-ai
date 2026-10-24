@@ -2,6 +2,7 @@ import React from 'react';
 import {getBackendDevicesInfo} from 'llama.rn';
 import {Platform, Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
+import {Divider} from 'react-native-paper';
 
 import {
   fireEvent,
@@ -1510,6 +1511,21 @@ describe('SettingsScreen', () => {
         expect(queryByTestId('asr-models-header') != null).toBe(shown);
       },
     );
+
+    it('adds one divider with the model section, none without it', () => {
+      const dividers = (handsFree: boolean) => {
+        runInAction(() => {
+          modelStore.deviceTier = 'low';
+          asrStore.userASROverride = false;
+          voiceModeStore.userVoiceModeOverride = handsFree;
+        });
+        const {UNSAFE_queryAllByType, unmount} = renderSettings();
+        const count = UNSAFE_queryAllByType(Divider).length;
+        unmount();
+        return count;
+      };
+      expect(dividers(true) - dividers(false)).toBe(1);
+    });
 
     it('labels each tier with its speed and accuracy', () => {
       runInAction(() => {
