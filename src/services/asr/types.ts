@@ -98,7 +98,7 @@ export interface AsrEngine {
    */
   transcribe(
     pcmBase64Int16: string,
-    opts?: {tier: AsrTier; language?: string; prompt?: string},
+    opts: {tier: AsrTier; language?: string; prompt?: string},
   ): Promise<AsrTranscript>;
   /** Stop an in-flight `transcribe`, which then resolves to empty text. */
   cancelTranscription(): Promise<void>;

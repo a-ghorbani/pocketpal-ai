@@ -50,8 +50,10 @@ export class ASRStore {
   userASROverride: boolean | null = null;
   private initialized: boolean = false;
   private appStateSubscription: NativeEventSubscription | null = null;
+  private hydrated: Promise<void>;
+  private reconciled: Promise<void> = Promise.resolve();
 
-  // Persisted: which tier the user installed / uses.
+  // Persisted: the in-use tier, shared by dictation and voice mode.
   selectedTier: AsrTier = ASR_DEFAULT_TIER;
   // Persisted: the language whisper detected on the first transcription,
   // passed on every later one. null = detect on the next transcription.
@@ -88,12 +90,21 @@ export class ASRStore {
   waitingForChat: boolean = false;
 
   constructor() {
-    makeAutoObservable(this, {inputLevels: observable.ref}, {autoBind: true});
-    makePersistable(this, {
+    makeAutoObservable<ASRStore, 'hydrated' | 'reconciled'>(
+      this,
+      {inputLevels: observable.ref, hydrated: false, reconciled: false},
+      {autoBind: true},
+    );
+    this.hydrated = makePersistable(this, {
       name: 'ASRStore',
       properties: ['userASROverride', 'selectedTier', 'spokenLanguage'],
       storage: AsyncStorage,
-    });
+    }).then(
+      () => undefined,
+      err => {
+        console.warn('[ASRStore] hydration failed:', err);
+      },
+    );
   }
 
   /** True when the device tier is high enough for voice input by default. */
@@ -154,9 +165,15 @@ export class ASRStore {
     return this.selectedTierState === 'ready';
   }
 
+  /** The tier a setup sheet offers. */
+  get setupTier(): AsrTier {
+    return this.isSelectedTierReady ? this.selectedTier : ASR_DEFAULT_TIER;
+  }
+
   /**
    * Initialize the store. Idempotent — only the first call does work.
-   * Derives each tier's install state from disk.
+   * Derives each tier's install state from disk, then reconciles the in-use
+   * tier against it.
    */
   async init(): Promise<void> {
     if (this.initialized) {
@@ -164,25 +181,50 @@ export class ASRStore {
     }
     this.initialized = true;
 
-    const results = await Promise.all(
-      ASR_TIER_ORDER.map(async tier => {
-        try {
-          return {tier, installed: await whisperAsrEngine.isInstalled(tier)};
-        } catch (err) {
-          console.warn(`[ASRStore] ${tier} isInstalled check failed:`, err);
-          return {tier, installed: false};
-        }
-      }),
-    );
-    runInAction(() => {
-      for (const {tier, installed} of results) {
-        this.downloadStates[tier] = installed ? 'ready' : 'not_installed';
-      }
-    });
+    this.reconciled = this.reconcileWithDisk();
+    await this.reconciled;
 
     this.appStateSubscription = AppState.addEventListener(
       'change',
       this.handleAppStateChange,
+    );
+  }
+
+  private async reconcileWithDisk(): Promise<void> {
+    const [installed] = await Promise.all([
+      this.readInstalledTiers(),
+      this.hydrated,
+    ]);
+    runInAction(() => {
+      for (const tier of installed) {
+        if (this.downloadStates[tier] !== 'downloading') {
+          this.downloadStates[tier] = 'ready';
+        }
+      }
+      if (!this.isSelectedTierReady) {
+        this.setSelectedTier(this.fallbackTier());
+      }
+    });
+  }
+
+  private async readInstalledTiers(): Promise<AsrTier[]> {
+    const installed = await Promise.all(
+      ASR_TIER_ORDER.map(async tier => {
+        try {
+          return await whisperAsrEngine.isInstalled(tier);
+        } catch (err) {
+          console.warn(`[ASRStore] ${tier} isInstalled check failed:`, err);
+          return false;
+        }
+      }),
+    );
+    return ASR_TIER_ORDER.filter((_, i) => installed[i]);
+  }
+
+  private fallbackTier(): AsrTier {
+    return (
+      ASR_TIER_ORDER.find(t => this.downloadStates[t] === 'ready') ??
+      ASR_DEFAULT_TIER
     );
   }
 
@@ -211,7 +253,13 @@ export class ASRStore {
     this.userASROverride = value;
   }
 
-  setSelectedTier(tier: AsrTier): void {
+  selectTier(tier: AsrTier): void {
+    if (this.downloadStates[tier] === 'ready') {
+      this.setSelectedTier(tier);
+    }
+  }
+
+  private setSelectedTier(tier: AsrTier): void {
     this.selectedTier = tier;
   }
 
@@ -236,10 +284,8 @@ export class ASRStore {
 
   // --- Model download -----------------------------------------------------
 
-  async downloadModel(
-    tier: AsrTier,
-    {select = true}: {select?: boolean} = {},
-  ): Promise<void> {
+  /** Installs a tier; it becomes the in-use tier only if none is ready yet. */
+  async downloadModel(tier: AsrTier): Promise<void> {
     if (this.downloadStates[tier] === 'downloading') {
       return;
     }
@@ -282,15 +328,15 @@ export class ASRStore {
           this.downloadProgress[tier] = progress;
         });
       });
+      await this.reconciled;
       runInAction(() => {
+        const firstInstall = !this.isSelectedTierReady;
         this.downloadStates[tier] = 'ready';
         this.downloadProgress[tier] = 1;
+        if (firstInstall) {
+          this.setSelectedTier(tier);
+        }
       });
-      // Dictation's installs make the tier the active one, so the mic works
-      // without a separate selection step; voice mode's base download doesn't.
-      if (select) {
-        this.setSelectedTier(tier);
-      }
     } catch (err) {
       console.warn(`[ASRStore] ${tier} download failed:`, err);
       const message = err instanceof Error ? err.message : String(err);
@@ -315,13 +361,8 @@ export class ASRStore {
       this.downloadProgress[tier] = 0;
       this.downloadError[tier] = null;
     });
-    // If the active tier was removed, reselect a remaining ready tier (or fall
-    // back to the default, which self-gates the mic to the setup affordance).
     if (tier === this.selectedTier) {
-      const nextReady = ASR_TIER_ORDER.find(
-        t => this.downloadStates[t] === 'ready',
-      );
-      this.setSelectedTier(nextReady ?? ASR_DEFAULT_TIER);
+      this.setSelectedTier(this.fallbackTier());
     }
   }
 

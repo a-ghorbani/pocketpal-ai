@@ -15,9 +15,9 @@ import {
   ASR_CHANNELS,
   ASR_CHUNK_BYTES,
   ASR_SAMPLE_RATE,
-  ASR_TIERS,
   readDeviceMemory,
 } from '../services/asr';
+import type {AsrTier} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
 import {
   Endpointer,
@@ -92,7 +92,7 @@ const withStartTimeout = (loading: Promise<void>): Promise<void> => {
 
 async function isSetupComplete(): Promise<boolean> {
   return (
-    asrStore.downloadStates.base === 'ready' &&
+    asrStore.isSelectedTierReady &&
     isVoiceModeVoice(ttsStore.currentVoice) &&
     (await isMicGranted())
   );
@@ -172,25 +172,32 @@ class VoiceModeController {
       this.showSheet({kind: 'setup'});
       return;
     }
+    const tier = asrStore.selectedTier;
     const fit = voiceMemoryFit({
       memory: await readDeviceMemory(modelStore),
       chatBytes: modelStore.loadedModelBytes ?? 0,
-      sttBytes: ASR_TIERS.base.runtimeBytes,
+      sttTier: tier,
       ttsBytes: TTS_ENGINE_RUNTIME_BYTES[voice.engine],
     });
     if (fit.status === 'fits') {
-      await this.enter();
+      await this.enter(tier);
     } else {
       this.showSheet({kind: 'memory', fit});
     }
   }
 
-  async continueAnyway(): Promise<void> {
+  /** Enters with the tier the memory sheet counted, or re-runs entry if it changed. */
+  async continueAnyway(tier: AsrTier): Promise<void> {
     await this.exiting;
     this.showSheet(null);
-    if (!this.entryBlocked()) {
-      await this.enter();
+    if (this.entryBlocked()) {
+      return;
     }
+    if (asrStore.selectedTier !== tier || !asrStore.isSelectedTierReady) {
+      await this.requestEntry(this.actions);
+      return;
+    }
+    await this.enter(tier);
   }
 
   private entryBlocked(): boolean {
@@ -232,7 +239,7 @@ class VoiceModeController {
     this.actions.openModelPicker();
   }
 
-  async enter(): Promise<void> {
+  async enter(tier: AsrTier): Promise<void> {
     await this.exiting;
     if (this.open || this.disposed) {
       return;
@@ -249,7 +256,7 @@ class VoiceModeController {
     this.setPhase('starting', 'enter');
     voiceModeStore.setPresentation('full');
     try {
-      await withStartTimeout(this.engine.prepare());
+      await withStartTimeout(this.engine.prepare(tier));
     } catch (err) {
       console.warn('[voiceMode] prepare failed:', err);
       if (session === this.session) {
@@ -645,7 +652,7 @@ export function useVoiceMode({
 
   const continueAnyway = useCallback(async () => {
     if (sheet?.kind === 'memory' && sheet.fit.status === 'tight') {
-      await controller.continueAnyway();
+      await controller.continueAnyway(sheet.fit.sttTier);
     }
   }, [controller, sheet]);
 

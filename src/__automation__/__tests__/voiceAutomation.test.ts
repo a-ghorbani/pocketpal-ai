@@ -2,7 +2,7 @@ import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import DeviceInfo from 'react-native-device-info';
 
-import {ASR_TIERS, readDeviceMemory} from '../../services/asr';
+import {readDeviceMemory} from '../../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts';
 import {voiceMemoryFit} from '../../services/voice';
 import {
@@ -72,12 +72,24 @@ describe('runVoiceCommand', () => {
     expect(voiceModeStore).toMatchObject(expected);
   });
 
-  it.each([
-    ['setup::complete', 'ready'],
-    ['setup::incomplete', 'not_installed'],
-  ])('%s sets whisper base to %s', async (cmd, state) => {
-    await runVoiceCommand(cmd);
-    expect(asrStore.downloadStates.base).toBe(state);
+  describe('setup', () => {
+    afterEach(() => {
+      runInAction(() => {
+        asrStore.selectedTier = 'base';
+        asrStore.downloadStates.small = 'not_installed';
+      });
+    });
+
+    it.each([
+      ['setup::complete', 'ready'],
+      ['setup::incomplete', 'not_installed'],
+    ])('%s sets the in-use whisper tier to %s', async (cmd, state) => {
+      runInAction(() => {
+        asrStore.selectedTier = 'small';
+      });
+      await runVoiceCommand(cmd);
+      expect(asrStore.downloadStates.small).toBe(state);
+    });
   });
 
   it.each([
@@ -95,7 +107,7 @@ describe('runVoiceCommand', () => {
       const fit = voiceMemoryFit({
         memory: await readDeviceMemory(modelStore),
         chatBytes: modelStore.loadedModelBytes ?? 0,
-        sttBytes: ASR_TIERS.base.runtimeBytes,
+        sttTier: asrStore.selectedTier,
         ttsBytes: TTS_ENGINE_RUNTIME_BYTES.supertonic,
       });
       expect(fit.status).toBe(status);

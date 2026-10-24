@@ -80,7 +80,7 @@ describe('CascadeVoiceEngine', () => {
   const engine = new CascadeVoiceEngine();
   let savedSessions: unknown;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     savedSessions = chat.sessions;
     transcribe.mockResolvedValue({
       text: 'What is the capital of France?',
@@ -102,6 +102,8 @@ describe('CascadeVoiceEngine', () => {
       tts.currentVoice = {id: 'F1', name: 'F1', engine: 'supertonic'};
       (asrStore as any).spokenLanguage = null;
     });
+    await engine.prepare('base');
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -338,9 +340,9 @@ describe('CascadeVoiceEngine', () => {
   });
 
   describe('residency', () => {
-    it('prepare loads base whisper and the voice engine', async () => {
-      await engine.prepare();
-      expect(preload).toHaveBeenCalledWith('base');
+    it('prepare loads the given whisper tier and the voice engine', async () => {
+      await engine.prepare('small');
+      expect(preload).toHaveBeenCalledWith('small');
       expect(acquire).toHaveBeenCalledWith(
         expect.objectContaining({id: 'supertonic'}),
         expect.any(Function),
@@ -349,7 +351,7 @@ describe('CascadeVoiceEngine', () => {
 
     it('logs how long each load took in dev builds, with no content', async () => {
       const log = jest.spyOn(console, 'log').mockImplementation(() => {});
-      await engine.prepare();
+      await engine.prepare('base');
       expect(log).toHaveBeenCalledWith(
         expect.stringMatching(
           /^\[voiceMode\] prepare: whisper \d+ ms, voice \d+ ms$/,
@@ -358,10 +360,33 @@ describe('CascadeVoiceEngine', () => {
 
       log.mockClear();
       (global as any).__DEV__ = false;
-      await engine.prepare();
+      await engine.prepare('base');
       (global as any).__DEV__ = true;
       expect(log).not.toHaveBeenCalled();
       log.mockRestore();
+    });
+
+    it('turns transcribe with the prepared tier', async () => {
+      await engine.prepare('small');
+      const port = makePort();
+      const turn = engine.runTurn(speech(500), port, events());
+      await flush();
+
+      expect(transcribe).toHaveBeenCalledWith(expect.any(String), {
+        tier: 'small',
+        language: undefined,
+      });
+      createTurn(port);
+      port.settle();
+      await expect(turn.done).resolves.toBe('answered');
+    });
+
+    it('a turn after release fails to transcribe instead of guessing a tier', async () => {
+      await engine.release();
+      const turn = engine.runTurn(speech(500), makePort(), events());
+
+      await expect(turn.done).resolves.toBe('transcribe_failed');
+      expect(transcribe).not.toHaveBeenCalled();
     });
 
     it('release frees whisper and the voice engine when auto-speak is off', async () => {

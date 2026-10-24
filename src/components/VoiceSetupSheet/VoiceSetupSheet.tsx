@@ -2,18 +2,14 @@ import React, {useContext, useEffect, useRef, useState} from 'react';
 import {AppState, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
-import {Button, ProgressBar, Text} from 'react-native-paper';
+import {Button, Text} from 'react-native-paper';
 
 import {Sheet} from '../Sheet';
+import {WhisperModelRow} from '../WhisperModelRow';
 import {useTheme} from '../../hooks';
 import {asrStore, ttsStore} from '../../store';
-import {L10nContext, formatBytes} from '../../utils';
+import {L10nContext} from '../../utils';
 import {t} from '../../locales';
-import {
-  ASR_DISK_HEADROOM_FACTOR,
-  ASR_INSUFFICIENT_STORAGE,
-  ASR_TIERS,
-} from '../../services/asr';
 import {isVoiceModeVoice} from '../../services/voice';
 import {
   ensureMicPermission,
@@ -22,21 +18,16 @@ import {
   type MicPermissionResult,
 } from '../../utils/asrMicPermission';
 
-const MB = 1024 * 1024;
-const BASE_BYTES = ASR_TIERS.base.estimatedBytes;
-const baseReady = () => asrStore.downloadStates.base === 'ready';
-
 interface VoiceSetupSheetProps {
   isVisible: boolean;
   onClose: () => void;
-  /** Called once whisper base, a neural voice and the mic are all ready. */
+  /** Called once whisper, a neural voice and the mic are all ready. */
   onDone: () => void;
 }
 
 /**
- * First-use setup for voice mode: the whisper base download, a neural
- * voice, then microphone access. Downloading base never changes the tier
- * dictation uses.
+ * First-use setup for voice mode: the in-use whisper tier (the default when
+ * none is installed), a neural voice, then microphone access.
  */
 export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
   ({isVisible, onClose, onDone}) => {
@@ -70,20 +61,17 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
       };
     }, [isVisible]);
 
-    const sttState = asrStore.downloadStates.base;
+    const sttState = asrStore.downloadStates[asrStore.setupTier];
     const voice = ttsStore.currentVoice;
     const voiceReady = isVoiceModeVoice(voice);
-    const lowDisk =
-      sttState === 'error' &&
-      asrStore.downloadError.base === ASR_INSUFFICIENT_STORAGE;
 
     const proceed = async () => {
       setBusy(true);
       try {
-        if (!baseReady()) {
-          await asrStore.downloadModel('base', {select: false});
+        if (!asrStore.isSelectedTierReady) {
+          await asrStore.downloadModel(asrStore.setupTier);
           if (
-            !baseReady() ||
+            !asrStore.isSelectedTierReady ||
             !visible.current ||
             AppState.currentState === 'background'
           ) {
@@ -98,29 +86,6 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
       } finally {
         setBusy(false);
       }
-    };
-
-    const renderSttStatus = () => {
-      if (sttState === 'ready') {
-        return (
-          <Text variant="bodySmall" style={{color: theme.colors.statusLoaded}}>
-            {strings.installedLabel}
-          </Text>
-        );
-      }
-      if (sttState === 'downloading') {
-        return (
-          <Text
-            variant="bodySmall"
-            style={{color: theme.colors.onSurfaceVariant}}>
-            {t(strings.sttProgress, {
-              done: formatBytes(BASE_BYTES * asrStore.downloadProgress.base, 0),
-              total: formatBytes(BASE_BYTES, 0),
-            })}
-          </Text>
-        );
-      }
-      return null;
     };
 
     const renderPrimary = () => {
@@ -180,45 +145,10 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
 
           <View
             style={[styles.card, {borderColor: theme.colors.outlineVariant}]}>
-            <View style={styles.row} testID="voice-setup-stt">
-              <View style={styles.rowHead}>
-                <View style={styles.rowText}>
-                  <Text variant="titleSmall">{strings.sttRowTitle}</Text>
-                  <Text
-                    variant="bodySmall"
-                    style={{color: theme.colors.onSurfaceVariant}}>
-                    {t(strings.sttRowDetail, {
-                      size: formatBytes(BASE_BYTES, 0),
-                    })}
-                  </Text>
-                </View>
-                {renderSttStatus()}
-              </View>
-              {sttState === 'downloading' && (
-                <ProgressBar
-                  progress={asrStore.downloadProgress.base}
-                  color={theme.colors.accent.greenStrong}
-                />
-              )}
-              {lowDisk && (
-                <Text
-                  variant="bodySmall"
-                  testID="voice-setup-low-disk"
-                  style={{color: theme.colors.error}}>
-                  {t(l10n.voiceInput.insufficientStorage, {
-                    requiredMb: Math.ceil(
-                      (BASE_BYTES * ASR_DISK_HEADROOM_FACTOR) / MB,
-                    ),
-                    freeMb: Math.floor((asrStore.freeDiskBytes ?? 0) / MB),
-                  })}
-                </Text>
-              )}
-              {sttState === 'error' && !lowDisk && (
-                <Text variant="bodySmall" style={{color: theme.colors.error}}>
-                  {strings.sttDownloadFailed}
-                </Text>
-              )}
-            </View>
+            <WhisperModelRow
+              tier={asrStore.setupTier}
+              testIDPrefix="voice-setup"
+            />
             <View
               style={[styles.divider, {backgroundColor: theme.colors.border}]}
             />
@@ -272,12 +202,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
-  },
-  rowHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   rowText: {
     flex: 1,

@@ -2,7 +2,7 @@ import {fromByteArray} from 'base64-js';
 import {when} from 'mobx';
 
 import {energyVad, int16PcmToFloat32, whisperAsrEngine} from '../asr';
-import type {AsrTranscript} from '../asr';
+import type {AsrTier, AsrTranscript} from '../asr';
 import {getEngine, ttsRuntime} from '../tts';
 import {asrStore, chatSessionStore, ttsStore} from '../../store';
 import {vtrace} from '../../utils/voiceTrace';
@@ -27,15 +27,17 @@ const findTurn = (turnId: string) => {
 
 /**
  * Whisper, then the chat model through the normal send path, then TTS.
- * Whisper `base` and the voice's engine stay resident from `prepare` to
- * `release`.
+ * The prepared Whisper tier and the voice's engine stay resident from
+ * `prepare` to `release`.
  */
 export class CascadeVoiceEngine implements VoiceEngine {
   readonly id = 'cascade';
+  private tier: AsrTier | null = null;
 
-  async prepare(): Promise<void> {
+  async prepare(tier: AsrTier): Promise<void> {
+    this.tier = tier;
     const started = Date.now();
-    await whisperAsrEngine.preload('base');
+    await whisperAsrEngine.preload(tier);
     const whisperLoaded = Date.now();
     const voice = ttsStore.currentVoice;
     if (voice) {
@@ -51,6 +53,7 @@ export class CascadeVoiceEngine implements VoiceEngine {
   }
 
   async release(): Promise<void> {
+    this.tier = null;
     await whisperAsrEngine.release();
     if (!ttsStore.streamsReplies) {
       await ttsRuntime.release();
@@ -101,9 +104,12 @@ export class CascadeVoiceEngine implements VoiceEngine {
       }
       let transcript: AsrTranscript;
       try {
+        if (!this.tier) {
+          throw new Error('voice engine not prepared');
+        }
         transcript = await whisperAsrEngine.transcribe(
           fromByteArray(utterance),
-          {tier: 'base', language: asrStore.spokenLanguage ?? undefined},
+          {tier: this.tier, language: asrStore.spokenLanguage ?? undefined},
         );
       } catch (err) {
         if (aborted) {

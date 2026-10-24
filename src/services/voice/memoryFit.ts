@@ -1,3 +1,5 @@
+import {ASR_TIERS} from '../asr/constants';
+import type {AsrTier} from '../asr/types';
 import {memoryBudget, whisperFits, type DeviceMemory} from '../asr/whisperFits';
 import type {MemoryFitStatus} from '../../utils/memoryDisplay';
 
@@ -5,7 +7,7 @@ export interface VoiceMemoryInputs {
   /** null when the device memory could not be read. */
   memory: DeviceMemory | null;
   chatBytes: number;
-  sttBytes: number;
+  sttTier: AsrTier;
   ttsBytes: number;
 }
 
@@ -17,6 +19,8 @@ export interface VoiceMemoryRow {
 
 export interface VoiceMemoryFit {
   status: MemoryFitStatus;
+  /** The Whisper tier whose runtime bytes the stt row counts. */
+  sttTier: AsrTier;
   breakdown: {
     /** Sums to `neededBytes`. */
     rows: VoiceMemoryRow[];
@@ -33,15 +37,17 @@ export interface VoiceMemoryFit {
 export const voiceMemoryFit = ({
   memory,
   chatBytes,
-  sttBytes,
+  sttTier,
   ttsBytes,
 }: VoiceMemoryInputs): VoiceMemoryFit => {
   if (!memory || (memory.os === 'ios' && memory.ceilingBytes === 0)) {
     return {
       status: 'fits',
+      sttTier,
       breakdown: {rows: [], neededBytes: 0, availableBytes: 0},
     };
   }
+  const sttBytes = ASR_TIERS[sttTier].runtimeBytes;
   const rows: VoiceMemoryRow[] = [
     {kind: 'chat', bytes: chatBytes},
     {kind: 'stt', bytes: sttBytes},
@@ -55,5 +61,5 @@ export const voiceMemoryFit = ({
   } else if (neededBytes > availableBytes) {
     status = 'tight';
   }
-  return {status, breakdown: {rows, neededBytes, availableBytes}};
+  return {status, sttTier, breakdown: {rows, neededBytes, availableBytes}};
 };

@@ -48,11 +48,15 @@ const renderSheet = (fit: VoiceMemoryFit | null) =>
 
 describe('VoiceMemorySheet', () => {
   it('when tight, shows the three models, needed vs available and both actions', () => {
-    const {getByText, getByTestId} = renderSheet({status: 'tight', breakdown});
+    const {getByText, getByTestId} = renderSheet({
+      status: 'tight',
+      sttTier: 'base',
+      breakdown,
+    });
 
     expect(getByText(strings.memoryTightTitle)).toBeTruthy();
     expect(getByText('Chat model · Gemma')).toBeTruthy();
-    expect(getByText(strings.memorySttRow)).toBeTruthy();
+    expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByText('Voice · Supertonic')).toBeTruthy();
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
       /3\.7 GB of 3\.3 GB available/,
@@ -67,6 +71,7 @@ describe('VoiceMemorySheet', () => {
   it("when it won't fit, offers no Continue anyway", () => {
     const {getByText, queryByTestId, getByTestId} = renderSheet({
       status: 'wont_fit',
+      sttTier: 'base',
       breakdown,
     });
 
@@ -78,6 +83,7 @@ describe('VoiceMemorySheet', () => {
   it('shows only the rows the fit counts', () => {
     const {queryByText, getByTestId, getByText} = renderSheet({
       status: 'tight',
+      sttTier: 'base',
       breakdown: {
         rows: [
           {kind: 'stt', bytes: 0.4e9},
@@ -89,11 +95,20 @@ describe('VoiceMemorySheet', () => {
     });
 
     expect(queryByText('Chat model · Gemma')).toBeNull();
-    expect(getByText(strings.memorySttRow)).toBeTruthy();
+    expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByTestId('voice-memory-tts')).toHaveTextContent(/600 MB/);
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
       /1 GB of 800 MB available/,
     );
+  });
+
+  it('names the Whisper tier the fit counted', () => {
+    const {getByText} = renderSheet({
+      status: 'tight',
+      sttTier: 'small',
+      breakdown,
+    });
+    expect(getByText('Speech recognition · Whisper Small')).toBeTruthy();
   });
 
   it('is hidden without a fit to show', () => {

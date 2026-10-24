@@ -158,8 +158,8 @@ export const ASR_TIERS: Record<AsrTier, AsrTierManifest> = {
   },
 };
 
-/** Default tier: small q8_0 — near-lossless multilingual, ARM-dotprod fast. */
-export const ASR_DEFAULT_TIER: AsrTier = 'small';
+/** Default tier: base, fast on every measured phone. */
+export const ASR_DEFAULT_TIER: AsrTier = 'base';
 
 /** Ordered tiers for UI listing (low-end → flagship). */
 export const ASR_TIER_ORDER: AsrTier[] = ['base', 'small', 'large-turbo'];
