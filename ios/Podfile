@@ -62,6 +62,22 @@ def add_llama_rn_headers_to_wrapper(installer, user_project)
   wrapper.settings = (wrapper.settings || {}).merge('COMPILER_FLAGS' => flags)
 end
 
+podfile_dir = Pathname.new(__dir__).realpath
+from_srcroot = ->(path) { Pathname.new(path).relative_path_from(podfile_dir).to_s }
+llama_rn_dir = Pathname.new(Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "llama.rn/package.json",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip).realpath.dirname
+ggml_src_dir = llama_rn_dir.join('vendor/llama.cpp/ggml/src')
+ggml_metal_dir = ggml_src_dir.join('ggml-metal')
+metal_kernels = ggml_metal_dir.join('ggml-metal-device.m').read[/^#define GGML_METAL_LIBS((?:.*\\\n)+.*)/, 1]
+  .to_s.scan(/X\(\s*\w+\s*,\s*(\w+)\s*\)/).flatten
+raise Pod::Informative, 'No GGML_METAL_LIBS kernels found in llama.rn' if metal_kernels.empty?
+missing_kernels = metal_kernels.reject { |name| ggml_metal_dir.join("kernels/#{name}.metal").file? }
+raise Pod::Informative, "llama.rn Metal kernels missing: #{missing_kernels.join(', ')}" unless missing_kernels.empty?
+metallib_script = podfile_dir.join('../scripts/build-ios-metallib.sh')
+
 target 'PocketPal' do
   config = use_native_modules!
 
@@ -70,6 +86,21 @@ target 'PocketPal' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+
+  script_phase :name => 'Compile llama.rn Metal libraries',
+    :execution_position => :before_compile,
+    :input_files => [
+      *ggml_metal_dir.join('kernels').children.select(&:file?).sort,
+      ggml_metal_dir.join('ggml-metal-impl.h'),
+      ggml_src_dir.join('ggml-common.h'),
+      metallib_script,
+    ].map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
+    :output_files => [
+      '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama.metallib',
+      '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama-tensor.metallib',
+    ],
+    :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" "${SRCROOT}/#{from_srcroot.(ggml_src_dir)}" ) +
+      metal_kernels.join(' ')
 
   # # Required for Firebase with New Architecture
   # pod 'Firebase',         :modular_headers => true
