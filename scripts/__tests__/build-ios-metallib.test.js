@@ -1,0 +1,225 @@
+const {spawnSync} = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..');
+const SCRIPT = path.join(ROOT, 'scripts', 'build-ios-metallib.sh');
+const GGML_SRC = path.join(
+  ROOT,
+  'node_modules',
+  'llama.rn',
+  'vendor',
+  'llama.cpp',
+  'ggml',
+  'src',
+);
+const GGML_METAL = path.join(GGML_SRC, 'ggml-metal');
+const KERNELS = path.join(GGML_METAL, 'kernels');
+
+const kernelSet = [
+  ...(fs
+    .readFileSync(path.join(GGML_METAL, 'ggml-metal-device.m'), 'utf-8')
+    .match(/^#define GGML_METAL_LIBS((?:.*\\\n)+.*)/m) || ['', ''])[1].matchAll(
+    /X\(\s*\w+\s*,\s*(\w+)\s*\)/g,
+  ),
+].map(match => match[1]);
+
+const XCRUN = `#!/bin/bash
+{ printf '%s\\x1f' "$@"; printf '\\n'; } >> "$XCRUN_LOG"
+[ "$1" = -sdk ] && shift 2
+tool=$1
+shift
+if [ "$tool" = metal ] && [ "$1" = -v ]; then
+  [ -n "\${STUB_NO_METAL:-}" ] && exit 1
+  exit 0
+fi
+out=""
+prev=""
+for arg in "$@"; do
+  [ "$prev" = -o ] && out=$arg
+  [ "$arg" = "$KERNELS_DIR/\${STUB_FAIL_KERNEL:-none}.metal" ] && { echo "error: stub" >&2; exit 1; }
+  prev=$arg
+done
+echo "$tool" > "$out"
+`;
+
+let tmp;
+let derived;
+let app;
+
+beforeEach(() => {
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'build-ios-metallib-'));
+  fs.mkdirSync(path.join(tmp, 'bin'));
+  fs.writeFileSync(path.join(tmp, 'bin', 'xcrun'), XCRUN, {mode: 0o755});
+  derived = path.join(tmp, 'DerivedSources');
+  app = path.join(tmp, 'Products', 'PocketPal.app');
+  fs.mkdirSync(derived, {recursive: true});
+  fs.mkdirSync(app, {recursive: true});
+});
+
+afterEach(() => {
+  fs.rmSync(tmp, {recursive: true, force: true});
+});
+
+function run({
+  platform = 'iphoneos',
+  args = [GGML_SRC, ...kernelSet],
+  env = {},
+} = {}) {
+  const result = spawnSync('bash', [SCRIPT, ...args], {
+    encoding: 'utf-8',
+    env: {
+      ...process.env,
+      PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
+      XCRUN_LOG: path.join(tmp, 'xcrun.log'),
+      KERNELS_DIR: KERNELS,
+      PLATFORM_NAME: platform,
+      DERIVED_FILE_DIR: derived,
+      TARGET_BUILD_DIR: path.join(tmp, 'Products'),
+      UNLOCALIZED_RESOURCES_FOLDER_PATH: 'PocketPal.app',
+      ...env,
+    },
+  });
+  const log = path.join(tmp, 'xcrun.log');
+  const calls = fs.existsSync(log)
+    ? fs
+        .readFileSync(log, 'utf-8')
+        .split('\n')
+        .filter(Boolean)
+        .map(line => line.split('\x1f').slice(0, -1))
+    : [];
+  return {status: result.status, stderr: result.stderr, calls};
+}
+
+const compiles = calls =>
+  calls.filter(call => call[2] === 'metal' && call[3] !== '-v');
+const appMetallibs = () =>
+  fs.readdirSync(app).filter(name => name.endsWith('.metallib'));
+
+describe('the parse itself', () => {
+  it('finds the kernel set in the vendored ggml', () => {
+    expect(kernelSet.length).toBeGreaterThan(0);
+  });
+});
+
+describe.each([
+  ['iphoneos', '-mtargetos=ios18.0'],
+  ['iphonesimulator', '-mtargetos=ios18.0-simulator'],
+])('the %s build', (platform, target) => {
+  it('compiles each kernel for iOS 18 with bf16, and nothing else', () => {
+    const {status, calls} = run({platform});
+    expect(status).toBe(0);
+    expect(compiles(calls)).toEqual(
+      kernelSet.map(kernel => [
+        '-sdk',
+        platform,
+        'metal',
+        '-O3',
+        target,
+        '-DGGML_METAL_HAS_BF16',
+        '-I',
+        GGML_METAL,
+        '-I',
+        GGML_SRC,
+        '-c',
+        path.join(KERNELS, `${kernel}.metal`),
+        '-o',
+        path.join(derived, 'rnllama-metal', `${kernel}.air`),
+      ]),
+    );
+  });
+
+  it('links every kernel into one rnllama.metallib', () => {
+    const {calls} = run({platform});
+    const links = calls.filter(call => call[2] === 'metallib');
+    expect(links).toEqual([
+      [
+        '-sdk',
+        platform,
+        'metallib',
+        ...kernelSet.map(kernel =>
+          path.join(derived, 'rnllama-metal', `${kernel}.air`),
+        ),
+        '-o',
+        path.join(derived, 'rnllama.metallib'),
+      ],
+    ]);
+  });
+});
+
+describe('the app bundle it writes', () => {
+  it('holds rnllama.metallib as its only library', () => {
+    expect(run().status).toBe(0);
+    expect(appMetallibs()).toEqual(['rnllama.metallib']);
+    expect(fs.readFileSync(path.join(app, 'rnllama.metallib'), 'utf-8')).toBe(
+      'metallib\n',
+    );
+  });
+
+  it('holds byte copies of every kernel source and both headers', () => {
+    run();
+    expect(fs.readdirSync(path.join(app, 'kernels')).sort()).toEqual(
+      fs.readdirSync(KERNELS).sort(),
+    );
+    for (const name of fs.readdirSync(KERNELS)) {
+      expect(
+        fs
+          .readFileSync(path.join(app, 'kernels', name))
+          .equals(fs.readFileSync(path.join(KERNELS, name))),
+      ).toBe(true);
+    }
+    for (const header of [
+      path.join(GGML_METAL, 'ggml-metal-impl.h'),
+      path.join(GGML_SRC, 'ggml-common.h'),
+    ]) {
+      expect(
+        fs
+          .readFileSync(path.join(app, path.basename(header)))
+          .equals(fs.readFileSync(header)),
+      ).toBe(true);
+    }
+  });
+
+  it('keeps the intermediates out of the bundle', () => {
+    run();
+    const names = fs.readdirSync(app, {recursive: true});
+    expect(names.filter(name => name.endsWith('.air'))).toEqual([]);
+  });
+
+  it('drops a kernel file left over from an earlier build', () => {
+    fs.mkdirSync(path.join(app, 'kernels'));
+    fs.writeFileSync(path.join(app, 'kernels', 'removed_upstream.metal'), '');
+    run();
+    expect(fs.readdirSync(path.join(app, 'kernels'))).not.toContain(
+      'removed_upstream.metal',
+    );
+  });
+});
+
+describe('failures', () => {
+  it('fails with the install command when the Metal toolchain is missing', () => {
+    const {status, stderr, calls} = run({env: {STUB_NO_METAL: '1'}});
+    expect(status).not.toBe(0);
+    expect(stderr).toContain('xcodebuild -downloadComponent MetalToolchain');
+    expect(compiles(calls)).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it('fails without writing a partial library when a kernel does not compile', () => {
+    const {status, calls} = run({env: {STUB_FAIL_KERNEL: 'mul_mm'}});
+    expect(status).not.toBe(0);
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it.each([
+    ['no arguments', []],
+    ['no kernels', [GGML_SRC]],
+  ])('prints usage and exits 64 for %s', (_, args) => {
+    const {status, stderr, calls} = run({args});
+    expect(stderr).toMatch(/^usage: /);
+    expect(calls).toEqual([]);
+    expect(status).toBe(64);
+  });
+});
