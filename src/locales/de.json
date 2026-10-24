@@ -1717,5 +1717,34 @@
   "plus": {
     "eyebrow": "PocketPal Plus",
     "headline": "Lokale KI weiterentwickeln."
+  },
+  "voiceMode": {
+    "settingTitle": "Freihändige Sprachsteuerung",
+    "settingDescription": "Spreche mit dem Modell im Chat und höre seine Antworten.",
+    "unsupportedDeviceHelper": "Kann auf diesem Telefon langsam sein.",
+    "startingTitle": "Startet",
+    "startingHint": "Spracherkennung und die Stimme werden geladen. Das erste Laden kann etwas länger dauern.",
+    "startFailed": "Der Sprachmodus konnte nicht gestartet werden. Versuche es erneut.",
+    "micFailed": "Das Mikrofon konnte nicht verwendet werden, daher wurde der Sprachmodus beendet.",
+    "listeningTitle": "hört zu",
+    "listeningHint": "Pausiere, wenn du fertig bist, oder tippe auf die Wolke, um zu senden.",
+    "thinkingTitle": "Denkt nach",
+    "thinkingHint": "Tippe die Wolke zum Abbrechen",
+    "speakingTitle": "Spricht",
+    "speakingHint": "Rippe die Wolke zum Unterbrechen",
+    "mutedTitle": "Mikrofon aus",
+    "mutedHint": "Tippe auf das Mikrofon die Sprachausgabe erneut zu starten",
+    "errorTranscribe": "Das konnte ich nicht verstehen. Versuche es erneut.",
+    "errorReply": "Es konnte keine Antwort abgerufen werden. Versuche es erneut.",
+    "errorSpeech": "Die Antwort konnte nicht laut vorgelesen werden.",
+    "pullDownHint": "Nach unten ziehen, um den Chat zu sehen",
+    "showChatLabel": "Zeige Chat",
+    "swipeUpHint": "Nach oben wischen, um die Sprachansicht zu öffnen",
+    "cloudLabel": "Sprachmodus Cloud",
+    "openViewLabel": "Sprachansicht öffnen",
+    "micSwitchLabel": "Mikrofon",
+    "endLabel": "Sprachmodus beenden",
+    "setupTitle": "Sprachmodus einrichten",
+    "setupBody": "Zwei kleine Modelle laufen auf deinem Telefon, damit du offline sprechen kannst."
   }
 }
