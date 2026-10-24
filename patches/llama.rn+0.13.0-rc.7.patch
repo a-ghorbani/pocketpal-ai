@@ -1055,24 +1055,20 @@ index 039933f..1fdd5d4 100644
      return llamaStopCompletion(this.id)
    }
 diff --git a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
-index 951cb80..f313b04 100644
+index 951cb80..eeb9fa5 100644
 --- a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
 +++ b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
-@@ -506,7 +506,7 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
+@@ -506,7 +506,12 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
      const int64_t t_start = ggml_time_us();
  
      NSError * error = nil;
 -    NSString * path_lib = ggml_metal_find_metallib(bundle, @"default");
-+    NSString * path_lib = ggml_metal_find_metallib(bundle, @"rnllama");
++    NSString * path_lib = nil;
++    if (ggml_metal_device_get_props(dev)->has_tensor) {
++        GGML_LOG_INFO("%s: tensor API enabled - skipping rnllama.metallib to compile the tensor kernels from source\n", __func__);
++    } else {
++        path_lib = ggml_metal_find_metallib(bundle, @"rnllama");
++    }
  
      if (path_lib != nil) {
          // pre-compiled library found: a single combined default.metallib
-@@ -523,7 +523,7 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
- 
-         // the tensor API kernels are built into a separate metallib
-         if (ggml_metal_device_get_props(dev)->has_tensor) {
--            NSString * path_mm = ggml_metal_find_metallib(bundle, @"ggml-tensor");
-+            NSString * path_mm = ggml_metal_find_metallib(bundle, @"rnllama-tensor");
- 
-             id<MTLLibrary> lib_mm = nil;
-             if (path_mm != nil) {
