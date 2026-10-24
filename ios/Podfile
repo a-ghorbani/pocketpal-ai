@@ -76,7 +76,10 @@ metal_kernels = ggml_metal_dir.join('ggml-metal-device.m').read[/^#define GGML_M
 raise Pod::Informative, 'No GGML_METAL_LIBS kernels found in llama.rn' if metal_kernels.empty?
 missing_kernels = metal_kernels.reject { |name| ggml_metal_dir.join("kernels/#{name}.metal").file? }
 raise Pod::Informative, "llama.rn Metal kernels missing: #{missing_kernels.join(', ')}" unless missing_kernels.empty?
+metal_kernel_files = ggml_metal_dir.join('kernels').children.select(&:file?).sort
+metal_headers = [ggml_metal_dir.join('ggml-metal-impl.h'), ggml_src_dir.join('ggml-common.h')]
 metallib_script = podfile_dir.join('../scripts/build-ios-metallib.sh')
+app_resources_dir = '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)'
 
 target 'PocketPal' do
   config = use_native_modules!
@@ -87,17 +90,14 @@ target 'PocketPal' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  script_phase :name => 'Compile llama.rn Metal libraries',
+  script_phase :name => 'Build llama.rn Metal kernels',
     :execution_position => :before_compile,
-    :input_files => [
-      *ggml_metal_dir.join('kernels').children.select(&:file?).sort,
-      ggml_metal_dir.join('ggml-metal-impl.h'),
-      ggml_src_dir.join('ggml-common.h'),
-      metallib_script,
-    ].map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
+    :input_files => [*metal_kernel_files, *metal_headers, metallib_script]
+      .map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
     :output_files => [
-      '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama.metallib',
-      '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama-tensor.metallib',
+      "#{app_resources_dir}/rnllama.metallib",
+      *metal_kernel_files.map { |path| "#{app_resources_dir}/kernels/#{path.basename}" },
+      *metal_headers.map { |path| "#{app_resources_dir}/#{path.basename}" },
     ],
     :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" "${SRCROOT}/#{from_srcroot.(ggml_src_dir)}" ) +
       metal_kernels.join(' ')
