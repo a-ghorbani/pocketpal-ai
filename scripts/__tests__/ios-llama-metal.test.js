@@ -503,6 +503,36 @@ describe('the patched whisper.rn GPU init', () => {
   });
 });
 
+describe("whisper.rn's parallel transcription", () => {
+  const start = whisperCpp.indexOf('int whisper_full_parallel(');
+  const body =
+    start < 0
+      ? ''
+      : whisperCpp.slice(start, whisperCpp.indexOf('\n}\n', start));
+  const firstWorker = body.indexOf('std::thread(whisper_full_with_state');
+
+  it('still hands a single processor to whisper_full', () => {
+    expect(body).toMatch(
+      /^\s*if \(n_processors == 1\) \{\s*return whisper_full\(ctx, params, samples, n_samples\);\s*\}/m,
+    );
+  });
+
+  it('creates every worker state before starting any worker', () => {
+    const inits = [...body.matchAll(/whisper_init_state\(/g)];
+    expect(inits).toHaveLength(1);
+    expect(firstWorker).toBeGreaterThan(-1);
+    expect(inits[0].index).toBeLessThan(firstWorker);
+  });
+
+  it('frees the states it made and fails on a null one, before any transcription', () => {
+    const guard = body.match(
+      /whisper_state \* (\w+) = whisper_init_state\(ctx\);\s*if \(\1 == nullptr\) \{\s*for \(whisper_state \* (\w+) : states\) \{\s*whisper_free_state\(\2\);\s*\}\s*return -1;\s*\}\s*states\.push_back\(\1\);/,
+    );
+    expect(guard).not.toBeNull();
+    expect(guard.index).toBeLessThan(body.indexOf('whisper_full_with_state'));
+  });
+});
+
 describe("whisper.rn's reported GPU use", () => {
   const start = rnWhisper.indexOf(
     'WhisperContextInitResult hostInitWhisperContext(',

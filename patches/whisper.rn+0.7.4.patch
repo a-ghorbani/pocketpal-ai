@@ -60,7 +60,7 @@ index e40cf33..549266b 100644
      NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"WSP_GGML_METAL_PATH_RESOURCES"];
      if (path_resource) {
 diff --git a/node_modules/whisper.rn/cpp/whisper.cpp b/node_modules/whisper.rn/cpp/whisper.cpp
-index 46bec1f..82484dd 100644
+index 46bec1f..8a30242 100644
 --- a/node_modules/whisper.rn/cpp/whisper.cpp
 +++ b/node_modules/whisper.rn/cpp/whisper.cpp
 @@ -3447,6 +3447,19 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
@@ -112,6 +112,33 @@ index 46bec1f..82484dd 100644
  float * whisper_get_logits(struct whisper_context * ctx) {
      return ctx->state->logits.data();
  }
+@@ -7929,6 +7957,16 @@ int whisper_full_parallel(
+ 
+     // prepare separate states for each thread
+     std::vector<whisper_state*> states;
++    for (int i = 0; i < n_processors - 1; ++i) {
++        whisper_state * state = whisper_init_state(ctx);
++        if (state == nullptr) {
++            for (whisper_state * created : states) {
++                whisper_free_state(created);
++            }
++            return -1;
++        }
++        states.push_back(state);
++    }
+ 
+     const int offset_samples = (WHISPER_SAMPLE_RATE*params.offset_ms)/1000;
+     const int n_samples_per_processor = (n_samples - offset_samples)/n_processors;
+@@ -7938,9 +7976,6 @@ int whisper_full_parallel(
+ 
+     std::vector<std::thread> workers(n_processors - 1);
+     for (int i = 0; i < n_processors - 1; ++i) {
+-        // create a new state for each thread
+-        states.push_back(whisper_init_state(ctx));
+-
+         const int start_samples = offset_samples + (i + 1)*n_samples_per_processor;
+         const int n_samples_cur = (i == n_processors - 2) ? n_samples - start_samples : n_samples_per_processor;
+ 
 diff --git a/node_modules/whisper.rn/cpp/whisper.h b/node_modules/whisper.rn/cpp/whisper.h
 index 16f2fc4..254f975 100644
 --- a/node_modules/whisper.rn/cpp/whisper.h
