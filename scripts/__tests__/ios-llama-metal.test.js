@@ -181,9 +181,9 @@ describe('the launch-time Metal gate', () => {
     expect(launchBody[1].trim()).toBe('configureGgmlMetal()');
   });
 
-  it('turns llama.rn Metal off through the env ggml reads', () => {
+  it("turns both ggml copies' Metal off through the env each reads", () => {
     expect(appDelegate).toMatch(
-      /disablesLlamaMetal\([^)]*\)\s*\{\s*setenv\("GGML_METAL_DEVICES", "0", 1\)/,
+      /disablesGgmlMetal\([^)]*\)\s*\{\s*setenv\("GGML_METAL_DEVICES", "0", 1\)\s*setenv\("WSP_GGML_METAL_DEVICES", "0", 1\)/,
     );
   });
 
@@ -194,7 +194,7 @@ describe('the launch-time Metal gate', () => {
 
 describe('the Metal gate logic', () => {
   const predicate = metalGate.match(
-    /func disablesLlamaMetal\(iOS18OrLater: Bool, supportsApple6: Bool\) -> Bool \{\s*([^}]*?)\s*\}/,
+    /func disablesGgmlMetal\(iOS18OrLater: Bool, supportsApple6: Bool\) -> Bool \{\s*([^}]*?)\s*\}/,
   );
   const launchGate = appDelegate.match(
     /func configureGgmlMetal\(\) \{([\s\S]*?)\n {2}\}/,
@@ -203,6 +203,13 @@ describe('the Metal gate logic', () => {
   it('finds the predicate and the launch gate', () => {
     expect(predicate).not.toBeNull();
     expect(launchGate).not.toBeNull();
+  });
+
+  it('names both precompiled libraries it protects', () => {
+    const comment = metalGate.match(/^\/\/ (.*)\nfunc disablesGgmlMetal\(/m);
+    expect(comment).not.toBeNull();
+    expect(comment[1]).toContain('rnllama.metallib');
+    expect(comment[1]).toContain('rnwhisper.metallib');
   });
 
   it.each([
@@ -231,7 +238,7 @@ describe('the Metal gate logic', () => {
       'iOS18OrLater = true',
       '}',
       'let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)',
-      'if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {',
+      'if disablesGgmlMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {',
       'setenv("GGML_METAL_DEVICES", "0", 1)',
       'setenv("WSP_GGML_METAL_DEVICES", "0", 1)',
       '}',
