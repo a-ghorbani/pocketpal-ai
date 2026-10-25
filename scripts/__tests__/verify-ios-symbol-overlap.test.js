@@ -404,6 +404,11 @@ const archive = (name, members) =>
 
 const mangled = fixture => fixture.a.split(' ').pop().slice(1);
 
+const CANARY = {
+  a: '__ZNSt3__16vectorIiNS_9allocatorIiEEED2Ev',
+  demangled: 'std::__1::vector<int, std::__1::allocator<int>>::~vector()',
+};
+
 let tmp;
 
 beforeEach(() => {
@@ -428,8 +433,40 @@ awk -F '\\t' 'FILENAME == ARGV[1] { map[$1] = $2; next } { print ($0 in map) ? m
     {mode: 0o755},
   );
   fs.writeFileSync(
+    path.join(bin, 'xcrun'),
+    `#!/bin/bash
+[ -n "\${STUB_XCRUN_FAIL:-}" ] && exit 1
+tool=$1
+shift
+case $tool in
+  clang)
+    awk -v local="\${STUB_PLANT_LOCAL:-}" '
+      /^\\.globl / { global = 1 }
+      /^\\.private_extern / { private = 1 }
+      /^\\.weak_definition / { weak = 1 }
+      /^\\.weak_def_can_be_hidden / { hidden = 1 }
+      /:$/ { name = substr($0, 1, length($0) - 1) }
+      END {
+        binding = global && !local ? "external" : "non-external"
+        if (binding == "external" && private) binding = "private " binding
+        if (binding != "non-external" && weak) binding = "weak " binding
+        if (hidden) binding = binding " automatically hidden"
+        print "0000000000000000 (__TEXT,__text) " binding " " name
+      }' >"\${@: -1}"
+    ;;
+  libtool)
+    [ "$1 $2" = "-static -o" ] || exit 2
+    { printf '\\n%s(%s):\\n' "$3" "$(basename "$4")"; cat "$4"; } >"$3.nm"
+    : >"$3"
+    ;;
+  *) exit 2 ;;
+esac
+`,
+    {mode: 0o755},
+  );
+  fs.writeFileSync(
     path.join(tmp, 'cxxfilt.map'),
-    fixtures.map(f => `${mangled(f)}\t${f.demangled}\n`).join(''),
+    [...fixtures, CANARY].map(f => `${mangled(f)}\t${f.demangled}\n`).join(''),
   );
 });
 
@@ -437,7 +474,7 @@ afterEach(() => {
   fs.rmSync(tmp, {recursive: true, force: true});
 });
 
-function run(aSymbols, bSymbols, {env = {}, args} = {}) {
+function run(aSymbols, bSymbols, {env = {}, args, selfTest = false} = {}) {
   const a = path.join(tmp, 'libllama-rn.a');
   const b = path.join(tmp, 'libwhisper-rn.a');
   fs.writeFileSync(
@@ -454,15 +491,19 @@ function run(aSymbols, bSymbols, {env = {}, args} = {}) {
       bSymbols.map(s => [s.members[1], [s.b]]),
     ),
   );
-  const result = spawnSync('bash', [SCRIPT, ...(args || [a, b])], {
-    encoding: 'utf-8',
-    env: {
-      ...process.env,
-      PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
-      STUB_CXXFILT_MAP: path.join(tmp, 'cxxfilt.map'),
-      ...env,
+  const result = spawnSync(
+    'bash',
+    [SCRIPT, ...(args || [...(selfTest ? ['--self-test'] : []), a, b])],
+    {
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
+        STUB_CXXFILT_MAP: path.join(tmp, 'cxxfilt.map'),
+        ...env,
+      },
     },
-  });
+  );
   const verdicts = result.stdout
     .split('\n')
     .filter(line => /^(ALLOW|DENY) /.test(line));
@@ -684,6 +725,59 @@ describe('demangling', () => {
   });
 });
 
+describe('self-test', () => {
+  const PLANTED = [
+    'DENY external / external ggml_planted_strong',
+    'DENY weak external / weak external ggml_planted_weak',
+    'DENY weak private external / weak private external ggml_planted_weak_hidden',
+    'DENY weak external automatically hidden / weak external automatically hidden ggml_planted_autohidden',
+  ];
+
+  it('denies a planted symbol of each binding, then compares the archives', () => {
+    const result = run([STD_FUNCTION, OWN_A], [STD_FUNCTION, OWN_B], {
+      selfTest: true,
+    });
+    expect(result.verdicts.slice(0, PLANTED.length)).toEqual(PLANTED);
+    expect(verdictOf(result, STD_FUNCTION)).toEqual(['ALLOW']);
+    expect(result.stdout.trim().split('\n').pop()).toBe('1 shared, 0 denied');
+    expect(result.status).toBe(0);
+  });
+
+  it('still fails a denied overlap after it passes', () => {
+    const result = run([C_FUNCTION, OWN_A], [C_FUNCTION, OWN_B], {
+      selfTest: true,
+    });
+    expect(verdictOf(result, C_FUNCTION)).toEqual(['DENY']);
+    expect(result.status).toBe(1);
+  });
+
+  it.each([
+    [
+      'c++filt -n leaves a std:: name mangled',
+      {STUB_CXXFILT_MAP: '/dev/null'},
+      'c++filt -n left a std:: name mangled',
+    ],
+    [
+      'a planted symbol is not denied',
+      {STUB_PLANT_LOCAL: '1'},
+      'a planted ggml_planted_strong was not denied',
+    ],
+    [
+      'the toolchain cannot build a planted symbol',
+      {STUB_XCRUN_FAIL: '1'},
+      'could not build a planted ggml_planted_strong',
+    ],
+  ])('fails before comparing when %s', (_, env, message) => {
+    const result = run([STD_FUNCTION, OWN_A], [STD_FUNCTION, OWN_B], {
+      selfTest: true,
+      env,
+    });
+    expect(result.stderr).toContain(message);
+    expect(result.stdout).not.toContain('1 shared, 0 denied');
+    expect(result.status).toBe(1);
+  });
+});
+
 describe('failures', () => {
   it('fails when an archive has no external symbols', () => {
     const result = run([STD_FUNCTION], []);
@@ -706,12 +800,15 @@ describe('failures', () => {
     expect(result.status).toBe(1);
   });
 
-  it.each([[[]], [['a.a']], [['a.a', 'b.a', 'c.a']]])(
-    'prints usage and exits 64 for %j',
-    args => {
-      const result = run([STD_FUNCTION], [STD_FUNCTION], {args});
-      expect(result.stderr).toMatch(/^usage: /);
-      expect(result.status).toBe(64);
-    },
-  );
+  it.each([
+    [[]],
+    [['a.a']],
+    [['a.a', 'b.a', 'c.a']],
+    [['--self-test', 'a.a']],
+    [['a.a', '--self-test', 'b.a']],
+  ])('prints usage and exits 64 for %j', args => {
+    const result = run([STD_FUNCTION], [STD_FUNCTION], {args});
+    expect(result.stderr).toMatch(/^usage: /);
+    expect(result.status).toBe(64);
+  });
 });

@@ -561,32 +561,6 @@ jobs:
           done
 
       - name: Symbol overlap (llama-rn, whisper-rn)
-        shell: bash -eo pipefail {0}
         run: |
-          # Without -n, macOS c++filt strips a second underscore and every C++ name stays mangled.
-          c++filt -n <<<'_ZNSt3__16vectorIiNS_9allocatorIiEEED2Ev' | tee /dev/stderr | grep -q '^std::'
-
-          # A planted shared symbol of each binding must be denied, or a clean comparison proves nothing.
-          plant() {
-            local name=$1 dir="$RUNNER_TEMP/planted-$1" side out status
-            shift
-            mkdir -p "$dir"
-            for side in a b; do
-              printf '%s\n' .text "$@" "_$name:" ret |
-                xcrun clang -arch arm64 -x assembler -c - -o "$dir/$side.o"
-              xcrun libtool -static -o "$dir/lib$side.a" "$dir/$side.o"
-            done
-            out=$(scripts/verify-ios-symbol-overlap.sh "$dir/liba.a" "$dir/libb.a") && status=0 || status=$?
-            echo "$out"
-            test "$status" -eq 1
-            grep -q "^DENY .* $name\$" <<<"$out"
-          }
-          plant ggml_planted_strong '.globl _ggml_planted_strong'
-          plant ggml_planted_weak '.globl _ggml_planted_weak' '.weak_definition _ggml_planted_weak'
-          plant ggml_planted_weak_hidden '.globl _ggml_planted_weak_hidden' \
-            '.private_extern _ggml_planted_weak_hidden' '.weak_definition _ggml_planted_weak_hidden'
-          plant ggml_planted_autohidden '.globl _ggml_planted_autohidden' \
-            '.weak_definition _ggml_planted_autohidden' '.weak_def_can_be_hidden _ggml_planted_autohidden'
-
           products=ios/build/Build/Products/Release-iphonesimulator
-          scripts/verify-ios-symbol-overlap.sh "$products/llama-rn/libllama-rn.a" "$products/whisper-rn/libwhisper-rn.a"
+          scripts/verify-ios-symbol-overlap.sh --self-test "$products/llama-rn/libllama-rn.a" "$products/whisper-rn/libwhisper-rn.a"

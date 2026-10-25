@@ -678,47 +678,16 @@ describe('the iOS CI job', () => {
     expect(loop[1].split(/\s+/)).toEqual(ARCHIVES);
   });
 
-  it('compares the two archives last, after a planted symbol of each binding is denied', () => {
+  it('self-tests the symbol gate, then compares the two archives', () => {
     const {body} = step('Symbol overlap (llama-rn, whisper-rn)');
-    expect(body).toContain('shell: bash -eo pipefail {0}');
-    expect(body).toMatch(
-      /test "\$status" -eq 1\n\s*grep -q "\^DENY \.\* \$name\\\$" <<<"\$out"/,
-    );
-    const plants = [
-      ...body.matchAll(/^\s*plant (ggml_planted_\w+)((?:[^\n]*\\\n)*[^\n]*)/gm),
-    ].map(([, name, directives]) => ({
-      name,
-      directives,
-      at: body.indexOf(`plant ${name}`),
-    }));
-    const has = directive => plant => plant.directives.includes(directive);
-    expect(new Set(plants.map(plant => plant.name)).size).toBe(4);
-    expect(
-      plants.filter(
-        plant =>
-          !has('.weak_definition')(plant) && !has('.private_extern')(plant),
-      ),
-    ).toHaveLength(1);
-    expect(plants.filter(has('.weak_definition'))).toHaveLength(3);
-    expect(
-      plants.filter(
-        plant =>
-          has('.private_extern')(plant) && has('.weak_definition')(plant),
-      ),
-    ).toHaveLength(1);
-    expect(plants.filter(has('.weak_def_can_be_hidden'))).toHaveLength(1);
-    const lines = body.trim().split('\n');
-    expect(lines[lines.length - 1].trim()).toBe(
-      `scripts/verify-ios-symbol-overlap.sh ${ARCHIVES.map(
-        archive => `"$products/${archive}"`,
-      ).join(' ')}`,
-    );
-    const compare = body.lastIndexOf('scripts/verify-ios-symbol-overlap.sh');
-    for (const plant of plants) {
-      expect(plant.at).toBeLessThan(compare);
-    }
     expect(body).toMatch(
       /^\s*products=ios\/build\/Build\/Products\/Release-iphonesimulator$/m,
+    );
+    const lines = body.trim().split('\n');
+    expect(lines[lines.length - 1].trim()).toBe(
+      `scripts/verify-ios-symbol-overlap.sh --self-test ${ARCHIVES.map(
+        archive => `"$products/${archive}"`,
+      ).join(' ')}`,
     );
   });
 });

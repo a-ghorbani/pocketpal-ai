@@ -5,15 +5,57 @@
 # Both archives link into one executable, where hidden visibility does not keep
 # two definitions apart: the linker keeps one of each pair, with at most a
 # warning.
+# --self-test first checks that a planted shared symbol of each binding is
+# denied on this machine's toolchain, or a clean comparison proves nothing.
 set -uo pipefail
 
+self_test=false
+if [ "${1:-}" = --self-test ]; then
+  shift
+  self_test=true
+fi
+
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 <a.a> <b.a>" >&2
+  echo "usage: $0 [--self-test] <a.a> <b.a>" >&2
   exit 64
 fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+plant() {
+  local name=$1 dir="$tmp/planted-$1" side out status
+  shift
+  mkdir -p "$dir"
+  for side in a b; do
+    printf '%s\n' .text "$@" "_$name:" ret |
+      xcrun clang -arch arm64 -x assembler -c - -o "$dir/$side.o" &&
+      xcrun libtool -static -o "$dir/lib$side.a" "$dir/$side.o" || {
+      echo "FAIL self-test could not build a planted $name" >&2
+      return 1
+    }
+  done
+  out=$(bash "$0" "$dir/liba.a" "$dir/libb.a" 2>&1) && status=0 || status=$?
+  if [ "$status" -ne 1 ] || ! grep "^DENY .* $name\$" <<<"$out"; then
+    printf '%s\n' "$out" >&2
+    echo "FAIL self-test: a planted $name was not denied" >&2
+    return 1
+  fi
+}
+
+if $self_test; then
+  if ! c++filt -n <<<'_ZNSt3__16vectorIiNS_9allocatorIiEEED2Ev' | grep -q '^std::'; then
+    echo "FAIL self-test: c++filt -n left a std:: name mangled" >&2
+    exit 1
+  fi
+  plant ggml_planted_strong '.globl _ggml_planted_strong' &&
+    plant ggml_planted_weak '.globl _ggml_planted_weak' '.weak_definition _ggml_planted_weak' &&
+    plant ggml_planted_weak_hidden '.globl _ggml_planted_weak_hidden' \
+      '.private_extern _ggml_planted_weak_hidden' '.weak_definition _ggml_planted_weak_hidden' &&
+    plant ggml_planted_autohidden '.globl _ggml_planted_autohidden' \
+      '.weak_definition _ggml_planted_autohidden' '.weak_def_can_be_hidden _ggml_planted_autohidden' ||
+    exit 1
+fi
 
 # One "<name>\t<binding>\t<nm line>" per defined symbol that is not
 # non-external. A binding this does not know is kept.
