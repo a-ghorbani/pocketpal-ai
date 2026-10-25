@@ -1,4 +1,4 @@
-const {execFileSync} = require('child_process');
+const {execFileSync, spawnSync} = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -565,6 +565,17 @@ describe("whisper.rn's reported GPU use", () => {
       hostInit.indexOf('#ifdef RNWHISPER_BUILD_FROM_SOURCE'),
     ).toBeGreaterThan(created);
   });
+
+  it('takes the live-context branch in the from-source podspec mode the Podfile selects', () => {
+    const macro = hostInit.match(/\n#ifdef (\w+)\n\s*result\.gpu = /);
+    const fromSource = whisperPodspec.match(
+      /if ENV\["RNWHISPER_BUILD_FROM_SOURCE"\] == "1"([\s\S]*?)\n {2}else/,
+    );
+    expect(macro).not.toBeNull();
+    expect(fromSource).not.toBeNull();
+    expect(fromSource[1]).toContain(`base_compiler_flags += " -D${macro[1]}"`);
+    expect(podfile).toMatch(/^ENV\['RNWHISPER_BUILD_FROM_SOURCE'\] = '1'$/m);
+  });
 });
 
 describe('the Podfile kernel phase inputs', () => {
@@ -892,6 +903,155 @@ describe('the iOS CI job', () => {
       `scripts/verify-ios-symbol-overlap.sh --self-test ${ARCHIVES.map(
         archive => `"$products/${archive}"`,
       ).join(' ')}`,
+    );
+  });
+
+  describe('AMX scan, run under its CI shell with a stub disassembler', () => {
+    const SCAN = 'AMX scan (llama-rn, whisper-rn, app executable)';
+    const SCANNED = [...ARCHIVES, 'PocketPal.app/PocketPal'];
+    // Line layout of llvm-objdump -d --mattr=+all on an arm64 Mach-O build.
+    const DECODED = '  29a1b0: 00000450     \tudf\t#0x450';
+    const UNDECODED = '  29a1b4: fffffe14     \t<unknown>';
+    const AMX_WORD = '  793fc8: 00201220     \t<unknown>';
+    let tmp;
+
+    beforeEach(() => {
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-amx-scan-'));
+      fs.mkdirSync(path.join(tmp, 'bin'));
+      fs.mkdirSync(path.join(tmp, 'llvm', 'bin'), {recursive: true});
+      fs.mkdirSync(path.join(tmp, 'runner'));
+      fs.writeFileSync(
+        path.join(tmp, 'bin', 'brew'),
+        `#!/bin/bash
+[ "$*" = "--prefix llvm" ] || exit 1
+echo "${path.join(tmp, 'llvm')}"
+`,
+        {mode: 0o755},
+      );
+      fs.writeFileSync(
+        path.join(tmp, 'llvm', 'bin', 'llvm-objdump'),
+        `#!/bin/bash
+[ "$*" = --version ] && { echo "stub llvm-objdump"; exit 0; }
+[ "$1 $2" = "-d --mattr=+all" ] || { echo "stub llvm-objdump: unexpected $*" >&2; exit 2; }
+while IFS= read -r line; do
+  case $line in '!exit '*) exit "\${line#!exit }" ;; esac
+  printf '%s\\n' "$line"
+done <"$3"
+`,
+        {mode: 0o755},
+      );
+      fs.writeFileSync(
+        path.join(tmp, 'bin', 'xcrun'),
+        `#!/bin/bash
+[ "$*" = "clang -arch arm64 -x assembler -c - -o $RUNNER_TEMP/amx.o" ] || { echo "stub xcrun: unexpected $*" >&2; exit 2; }
+grep -qx '\\.inst 0x00201220' || exit 1
+cp "$STUB_CALIBRATION" "$RUNNER_TEMP/amx.o"
+`,
+        {mode: 0o755},
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmp, {recursive: true, force: true});
+    });
+
+    const runScan = (contents = {}, calibration = [AMX_WORD]) => {
+      for (const file of SCANNED) {
+        if (contents[file] === null) {
+          continue;
+        }
+        const target = path.join(tmp, PRODUCTS, file);
+        fs.mkdirSync(path.dirname(target), {recursive: true});
+        fs.writeFileSync(
+          target,
+          `${(contents[file] || [DECODED, UNDECODED]).join('\n')}\n`,
+        );
+      }
+      fs.writeFileSync(
+        path.join(tmp, 'calibration'),
+        `${calibration.join('\n')}\n`,
+      );
+      const {body} = step(SCAN);
+      const shell = body.match(/^\s*shell: (.+)$/m)[1];
+      const run = body.split(/^\s*run: \|\n/m)[1];
+      const indent = run.match(/^ */)[0].length;
+      const script = path.join(tmp, 'step.sh');
+      fs.writeFileSync(
+        script,
+        run
+          .split('\n')
+          .map(line => line.slice(indent))
+          .join('\n'),
+      );
+      const [command, ...args] = shell.replace('{0}', script).split(' ');
+      const result = spawnSync(command, args, {
+        cwd: tmp,
+        encoding: 'utf-8',
+        env: {
+          ...process.env,
+          PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
+          RUNNER_TEMP: path.join(tmp, 'runner'),
+          STUB_CALIBRATION: path.join(tmp, 'calibration'),
+        },
+      });
+      return {
+        status: result.status,
+        lines: result.stdout
+          .split('\n')
+          .filter(line => line.endsWith(' in AMX opcode space')),
+      };
+    };
+    const calibrated = (unknown, amx) =>
+      `${path.join(tmp, 'runner', 'amx.o')}: ${unknown} <unknown>, ${amx} in AMX opcode space`;
+    const scannedBefore = file =>
+      SCANNED.slice(0, SCANNED.indexOf(file)).map(
+        before => `${PRODUCTS}/${before}: 1 <unknown>, 0 in AMX opcode space`,
+      );
+
+    it('passes on clean device slices, scanning each once after flagging the planted word', () => {
+      const result = runScan();
+      expect(result.status).toBe(0);
+      expect(result.lines).toEqual([
+        calibrated(1, 1),
+        ...SCANNED.map(
+          file => `${PRODUCTS}/${file}: 1 <unknown>, 0 in AMX opcode space`,
+        ),
+      ]);
+      expect(fs.readdirSync(path.join(tmp, 'runner'))).toEqual(['amx.o']);
+    });
+
+    it('fails before scanning a slice when the planted word is not flagged', () => {
+      const result = runScan({}, [DECODED, UNDECODED]);
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([calibrated(1, 0)]);
+    });
+
+    it.each(SCANNED)('fails on one AMX word in %s, naming it', file => {
+      const result = runScan({[file]: [DECODED, UNDECODED, AMX_WORD]});
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([
+        calibrated(1, 1),
+        ...scannedBefore(file),
+        `${PRODUCTS}/${file}: 2 <unknown>, 1 in AMX opcode space`,
+      ]);
+    });
+
+    it.each(SCANNED)('fails when %s is missing', file => {
+      const result = runScan({[file]: null});
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([calibrated(1, 1), ...scannedBefore(file)]);
+    });
+
+    it.each(SCANNED)(
+      'fails when the disassembler fails partway through %s, before an AMX word it would have hidden',
+      file => {
+        const result = runScan({[file]: [DECODED, '!exit 3', AMX_WORD]});
+        expect(result.status).not.toBe(0);
+        expect(result.lines).toEqual([
+          calibrated(1, 1),
+          ...scannedBefore(file),
+        ]);
+      },
     );
   });
 });
