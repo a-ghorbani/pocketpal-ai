@@ -429,7 +429,7 @@ describe('whisper mode', () => {
       );
     });
 
-    it('links every kernel into one default.metallib, after every compile', () => {
+    it('links every kernel into one rnwhisper.metallib, after every compile', () => {
       const {calls} = runWhisper({platform});
       expect(calls[calls.length - 1][2]).toBe('metallib');
       expect(calls.filter(call => call[2] === 'metallib')).toEqual([
@@ -439,16 +439,16 @@ describe('whisper mode', () => {
           'metallib',
           ...whisperKernelSet.map(whisperAir),
           '-o',
-          path.join(derived, 'default.metallib'),
+          path.join(derived, 'rnwhisper.metallib'),
         ],
       ]);
     });
   });
 
-  it('writes default.metallib and nothing else into the bundle', () => {
+  it('writes rnwhisper.metallib and nothing else into the bundle', () => {
     expect(runWhisper().status).toBe(0);
-    expect(fs.readdirSync(app)).toEqual(['default.metallib']);
-    expect(fs.readFileSync(path.join(app, 'default.metallib'), 'utf-8')).toBe(
+    expect(fs.readdirSync(app)).toEqual(['rnwhisper.metallib']);
+    expect(fs.readFileSync(path.join(app, 'rnwhisper.metallib'), 'utf-8')).toBe(
       'metallib\n',
     );
   });
@@ -465,12 +465,12 @@ describe('whisper mode', () => {
     expect(runWhisper().status).toBe(0);
 
     expect(appMetallibs().sort()).toEqual([
-      'default.metallib',
       'ggml-tensor.metallib',
       'rnllama.metallib',
+      'rnwhisper.metallib',
     ]);
     expect(fs.readdirSync(app, {recursive: true}).sort()).toEqual(
-      [...llamaFiles, 'default.metallib'].sort(),
+      [...llamaFiles, 'rnwhisper.metallib'].sort(),
     );
     for (const [name, content] of Object.entries(snapshot)) {
       expect(fs.readFileSync(path.join(app, name)).equals(content)).toBe(true);

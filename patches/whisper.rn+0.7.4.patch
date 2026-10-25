@@ -30,6 +30,35 @@ index 10e4aa2..facf488 100644
          if (hasFp16 && tryLoadLibrary("rnwhisper_v8fp16_va_2")) {
            libsLoaded = true;
            return true;
+diff --git a/node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-device.m b/node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-device.m
+index e40cf33..549266b 100644
+--- a/node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-device.m
++++ b/node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-device.m
+@@ -431,13 +431,13 @@ wsp_ggml_metal_library_t wsp_ggml_metal_library_init(wsp_ggml_metal_device_t dev
+     const int64_t t_start = wsp_ggml_time_us();
+ 
+     NSError * error = nil;
+-    NSString * path_lib = [bundle pathForResource:@"default" ofType:@"metallib"];
++    NSString * path_lib = [bundle pathForResource:@"rnwhisper" ofType:@"metallib"];
+     if (path_lib == nil) {
+         // Try to find the resource in the directory where the current binary located.
+         NSString * bin_cur = [[NSProcessInfo processInfo] arguments][0];
+         NSString * bin_dir = [bin_cur stringByDeletingLastPathComponent];
+ 
+-        NSString * path_lib_default = [NSString pathWithComponents:@[bin_dir, @"default.metallib"]];
++        NSString * path_lib_default = [NSString pathWithComponents:@[bin_dir, @"rnwhisper.metallib"]];
+         if ([[NSFileManager defaultManager] isReadableFileAtPath:path_lib_default]) {
+             WSP_GGML_LOG_INFO("%s: found '%s'\n", __func__, [path_lib_default UTF8String]);
+ 
+@@ -482,7 +482,7 @@ wsp_ggml_metal_library_t wsp_ggml_metal_library_init(wsp_ggml_metal_device_t dev
+     }
+ 
+     // no pre-compiled metallib: fall back to compiling each kernel source separately
+-    WSP_GGML_LOG_INFO("%s: default.metallib not found, loading kernel sources\n", __func__);
++    WSP_GGML_LOG_INFO("%s: no precompiled metallib, loading kernel sources\n", __func__);
+ 
+     NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"WSP_GGML_METAL_PATH_RESOURCES"];
+     if (path_resource) {
 diff --git a/node_modules/whisper.rn/cpp/whisper.cpp b/node_modules/whisper.rn/cpp/whisper.cpp
 index 46bec1f..78b842c 100644
 --- a/node_modules/whisper.rn/cpp/whisper.cpp
@@ -73,7 +102,7 @@ index 46bec1f..78b842c 100644
      // (Rust via whisper-rs, Go via cgo, ...). whisper_model_load can throw
      // (std::runtime_error here; vk::SystemError from the Vulkan backend during
 diff --git a/node_modules/whisper.rn/whisper-rn.podspec b/node_modules/whisper.rn/whisper-rn.podspec
-index e24aa83..ea6efde 100644
+index e24aa83..93a6ee5 100644
 --- a/node_modules/whisper.rn/whisper-rn.podspec
 +++ b/node_modules/whisper.rn/whisper-rn.podspec
 @@ -38,13 +38,16 @@ Pod::Spec.new do |s|

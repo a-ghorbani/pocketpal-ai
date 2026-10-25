@@ -20,6 +20,7 @@ const metalGate = read('ios/PocketPal/LlamaMetalGate.swift');
 const podfile = read('ios/Podfile');
 const pbxproj = read('ios/PocketPal.xcodeproj/project.pbxproj');
 const metallibScript = read('scripts/build-ios-metallib.sh');
+const payloadScript = read('scripts/verify-ios-payload.sh');
 const deviceCapabilities = read('src/utils/deviceCapabilities.ts');
 const podspec = fs.readFileSync(
   path.join(LLAMA_RN, 'llama-rn.podspec'),
@@ -348,12 +349,12 @@ describe("whisper.rn's Metal library lookup", () => {
     /pre_install do \|installer\|([\s\S]*?)\n {2}end/,
   );
 
-  it("looks up default.metallib in its own class's bundle, which static linking makes the app's", () => {
+  it("looks up rnwhisper.metallib in its own class's bundle, which static linking makes the app's", () => {
     const bundle = whisperMetalDevice.indexOf(
       'NSBundle * bundle = [NSBundle bundleForClass:[WSPGGMLMetalClass class]];',
     );
     const lookup = whisperMetalDevice.indexOf(
-      'NSString * path_lib = [bundle pathForResource:@"default" ofType:@"metallib"];',
+      'NSString * path_lib = [bundle pathForResource:@"rnwhisper" ofType:@"metallib"];',
     );
     expect(bundle).toBeGreaterThan(-1);
     expect(lookup).toBeGreaterThan(bundle);
@@ -362,6 +363,20 @@ describe("whisper.rn's Metal library lookup", () => {
       /pod\.name == 'whisper-rn'|pod\.name\.start_with\?\('whisper'\)/,
     );
     expect(preInstall[1]).toMatch(/Pod::BuildType\.static_library/);
+  });
+
+  it('looks up rnwhisper.metallib next to the executable, and default.metallib nowhere', () => {
+    expect(whisperMetalDevice).toContain(
+      'NSString * path_lib_default = [NSString pathWithComponents:@[bin_dir, @"rnwhisper.metallib"]];',
+    );
+    expect(whisperMetalDevice).not.toContain('@"default"');
+    expect(whisperMetalDevice).not.toContain('@"default.metallib"');
+  });
+
+  it('logs the kernel-source fallback without naming a library file', () => {
+    expect(whisperMetalDevice).toMatch(
+      /WSP_GGML_LOG_INFO\("%s: no precompiled metallib, loading kernel sources\\n"/,
+    );
   });
 
   it('turns the tensor API on only by GPU family, so its opt-out cannot be overridden', () => {
@@ -535,14 +550,52 @@ describe('the committed whisper.rn Metal kernel phase', () => {
     ]);
   });
 
-  it('writes only default.metallib', () => {
-    expect(whisperPhase.outputs).toEqual([`${APP_RESOURCES}/default.metallib`]);
+  it('writes only rnwhisper.metallib', () => {
+    expect(whisperPhase.outputs).toEqual([
+      `${APP_RESOURCES}/rnwhisper.metallib`,
+    ]);
   });
 
-  it('is the only writer of default.metallib in the app project', () => {
+  it('is the only writer of rnwhisper.metallib in the app project, and nothing writes default.metallib', () => {
     const phases = pbxproj.match(/Build whisper\.rn Metal kernels \*\/ = \{/g);
     expect(phases).toHaveLength(1);
-    expect(pbxproj.match(/default\.metallib/g)).toHaveLength(1);
+    expect(pbxproj.match(/rnwhisper\.metallib/g)).toHaveLength(1);
+    expect(pbxproj).not.toMatch(/default\.metallib/);
+  });
+});
+
+describe("whisper.rn's Metal library name", () => {
+  const names = {
+    bundleLookup: whisperMetalDevice.match(
+      /\[bundle pathForResource:@"(\w+)" ofType:@"metallib"\]/,
+    ),
+    executableLookup: whisperMetalDevice.match(
+      /@\[bin_dir, @"(\w+)\.metallib"\]/,
+    ),
+    script: metallibScript.match(
+      /mode=whisper\n(?:.*\n)*?\s*library=(\w+)\.metallib\n/,
+    ),
+    podfile: podfile.match(
+      /Build whisper\.rn Metal kernels'[\s\S]*?:output_files => \["#\{app_resources_dir\}\/(\w+)\.metallib"\]/,
+    ),
+    pbxproj: (whisperPhase.outputs[0] || '').match(/\/(\w+)\.metallib$/),
+    payload: payloadScript.match(
+      /check "(\w+)\.metallib at the \.app root" test -f "\$app\/\1\.metallib"\n(?=check "no \.metallib other)/,
+    ),
+  };
+
+  it.each(Object.keys(names))('is found in the %s', key => {
+    expect(names[key]).not.toBeNull();
+  });
+
+  it('is rnwhisper in each place', () => {
+    expect(
+      Object.fromEntries(
+        Object.entries(names).map(([key, match]) => [key, match && match[1]]),
+      ),
+    ).toEqual(
+      Object.fromEntries(Object.keys(names).map(key => [key, 'rnwhisper'])),
+    );
   });
 });
 

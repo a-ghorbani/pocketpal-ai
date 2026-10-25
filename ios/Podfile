@@ -150,7 +150,7 @@ target 'PocketPal' do
     :execution_position => :before_compile,
     :input_files => [*whisper_metal_kernel_files, *whisper_metal_headers, metallib_script]
       .map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
-    :output_files => ["#{app_resources_dir}/default.metallib"],
+    :output_files => ["#{app_resources_dir}/rnwhisper.metallib"],
     :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" --whisper "${SRCROOT}/#{from_srcroot.(whisper_cpp_dir)}" ) +
       whisper_metal_kernels.join(' ')
 
