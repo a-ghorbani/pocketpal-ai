@@ -257,6 +257,7 @@
 			buildPhases = (
 				4AD29747771C45CD72B7462F /* [CP] Check Pods Manifest.lock */,
 				CF11501306DF402EAB570A09 /* [CP-User] Build llama.rn Metal kernels */,
+				5C5A2B7B349FDF0BEF3E7C03 /* [CP-User] Build whisper.rn Metal kernels */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
@@ -421,6 +422,47 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		5C5A2B7B349FDF0BEF3E7C03 /* [CP-User] Build whisper.rn Metal kernels */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/argsort.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/binbcast.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/common.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/conv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/dequantize.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/fa.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/gated_delta_net.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/misc.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/mul_mm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/norm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/pool.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/quantize.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/quantize.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/reduce.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/rope.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/softmax.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/solve_tri.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/ssm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/tri.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/unary.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/upscale.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/wkv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-impl.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-common.h",
+				"$(SRCROOT)/../scripts/build-ios-metallib.sh",
+			);
+			name = "[CP-User] Build whisper.rn Metal kernels";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/default.metallib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" --whisper \"${SRCROOT}/../node_modules/whisper.rn/cpp\" fa mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
 		};
 		67774D344B12F9AB3F9128F3 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

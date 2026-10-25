@@ -530,7 +530,7 @@ jobs:
       - name: Verify iOS payload
         run: scripts/verify-ios-payload.sh ios/build/Build/Products/Release-iphonesimulator/PocketPal.app --require-marker
 
-      - name: AMX scan (llama-rn)
+      - name: AMX scan (llama-rn, whisper-rn)
         shell: bash -eo pipefail {0}
         run: |
           llvm_objdump="$(brew --prefix llvm 2>/dev/null || true)/bin/llvm-objdump"
@@ -553,7 +553,14 @@ jobs:
           scan "$RUNNER_TEMP/amx.o"
           test "$amx" -gt 0
 
-          lib=ios/build/Build/Products/Release-iphonesimulator/llama-rn/libllama-rn.a
-          test -f "$lib"
-          scan "$lib"
-          test "$amx" -eq 0
+          for lib in llama-rn/libllama-rn.a whisper-rn/libwhisper-rn.a; do
+            lib="ios/build/Build/Products/Release-iphonesimulator/$lib"
+            test -f "$lib"
+            scan "$lib"
+            test "$amx" -eq 0
+          done
+
+      - name: Symbol overlap (llama-rn, whisper-rn)
+        run: |
+          products=ios/build/Build/Products/Release-iphonesimulator
+          scripts/verify-ios-symbol-overlap.sh --self-test "$products/llama-rn/libllama-rn.a" "$products/whisper-rn/libwhisper-rn.a"
