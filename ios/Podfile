@@ -110,17 +110,18 @@ parse_metal_kernels = ->(package, metal_dir, macro) {
   raise Pod::Informative, "#{package} Metal kernels missing: #{missing.join(', ')}" unless missing.empty?
   kernels
 }
+kernel_input_files = ->(metal_dir) { metal_dir.join('kernels').children.select { |path| path.file? && path.basename.to_s.match?(/\A[^.].*\.(?:metal|h)\z/) }.sort }
 
 ggml_src_dir = package_dir.('llama.rn').join('vendor/llama.cpp/ggml/src')
 ggml_metal_dir = ggml_src_dir.join('ggml-metal')
 metal_kernels = parse_metal_kernels.('llama.rn', ggml_metal_dir, 'GGML_METAL_LIBS')
-metal_kernel_files = ggml_metal_dir.join('kernels').children.select(&:file?).sort
+metal_kernel_files = kernel_input_files.(ggml_metal_dir)
 metal_headers = [ggml_metal_dir.join('ggml-metal-impl.h'), ggml_src_dir.join('ggml-common.h')]
 
 whisper_cpp_dir = package_dir.('whisper.rn').join('cpp')
 whisper_metal_dir = whisper_cpp_dir.join('ggml-metal')
 whisper_metal_kernels = parse_metal_kernels.('whisper.rn', whisper_metal_dir, 'WSP_GGML_METAL_LIBS')
-whisper_metal_kernel_files = whisper_metal_dir.join('kernels').children.select(&:file?).sort
+whisper_metal_kernel_files = kernel_input_files.(whisper_metal_dir)
 whisper_metal_headers = [whisper_metal_dir.join('ggml-metal-impl.h'), whisper_cpp_dir.join('ggml-common.h')]
 
 metallib_script = podfile_dir.join('../scripts/build-ios-metallib.sh')

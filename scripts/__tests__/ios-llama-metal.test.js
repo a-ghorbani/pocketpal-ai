@@ -1,4 +1,6 @@
+const {execFileSync} = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const vm = require('vm');
 
@@ -41,10 +43,11 @@ const parseKernelSet = (source, macro) =>
       new RegExp(`^#define ${macro}((?:.*\\\\\\n)+.*)`, 'm'),
     ) || ['', ''])[1].matchAll(/X\(\s*\w+\s*,\s*(\w+)\s*\)/g),
   ].map(match => match[1]);
+const KERNEL_INPUT = /^[^.].*\.(?:metal|h)$/;
 const listKernelFiles = metalDir =>
   fs
     .readdirSync(path.join(metalDir, 'kernels'), {withFileTypes: true})
-    .filter(entry => entry.isFile())
+    .filter(entry => entry.isFile() && KERNEL_INPUT.test(entry.name))
     .map(entry => entry.name)
     .sort();
 
@@ -489,6 +492,51 @@ describe('the patched whisper.rn GPU init', () => {
     expect(guard.index).toBeLessThan(
       initState.indexOf('whisper_kv_cache_init('),
     );
+  });
+});
+
+describe('the Podfile kernel phase inputs', () => {
+  const lambda = podfile.match(/^kernel_input_files = (.*)$/m);
+
+  it('are what both phases declare', () => {
+    expect(podfile).toMatch(
+      /^metal_kernel_files = kernel_input_files\.\(ggml_metal_dir\)$/m,
+    );
+    expect(podfile).toMatch(
+      /^whisper_metal_kernel_files = kernel_input_files\.\(whisper_metal_dir\)$/m,
+    );
+  });
+
+  it('are the kernel sources and headers only, never dotfiles or AppleDouble files', () => {
+    expect(lambda).not.toBeNull();
+    const metalDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kernel-input-files-'),
+    );
+    try {
+      fs.mkdirSync(path.join(metalDir, 'kernels'));
+      for (const name of [
+        'mul_mm.metal',
+        'common.h',
+        '.DS_Store',
+        '._mul_mm.metal',
+        '._common.h',
+      ]) {
+        fs.writeFileSync(path.join(metalDir, 'kernels', name), '');
+      }
+      const selected = execFileSync(
+        'ruby',
+        [
+          '-rpathname',
+          '-e',
+          `puts (${lambda[1]}).(Pathname.new(ARGV[0])).map { |path| path.basename }`,
+          metalDir,
+        ],
+        {encoding: 'utf-8'},
+      );
+      expect(selected.trim().split('\n')).toEqual(['common.h', 'mul_mm.metal']);
+    } finally {
+      fs.rmSync(metalDir, {recursive: true, force: true});
+    }
   });
 });
 
