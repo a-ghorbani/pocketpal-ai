@@ -1,6 +1,7 @@
 #!/bin/bash
-# Checks that an iOS .app carries llama.rn's precompiled Metal libraries where
-# ggml looks them up, and no .metallib that whisper.rn would load in their place.
+# Checks that an iOS .app carries llama.rn's and whisper.rn's precompiled Metal
+# libraries where their ggml copies look them up, no other .metallib, and no
+# rnwhisper.framework.
 set -uo pipefail
 
 usage() {
@@ -29,12 +30,12 @@ check() {
   fi
 }
 
-only_llama_metallibs() {
+only_known_metallibs() {
   local lib extra=0
   for lib in "$app"/*.metallib; do
     [ -e "$lib" ] || continue
     case $(basename "$lib") in
-      rnllama.metallib | ggml-tensor.metallib) ;;
+      rnllama.metallib | ggml-tensor.metallib | default.metallib) ;;
       *)
         echo "  unexpected $(basename "$lib")" >&2
         extra=1
@@ -62,7 +63,9 @@ check "app bundle $app" test -d "$app"
 check "executable $exe" test -f "$exe"
 check "rnllama.metallib at the .app root" test -f "$app/rnllama.metallib"
 check "ggml-tensor.metallib at the .app root" test -f "$app/ggml-tensor.metallib"
-check "no .metallib other than those two at the .app root" only_llama_metallibs
+check "default.metallib at the .app root" test -f "$app/default.metallib"
+check "no .metallib other than those three at the .app root" only_known_metallibs
+check "no Frameworks/rnwhisper.framework in the .app" test ! -e "$app/Frameworks/rnwhisper.framework"
 check "no __ggml_metallib section in the executable" no_embedded_library
 if $require_marker; then
   check "core patch marker _rnllama_patch_abort_v3 in the executable" has_core_marker

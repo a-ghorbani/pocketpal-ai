@@ -17,13 +17,22 @@ const GGML_SRC = path.join(
 const GGML_METAL = path.join(GGML_SRC, 'ggml-metal');
 const KERNELS = path.join(GGML_METAL, 'kernels');
 
-const kernelSet = [
-  ...(fs
-    .readFileSync(path.join(GGML_METAL, 'ggml-metal-device.m'), 'utf-8')
-    .match(/^#define GGML_METAL_LIBS((?:.*\\\n)+.*)/m) || ['', ''])[1].matchAll(
-    /X\(\s*\w+\s*,\s*(\w+)\s*\)/g,
-  ),
-].map(match => match[1]);
+const WHISPER_CPP = path.join(ROOT, 'node_modules', 'whisper.rn', 'cpp');
+const WHISPER_METAL = path.join(WHISPER_CPP, 'ggml-metal');
+const WHISPER_KERNELS = path.join(WHISPER_METAL, 'kernels');
+
+const parseKernelSet = (metalDir, macro) =>
+  [
+    ...(fs
+      .readFileSync(path.join(metalDir, 'ggml-metal-device.m'), 'utf-8')
+      .match(new RegExp(`^#define ${macro}((?:.*\\\\\\n)+.*)`, 'm')) || [
+      '',
+      '',
+    ])[1].matchAll(/X\(\s*\w+\s*,\s*(\w+)\s*\)/g),
+  ].map(match => match[1]);
+
+const kernelSet = parseKernelSet(GGML_METAL, 'GGML_METAL_LIBS');
+const whisperKernelSet = parseKernelSet(WHISPER_METAL, 'WSP_GGML_METAL_LIBS');
 
 const tensorKernels = [
   ...fs
@@ -142,6 +151,10 @@ const appMetallibs = () =>
 describe('the parse itself', () => {
   it('finds the kernel set in the vendored ggml', () => {
     expect(kernelSet.length).toBeGreaterThan(0);
+  });
+
+  it("finds whisper.rn's kernel set", () => {
+    expect(whisperKernelSet.length).toBeGreaterThan(0);
   });
 
   it("finds upstream's tensor API kernels, which the script builds", () => {
@@ -368,6 +381,112 @@ describe('failures', () => {
   it.each([
     ['no arguments', []],
     ['no kernels', [GGML_SRC]],
+  ])('prints usage and exits 64 for %s', (_, args) => {
+    const {status, stderr, calls} = run({args});
+    expect(stderr).toMatch(/^usage: /);
+    expect(calls).toEqual([]);
+    expect(status).toBe(64);
+  });
+});
+
+describe('whisper mode', () => {
+  const whisperArgs = ['--whisper', WHISPER_CPP, ...whisperKernelSet];
+  const runWhisper = ({platform, env = {}} = {}) =>
+    run({
+      platform,
+      args: whisperArgs,
+      env: {KERNELS_DIR: WHISPER_KERNELS, ...env},
+    });
+  const whisperAir = kernel =>
+    path.join(derived, 'whisper-metal', `${kernel}.air`);
+
+  describe.each([
+    ['iphoneos', '-mtargetos=ios18.0'],
+    ['iphonesimulator', '-mtargetos=ios18.0-simulator'],
+  ])('the %s build', (platform, target) => {
+    it("compiles each of whisper's kernels for iOS 18 with its own bf16 macro", () => {
+      const {status, calls} = runWhisper({platform});
+      expect(status).toBe(0);
+      expect(sorted(compiles(calls))).toEqual(
+        sorted(
+          whisperKernelSet.map(kernel => [
+            '-sdk',
+            platform,
+            'metal',
+            '-O3',
+            target,
+            '-DWSP_GGML_METAL_HAS_BF16',
+            '-I',
+            WHISPER_METAL,
+            '-I',
+            WHISPER_CPP,
+            '-c',
+            path.join(WHISPER_KERNELS, `${kernel}.metal`),
+            '-o',
+            whisperAir(kernel),
+          ]),
+        ),
+      );
+    });
+
+    it('links every kernel into one default.metallib, after every compile', () => {
+      const {calls} = runWhisper({platform});
+      expect(calls[calls.length - 1][2]).toBe('metallib');
+      expect(calls.filter(call => call[2] === 'metallib')).toEqual([
+        [
+          '-sdk',
+          platform,
+          'metallib',
+          ...whisperKernelSet.map(whisperAir),
+          '-o',
+          path.join(derived, 'default.metallib'),
+        ],
+      ]);
+    });
+  });
+
+  it('writes default.metallib and nothing else into the bundle', () => {
+    expect(runWhisper().status).toBe(0);
+    expect(fs.readdirSync(app)).toEqual(['default.metallib']);
+    expect(fs.readFileSync(path.join(app, 'default.metallib'), 'utf-8')).toBe(
+      'metallib\n',
+    );
+  });
+
+  it("leaves llama.rn's libraries as the llama run wrote them", () => {
+    expect(run().status).toBe(0);
+    const llamaFiles = fs.readdirSync(app, {recursive: true}).sort();
+    const snapshot = Object.fromEntries(
+      llamaFiles
+        .filter(name => fs.statSync(path.join(app, name)).isFile())
+        .map(name => [name, fs.readFileSync(path.join(app, name))]),
+    );
+
+    expect(runWhisper().status).toBe(0);
+
+    expect(appMetallibs().sort()).toEqual([
+      'default.metallib',
+      'ggml-tensor.metallib',
+      'rnllama.metallib',
+    ]);
+    expect(fs.readdirSync(app, {recursive: true}).sort()).toEqual(
+      [...llamaFiles, 'default.metallib'].sort(),
+    );
+    for (const [name, content] of Object.entries(snapshot)) {
+      expect(fs.readFileSync(path.join(app, name)).equals(content)).toBe(true);
+    }
+  });
+
+  it('fails without writing a library when a kernel does not compile', () => {
+    const {status, calls} = runWhisper({env: {STUB_FAIL_KERNEL: 'fa'}});
+    expect(status).not.toBe(0);
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it.each([
+    ['no directory', ['--whisper']],
+    ['no kernels', ['--whisper', WHISPER_CPP]],
   ])('prints usage and exits 64 for %s', (_, args) => {
     const {status, stderr, calls} = run({args});
     expect(stderr).toMatch(/^usage: /);

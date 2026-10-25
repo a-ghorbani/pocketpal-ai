@@ -17,7 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    keepLlamaOffUnsupportedMetal()
+    configureGgmlMetal()
 
     // Initialize Firebase
     // This is used exclusively for sending model benchmarks (with user consent) to Firebase.
@@ -43,7 +43,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
-  private func keepLlamaOffUnsupportedMetal() {
+  private func configureGgmlMetal() {
+    setenv("WSP_GGML_METAL_TENSOR_DISABLE", "1", 1)
     var iOS18OrLater = false
     if #available(iOS 18.0, *) {
       iOS18OrLater = true
@@ -51,6 +52,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)
     if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {
       setenv("GGML_METAL_DEVICES", "0", 1)
+      setenv("WSP_GGML_METAL_DEVICES", "0", 1)
     }
   }
 
