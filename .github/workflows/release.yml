@@ -274,6 +274,11 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
+      - name: Ensure Metal toolchain
+        run: |
+          xcrun -sdk iphoneos metal -v || xcodebuild -downloadComponent MetalToolchain
+          xcrun -sdk iphonesimulator metal -v
+
       # Step 2: Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3

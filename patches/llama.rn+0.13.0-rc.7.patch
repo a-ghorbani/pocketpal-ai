@@ -990,6 +990,28 @@ index 0065b43..122681f 100644
                  throw std::runtime_error("Failed to evaluate chunks");
              }
              n_past = new_n_past;
+diff --git a/node_modules/llama.rn/llama-rn.podspec b/node_modules/llama.rn/llama-rn.podspec
+index 413627a..651c91a 100644
+--- a/node_modules/llama.rn/llama-rn.podspec
++++ b/node_modules/llama.rn/llama-rn.podspec
+@@ -7,7 +7,7 @@ base_compiler_flags = "-fno-objc-arc -fvisibility-inlines-hidden -DGGML_USE_CPU
+ if ENV["RNLLAMA_DISABLE_METAL"] != "1" then
+   # GGMLMetalClass only exists when GGML_METAL_EMBED_LIBRARY is off; keep the
+   # (process-global) Objective-C class name unique per library regardless.
+-  base_compiler_flags += " -DGGML_USE_METAL -DGGML_METAL_EMBED_LIBRARY=1 -DGGMLMetalClass=RNLlamaGGMLMetalClass" # -DGGML_METAL_NDEBUG
++  base_compiler_flags += " -DGGML_USE_METAL -DGGMLMetalClass=RNLlamaGGMLMetalClass" # -DGGML_METAL_NDEBUG
+ end
+ 
+ # Use base_optimizer_flags = "" for debug builds
+@@ -44,7 +44,7 @@ Pod::Spec.new do |s|
+       "#{llama_cpp}/ggml/include/*.h",
+       "#{llama_cpp}/ggml/src/*.{h,c,cpp}",
+       "#{llama_cpp}/ggml/src/ggml-cpu/**/*.{h,c,cpp}",
+-      "#{llama_cpp}/ggml/src/ggml-metal/*.{h,m,cpp,s}",
++      "#{llama_cpp}/ggml/src/ggml-metal/*.{h,m,cpp}",
+       "#{llama_cpp}/ggml/src/ggml-blas/*.{h,cpp}",
+       "#{llama_cpp}/common/**/*.{h,cpp}",
+       "#{llama_cpp}/tools/mtmd/**/*.{h,cpp}",
 diff --git a/node_modules/llama.rn/src/index.ts b/node_modules/llama.rn/src/index.ts
 index 039933f..1fdd5d4 100644
 --- a/node_modules/llama.rn/src/index.ts
@@ -1032,3 +1054,29 @@ index 039933f..1fdd5d4 100644
      const { llamaStopCompletion } = getJsi()
      return llamaStopCompletion(this.id)
    }
+diff --git a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
+index 951cb80..abf61ae 100644
+--- a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
++++ b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
+@@ -506,10 +506,10 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
+     const int64_t t_start = ggml_time_us();
+ 
+     NSError * error = nil;
+-    NSString * path_lib = ggml_metal_find_metallib(bundle, @"default");
++    NSString * path_lib = ggml_metal_find_metallib(bundle, @"rnllama");
+ 
+     if (path_lib != nil) {
+-        // pre-compiled library found: a single combined default.metallib
++        // pre-compiled library found: a single combined rnllama.metallib
+         NSURL * libURL = [NSURL fileURLWithPath:path_lib];
+         GGML_LOG_INFO("%s: loading '%s'\n", __func__, [path_lib UTF8String]);
+ 
+@@ -550,7 +550,7 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
+     }
+ 
+     // no pre-compiled metallib: fall back to compiling each kernel source separately
+-    GGML_LOG_INFO("%s: default.metallib not found, loading kernel sources\n", __func__);
++    GGML_LOG_INFO("%s: no precompiled metallib, loading kernel sources\n", __func__);
+ 
+     NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"GGML_METAL_PATH_RESOURCES"];
+     if (path_resource) {
