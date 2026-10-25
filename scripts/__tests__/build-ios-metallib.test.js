@@ -25,6 +25,12 @@ const kernelSet = [
   ),
 ].map(match => match[1]);
 
+const tensorKernels = [
+  ...fs
+    .readFileSync(path.join(GGML_METAL, 'CMakeLists.txt'), 'utf-8')
+    .matchAll(/Compiling kernels\/(\w+)\.metal \(tensor API\)/g),
+].map(match => match[1]);
+
 const XCRUN = `#!/bin/bash
 line=$(printf '%s\\x1f' "$@")
 printf '%s\\n' "$line" >> "$XCRUN_LOG"
@@ -40,6 +46,7 @@ prev=""
 for arg in "$@"; do
   [ "$prev" = -o ] && out=$arg
   [ "$arg" = "$KERNELS_DIR/\${STUB_FAIL_KERNEL:-none}.metal" ] && { echo "error: stub" >&2; exit 1; }
+  [ "$arg" = -DGGML_METAL_HAS_TENSOR ] && [ -n "\${STUB_FAIL_TENSOR:-}" ] && { echo "error: stub" >&2; exit 1; }
   [ "$arg" = "$KERNELS_DIR/\${STUB_NO_OUTPUT_KERNEL:-none}.metal" ] && exit 0
   prev=$arg
 done
@@ -134,41 +141,65 @@ describe('the parse itself', () => {
   it('finds the kernel set in the vendored ggml', () => {
     expect(kernelSet.length).toBeGreaterThan(0);
   });
+
+  it("finds upstream's tensor API kernels, which the script builds", () => {
+    expect(tensorKernels).toEqual(['mul_mm', 'fa_f16']);
+  });
 });
 
 describe.each([
-  ['iphoneos', '-mtargetos=ios18.0'],
-  ['iphonesimulator', '-mtargetos=ios18.0-simulator'],
-])('the %s build', (platform, target) => {
-  it('compiles each kernel for iOS 18 with bf16, and nothing else', () => {
+  ['iphoneos', ''],
+  ['iphonesimulator', '-simulator'],
+])('the %s build', (platform, suffix) => {
+  const compile = (target, defines, kernel, air) => [
+    '-sdk',
+    platform,
+    'metal',
+    '-O3',
+    `-mtargetos=${target}${suffix}`,
+    ...defines,
+    '-I',
+    GGML_METAL,
+    '-I',
+    GGML_SRC,
+    '-c',
+    path.join(KERNELS, `${kernel}.metal`),
+    '-o',
+    path.join(derived, 'rnllama-metal', air),
+  ];
+
+  it('compiles each kernel for iOS 18 with bf16, the tensor API kernels again for iOS 26, and nothing else', () => {
     const {status, calls} = run({platform});
     expect(status).toBe(0);
     expect(sorted(compiles(calls))).toEqual(
-      sorted(
-        kernelSet.map(kernel => [
-          '-sdk',
-          platform,
-          'metal',
-          '-O3',
-          target,
-          '-DGGML_METAL_HAS_BF16',
-          '-I',
-          GGML_METAL,
-          '-I',
-          GGML_SRC,
-          '-c',
-          path.join(KERNELS, `${kernel}.metal`),
-          '-o',
-          path.join(derived, 'rnllama-metal', `${kernel}.air`),
-        ]),
-      ),
+      sorted([
+        ...kernelSet.map(kernel =>
+          compile(
+            'ios18.0',
+            ['-DGGML_METAL_HAS_BF16'],
+            kernel,
+            `${kernel}.air`,
+          ),
+        ),
+        ...tensorKernels.map(kernel =>
+          compile(
+            'ios26.0',
+            ['-DGGML_METAL_HAS_TENSOR', '-DGGML_METAL_HAS_BF16'],
+            kernel,
+            `tensor/${kernel}.air`,
+          ),
+        ),
+      ]),
     );
   });
 
-  it('links every kernel into one rnllama.metallib, after every compile', () => {
+  it('links rnllama.metallib and ggml-tensor.metallib, after every compile', () => {
     const {calls} = run({platform});
     const links = calls.filter(call => call[2] === 'metallib');
-    expect(calls[calls.length - 1][2]).toBe('metallib');
+    expect(calls.slice(-2).map(call => call[2])).toEqual([
+      'metallib',
+      'metallib',
+    ]);
     expect(links).toEqual([
       [
         '-sdk',
@@ -180,56 +211,30 @@ describe.each([
         '-o',
         path.join(derived, 'rnllama.metallib'),
       ],
+      [
+        '-sdk',
+        platform,
+        'metallib',
+        ...tensorKernels.map(kernel =>
+          path.join(derived, 'rnllama-metal', 'tensor', `${kernel}.air`),
+        ),
+        '-o',
+        path.join(derived, 'ggml-tensor.metallib'),
+      ],
     ]);
   });
 });
 
 describe('the app bundle it writes', () => {
-  it('holds rnllama.metallib as its only library', () => {
+  it('holds the two libraries and nothing else', () => {
     expect(run().status).toBe(0);
-    expect(appMetallibs()).toEqual(['rnllama.metallib']);
-    expect(fs.readFileSync(path.join(app, 'rnllama.metallib'), 'utf-8')).toBe(
-      'metallib\n',
-    );
-  });
-
-  it('holds byte copies of every kernel source and both headers', () => {
-    run();
-    expect(fs.readdirSync(path.join(app, 'kernels')).sort()).toEqual(
-      fs.readdirSync(KERNELS).sort(),
-    );
-    for (const name of fs.readdirSync(KERNELS)) {
-      expect(
-        fs
-          .readFileSync(path.join(app, 'kernels', name))
-          .equals(fs.readFileSync(path.join(KERNELS, name))),
-      ).toBe(true);
+    expect(fs.readdirSync(app).sort()).toEqual([
+      'ggml-tensor.metallib',
+      'rnllama.metallib',
+    ]);
+    for (const lib of ['rnllama.metallib', 'ggml-tensor.metallib']) {
+      expect(fs.readFileSync(path.join(app, lib), 'utf-8')).toBe('metallib\n');
     }
-    for (const header of [
-      path.join(GGML_METAL, 'ggml-metal-impl.h'),
-      path.join(GGML_SRC, 'ggml-common.h'),
-    ]) {
-      expect(
-        fs
-          .readFileSync(path.join(app, path.basename(header)))
-          .equals(fs.readFileSync(header)),
-      ).toBe(true);
-    }
-  });
-
-  it('keeps the intermediates out of the bundle', () => {
-    run();
-    const names = fs.readdirSync(app, {recursive: true});
-    expect(names.filter(name => name.endsWith('.air'))).toEqual([]);
-  });
-
-  it('drops a kernel file left over from an earlier build', () => {
-    fs.mkdirSync(path.join(app, 'kernels'));
-    fs.writeFileSync(path.join(app, 'kernels', 'removed_upstream.metal'), '');
-    run();
-    expect(fs.readdirSync(path.join(app, 'kernels'))).not.toContain(
-      'removed_upstream.metal',
-    );
   });
 });
 
@@ -254,12 +259,18 @@ describe("a DerivedSources path as long as an archive build's", () => {
     expect(path.join(airDir, 'fa_aux.air').length).toBeGreaterThan(300);
     const {status, calls} = run({env: {DERIVED_FILE_DIR: longDerived}});
     expect(calls.flat().filter(arg => arg.includes('{}'))).toEqual([]);
+    const tensorAirs = tensorKernels.map(kernel =>
+      path.join(airDir, 'tensor', `${kernel}.air`),
+    );
     expect(
       compiles(calls)
         .map(call => call[call.indexOf('-o') + 1])
         .sort(),
     ).toEqual(
-      kernelSet.map(kernel => path.join(airDir, `${kernel}.air`)).sort(),
+      [
+        ...kernelSet.map(kernel => path.join(airDir, `${kernel}.air`)),
+        ...tensorAirs,
+      ].sort(),
     );
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([
       [
@@ -270,9 +281,20 @@ describe("a DerivedSources path as long as an archive build's", () => {
         '-o',
         path.join(longDerived, 'rnllama.metallib'),
       ],
+      [
+        '-sdk',
+        'iphoneos',
+        'metallib',
+        ...tensorAirs,
+        '-o',
+        path.join(longDerived, 'ggml-tensor.metallib'),
+      ],
     ]);
     expect(status).toBe(0);
-    expect(appMetallibs()).toEqual(['rnllama.metallib']);
+    expect(appMetallibs().sort()).toEqual([
+      'ggml-tensor.metallib',
+      'rnllama.metallib',
+    ]);
   });
 });
 
@@ -287,6 +309,13 @@ describe('failures', () => {
 
   it('fails without writing a partial library when a kernel does not compile', () => {
     const {status, calls} = run({env: {STUB_FAIL_KERNEL: 'mul_mm'}});
+    expect(status).not.toBe(0);
+    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+    expect(fs.readdirSync(app)).toEqual([]);
+  });
+
+  it('fails without writing either library when a tensor API kernel does not compile', () => {
+    const {status, calls} = run({env: {STUB_FAIL_TENSOR: '1'}});
     expect(status).not.toBe(0);
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
     expect(fs.readdirSync(app)).toEqual([]);

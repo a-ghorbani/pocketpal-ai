@@ -5,30 +5,12 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'verify-ios-payload.sh');
-const GGML_SRC = path.join(
-  ROOT,
-  'node_modules',
-  'llama.rn',
-  'vendor',
-  'llama.cpp',
-  'ggml',
-  'src',
-);
-const KERNELS = path.join(GGML_SRC, 'ggml-metal', 'kernels');
-const HEADERS = [
-  path.join(GGML_SRC, 'ggml-metal', 'ggml-metal-impl.h'),
-  path.join(GGML_SRC, 'ggml-common.h'),
-];
-
 const CHECKS = {
   app: 'app bundle',
   exe: 'executable',
-  sources: 'llama.rn kernel sources found in node_modules',
   metallib: 'rnllama.metallib at the .app root',
-  kernels: "kernels/ matches llama.rn's ggml-metal/kernels",
-  implHeader: 'ggml-metal-impl.h at the .app root',
-  commonHeader: 'ggml-common.h at the .app root',
-  onlyRnllama: 'no .metallib other than rnllama.metallib at the .app root',
+  tensorMetallib: 'ggml-tensor.metallib at the .app root',
+  onlyLlama: 'no .metallib other than those two at the .app root',
   notEmbedded: 'no __ggml_metallib section in the executable',
   marker: 'core patch marker _rnllama_patch_abort_v3 in the executable',
 };
@@ -63,24 +45,17 @@ function makeApp(name = 'PocketPal.app') {
   fs.mkdirSync(app);
   fs.writeFileSync(path.join(app, 'PocketPal'), 'exe');
   fs.writeFileSync(path.join(app, 'rnllama.metallib'), 'metallib');
-  fs.cpSync(KERNELS, path.join(app, 'kernels'), {recursive: true});
-  for (const header of HEADERS) {
-    fs.copyFileSync(header, path.join(app, path.basename(header)));
-  }
+  fs.writeFileSync(path.join(app, 'ggml-tensor.metallib'), 'metallib');
   return app;
 }
 
-function run(
-  args,
-  {otool = OTOOL_CLEAN, nm = NM_MARKED, env = {}, script = SCRIPT} = {},
-) {
+function run(args, {otool = OTOOL_CLEAN, nm = NM_MARKED, env = {}} = {}) {
   fs.writeFileSync(path.join(tmp, 'otool.out'), otool);
   fs.writeFileSync(path.join(tmp, 'nm.out'), nm);
-  const {NODE_PATH, ...parentEnv} = process.env;
-  const result = spawnSync('bash', [script, ...args], {
+  const result = spawnSync('bash', [SCRIPT, ...args], {
     encoding: 'utf-8',
     env: {
-      ...parentEnv,
+      ...process.env,
       PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
       STUB_OTOOL_OUT: path.join(tmp, 'otool.out'),
       STUB_NM_OUT: path.join(tmp, 'nm.out'),
@@ -96,15 +71,6 @@ function run(
   );
   return {status: result.status, stderr: result.stderr, lines, failed, passed};
 }
-
-describe('the parse itself', () => {
-  it('has the vendored kernel sources and headers to build a bundle from', () => {
-    expect(fs.readdirSync(KERNELS).length).toBeGreaterThan(0);
-    for (const header of HEADERS) {
-      expect(fs.existsSync(header)).toBe(true);
-    }
-  });
-});
 
 describe('a complete bundle', () => {
   it('passes every check, the core marker included', () => {
@@ -130,27 +96,29 @@ describe('a complete bundle', () => {
   });
 });
 
-describe('the precompiled library', () => {
-  it('fails when rnllama.metallib is missing', () => {
+describe('the precompiled libraries', () => {
+  it.each([
+    ['rnllama.metallib', 'metallib'],
+    ['ggml-tensor.metallib', 'tensorMetallib'],
+  ])('fails when %s is missing', (lib, check) => {
     const app = makeApp();
-    fs.rmSync(path.join(app, 'rnllama.metallib'));
+    fs.rmSync(path.join(app, lib));
     const result = run([app]);
-    expect(result.failed).toEqual(['metallib']);
+    expect(result.failed).toEqual([check]);
     expect(result.status).toBe(1);
   });
 
-  it.each([
-    'default.metallib',
-    'rnllama-tensor.metallib',
-    'ggml-tensor.metallib',
-  ])('fails on %s beside it, and names it', extra => {
-    const app = makeApp();
-    fs.writeFileSync(path.join(app, extra), 'metallib');
-    const result = run([app]);
-    expect(result.failed).toEqual(['onlyRnllama']);
-    expect(result.stderr).toContain(`unexpected ${extra}`);
-    expect(result.status).toBe(1);
-  });
+  it.each(['default.metallib', 'rnllama-tensor.metallib', 'ggml.metallib'])(
+    'fails on %s beside them, and names it',
+    extra => {
+      const app = makeApp();
+      fs.writeFileSync(path.join(app, extra), 'metallib');
+      const result = run([app]);
+      expect(result.failed).toEqual(['onlyLlama']);
+      expect(result.stderr).toContain(`unexpected ${extra}`);
+      expect(result.status).toBe(1);
+    },
+  );
 
   it('fails on another library even when rnllama.metallib is missing', () => {
     const app = makeApp();
@@ -159,78 +127,7 @@ describe('the precompiled library', () => {
       path.join(app, 'default.metallib'),
     );
     const result = run([app]);
-    expect(result.failed).toEqual(['metallib', 'onlyRnllama']);
-    expect(result.status).toBe(1);
-  });
-});
-
-describe('the kernel sources tensor GPUs compile', () => {
-  it('fails when kernels/ is missing', () => {
-    const app = makeApp();
-    fs.rmSync(path.join(app, 'kernels'), {recursive: true});
-    const result = run([app]);
-    expect(result.failed).toEqual(['kernels']);
-    expect(result.status).toBe(1);
-  });
-
-  it('fails when one kernel file is missing', () => {
-    const app = makeApp();
-    fs.rmSync(path.join(app, 'kernels', 'tri.metal'));
-    const result = run([app]);
-    expect(result.failed).toEqual(['kernels']);
-    expect(result.status).toBe(1);
-  });
-
-  it('fails on a kernel file llama.rn does not ship', () => {
-    const app = makeApp();
-    fs.writeFileSync(path.join(app, 'kernels', 'removed_upstream.metal'), '');
-    const result = run([app]);
-    expect(result.failed).toEqual(['kernels']);
-    expect(result.status).toBe(1);
-  });
-
-  it('fails on a stale kernel file', () => {
-    const app = makeApp();
-    fs.appendFileSync(path.join(app, 'kernels', 'common.h'), '\n');
-    const result = run([app]);
-    expect(result.failed).toEqual(['kernels']);
-    expect(result.status).toBe(1);
-  });
-
-  it.each([
-    ['ggml-metal-impl.h', 'implHeader'],
-    ['ggml-common.h', 'commonHeader'],
-  ])('fails when %s is missing from the root', (header, check) => {
-    const app = makeApp();
-    fs.rmSync(path.join(app, header));
-    const result = run([app]);
-    expect(result.failed).toEqual([check]);
-    expect(result.status).toBe(1);
-  });
-
-  it.each([
-    ['ggml-metal-impl.h', 'implHeader'],
-    ['ggml-common.h', 'commonHeader'],
-  ])('fails when %s at the root is stale', (header, check) => {
-    const app = makeApp();
-    fs.appendFileSync(path.join(app, header), '\n');
-    const result = run([app]);
-    expect(result.failed).toEqual([check]);
-    expect(result.status).toBe(1);
-  });
-
-  it('fails every source check when llama.rn cannot be resolved, rather than passing', () => {
-    const detached = path.join(tmp, 'detached', 'scripts');
-    fs.mkdirSync(detached, {recursive: true});
-    const script = path.join(detached, 'verify-ios-payload.sh');
-    fs.copyFileSync(SCRIPT, script);
-    const result = run([makeApp()], {script});
-    expect(result.failed).toEqual([
-      'sources',
-      'kernels',
-      'implHeader',
-      'commonHeader',
-    ]);
+    expect(result.failed).toEqual(['metallib', 'onlyLlama']);
     expect(result.status).toBe(1);
   });
 });
@@ -293,7 +190,7 @@ describe('arguments', () => {
   it('fails on a missing bundle', () => {
     const result = run([path.join(tmp, 'Missing.app')]);
     expect(result.failed).toEqual(
-      expect.arrayContaining(['app', 'exe', 'metallib', 'kernels']),
+      expect.arrayContaining(['app', 'exe', 'metallib', 'tensorMetallib']),
     );
     expect(result.status).toBe(1);
   });

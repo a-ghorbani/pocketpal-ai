@@ -96,8 +96,7 @@ target 'PocketPal' do
       .map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
     :output_files => [
       "#{app_resources_dir}/rnllama.metallib",
-      *metal_kernel_files.map { |path| "#{app_resources_dir}/kernels/#{path.basename}" },
-      *metal_headers.map { |path| "#{app_resources_dir}/#{path.basename}" },
+      "#{app_resources_dir}/ggml-tensor.metallib",
     ],
     :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" "${SRCROOT}/#{from_srcroot.(ggml_src_dir)}" ) +
       metal_kernels.join(' ')

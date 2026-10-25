@@ -101,7 +101,7 @@ describe('the parsed kernel set', () => {
 describe('the iOS version the Metal library and its gates agree on', () => {
   const versions = {
     appDelegate: appDelegate.match(/#available\(iOS (\d+)\.0, \*\)/),
-    metallibTarget: metallibScript.match(/-mtargetos=ios(\d+)\.0/),
+    metallibTarget: metallibScript.match(/target="-mtargetos=ios(\d+)\.0\$2"/),
     jsGpuPolicy: deviceCapabilities.match(/iosVersion >= (\d+)/),
   };
 
@@ -116,6 +116,12 @@ describe('the iOS version the Metal library and its gates agree on', () => {
       Object.values(versions).map(match => match && match[1]),
     );
     expect([...majors]).toEqual(['18']);
+  });
+
+  it('is 26, the first with the tensor API, for the tensor API kernels', () => {
+    expect(metallibScript).toMatch(
+      /target="-mtargetos=ios26\.0\$2 -DGGML_METAL_HAS_TENSOR"/,
+    );
   });
 });
 
@@ -242,9 +248,12 @@ describe('the patched llama.rn Metal lookup', () => {
     );
   });
 
-  it('skips the precompiled library on tensor GPUs', () => {
+  it('loads rnllama.metallib on every GPU, and ggml-tensor.metallib over it on tensor GPUs', () => {
     expect(metalDevice).toMatch(
-      /if \(ggml_metal_device_get_props\(dev\)->has_tensor\) \{\s*GGML_LOG_INFO\([^;]*\);\s*\} else \{\s*path_lib = ggml_metal_find_metallib\(bundle, @"rnllama"\);\s*\}/,
+      /NSString \* path_lib = ggml_metal_find_metallib\(bundle, @"rnllama"\);/,
+    );
+    expect(metalDevice).toMatch(
+      /if \(ggml_metal_device_get_props\(dev\)->has_tensor\) \{\s*NSString \* path_mm = ggml_metal_find_metallib\(bundle, @"ggml-tensor"\);/,
     );
   });
 });
@@ -270,12 +279,10 @@ describe('the committed Metal kernel phase', () => {
     ]);
   });
 
-  it('writes rnllama.metallib, the kernel sources and both headers, and no other library', () => {
+  it('writes rnllama.metallib and ggml-tensor.metallib, and nothing else', () => {
     expect(metalPhase.outputs).toEqual([
       `${APP_RESOURCES}/rnllama.metallib`,
-      ...kernelFiles.map(name => `${APP_RESOURCES}/kernels/${name}`),
-      `${APP_RESOURCES}/ggml-metal-impl.h`,
-      `${APP_RESOURCES}/ggml-common.h`,
+      `${APP_RESOURCES}/ggml-tensor.metallib`,
     ]);
   });
 
@@ -283,6 +290,7 @@ describe('the committed Metal kernel phase', () => {
     const phases = pbxproj.match(/Build llama\.rn Metal kernels \*\/ = \{/g);
     expect(phases).toHaveLength(1);
     expect(pbxproj.match(/rnllama\.metallib/g)).toHaveLength(1);
+    expect(pbxproj.match(/ggml-tensor\.metallib/g)).toHaveLength(1);
     expect(pbxproj).not.toMatch(
       /default\.metallib|\.metal in (Sources|Resources)/,
     );
