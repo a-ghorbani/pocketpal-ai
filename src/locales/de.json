@@ -1611,7 +1611,8 @@
     "errorMicUnavailable": "Das Mikrofon reagiert nicht. Versuchen Sie es erneut oder wechseln Sie zu einem kleineren Chat-Modell.",
     "errorTranscriptPartial": "Ein Teil Ihres Diktats konnte nicht transkribiert werden.",
     "openSettingsLabel": "Einstellungen öffnen",
-    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um dieses Modell zu installieren ({{freeMb}} MB verfügbar)."
+    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um dieses Modell zu installieren ({{freeMb}} MB verfügbar).",
+    "setupSheetTitle": "Spracheingabe einrichten"
   },
   "onboarding": {
     "back": "Zurück",
@@ -1728,7 +1729,7 @@
     "thinkingTitle": "Denkt nach",
     "thinkingHint": "Tippe die Wolke zum Abbrechen",
     "speakingTitle": "Spricht",
-    "speakingHint": "Rippe die Wolke zum Unterbrechen",
+    "speakingHint": "Tippe auf die Wolke zum Unterbrechen",
     "mutedTitle": "Mikrofon aus",
     "mutedHint": "Tippe auf das Mikrofon die Sprachausgabe erneut zu starten",
     "errorTranscribe": "Das konnte ich nicht verstehen. Versuche es erneut.",
