@@ -47,10 +47,12 @@ for arg in "$@"; do
   [ "$prev" = -o ] && out=$arg
   [ "$arg" = "$KERNELS_DIR/\${STUB_FAIL_KERNEL:-none}.metal" ] && { echo "error: stub" >&2; exit 1; }
   [ "$arg" = -DGGML_METAL_HAS_TENSOR ] && [ -n "\${STUB_FAIL_TENSOR:-}" ] && { echo "error: stub" >&2; exit 1; }
-  [ "$arg" = "$KERNELS_DIR/\${STUB_NO_OUTPUT_KERNEL:-none}.metal" ] && exit 0
   prev=$arg
 done
+[ "\${out%/rnllama-metal/\${STUB_NO_OUTPUT_AIR:-none}}" != "$out" ] && exit 0
 echo "$tool" > "$out"
+[ "\${out%/rnllama-metal/\${STUB_FAIL_AFTER_OUTPUT_AIR:-none}}" != "$out" ] && exit 1
+exit 0
 `;
 
 // BSD xargs substitutes -I's replacement only into arguments of up to 255
@@ -315,30 +317,53 @@ describe('failures', () => {
   });
 
   it('fails without writing either library when a tensor API kernel does not compile', () => {
-    const {status, calls} = run({env: {STUB_FAIL_TENSOR: '1'}});
+    const {status, stderr, calls} = run({env: {STUB_FAIL_TENSOR: '1'}});
     expect(status).not.toBe(0);
+    expect(stderr).toContain('the tensor API kernels need Xcode 26.6 or later');
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
     expect(fs.readdirSync(app)).toEqual([]);
   });
 
-  it('fails naming the kernel when a compile exits 0 without its .air', () => {
-    const {status, stderr, calls} = run({
-      env: {STUB_NO_OUTPUT_KERNEL: 'mul_mm'},
+  it.each([
+    ['mul_mm.air', 'mul_mm.metal produced no '],
+    ['tensor/mul_mm.air', 'mul_mm.metal produced no '],
+  ])(
+    'fails naming the kernel when a compile exits 0 without %s',
+    (air, message) => {
+      const {status, stderr, calls} = run({env: {STUB_NO_OUTPUT_AIR: air}});
+      expect(status).not.toBe(0);
+      expect(stderr).toContain(
+        `${message}${path.join(derived, 'rnllama-metal', air)}`,
+      );
+      expect(stderr.includes('need Xcode 26.6 or later')).toBe(
+        air.startsWith('tensor/'),
+      );
+      expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+      expect(fs.readdirSync(app)).toEqual([]);
+    },
+  );
+
+  it('fails without writing either library when a compile fails after writing its .air', () => {
+    const {status, calls} = run({
+      env: {STUB_FAIL_AFTER_OUTPUT_AIR: 'tensor/fa_f16.air'},
     });
     expect(status).not.toBe(0);
-    expect(stderr).toContain('mul_mm.metal produced no');
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
     expect(fs.readdirSync(app)).toEqual([]);
   });
 
-  it('does not count an .air left over from an earlier build', () => {
-    fs.mkdirSync(path.join(derived, 'rnllama-metal'));
-    fs.writeFileSync(path.join(derived, 'rnllama-metal', 'mul_mm.air'), 'old');
-    const {status, calls} = run({env: {STUB_NO_OUTPUT_KERNEL: 'mul_mm'}});
-    expect(status).not.toBe(0);
-    expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
-    expect(fs.readdirSync(app)).toEqual([]);
-  });
+  it.each(['mul_mm.air', 'tensor/mul_mm.air'])(
+    'does not count a %s left over from an earlier build',
+    air => {
+      const stale = path.join(derived, 'rnllama-metal', air);
+      fs.mkdirSync(path.dirname(stale), {recursive: true});
+      fs.writeFileSync(stale, 'old');
+      const {status, calls} = run({env: {STUB_NO_OUTPUT_AIR: air}});
+      expect(status).not.toBe(0);
+      expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);
+      expect(fs.readdirSync(app)).toEqual([]);
+    },
+  );
 
   it.each([
     ['no arguments', []],
