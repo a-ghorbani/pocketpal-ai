@@ -59,6 +59,14 @@ const whisperCpp = fs.readFileSync(
   path.join(WHISPER_CPP, 'whisper.cpp'),
   'utf-8',
 );
+const whisperHeader = fs.readFileSync(
+  path.join(WHISPER_CPP, 'whisper.h'),
+  'utf-8',
+);
+const rnWhisper = fs.readFileSync(
+  path.join(ROOT, 'node_modules', 'whisper.rn', 'ios', 'RNWhisper.mm'),
+  'utf-8',
+);
 const ciWorkflow = read('.github/workflows/ci.yml');
 
 const kernelSet = parseKernelSet(metalDevice, 'GGML_METAL_LIBS');
@@ -492,6 +500,40 @@ describe('the patched whisper.rn GPU init', () => {
     expect(guard.index).toBeLessThan(
       initState.indexOf('whisper_kv_cache_init('),
     );
+  });
+});
+
+describe("whisper.rn's reported GPU use", () => {
+  const start = rnWhisper.indexOf(
+    'WhisperContextInitResult hostInitWhisperContext(',
+  );
+  const hostInit =
+    start < 0 ? '' : rnWhisper.slice(start, rnWhisper.indexOf('\n}\n', start));
+
+  it('is read from the context flag the probe clears', () => {
+    expect(whisperHeader).toMatch(
+      /WHISPER_API bool whisper_ctx_uses_gpu\s*\(struct whisper_context \* ctx\);/,
+    );
+    expect(whisperCpp).toMatch(
+      /\nbool whisper_ctx_uses_gpu\(struct whisper_context \* ctx\) \{\s*return ctx->params\.use_gpu;\s*\}\n/,
+    );
+  });
+
+  it('comes from the live context in from-source builds, and from the request otherwise', () => {
+    expect(hostInit.match(/result\.gpu = /g)).toHaveLength(2);
+    expect(hostInit).toMatch(
+      /\n#ifdef RNWHISPER_BUILD_FROM_SOURCE\n\s*result\.gpu = result\.context != nullptr && whisper_ctx_uses_gpu\(result\.context\);\n#else\n\s*result\.gpu = params\.use_gpu;\n#endif\n/,
+    );
+  });
+
+  it('is decided after the context is created', () => {
+    const created = hostInit.indexOf(
+      'result.context =\n        whisper_init_from_file_with_params(modelPath.c_str(), params);',
+    );
+    expect(created).toBeGreaterThan(-1);
+    expect(
+      hostInit.indexOf('#ifdef RNWHISPER_BUILD_FROM_SOURCE'),
+    ).toBeGreaterThan(created);
   });
 });
 

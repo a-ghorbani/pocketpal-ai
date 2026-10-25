@@ -60,7 +60,7 @@ index e40cf33..549266b 100644
      NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"WSP_GGML_METAL_PATH_RESOURCES"];
      if (path_resource) {
 diff --git a/node_modules/whisper.rn/cpp/whisper.cpp b/node_modules/whisper.rn/cpp/whisper.cpp
-index 46bec1f..78b842c 100644
+index 46bec1f..82484dd 100644
 --- a/node_modules/whisper.rn/cpp/whisper.cpp
 +++ b/node_modules/whisper.rn/cpp/whisper.cpp
 @@ -3447,6 +3447,19 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
@@ -101,6 +101,45 @@ index 46bec1f..78b842c 100644
      // A C++ exception escaping this extern "C" function aborts non-C++ callers
      // (Rust via whisper-rs, Go via cgo, ...). whisper_model_load can throw
      // (std::runtime_error here; vk::SystemError from the Vulkan backend during
+@@ -4298,6 +4322,10 @@ int whisper_is_multilingual(struct whisper_context * ctx) {
+     return ctx->vocab.is_multilingual() ? 1 : 0;
+ }
+ 
++bool whisper_ctx_uses_gpu(struct whisper_context * ctx) {
++    return ctx->params.use_gpu;
++}
++
+ float * whisper_get_logits(struct whisper_context * ctx) {
+     return ctx->state->logits.data();
+ }
+diff --git a/node_modules/whisper.rn/cpp/whisper.h b/node_modules/whisper.rn/cpp/whisper.h
+index 16f2fc4..254f975 100644
+--- a/node_modules/whisper.rn/cpp/whisper.h
++++ b/node_modules/whisper.rn/cpp/whisper.h
+@@ -395,6 +395,7 @@ extern "C" {
+     WHISPER_API int whisper_n_text_ctx      (struct whisper_context * ctx);
+     WHISPER_API int whisper_n_audio_ctx     (struct whisper_context * ctx);
+     WHISPER_API int whisper_is_multilingual (struct whisper_context * ctx);
++    WHISPER_API bool whisper_ctx_uses_gpu   (struct whisper_context * ctx);
+ 
+     WHISPER_API int whisper_model_n_vocab      (struct whisper_context * ctx);
+     WHISPER_API int whisper_model_n_audio_ctx  (struct whisper_context * ctx);
+diff --git a/node_modules/whisper.rn/ios/RNWhisper.mm b/node_modules/whisper.rn/ios/RNWhisper.mm
+index f7032f4..e6c8f19 100644
+--- a/node_modules/whisper.rn/ios/RNWhisper.mm
++++ b/node_modules/whisper.rn/ios/RNWhisper.mm
+@@ -201,7 +201,11 @@ WhisperContextInitResult hostInitWhisperContext(
+ 
+     result.context =
+         whisper_init_from_file_with_params(modelPath.c_str(), params);
++#ifdef RNWHISPER_BUILD_FROM_SOURCE
++    result.gpu = result.context != nullptr && whisper_ctx_uses_gpu(result.context);
++#else
+     result.gpu = params.use_gpu;
++#endif
+     result.reasonNoGPU = toStdString(reasonNoGPU);
+     return result;
+ }
 diff --git a/node_modules/whisper.rn/whisper-rn.podspec b/node_modules/whisper.rn/whisper-rn.podspec
 index e24aa83..93a6ee5 100644
 --- a/node_modules/whisper.rn/whisper-rn.podspec
