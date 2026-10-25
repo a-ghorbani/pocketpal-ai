@@ -830,11 +830,25 @@ describe('the iOS CI job', () => {
   const stepIndex = name => steps.findIndex(step => step.name === name);
   const step = name => steps[stepIndex(name)] || {body: ''};
   const ARCHIVES = ['llama-rn/libllama-rn.a', 'whisper-rn/libwhisper-rn.a'];
+  const PRODUCTS = 'ios/build/Build/Products/Release-iphoneos';
   const GATES = [
     'Verify iOS payload',
-    'AMX scan (llama-rn, whisper-rn)',
+    'AMX scan (llama-rn, whisper-rn, app executable)',
     'Symbol overlap (llama-rn, whisper-rn)',
   ];
+
+  it('builds the app for the device SDK only', () => {
+    const {body} = step('Build iOS Release');
+    expect(body).toContain('-sdk iphoneos \\');
+    expect(body).toContain("-destination 'generic/platform=iOS' \\");
+    expect(job[1]).not.toMatch(/iphonesimulator|iOS Simulator|simctl/);
+  });
+
+  it('checks the payload of the device app', () => {
+    expect(step('Verify iOS payload').body.trim()).toBe(
+      `run: scripts/verify-ios-payload.sh ${PRODUCTS}/PocketPal.app --require-marker`,
+    );
+  });
 
   it('runs every whisper.rn gate after the Release build, unconditionally', () => {
     const build = stepIndex('Build iOS Release');
@@ -845,24 +859,34 @@ describe('the iOS CI job', () => {
     }
   });
 
-  it('fails the AMX scan on any AMX word in either archive, after flagging a planted one', () => {
-    const {body} = step('AMX scan (llama-rn, whisper-rn)');
+  it('fails the AMX scan on any AMX word in either device archive or the app executable, after flagging a planted one', () => {
+    const {body} = step('AMX scan (llama-rn, whisper-rn, app executable)');
     expect(body).toContain('shell: bash -eo pipefail {0}');
     const calibration = body.indexOf('test "$amx" -gt 0');
     const loop = body.match(
-      /for lib in ([^;]+); do\s*lib="ios\/build\/Build\/Products\/Release-iphonesimulator\/\$lib"\s*test -f "\$lib"\s*scan "\$lib"\s*test "\$amx" -eq 0\s*done/,
+      /for lib in ([^;]+); do\s*lib="ios\/build\/Build\/Products\/Release-iphoneos\/\$lib"\s*test -f "\$lib"\s*scan "\$lib"\s*test "\$amx" -eq 0\s*done/,
     );
     expect(calibration).toBeGreaterThan(-1);
     expect(loop).not.toBeNull();
     expect(loop.index).toBeGreaterThan(calibration);
-    expect(loop[1].split(/\s+/)).toEqual(ARCHIVES);
+    expect(loop[1].split(/\s+/)).toEqual([
+      ...ARCHIVES,
+      'PocketPal.app/PocketPal',
+    ]);
+  });
+
+  it('streams the disassembly, so an objdump failure fails the scan and no dump is written', () => {
+    const {body} = step('AMX scan (llama-rn, whisper-rn, app executable)');
+    expect(body).not.toContain('.objdump.txt');
+    expect(body).toMatch(
+      /^\s*local counts\n\s*counts=\$\("\$\{objdump\[@\]\}" -d --mattr=\+all "\$1" \| awk '/m,
+    );
+    expect(body).toMatch(/^\s*read -r raw amx <<<"\$counts"$/m);
   });
 
   it('self-tests the symbol gate, then compares the two archives', () => {
     const {body} = step('Symbol overlap (llama-rn, whisper-rn)');
-    expect(body).toMatch(
-      /^\s*products=ios\/build\/Build\/Products\/Release-iphonesimulator$/m,
-    );
+    expect(body).toMatch(new RegExp(`^\\s*products=${PRODUCTS}$`, 'm'));
     const lines = body.trim().split('\n');
     expect(lines[lines.length - 1].trim()).toBe(
       `scripts/verify-ios-symbol-overlap.sh --self-test ${ARCHIVES.map(
