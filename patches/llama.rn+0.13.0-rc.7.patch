@@ -994,7 +994,7 @@ diff --git a/node_modules/llama.rn/llama-rn.podspec b/node_modules/llama.rn/llam
 index 413627a..651c91a 100644
 --- a/node_modules/llama.rn/llama-rn.podspec
 +++ b/node_modules/llama.rn/llama-rn.podspec
-@@ -7,7 +7,7 @@ base_compiler_flags = "-fno-objc-arc -fvisibility-inlines-hidden -DGGML_USE_CPU
+@@ -7,12 +7,12 @@ base_compiler_flags = "-fno-objc-arc -fvisibility-inlines-hidden -DGGML_USE_CPU
  if ENV["RNLLAMA_DISABLE_METAL"] != "1" then
    # GGMLMetalClass only exists when GGML_METAL_EMBED_LIBRARY is off; keep the
    # (process-global) Objective-C class name unique per library regardless.
@@ -1003,6 +1003,12 @@ index 413627a..651c91a 100644
  end
  
  # Use base_optimizer_flags = "" for debug builds
+ # base_optimizer_flags = ""
+-base_optimizer_flags = "-O3 -DNDEBUG -funroll-loops"
++base_optimizer_flags = "-O3 -DNDEBUG"
+ 
+ if ENV["RNLLAMA_NATIVE_CPU"] == "1" then
+   apple_cpu_flags = ENV["RNLLAMA_NATIVE_CPU_FLAGS"] || "-Xarch_arm64 -mcpu=apple-m2"
 @@ -44,7 +44,7 @@ Pod::Spec.new do |s|
        "#{llama_cpp}/ggml/include/*.h",
        "#{llama_cpp}/ggml/src/*.{h,c,cpp}",

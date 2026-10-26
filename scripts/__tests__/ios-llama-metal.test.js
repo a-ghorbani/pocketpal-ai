@@ -264,6 +264,11 @@ describe('the llama.rn build mode', () => {
     expect(offenders).toEqual([]);
     expect(podfile).not.toMatch(/RNLLAMA_(NATIVE_CPU|DISABLE_METAL)/);
   });
+
+  it('compiles with the prebuilt framework optimizer flags, without loop unrolling', () => {
+    expect(podspec).toMatch(/^base_optimizer_flags = "-O3 -DNDEBUG"$/m);
+    expect(podspec).not.toMatch(/-funroll-loops/);
+  });
 });
 
 describe('the whisper.rn build mode', () => {
