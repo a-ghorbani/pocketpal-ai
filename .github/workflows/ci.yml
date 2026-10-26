@@ -499,19 +499,16 @@ jobs:
       - name: Ensure Metal toolchain
         run: |
           xcrun -sdk iphoneos metal -v || xcodebuild -downloadComponent MetalToolchain
-          xcrun -sdk iphonesimulator metal -v
 
       - name: Build iOS Release
         run: |
           cd ios
-          # List available simulators for debugging
-          xcrun simctl list devices available
           xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -528,9 +525,9 @@ jobs:
           fi
 
       - name: Verify iOS payload
-        run: scripts/verify-ios-payload.sh ios/build/Build/Products/Release-iphonesimulator/PocketPal.app --require-marker
+        run: scripts/verify-ios-payload.sh ios/build/Build/Products/Release-iphoneos/PocketPal.app --require-marker
 
-      - name: AMX scan (llama-rn, whisper-rn)
+      - name: AMX scan (llama-rn, whisper-rn, app executable)
         shell: bash -eo pipefail {0}
         run: |
           llvm_objdump="$(brew --prefix llvm 2>/dev/null || true)/bin/llvm-objdump"
@@ -540,10 +537,12 @@ jobs:
           # Only undecoded words in AMX opcode space count (0x00201000 | op << 5 | operand):
           # jump tables inside __text also show as <unknown>.
           scan() {
-            local dump="$RUNNER_TEMP/$(basename "$1").objdump.txt"
-            "${objdump[@]}" -d --mattr=+all "$1" > "$dump"
-            raw=$(grep -c '<unknown>' "$dump" || true)
-            amx=$(awk '$1 ~ /^[0-9a-fA-F]+:$/ && $NF == "<unknown>" && tolower($2) ~ /^00201[0-3][0-9a-f][0-9a-f]$/' "$dump" | wc -l | tr -d ' ')
+            local counts
+            counts=$("${objdump[@]}" -d --mattr=+all "$1" | awk '
+              /<unknown>/ { raw++ }
+              $1 ~ /^[0-9a-fA-F]+:$/ && $NF == "<unknown>" && tolower($2) ~ /^00201[0-3][0-9a-f][0-9a-f]$/ { amx++ }
+              END { print raw + 0, amx + 0 }')
+            read -r raw amx <<<"$counts"
             echo "$1: $raw <unknown>, $amx in AMX opcode space"
           }
 
@@ -553,8 +552,8 @@ jobs:
           scan "$RUNNER_TEMP/amx.o"
           test "$amx" -gt 0
 
-          for lib in llama-rn/libllama-rn.a whisper-rn/libwhisper-rn.a; do
-            lib="ios/build/Build/Products/Release-iphonesimulator/$lib"
+          for lib in llama-rn/libllama-rn.a whisper-rn/libwhisper-rn.a PocketPal.app/PocketPal; do
+            lib="ios/build/Build/Products/Release-iphoneos/$lib"
             test -f "$lib"
             scan "$lib"
             test "$amx" -eq 0
@@ -562,5 +561,5 @@ jobs:
 
       - name: Symbol overlap (llama-rn, whisper-rn)
         run: |
-          products=ios/build/Build/Products/Release-iphonesimulator
+          products=ios/build/Build/Products/Release-iphoneos
           scripts/verify-ios-symbol-overlap.sh --self-test "$products/llama-rn/libllama-rn.a" "$products/whisper-rn/libwhisper-rn.a"
