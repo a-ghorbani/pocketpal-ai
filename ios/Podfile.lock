@@ -3060,7 +3060,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  llama-rn: c72406f25e74207113a7db45f0f7eff59e22320a
+  llama-rn: 80ea53df0859a0a43292b7dd89cfb539e9e7acf4
   NitroIap: 9298750287e22c634e0cd7c62a24d88358772f53
   NitroModules: d7b6cfed1591a4f067ccfd834c031945763bebc9
   onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
