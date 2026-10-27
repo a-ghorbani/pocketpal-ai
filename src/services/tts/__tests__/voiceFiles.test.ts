@@ -208,6 +208,36 @@ describe('voice files', () => {
       );
     });
 
+    it('passes a resumable callback so an iOS failure with resume data reports back', async () => {
+      await ensureVoiceFile(bella);
+      expect(RNFS.downloadFile).toHaveBeenCalledWith(
+        expect.objectContaining({resumable: expect.any(Function)}),
+      );
+    });
+
+    it('resolves false when the download fails with resume data, then downloads again', async () => {
+      const flush = () => new Promise(resolve => setImmediate(resolve));
+      let captured: {resumable: () => void} | undefined;
+      (RNFS.downloadFile as jest.Mock).mockImplementation(opts => {
+        captured = opts;
+        return {jobId: 1, promise: new Promise(() => {})};
+      });
+
+      const first = ensureVoiceFile(lily);
+      await flush();
+      captured!.resumable();
+
+      await expect(first).resolves.toBe(false);
+      expect(RNFS.unlink).toHaveBeenCalledWith(`${supertonicDir}/F2.json.part`);
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      mockDownload(Promise.resolve({statusCode: 200}));
+      await expect(ensureVoiceFile(lily)).resolves.toBe(true);
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(2);
+    });
+
     it('shares one download between install phase 2 and a use of the same voice', async () => {
       let finish: (value: {statusCode: number}) => void = () => {};
       mockDownload(new Promise(resolve => (finish = resolve)));

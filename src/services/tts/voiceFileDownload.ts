@@ -37,14 +37,30 @@ const fetchIfMissing = async (
     await RNFS.mkdir(path.slice(0, path.lastIndexOf('/')), {
       NSURLIsExcludedFromBackupKey: true,
     });
-    const {statusCode} = await RNFS.downloadFile({
-      fromUrl: url,
-      toFile: partPath,
-      background: false,
-      discretionary: false,
-      cacheable: false,
-      progressInterval: 1000,
-    }).promise;
+    let resumable = () => {};
+    const resumed = new Promise<null>(resolve => {
+      resumable = () => resolve(null);
+    });
+    const result = await Promise.race([
+      RNFS.downloadFile({
+        fromUrl: url,
+        toFile: partPath,
+        background: false,
+        discretionary: false,
+        cacheable: false,
+        progressInterval: 1000,
+        resumable,
+      }).promise,
+      resumed,
+    ]);
+    if (!result) {
+      await RNFS.unlink(partPath).catch(() => {});
+      console.warn(
+        `[tts] voice ${voice.engine}:${voice.id} download failed: interrupted`,
+      );
+      return false;
+    }
+    const {statusCode} = result;
     if (statusCode !== 200) {
       await RNFS.unlink(partPath).catch(() => {});
       console.warn(
