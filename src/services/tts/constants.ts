@@ -146,6 +146,9 @@ export const KOKORO_MODEL_ESTIMATED_BYTES = 330 * 1024 * 1024;
 export const KITTEN_MODEL_BASE_URL =
   'https://huggingface.co/palshub/kitten-tts-nano-0.8-fp32/resolve/main';
 
+/** Base URL for the Kitten per-voice JSON files (the HF manifest's `baseUrl`). */
+export const KITTEN_VOICES_BASE_URL = `${KITTEN_MODEL_BASE_URL}/voices`;
+
 /**
  * Kitten files: the ONNX model (saved locally as `kitten.onnx`) and the
  * voices manifest JSON. The IPA dict is downloaded separately via

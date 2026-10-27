@@ -24,6 +24,7 @@ import type {
   StreamingHandle,
   SupertonicSteps,
   Voice,
+  VoiceFileSource,
 } from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
@@ -80,6 +81,13 @@ export class SupertonicEngine implements NeuralEngine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`${voiceId}.json`),
+      url: `${SUPERTONIC_VOICES_BASE_URL}/${voiceId}.json`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {

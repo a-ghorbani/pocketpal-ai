@@ -20,6 +20,7 @@ import type {
   StreamOptions,
   StreamingHandle,
   Voice,
+  VoiceFileSource,
 } from '../../types';
 import {KOKORO_VOICES} from './voices';
 
@@ -62,6 +63,13 @@ export class KokoroEngine implements NeuralEngine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`voices/${voiceId}.bin`),
+      url: `${KOKORO_VOICES_BASE_URL}/${voiceId}.bin`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {
