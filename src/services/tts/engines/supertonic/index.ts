@@ -39,6 +39,15 @@ export type SupertonicProgressCallback = (progress: number) => void;
  */
 const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
+const isUsableStyle = (text: string): boolean => {
+  try {
+    const style = JSON.parse(text) as {style_dp?: unknown; style_ttl?: unknown};
+    return Boolean(style?.style_dp && style.style_ttl);
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Supertonic neural TTS engine (v3, 31 languages + trained `na`).
  *
@@ -286,13 +295,35 @@ export class SupertonicEngine implements NeuralEngine {
   private async writeVoicesManifest(): Promise<void> {
     await RNFS.writeFile(
       this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
-      JSON.stringify({voices: SUPERTONIC_VOICES.map(v => v.id)}, null, 2),
+      this.voicesManifest(),
     );
+  }
+
+  private voicesManifest(): string {
+    return JSON.stringify({voices: SUPERTONIC_VOICES.map(v => v.id)}, null, 2);
+  }
+
+  private async removeUnusableStyles(): Promise<void> {
+    for (const {id} of SUPERTONIC_VOICES) {
+      const {path} = this.voiceFile(id);
+      if (
+        (await RNFS.exists(path)) &&
+        !isUsableStyle(await RNFS.readFile(path))
+      ) {
+        await RNFS.unlink(path);
+      }
+    }
   }
 
   async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
-    await this.writeVoicesManifest();
+    const manifest = await RNFS.readFile(
+      this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
+    ).catch(() => null);
+    if (manifest !== this.voicesManifest()) {
+      await this.removeUnusableStyles();
+      await this.writeVoicesManifest();
+    }
     await Speech.initialize({
       engine: TTSEngine.SUPERTONIC,
       durationPredictorPath: `file://${modelDir}/duration_predictor.onnx`,
