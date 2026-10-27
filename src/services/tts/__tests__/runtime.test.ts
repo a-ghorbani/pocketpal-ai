@@ -137,6 +137,55 @@ describe('ttsRuntime', () => {
     expect(kokoro.loadInto).toHaveBeenCalledTimes(2);
   });
 
+  describe('invalidate()', () => {
+    it('reloads the active engine once at its next acquire', async () => {
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op for an engine that is not active', async () => {
+      const kokoro = makeEngine('kokoro');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(kokoro.loadInto).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a no-op when no engine is active', async () => {
+      ttsRuntime.invalidate('supertonic');
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(1);
+    });
+
+    it('is cleared by a release', async () => {
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.release();
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('stop()', () => {
     it('is a no-op when no engine is active', async () => {
       await ttsRuntime.stop();
