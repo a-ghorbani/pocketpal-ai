@@ -223,8 +223,6 @@ export class SupertonicEngine implements NeuralEngine {
       }
 
       // Phase 2: per-voice style JSON files — best-effort; partial OK.
-      // Without these the StyleLoader would fetch them lazily on first
-      // play, causing a confusing delay after the user picks a voice.
       const voicePhaseBase = corePhaseWeight;
       const voicePhaseWeight = 1 - corePhaseWeight;
       let voicesDone = 0;
@@ -242,17 +240,7 @@ export class SupertonicEngine implements NeuralEngine {
         }
       }
 
-      // Manifest WITH baseUrl — if any voice files failed to download
-      // (flaky network), the fork's StyleLoader can lazy-fetch them from
-      // this URL on first play. Matches Kokoro's pattern.
-      const manifest = {
-        baseUrl: SUPERTONIC_VOICES_BASE_URL,
-        voices: SUPERTONIC_VOICES.map(v => v.id),
-      };
-      await RNFS.writeFile(
-        this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
-        JSON.stringify(manifest, null, 2),
-      );
+      await this.writeVoicesManifest();
 
       // Version sentinel is the FINAL disk write (I-M2): if the process is
       // killed before this, isInstalled() reports false and the download is
@@ -291,8 +279,20 @@ export class SupertonicEngine implements NeuralEngine {
     }
   }
 
+  /**
+   * No `baseUrl`: with one, the library loads every style from the network
+   * and never reads the local file.
+   */
+  private async writeVoicesManifest(): Promise<void> {
+    await RNFS.writeFile(
+      this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
+      JSON.stringify({voices: SUPERTONIC_VOICES.map(v => v.id)}, null, 2),
+    );
+  }
+
   async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
+    await this.writeVoicesManifest();
     await Speech.initialize({
       engine: TTSEngine.SUPERTONIC,
       durationPredictorPath: `file://${modelDir}/duration_predictor.onnx`,

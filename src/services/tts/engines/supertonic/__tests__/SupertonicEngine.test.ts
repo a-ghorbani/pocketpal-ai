@@ -202,6 +202,20 @@ describe('SupertonicEngine', () => {
       );
     });
 
+    it('writes the voices manifest without a baseUrl', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new SupertonicEngine().downloadModel();
+
+      const manifestCall = (RNFS.writeFile as jest.Mock).mock.calls.find(
+        ([p]: [string]) =>
+          p.endsWith(`/${SUPERTONIC_VOICES_MANIFEST_FILENAME}`),
+      );
+      expect(JSON.parse(manifestCall![1])).toEqual({
+        voices: SUPERTONIC_VOICES.map(v => v.id),
+      });
+    });
+
     it('writes the version sentinel as the final disk write', async () => {
       (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
 
@@ -360,6 +374,22 @@ describe('SupertonicEngine', () => {
       // Second play() reuses the initialized engine.
       await engine.play('again', anyVoice);
       expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('rewrites the voices manifest without a baseUrl before Speech.initialize', async () => {
+      await new SupertonicEngine().loadInto();
+
+      const writeCalls = (RNFS.writeFile as jest.Mock).mock.calls;
+      expect(writeCalls).toHaveLength(1);
+      expect(writeCalls[0]![0]).toMatch(
+        new RegExp(`/tts/supertonic/${SUPERTONIC_VOICES_MANIFEST_FILENAME}$`),
+      );
+      expect(JSON.parse(writeCalls[0]![1])).not.toHaveProperty('baseUrl');
+      expect(
+        (RNFS.writeFile as jest.Mock).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        (Speech.initialize as jest.Mock).mock.invocationCallOrder[0]!,
+      );
     });
 
     it('forwards the language argument to Speech.speak when provided', async () => {

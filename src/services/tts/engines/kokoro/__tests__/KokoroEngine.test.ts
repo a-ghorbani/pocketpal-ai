@@ -156,6 +156,20 @@ describe('KokoroEngine', () => {
       );
     });
 
+    it('keeps baseUrl in the voices manifest', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new KokoroEngine().downloadModel();
+
+      const manifestCall = (RNFS.writeFile as jest.Mock).mock.calls.find(
+        ([p]: [string]) => p.endsWith(`/${KOKORO_VOICES_MANIFEST_FILENAME}`),
+      );
+      expect(JSON.parse(manifestCall![1])).toHaveProperty(
+        'baseUrl',
+        KOKORO_VOICES_BASE_URL,
+      );
+    });
+
     it('phase 1 failure cleans up the model dir and rethrows (manifest NOT written)', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
       (RNFS.downloadFile as jest.Mock)
