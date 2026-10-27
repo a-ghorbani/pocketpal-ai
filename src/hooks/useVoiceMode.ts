@@ -19,6 +19,7 @@ import {
 } from '../services/asr';
 import type {AsrTier} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
+import {hasVoiceFile} from '../services/tts/voiceFiles';
 import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
@@ -26,6 +27,7 @@ import {
   VOICE_START_TIMEOUT_MS,
   isMicGranted,
   isVoiceModeVoice,
+  isVoiceModeVoiceReady,
   voiceMemoryFit,
 } from '../services/voice';
 import type {
@@ -93,7 +95,7 @@ const withStartTimeout = (loading: Promise<void>): Promise<void> => {
 async function isSetupComplete(): Promise<boolean> {
   return (
     asrStore.isSelectedTierReady &&
-    isVoiceModeVoice(ttsStore.currentVoice) &&
+    (await isVoiceModeVoiceReady(ttsStore.currentVoice)) &&
     (await isMicGranted())
   );
 }
@@ -168,7 +170,7 @@ class VoiceModeController {
       return;
     }
     const voice = ttsStore.currentVoice;
-    if (!isVoiceModeVoice(voice)) {
+    if (!isVoiceModeVoice(voice) || !(await hasVoiceFile(voice))) {
       this.showSheet({kind: 'setup'});
       return;
     }

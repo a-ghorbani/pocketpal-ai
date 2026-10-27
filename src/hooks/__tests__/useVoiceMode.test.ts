@@ -14,6 +14,7 @@ import {
   ASR_TIERS,
 } from '../../services/asr/constants';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts/constants';
+import {hasVoiceFile} from '../../services/tts/voiceFiles';
 import {
   asrStore,
   chatSessionStore,
@@ -33,6 +34,11 @@ import {
 import type {VoiceTurnEvents, VoiceTurnOutcome} from '../../services/voice';
 
 import {useVoiceMode} from '../useVoiceMode';
+
+jest.mock('../../services/tts/voiceFiles', () => ({
+  hasVoiceFile: jest.fn(),
+  ensureVoiceFile: jest.fn(),
+}));
 
 let mockBlur: (() => void) | undefined;
 jest.mock('@react-navigation/native', () => ({
@@ -176,6 +182,7 @@ describe('useVoiceMode', () => {
     (AudioRecord.on as jest.Mock).mockReturnValue({remove: jest.fn()});
     (AudioRecord.init as jest.Mock).mockResolvedValue(undefined);
     (check as jest.Mock).mockResolvedValue('granted');
+    (hasVoiceFile as jest.Mock).mockResolvedValue(true);
     Platform.OS = 'ios';
     runInAction(() => {
       chatSessionStore.activeSessionId = 'session-1';
@@ -406,6 +413,36 @@ describe('useVoiceMode', () => {
 
       expect(hook.result.current.sheet).toBeNull();
       expect(engine.prepare).toHaveBeenCalledTimes(1);
+    });
+
+    it("opens the setup sheet when the voice's file is missing", async () => {
+      (hasVoiceFile as jest.Mock).mockResolvedValue(false);
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(hasVoiceFile).toHaveBeenCalledWith(
+        expect.objectContaining({engine: 'supertonic', id: 'F1'}),
+      );
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it("returns to the setup sheet when the voice's file is gone after setup", async () => {
+      Platform.OS = 'android';
+      (hasVoiceFile as jest.Mock).mockResolvedValue(false);
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+      const readMemory = DeviceInfo.getTotalMemory as jest.Mock;
+      readMemory.mockClear();
+
+      await act(async () => {
+        await hook.result.current.setupDone();
+      });
+
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+      expect(readMemory).not.toHaveBeenCalled();
+      expect(engine.prepare).not.toHaveBeenCalled();
     });
 
     it('leaving the screen keeps the setup sheet open', async () => {
