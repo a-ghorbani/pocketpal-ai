@@ -2243,6 +2243,21 @@ describe('TTSStore', () => {
       expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(1);
     });
 
+    it('a failed ensure keeps the voice and its engine install state', async () => {
+      mockKokoroIsInstalled.mockResolvedValueOnce(true);
+      mockEnsureVoiceFile.mockResolvedValueOnce(false);
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(KOKORO_VOICE);
+
+      await store.init();
+      await flush();
+
+      expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(1);
+      expect(store.currentVoice).toEqual(KOKORO_VOICE);
+      expect(store.kokoroDownloadState).toBe('ready');
+    });
+
     it('never ensures a system voice', async () => {
       const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
@@ -2324,6 +2339,53 @@ describe('TTSStore', () => {
         otherVoice,
       );
     });
+
+    it.each([
+      ['a chat auto-speak stream', SYSTEM_VOICE, false],
+      ['a voice-mode reply stream', SYSTEM_VOICE, true],
+      ['a Supertonic stream', SUPERTONIC_VOICE, false],
+    ])(
+      '%s ensures only after the stop, and starts only after the ensure',
+      async (_label, voice, voiceReply) => {
+        const store = await makeStore();
+        store.setCurrentVoice(voice);
+        store.setAutoSpeak(true);
+        store.setVoiceOutputActive(voiceReply);
+        const isSupertonic = voice.engine === 'supertonic';
+        const stopMock = isSupertonic ? mockSupertonicStop : mockSystemStop;
+        const playStreaming = isSupertonic
+          ? mockSupertonicPlayStreaming
+          : mockSystemPlayStreaming;
+        let finishStop: () => void = () => {};
+        stopMock.mockReturnValueOnce(
+          new Promise<void>(resolve => (finishStop = resolve)),
+        );
+        const ensure = deferred();
+        mockEnsureVoiceFile.mockClear();
+        mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+        store.onAssistantMessageStart('msg-1');
+        const [streamVoice, waitFor, opts] = playStreaming.mock.calls.at(
+          -1,
+        ) as unknown as [Voice, Promise<void>, object | undefined];
+        let released = false;
+        waitFor.then(() => (released = true));
+        expect(streamVoice).toEqual(voice);
+        expect(opts !== undefined).toBe(isSupertonic || voiceReply);
+
+        await flush();
+        expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+
+        finishStop();
+        await flush();
+        expect(mockEnsureVoiceFile).toHaveBeenCalledWith(voice);
+        expect(released).toBe(false);
+
+        ensure.resolve(true);
+        await flush();
+        expect(released).toBe(true);
+      },
+    );
 
     it('the stream waits for the ensure after the stop', async () => {
       const store = await makeStore();

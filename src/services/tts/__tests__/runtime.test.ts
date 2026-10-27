@@ -153,6 +153,30 @@ describe('ttsRuntime', () => {
       expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
     });
 
+    it('never releases by itself, so an active stream keeps its engine', async () => {
+      const supertonic = makeEngine('supertonic');
+      let finishStream: () => void = () => {};
+      const streaming = ttsRuntime.acquire(
+        supertonic,
+        () => new Promise<void>(resolve => (finishStream = resolve)),
+      );
+      while (ttsRuntime.getActiveEngineId() !== 'supertonic') {
+        await Promise.resolve();
+      }
+
+      ttsRuntime.invalidate('supertonic');
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(ttsRuntime.getActiveEngineId()).toBe('supertonic');
+      finishStream();
+      await streaming;
+      expect(releaseMock).not.toHaveBeenCalled();
+
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
+
     it('is a no-op for an engine that is not active', async () => {
       const kokoro = makeEngine('kokoro');
       await ttsRuntime.acquire(kokoro, async () => undefined);

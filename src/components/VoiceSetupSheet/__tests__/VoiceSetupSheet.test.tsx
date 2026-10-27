@@ -4,6 +4,7 @@ import {AppState} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 import {l10n} from '../../../locales';
 import {ASR_INSUFFICIENT_STORAGE} from '../../../services/asr';
 import {ensureVoiceFile, hasVoiceFile} from '../../../services/tts/voiceFiles';
@@ -83,14 +84,15 @@ describe('VoiceSetupSheet', () => {
     expect(getByText(strings.micNote)).toBeTruthy();
   });
 
-  it('shows the in-use tier when it is installed', () => {
+  it('shows the in-use tier when it is installed', async () => {
     runInAction(() => {
       asr.selectedTier = 'small';
       asr.downloadStates.small = 'ready';
     });
-    const {getByText} = renderSheet();
+    const {getByText, findByText} = renderSheet();
     expect(getByText(/^Whisper Small · /)).toBeTruthy();
     expect(getByText(strings.installedLabel)).toBeTruthy();
+    expect(await findByText('Sarah · ready')).toBeTruthy();
   });
 
   it('offers base while another tier downloads and none is installed', async () => {
@@ -193,22 +195,24 @@ describe('VoiceSetupSheet', () => {
     }
   });
 
-  it('shows download progress and blocks Continue while downloading', () => {
+  it('shows download progress and blocks Continue while downloading', async () => {
     runInAction(() => {
       asr.downloadStates.base = 'downloading';
       asr.downloadProgress.base = 0.5;
     });
-    const {getByTestId, getByText} = renderSheet();
+    const {getByTestId, getByText, findByText} = renderSheet();
     expect(getByText(/ of /)).toBeTruthy();
     expect(getByTestId('voice-setup-continue')).toBeDisabled();
+    expect(await findByText('Sarah · ready')).toBeTruthy();
   });
 
-  it('marks an installed base', () => {
+  it('marks an installed base', async () => {
     runInAction(() => {
       asr.downloadStates.base = 'ready';
     });
-    const {getByText} = renderSheet();
+    const {getByText, findByText} = renderSheet();
     expect(getByText(strings.installedLabel)).toBeTruthy();
+    expect(await findByText('Sarah · ready')).toBeTruthy();
   });
 
   it('shows the disk shortfall and does not finish', async () => {
@@ -244,15 +248,16 @@ describe('VoiceSetupSheet', () => {
     expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
   });
 
-  it('accepts a Phonon voice on a device that supports it', () => {
+  it('accepts a Phonon voice on a device that supports it', async () => {
     runInAction(() => {
       tts.currentVoice = {id: 'Zoey', name: 'Zoey', engine: 'phonon'};
       tts.phononSupported = true;
     });
-    const {getByTestId, queryByTestId} = renderSheet();
+    const {getByTestId, queryByTestId, findByText} = renderSheet();
 
     expect(getByTestId('voice-setup-continue')).toBeTruthy();
     expect(queryByTestId('voice-setup-choose-voice')).toBeNull();
+    expect(await findByText('Zoey · ready')).toBeTruthy();
   });
 
   it('a blocked mic offers Settings and does not finish', async () => {
@@ -378,6 +383,47 @@ describe('VoiceSetupSheet', () => {
       expect(onDone).not.toHaveBeenCalled();
     });
 
+    it('shows the failed line in the error colour, the missing line not', async () => {
+      readyWhisper();
+      const {colors} = themeFixtures.lightTheme;
+      (hasVoiceFile as jest.Mock).mockResolvedValue(false);
+      (ensureVoiceFile as jest.Mock).mockResolvedValue(false);
+      const view = renderSheet();
+      await view.findByText(/isn't downloaded yet/);
+      expect(voiceStatus(view)).toHaveStyle({color: colors.onSurfaceVariant});
+
+      fireEvent.press(view.getByTestId('voice-setup-continue'));
+
+      await view.findByText(/Couldn't download Sarah/);
+      expect(voiceStatus(view)).toHaveStyle({color: colors.error});
+    });
+
+    it('never fetches the voice file when the whisper download fails', async () => {
+      (hasVoiceFile as jest.Mock).mockResolvedValue(false);
+      const view = renderSheet();
+      await view.findByText(/isn't downloaded yet/);
+
+      fireEvent.press(view.getByTestId('voice-setup-continue'));
+
+      await waitFor(() => expect(asrStore.downloadModel).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(view.getByTestId('voice-setup-continue')).toBeEnabled(),
+      );
+      expect(ensureVoiceFile).not.toHaveBeenCalled();
+      expect(onDone).not.toHaveBeenCalled();
+    });
+
+    it('does not check the disk without a neural voice', async () => {
+      runInAction(() => {
+        tts.currentVoice = {id: 's', name: 'Samantha', engine: 'system'};
+      });
+      const view = renderSheet();
+      await act(async () => {});
+
+      expect(voiceStatus(view)).toHaveTextContent(strings.voiceRowMissing);
+      expect(hasVoiceFile).not.toHaveBeenCalled();
+    });
+
     it('Continue retries, then asks for the mic and finishes', async () => {
       readyWhisper();
       (hasVoiceFile as jest.Mock).mockResolvedValue(false);
@@ -479,8 +525,10 @@ describe('VoiceSetupSheet', () => {
       await view.findByText(/Couldn't download Sarah/);
 
       (hasVoiceFile as jest.Mock).mockResolvedValue(true);
-      runInAction(() => {
-        tts.currentVoice = {id: 'F2', name: 'Lily', engine: 'supertonic'};
+      act(() => {
+        runInAction(() => {
+          tts.currentVoice = {id: 'F2', name: 'Lily', engine: 'supertonic'};
+        });
       });
 
       expect(await view.findByText('Lily · ready')).toBeTruthy();
@@ -499,8 +547,10 @@ describe('VoiceSetupSheet', () => {
       fireEvent.press(view.getByTestId('voice-setup-continue'));
       await waitFor(() => expect(ensureVoiceFile).toHaveBeenCalled());
 
-      runInAction(() => {
-        tts.currentVoice = {id: 'F2', name: 'Lily', engine: 'supertonic'};
+      act(() => {
+        runInAction(() => {
+          tts.currentVoice = {id: 'F2', name: 'Lily', engine: 'supertonic'};
+        });
       });
       await view.findByText("Lily isn't downloaded yet. Continue gets it.");
       await act(async () => ensure.resolve(false));

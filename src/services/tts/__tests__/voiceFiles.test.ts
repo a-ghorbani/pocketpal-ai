@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import Speech from '@pocketpalai/react-native-speech';
 
 import {
   KITTEN_MODEL_BASE_URL,
@@ -7,7 +8,8 @@ import {
   SUPERTONIC_VOICES_BASE_URL,
 } from '../constants';
 import {ttsRuntime} from '../runtime';
-import type {Voice} from '../types';
+import type {Engine, Voice} from '../types';
+import {ensureVoiceFileAt} from '../voiceFileDownload';
 import {ensureVoiceFile, hasVoiceFile} from '../voiceFiles';
 
 const kokoroDir = '/path/to/documents/tts/kokoro';
@@ -135,8 +137,20 @@ describe('voice files', () => {
       expect(warn).toHaveBeenCalledTimes(1);
     });
 
+    it('resolves false on a non-200 even when removing the .part file fails', async () => {
+      mockDownload(Promise.resolve({statusCode: 500}));
+      (RNFS.unlink as jest.Mock).mockRejectedValueOnce(new Error('ENOENT'));
+
+      await expect(ensureVoiceFile(bella)).resolves.toBe(false);
+
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
     it('resolves false with one warning when the download throws', async () => {
-      mockDownload(Promise.reject(new Error('Network request failed')));
+      (RNFS.downloadFile as jest.Mock).mockImplementation(() => ({
+        promise: Promise.reject(new Error('Network request failed')),
+      }));
 
       await expect(ensureVoiceFile(bella)).resolves.toBe(false);
 
@@ -178,6 +192,89 @@ describe('voice files', () => {
     it('does not invalidate after a Kokoro download', async () => {
       await ensureVoiceFile(bella);
       expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('downloads again on the next call after a failure', async () => {
+      mockDownload(Promise.resolve({statusCode: 503}));
+      await expect(ensureVoiceFile(bella)).resolves.toBe(false);
+
+      mockDownload(Promise.resolve({statusCode: 200}));
+      await expect(ensureVoiceFile(bella)).resolves.toBe(true);
+
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(2);
+      expect(RNFS.moveFile).toHaveBeenCalledWith(
+        `${bellaPath}.part`,
+        bellaPath,
+      );
+    });
+
+    it('shares one download between install phase 2 and a use of the same voice', async () => {
+      let finish: (value: {statusCode: number}) => void = () => {};
+      mockDownload(new Promise(resolve => (finish = resolve)));
+
+      const install = ensureVoiceFileAt(bella, {
+        path: bellaPath,
+        url: `${KOKORO_VOICES_BASE_URL}/af_bella.bin`,
+      });
+      const use = ensureVoiceFile(bella);
+      await Promise.resolve();
+      finish({statusCode: 200});
+
+      await expect(Promise.all([install, use])).resolves.toEqual([true, true]);
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not share a download between different voices', async () => {
+      await Promise.all([
+        ensureVoiceFile(bella),
+        ensureVoiceFile({...bella, id: 'af_heart', name: 'Heart'}),
+      ]);
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not invalidate Supertonic when its style download fails', async () => {
+      mockDownload(Promise.resolve({statusCode: 404}));
+      await expect(ensureVoiceFile(lily)).resolves.toBe(false);
+      expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('resolves false without invalidating when the move fails', async () => {
+      (RNFS.moveFile as jest.Mock).mockRejectedValueOnce(new Error('EEXIST'));
+
+      await expect(ensureVoiceFile(lily)).resolves.toBe(false);
+
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('resolves false when the voices folder cannot be created', async () => {
+      (RNFS.mkdir as jest.Mock).mockRejectedValueOnce(new Error('ENOSPC'));
+
+      await expect(ensureVoiceFile(bella)).resolves.toBe(false);
+
+      expect(RNFS.downloadFile).not.toHaveBeenCalled();
+    });
+
+    it('reloads a loaded Supertonic at its next acquire after a style download', async () => {
+      const supertonic: Engine = {
+        id: 'supertonic',
+        isInstalled: jest.fn().mockResolvedValue(true),
+        getVoices: jest.fn().mockResolvedValue([]),
+        loadInto: jest.fn().mockResolvedValue(undefined),
+        play: jest.fn().mockResolvedValue(undefined),
+        playStreaming: jest.fn(),
+        stop: jest.fn().mockResolvedValue(undefined),
+      };
+      ttsRuntime._resetForTests();
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      await ensureVoiceFile(lily);
+      expect(Speech.release).not.toHaveBeenCalled();
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(Speech.release).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+      ttsRuntime._resetForTests();
     });
 
     it('fetches a Kitten voice from the voices folder of its model repo', async () => {
