@@ -647,10 +647,7 @@ export class TTSStore {
       }
     } finally {
       runInAction(() => {
-        if (
-          this.playbackState.mode === 'playing' &&
-          this.playbackState.messageId === messageId
-        ) {
+        if (this.playbackState === playing) {
           this.playbackState = {mode: 'idle'};
         }
       });
@@ -665,8 +662,8 @@ export class TTSStore {
    * Skips the thinking-stripper entirely — preview text is fixed and
    * known clean.
    *
-   * messageId is engine-qualified (`preview:<engine>:<voiceId>`) so two
-   * engines that share a voice id can't collide on the cleanup guard.
+   * messageId is engine-qualified (`preview:<engine>:<voiceId>`) so
+   * `isPreviewingVoice` can't match another engine's voice with the same id.
    */
   async preview(voice: Voice): Promise<void> {
     if (!this.isTTSAvailable) {
@@ -699,10 +696,7 @@ export class TTSStore {
       }
     } finally {
       runInAction(() => {
-        if (
-          this.playbackState.mode === 'playing' &&
-          this.playbackState.messageId === messageId
-        ) {
+        if (this.playbackState === playing) {
           this.playbackState = {mode: 'idle'};
         }
       });

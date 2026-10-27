@@ -2306,6 +2306,52 @@ describe('TTSStore', () => {
       expect(store.playbackState).toEqual({mode: 'idle'});
     });
 
+    it('play, stop, then play on the same message during the ensure speaks once', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const ensure = deferred();
+      mockEnsureVoiceFile
+        .mockReturnValueOnce(ensure.promise)
+        .mockReturnValueOnce(ensure.promise);
+
+      const playA = store.play('msg-1', 'hello');
+      await flush();
+      await store.stop();
+      const playB = store.play('msg-1', 'hello');
+      await flush();
+      ensure.resolve(true);
+      await Promise.all([playA, playB]);
+
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('preview, stop, then preview of the same voice during the ensure speaks once', async () => {
+      const store = await makeStore();
+      const ensure = deferred();
+      mockEnsureVoiceFile
+        .mockReturnValueOnce(ensure.promise)
+        .mockReturnValueOnce(ensure.promise);
+      const enginePlay = deferred();
+      mockSystemPlay.mockReturnValueOnce(enginePlay.promise);
+
+      const previewA = store.preview(SYSTEM_VOICE);
+      await flush();
+      await store.stop();
+      const previewB = store.preview(SYSTEM_VOICE);
+      await flush();
+      ensure.resolve(true);
+      await previewA;
+      await flush();
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(true);
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+
+      enginePlay.resolve(true);
+      await previewB;
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(false);
+    });
+
     it('preview speaks only after the ensure, and still when it fails', async () => {
       const store = await makeStore();
       const ensure = deferred();
