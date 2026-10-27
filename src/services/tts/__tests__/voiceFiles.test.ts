@@ -238,6 +238,49 @@ describe('voice files', () => {
       expect(RNFS.downloadFile).toHaveBeenCalledTimes(2);
     });
 
+    it('ignores a download that completes after it failed with resume data', async () => {
+      const flush = () => new Promise(resolve => setImmediate(resolve));
+      let captured: {resumable: () => void} | undefined;
+      let finish: (value: {statusCode: number}) => void = () => {};
+      (RNFS.downloadFile as jest.Mock).mockImplementation(opts => {
+        captured = opts;
+        return {jobId: 1, promise: new Promise(resolve => (finish = resolve))};
+      });
+
+      const run = ensureVoiceFile(lily);
+      await flush();
+      captured!.resumable();
+      await expect(run).resolves.toBe(false);
+
+      finish({statusCode: 200});
+      await flush();
+
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(invalidate).not.toHaveBeenCalled();
+      expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('settles every caller sharing a download that fails with resume data', async () => {
+      const flush = () => new Promise(resolve => setImmediate(resolve));
+      let captured: {resumable: () => void} | undefined;
+      (RNFS.downloadFile as jest.Mock).mockImplementation(opts => {
+        captured = opts;
+        return {jobId: 1, promise: new Promise(() => {})};
+      });
+
+      const first = ensureVoiceFile(lily);
+      const second = ensureVoiceFile(lily);
+      await flush();
+      captured!.resumable();
+
+      await expect(Promise.all([first, second])).resolves.toEqual([
+        false,
+        false,
+      ]);
+      expect(RNFS.downloadFile).toHaveBeenCalledTimes(1);
+    });
+
     it('shares one download between install phase 2 and a use of the same voice', async () => {
       let finish: (value: {statusCode: number}) => void = () => {};
       mockDownload(new Promise(resolve => (finish = resolve)));

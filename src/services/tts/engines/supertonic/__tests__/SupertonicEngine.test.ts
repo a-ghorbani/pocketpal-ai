@@ -511,6 +511,60 @@ describe('SupertonicEngine', () => {
         expect(RNFS.writeFile).not.toHaveBeenCalled();
         expect(Speech.initialize).not.toHaveBeenCalled();
       });
+
+      it('removes a style missing style_ttl', async () => {
+        mockDisk({
+          [manifestPath]: LEGACY_MANIFEST,
+          [stylePath('F1')]: '{"style_dp":{"data":[1]}}',
+          [stylePath('M1')]: usableStyle,
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+      });
+
+      it('treats a missing manifest as legacy: repairs, writes it, then initializes', async () => {
+        mockDisk({[stylePath('F1')]: truncatedStyle});
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+        expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+        expect(RNFS.writeFile).toHaveBeenCalledWith(
+          manifestPath,
+          CURRENT_MANIFEST,
+        );
+        expect(order(RNFS.writeFile)).toBeLessThan(order(Speech.initialize));
+      });
+
+      it('rejects without writing the manifest or initializing when a style read fails', async () => {
+        mockDisk({[manifestPath]: LEGACY_MANIFEST});
+        (RNFS.exists as jest.Mock).mockImplementation(
+          async (path: string) => path === stylePath('F1'),
+        );
+
+        await expect(new SupertonicEngine().loadInto()).rejects.toThrow(
+          'ENOENT',
+        );
+
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        expect(Speech.initialize).not.toHaveBeenCalled();
+      });
+
+      it('rejects without initializing when the manifest write fails', async () => {
+        mockDisk({[manifestPath]: LEGACY_MANIFEST});
+        (RNFS.writeFile as jest.Mock).mockRejectedValueOnce(
+          new Error('ENOSPC'),
+        );
+
+        await expect(new SupertonicEngine().loadInto()).rejects.toThrow(
+          'ENOSPC',
+        );
+
+        expect(Speech.initialize).not.toHaveBeenCalled();
+      });
     });
 
     it('forwards the language argument to Speech.speak when provided', async () => {
