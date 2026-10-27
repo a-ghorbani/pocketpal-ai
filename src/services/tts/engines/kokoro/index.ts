@@ -15,6 +15,7 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
+import {ensureVoiceFileAt} from '../../voiceFileDownload';
 import type {
   NeuralEngine,
   StreamOptions,
@@ -181,27 +182,7 @@ export class KokoroEngine implements NeuralEngine {
     const voicePhaseWeight = 1 - corePhaseWeight;
     let voicesDone = 0;
     for (const voice of KOKORO_VOICES) {
-      const target = `${voicesDir}/${voice.id}.bin`;
-      try {
-        const result = await RNFS.downloadFile({
-          fromUrl: `${KOKORO_VOICES_BASE_URL}/${voice.id}.bin`,
-          toFile: target,
-          background: false,
-          discretionary: false,
-          cacheable: false,
-          progressInterval: 1000,
-        }).promise;
-        if (result.statusCode !== 200) {
-          console.warn(
-            `[KokoroEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
-          );
-        }
-      } catch (voiceErr) {
-        console.warn(
-          `[KokoroEngine] voice ${voice.id} download failed:`,
-          voiceErr,
-        );
-      }
+      await ensureVoiceFileAt(voice, this.voiceFile(voice.id));
       voicesDone++;
       if (onProgress) {
         onProgress(

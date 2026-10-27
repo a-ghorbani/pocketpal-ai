@@ -162,6 +162,46 @@ describe('SupertonicEngine', () => {
       );
     });
 
+    it('downloads voice styles through .part', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new SupertonicEngine().downloadModel();
+
+      for (const voice of SUPERTONIC_VOICES) {
+        expect(RNFS.downloadFile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            toFile: expect.stringMatching(
+              new RegExp(`/tts/supertonic/${voice.id}\\.json\\.part$`),
+            ),
+          }),
+        );
+      }
+    });
+
+    it('stays installed when a voice style returns non-200, leaving no file at its path', async () => {
+      let call = 0;
+      (RNFS.downloadFile as jest.Mock).mockImplementation(() => {
+        call++;
+        return {
+          promise: Promise.resolve({
+            statusCode: call <= SUPERTONIC_MODEL_FILES.length ? 200 : 404,
+            bytesWritten: 0,
+          }),
+          jobId: call,
+        };
+      });
+
+      await expect(
+        new SupertonicEngine().downloadModel(),
+      ).resolves.toBeUndefined();
+
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(RNFS.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining(`/${SUPERTONIC_VERSION_SENTINEL_FILENAME}`),
+        expect.any(String),
+      );
+    });
+
     it('writes the version sentinel as the final disk write', async () => {
       (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
 

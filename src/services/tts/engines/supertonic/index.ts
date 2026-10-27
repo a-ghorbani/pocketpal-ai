@@ -18,6 +18,7 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
+import {ensureVoiceFileAt} from '../../voiceFileDownload';
 import type {
   NeuralEngine,
   StreamOptions,
@@ -228,27 +229,7 @@ export class SupertonicEngine implements NeuralEngine {
       const voicePhaseWeight = 1 - corePhaseWeight;
       let voicesDone = 0;
       for (const voice of SUPERTONIC_VOICES) {
-        const target = this.getFilePath(`${voice.id}.json`);
-        try {
-          const result = await RNFS.downloadFile({
-            fromUrl: `${SUPERTONIC_VOICES_BASE_URL}/${voice.id}.json`,
-            toFile: target,
-            background: false,
-            discretionary: false,
-            cacheable: false,
-            progressInterval: 1000,
-          }).promise;
-          if (result.statusCode !== 200) {
-            console.warn(
-              `[SupertonicEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
-            );
-          }
-        } catch (voiceErr) {
-          console.warn(
-            `[SupertonicEngine] voice ${voice.id} download failed:`,
-            voiceErr,
-          );
-        }
+        await ensureVoiceFileAt(voice, this.voiceFile(voice.id));
         voicesDone++;
         if (onProgress) {
           onProgress(

@@ -140,7 +140,9 @@ describe('KokoroEngine', () => {
         expect(RNFS.downloadFile).toHaveBeenCalledWith(
           expect.objectContaining({
             fromUrl: `${KOKORO_VOICES_BASE_URL}/${voice.id}.bin`,
-            toFile: expect.stringContaining(`/voices/${voice.id}.bin`),
+            toFile: expect.stringMatching(
+              new RegExp(`/voices/${voice.id}\\.bin\\.part$`),
+            ),
           }),
         );
       }
@@ -195,8 +197,11 @@ describe('KokoroEngine', () => {
         expect.stringContaining(KOKORO_VOICES_MANIFEST_FILENAME),
         expect.any(String),
       );
-      // Phase-1 cleanup must NOT be triggered.
-      expect(RNFS.unlink).not.toHaveBeenCalled();
+      const unlinked = (RNFS.unlink as jest.Mock).mock.calls.map(
+        ([path]: [string]) => path,
+      );
+      expect(unlinked.every(path => path.endsWith('.bin.part'))).toBe(true);
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
     });
 
     it('phase 2 voice rejection is tolerated (best-effort): manifest still written, no throw', async () => {
