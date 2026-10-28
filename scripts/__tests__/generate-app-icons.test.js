@@ -1,7 +1,19 @@
+const {execFileSync} = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const GENERATOR_PATH = path.join(__dirname, '..', 'generate-app-icons.js');
-const {parseSvg, toVectorDrawable, buildTextOutputs} = require(GENERATOR_PATH);
+const {
+  APPICONSET,
+  ANDROID_RES,
+  SOURCE_DIR,
+  SOURCE_FILES,
+  generate,
+  parseSvg,
+  toVectorDrawable,
+  buildTextOutputs,
+} = require(GENERATOR_PATH);
 
 const canvas = body =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-28 -28 168 168">${body}</svg>`;
@@ -193,5 +205,131 @@ describe('buildTextOutputs', () => {
       });
       expect(Object.keys(image)).toEqual([...Object.keys(image)].sort());
     }
+  });
+});
+
+function pngHeader(buffer) {
+  expect(buffer.subarray(1, 4).toString('ascii')).toBe('PNG');
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    colorType: buffer[25],
+  };
+}
+
+describe('generate', () => {
+  let root;
+
+  const writeSources = overrides => {
+    const files = {
+      foregroundLight: canvas(SQUARE),
+      foregroundDark: canvas(SQUARE),
+      monochrome: canvas(
+        '<path id="m" d="M0 0H9V9Z" fill="#FFFFFF" fill-rule="evenodd"/>',
+      ),
+      ...overrides,
+    };
+    for (const [key, text] of Object.entries(files)) {
+      const target = path.join(root, SOURCE_DIR, SOURCE_FILES[key]);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.writeFileSync(target, text);
+    }
+  };
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, {recursive: true, force: true});
+  });
+
+  it('writes nothing when a source carries an unsupported element', () => {
+    writeSources({monochrome: canvas('<rect width="1" height="1"/>')});
+    expect(() => generate({root})).toThrow('<rect>');
+    expect(fs.existsSync(path.join(root, 'android'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'ios'))).toBe(false);
+  });
+
+  it('exits non-zero from the command line, naming the element', () => {
+    writeSources({foregroundLight: canvas('<rect width="1" height="1"/>')});
+    const script = path.join(root, 'scripts', 'generate-app-icons.js');
+    fs.copyFileSync(GENERATOR_PATH, script);
+    let failure;
+    try {
+      execFileSync('node', [script], {stdio: 'pipe'});
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure.status).not.toBe(0);
+    expect(failure.stderr.toString()).toContain('<rect>');
+  });
+
+  it('refuses a preview directory inside the repo', () => {
+    writeSources();
+    expect(() =>
+      generate({root, previewDir: path.join(root, 'previews')}),
+    ).toThrow('outside the repo');
+  });
+
+  it('writes opaque iOS icons, exact legacy sizes and drops stale icons', () => {
+    writeSources();
+    const stale = path.join(root, APPICONSET, 'iPhone_App_60_2x.png');
+    fs.mkdirSync(path.dirname(stale), {recursive: true});
+    fs.writeFileSync(stale, 'stale');
+
+    generate({root});
+
+    expect(fs.readdirSync(path.join(root, APPICONSET)).sort()).toEqual([
+      'AppIcon-dark.png',
+      'AppIcon-tinted.png',
+      'AppIcon.png',
+      'Contents.json',
+    ]);
+    for (const name of [
+      'AppIcon.png',
+      'AppIcon-dark.png',
+      'AppIcon-tinted.png',
+    ]) {
+      expect(
+        pngHeader(fs.readFileSync(path.join(root, APPICONSET, name))),
+      ).toEqual({width: 1024, height: 1024, colorType: 2});
+    }
+    const sizes = {mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192};
+    for (const [density, size] of Object.entries(sizes)) {
+      for (const name of ['ic_launcher', 'ic_launcher_round']) {
+        const file = path.join(
+          root,
+          ANDROID_RES,
+          `mipmap-${density}`,
+          `${name}.png`,
+        );
+        expect(pngHeader(fs.readFileSync(file))).toMatchObject({
+          width: size,
+          height: size,
+        });
+      }
+    }
+  });
+});
+
+describe('buildTextOutputs without the rasterizer', () => {
+  afterEach(() => {
+    jest.dontMock('@resvg/resvg-js');
+  });
+
+  it('never loads @resvg/resvg-js', () => {
+    jest.doMock('@resvg/resvg-js', () => {
+      throw new Error('resvg loaded');
+    });
+    jest.isolateModules(() => {
+      const isolated = require(GENERATOR_PATH);
+      expect(() =>
+        isolated.buildTextOutputs({
+          foregroundLight: canvas(SQUARE),
+          monochrome: canvas(SQUARE),
+        }),
+      ).not.toThrow();
+    });
   });
 });

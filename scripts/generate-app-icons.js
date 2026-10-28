@@ -5,11 +5,33 @@
  *
  * Usage: node scripts/generate-app-icons.js [--preview <dir outside the repo>]
  */
+const fs = require('fs');
+const path = require('path');
+const zlib = require('zlib');
+
+const REPO_ROOT = path.resolve(__dirname, '..');
+const SOURCE_DIR = 'scripts/app-icon';
+const SOURCE_FILES = {
+  foregroundLight: 'foreground-light.svg',
+  foregroundDark: 'foreground-dark.svg',
+  monochrome: 'monochrome.svg',
+};
+
 const CANVAS_VIEWBOX = '-28 -28 168 168';
 const CANVAS_OFFSET = 28;
 const CANVAS_SIZE = 168;
 
 const BACKGROUND_LIGHT = '#FFFFFF';
+const BACKGROUND_DARK = '#181715';
+const TINT_BACKGROUND = '#000000';
+const TINT_FOREGROUND = '#FFFFFF';
+
+const VIEWPORT_VIEWBOX = '0 0 112 112';
+const SAFE_RADIUS = 51.3333;
+const ROUNDED_MASK = '<rect width="112" height="112" rx="25.7471"/>';
+const CIRCLE_MASK = '<circle cx="56" cy="56" r="56"/>';
+const IOS_SIZE = 1024;
+const LEGACY_SIZES = {mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192};
 
 const ANDROID_RES = 'android/app/src/main/res';
 const APPICONSET = 'ios/PocketPal/Images.xcassets/AppIcon.appiconset';
@@ -409,9 +431,245 @@ function buildTextOutputs(sources) {
   };
 }
 
+function markup(node, recolor) {
+  const attrs = Object.entries(node.attrs)
+    .map(([key, value]) => {
+      const repaint =
+        recolor && (key === 'fill' || key === 'stroke') && value !== 'none';
+      return ` ${key}="${repaint ? recolor : value}"`;
+    })
+    .join('');
+  const children = node.children.map(child => markup(child, recolor));
+  return `<${node.name}${attrs}>${children.join('')}</${node.name}>`;
+}
+
+function composition(
+  tree,
+  {background, mask, recolor, viewBox = VIEWPORT_VIEWBOX, overlay = ''},
+) {
+  const art = tree.svg.children.map(child => markup(child, recolor)).join('');
+  const backdrop = `<rect x="-28" y="-28" width="168" height="168" fill="${background}"/>`;
+  const clip = mask
+    ? `<defs><clipPath id="icon-mask">${mask}</clipPath></defs>`
+    : '';
+  const clipRef = mask ? ' clip-path="url(#icon-mask)"' : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${clip}<g${clipRef}>${backdrop}${art}</g>${overlay}</svg>`;
+}
+
+function render(Resvg, svg, size) {
+  return new Resvg(svg, {
+    fitTo: {mode: 'width', value: size},
+    font: {loadSystemFonts: false},
+  }).render();
+}
+
+function pngChunk(type, data) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(zlib.crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+function opaqueRgbPng({width, height, pixels}, label) {
+  const stride = width * 3 + 1;
+  const rows = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const from = (y * width + x) * 4;
+      if (pixels[from + 3] !== 255) {
+        fail(`${label} has a non-opaque pixel at ${x},${y}`);
+      }
+      pixels.copy(rows, y * stride + 1 + x * 3, from, from + 3);
+    }
+  }
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 2;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', zlib.deflateSync(rows, {level: 9})),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+function iosCompositions(trees) {
+  return {
+    'AppIcon.png': composition(trees.foregroundLight, {
+      background: BACKGROUND_LIGHT,
+    }),
+    'AppIcon-dark.png': composition(trees.foregroundDark, {
+      background: BACKGROUND_DARK,
+    }),
+    'AppIcon-tinted.png': composition(trees.monochrome, {
+      background: TINT_BACKGROUND,
+      recolor: TINT_FOREGROUND,
+    }),
+  };
+}
+
+function buildRasterOutputs(trees) {
+  const {Resvg} = require('@resvg/resvg-js');
+  const outputs = {};
+  for (const [filename, svg] of Object.entries(iosCompositions(trees))) {
+    const image = render(Resvg, svg, IOS_SIZE);
+    outputs[`${APPICONSET}/${filename}`] = opaqueRgbPng(image, filename);
+  }
+  const legacy = {
+    ic_launcher: ROUNDED_MASK,
+    ic_launcher_round: CIRCLE_MASK,
+  };
+  for (const [density, size] of Object.entries(LEGACY_SIZES)) {
+    for (const [name, mask] of Object.entries(legacy)) {
+      const svg = composition(trees.foregroundLight, {
+        background: BACKGROUND_LIGHT,
+        mask,
+      });
+      outputs[`${ANDROID_RES}/mipmap-${density}/${name}.png`] = render(
+        Resvg,
+        svg,
+        size,
+      ).asPng();
+    }
+  }
+  return outputs;
+}
+
+function buildPreviews(trees) {
+  const {Resvg} = require('@resvg/resvg-js');
+  const guides = `<g fill="none" stroke="#FF00FF" stroke-width="0.4"><rect width="112" height="112"/><circle cx="56" cy="56" r="${SAFE_RADIUS}"/></g>`;
+  const fullCanvas = {viewBox: CANVAS_VIEWBOX, overlay: guides};
+  const svgs = {
+    'canvas-foreground-light.png': [
+      composition(trees.foregroundLight, {
+        ...fullCanvas,
+        background: BACKGROUND_LIGHT,
+      }),
+      1024,
+    ],
+    'canvas-foreground-dark.png': [
+      composition(trees.foregroundDark, {
+        ...fullCanvas,
+        background: BACKGROUND_DARK,
+      }),
+      1024,
+    ],
+    'canvas-monochrome.png': [
+      composition(trees.monochrome, {
+        ...fullCanvas,
+        background: TINT_BACKGROUND,
+        recolor: TINT_FOREGROUND,
+      }),
+      1024,
+    ],
+  };
+  const themed = composition(trees.monochrome, {
+    background: '#D6E3FF',
+    recolor: '#1F3760',
+    mask: CIRCLE_MASK,
+  });
+  const tinted = composition(trees.monochrome, {
+    background: TINT_BACKGROUND,
+    recolor: TINT_FOREGROUND,
+    mask: ROUNDED_MASK,
+  });
+  for (const size of [1024, 144]) {
+    svgs[`android-monochrome-themed-${size}.png`] = [themed, size];
+  }
+  for (const size of [1024, 180]) {
+    svgs[`ios-tinted-${size}.png`] = [tinted, size];
+  }
+  return Object.fromEntries(
+    Object.entries(svgs).map(([name, [svg, size]]) => [
+      name,
+      render(Resvg, svg, size).asPng(),
+    ]),
+  );
+}
+
+function readSources(root) {
+  return Object.fromEntries(
+    Object.entries(SOURCE_FILES).map(([key, file]) => [
+      key,
+      fs.readFileSync(path.join(root, SOURCE_DIR, file), 'utf-8'),
+    ]),
+  );
+}
+
+function assertOutsideRepo(root, dir) {
+  const relative = path.relative(path.resolve(root), path.resolve(dir));
+  if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+    fail(`--preview must point outside the repo, got ${dir}`);
+  }
+}
+
+function writeFiles(base, files) {
+  for (const [relative, content] of Object.entries(files)) {
+    const target = path.join(base, relative);
+    fs.mkdirSync(path.dirname(target), {recursive: true});
+    fs.writeFileSync(target, content);
+  }
+}
+
+function removeStaleAppIcons(root, outputs) {
+  const dir = path.join(root, APPICONSET);
+  for (const name of fs.readdirSync(dir)) {
+    if (!(`${APPICONSET}/${name}` in outputs)) {
+      fs.rmSync(path.join(dir, name));
+    }
+  }
+}
+
+function generate({root = REPO_ROOT, previewDir} = {}) {
+  if (previewDir) {
+    assertOutsideRepo(root, previewDir);
+  }
+  const sources = readSources(root);
+  const trees = Object.fromEntries(
+    Object.entries(sources).map(([key, text]) => [key, parseSvg(text)]),
+  );
+  const outputs = {...buildTextOutputs(sources), ...buildRasterOutputs(trees)};
+  const previews = previewDir ? buildPreviews(trees) : {};
+  writeFiles(root, outputs);
+  removeStaleAppIcons(root, outputs);
+  if (previewDir) {
+    writeFiles(previewDir, previews);
+  }
+  return {outputs: Object.keys(outputs), previews: Object.keys(previews)};
+}
+
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--preview' && argv[i + 1] && !args.previewDir) {
+      args.previewDir = argv[++i];
+    } else {
+      fail(`unexpected argument ${argv[i]}`);
+    }
+  }
+  return args;
+}
+
+if (require.main === module) {
+  try {
+    const {outputs, previews} = generate(parseArgs(process.argv.slice(2)));
+    console.log(`wrote ${outputs.length} outputs, ${previews.length} previews`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
 module.exports = {
   APPICONSET,
   ANDROID_RES,
+  SOURCE_DIR,
+  SOURCE_FILES,
+  generate,
   parseSvg,
   toVectorDrawable,
   buildTextOutputs,
