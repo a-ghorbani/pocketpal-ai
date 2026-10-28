@@ -45,6 +45,7 @@ import {
 } from '../utils/chat';
 import {acquireKeepAwake} from '../utils/keepAwake';
 import {vtrace} from '../utils/voiceTrace';
+import {LLAMARN_ERROR_PATTERNS} from '../utils/llamaRnErrors';
 import {
   toApiCompletionParams,
   ApiCompletionParams,
@@ -998,25 +999,19 @@ export const useChatSession = (
       // turn's metadata so the footer can show a friendlier hint
       // instead of a multi-KB raw error dump.
       const isToolArgsParseError =
-        /Failed to parse tool call arguments as JSON/i.test(errorMessage);
+        LLAMARN_ERROR_PATTERNS.toolArgsParse.test(errorMessage);
       // Prompt-processing overflow: when the prompt itself exceeds n_ctx
       // (ctx_shift is off — the llama.rn default), the native layer throws
       // "Context is full" before any token is generated, so it never reaches
       // run_finished. Treat it as an n_ctx-exhaustion signal so the banner
       // surfaces instead of a raw error dump.
-      // LLAMARN-DEP: string-coupled to the native throw in RNLlamaJSI.cpp.
-      // No typed flag exists yet; a llama.rn reword would silently stop the
-      // prompt-overflow banner. Re-verify on upgrade; prefer a typed
-      // CompletionResult flag upstream when available.
-      const isContextFullError = /context is full/i.test(errorMessage);
+      const isContextFullError =
+        LLAMARN_ERROR_PATTERNS.contextFull.test(errorMessage);
       const treatAsContextFull = isToolArgsParseError || isContextFullError;
       // Low-RAM devices can fail to allocate the speculative draft context at
       // first completion (the load-time memory check has no term for it).
-      // LLAMARN-DEP: string-coupled to the throw in rn-completion.cpp; a
-      // reword would silently demote this back to the raw dump.
-      const isSpeculativeInitError = /failed to create MTP draft context/i.test(
-        errorMessage,
-      );
+      const isSpeculativeInitError =
+        LLAMARN_ERROR_PATTERNS.speculativeInit.test(errorMessage);
 
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
