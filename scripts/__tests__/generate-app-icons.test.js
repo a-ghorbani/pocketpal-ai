@@ -1246,6 +1246,29 @@ describe('generate on failure', () => {
     fs.rmSync(root, {recursive: true, force: true});
   });
 
+  it('refuses a subfolder in the appiconset before writing anything', () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-subfolder-'));
+    for (const key of Object.keys(SOURCE_FILES)) {
+      const target = path.join(root, SOURCE_DIR, SOURCE_FILES[key]);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.writeFileSync(target, canvas(SQUARE));
+    }
+    const contents = path.join(root, APPICONSET, 'Contents.json');
+    fs.mkdirSync(path.join(root, APPICONSET, 'old.imageset'), {
+      recursive: true,
+    });
+    fs.writeFileSync(contents, 'previous');
+
+    expect(() => generate({root})).toThrow('old.imageset is a directory');
+
+    expect(fs.readFileSync(contents, 'utf-8')).toBe('previous');
+    expect(fs.readdirSync(path.join(root, APPICONSET)).sort()).toEqual([
+      'Contents.json',
+      'old.imageset',
+    ]);
+    expect(fs.existsSync(path.join(root, 'android'))).toBe(false);
+  });
+
   it('leaves existing outputs and stale icons untouched', () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-keep-'));
     const sources = {

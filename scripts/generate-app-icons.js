@@ -666,13 +666,20 @@ function writeFiles(base, files) {
   }
 }
 
-function removeStaleAppIcons(root, outputs) {
+function staleAppIcons(root, outputs) {
   const dir = path.join(root, APPICONSET);
-  for (const name of fs.readdirSync(dir)) {
-    if (!(`${APPICONSET}/${name}` in outputs)) {
-      fs.rmSync(path.join(dir, name));
-    }
+  if (!fs.existsSync(dir)) {
+    return [];
   }
+  return fs
+    .readdirSync(dir, {withFileTypes: true})
+    .filter(entry => !(`${APPICONSET}/${entry.name}` in outputs))
+    .map(entry => {
+      if (entry.isDirectory()) {
+        fail(`${APPICONSET}/${entry.name} is a directory, not an icon`);
+      }
+      return path.join(dir, entry.name);
+    });
 }
 
 function generate({root = REPO_ROOT, previewDir} = {}) {
@@ -685,8 +692,11 @@ function generate({root = REPO_ROOT, previewDir} = {}) {
   );
   const outputs = {...buildTextOutputs(sources), ...buildRasterOutputs(trees)};
   const previews = previewDir ? buildPreviews(trees) : {};
+  const stale = staleAppIcons(root, outputs);
   writeFiles(root, outputs);
-  removeStaleAppIcons(root, outputs);
+  for (const file of stale) {
+    fs.rmSync(file);
+  }
   if (previewDir) {
     writeFiles(previewDir, previews);
   }
