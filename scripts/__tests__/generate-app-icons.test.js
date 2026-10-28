@@ -296,6 +296,23 @@ describe('generate', () => {
     expect(fs.existsSync(path.join(root, strays[1]))).toBe(true);
   });
 
+  it('refuses a preview directory that reaches the repo through a symlink', () => {
+    writeSources();
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-link-'));
+    try {
+      fs.symlinkSync(root, path.join(elsewhere, 'repo'), 'dir');
+      for (const previewDir of [
+        path.join(elsewhere, 'repo'),
+        path.join(elsewhere, 'repo', 'previews'),
+      ]) {
+        expect(() => generate({root, previewDir})).toThrow('outside the repo');
+      }
+      expect(fs.existsSync(path.join(root, 'previews'))).toBe(false);
+    } finally {
+      fs.rmSync(elsewhere, {recursive: true, force: true});
+    }
+  });
+
   it('writes opaque iOS icons, exact legacy sizes and drops stale icons', () => {
     writeSources();
     const stale = path.join(root, APPICONSET, 'iPhone_App_60_2x.png');

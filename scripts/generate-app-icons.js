@@ -647,8 +647,20 @@ function readSources(root) {
   );
 }
 
+function realPath(target) {
+  const resolved = path.resolve(target);
+  let existing = resolved;
+  while (!fs.existsSync(existing)) {
+    existing = path.dirname(existing);
+  }
+  return path.join(
+    fs.realpathSync(existing),
+    path.relative(existing, resolved),
+  );
+}
+
 function assertOutsideRepo(root, dir) {
-  const relative = path.relative(path.resolve(root), path.resolve(dir));
+  const relative = path.relative(realPath(root), realPath(dir));
   const outside =
     relative === '..' ||
     relative.startsWith('..' + path.sep) ||
