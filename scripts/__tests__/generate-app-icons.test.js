@@ -296,6 +296,46 @@ describe('generate', () => {
     expect(fs.existsSync(path.join(root, strays[1]))).toBe(true);
   });
 
+  it('replaces case-variant icons without deleting a written output', () => {
+    writeSources();
+    const dir = path.join(root, APPICONSET);
+    fs.mkdirSync(dir, {recursive: true});
+    for (const name of ['appicon.png', 'Appicon-Dark.png']) {
+      fs.writeFileSync(path.join(dir, name), 'old');
+    }
+    const calls = spy =>
+      spy.mock.calls.map(([file], i) => ({
+        file: String(file).toLowerCase(),
+        order: spy.mock.invocationCallOrder[i],
+      }));
+    const write = jest.spyOn(fs, 'writeFileSync');
+    const remove = jest.spyOn(fs, 'rmSync');
+    let writes;
+    let removals;
+    try {
+      generate({root});
+    } finally {
+      writes = calls(write);
+      removals = calls(remove);
+      write.mockRestore();
+      remove.mockRestore();
+    }
+
+    const removedAfterWrite = removals.filter(removal =>
+      writes.some(
+        ({file, order}) => file === removal.file && order < removal.order,
+      ),
+    );
+    expect(removedAfterWrite).toEqual([]);
+    expect(removals).toHaveLength(2);
+    expect(fs.readdirSync(dir).sort()).toEqual([
+      'AppIcon-dark.png',
+      'AppIcon-tinted.png',
+      'AppIcon.png',
+      'Contents.json',
+    ]);
+  });
+
   it('refuses a preview directory that reaches the repo through a symlink', () => {
     writeSources();
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-link-'));

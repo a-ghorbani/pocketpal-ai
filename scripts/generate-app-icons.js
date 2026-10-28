@@ -704,11 +704,10 @@ function generate({root = REPO_ROOT, previewDir} = {}) {
   );
   const outputs = {...buildTextOutputs(sources), ...buildRasterOutputs(trees)};
   const previews = previewDir ? buildPreviews(trees) : {};
-  const stale = staleAppIcons(root, outputs);
-  writeFiles(root, outputs);
-  for (const file of stale) {
+  for (const file of staleAppIcons(root, outputs)) {
     fs.rmSync(file);
   }
+  writeFiles(root, outputs);
   if (previewDir) {
     writeFiles(previewDir, previews);
   }
