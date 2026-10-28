@@ -855,13 +855,10 @@ function decodePng(buffer) {
       const up = y ? pixels[(y - 1) * stride + x] : 0;
       const upLeft =
         y && x >= channels ? pixels[(y - 1) * stride + x - channels] : 0;
-      const predictor = [
-        0,
-        left,
-        up,
-        Math.floor((left + up) / 2),
-        PAETH(left, up, upLeft),
-      ][filter];
+      const predictor =
+        filter === 4
+          ? PAETH(left, up, upLeft)
+          : [0, left, up, Math.floor((left + up) / 2)][filter];
       pixels[y * stride + x] = (value + predictor) % 256;
     }
   }
@@ -876,8 +873,32 @@ function decodePng(buffer) {
       .toUpperCase();
     return {color: `#${hex}`, alpha: a};
   };
-  return {chunks, colorType, at};
+  return {chunks, width, height, colorType, pixels, at};
 }
+
+const premultiplied = ({colorType, pixels}) => {
+  if (colorType === 2) {
+    return pixels;
+  }
+  const out = Buffer.alloc(pixels.length);
+  for (let i = 0; i < pixels.length; i += 4) {
+    const alpha = pixels[i + 3];
+    for (let c = 0; c < 3; c++) {
+      out[i + c] = Math.round((pixels[i + c] * alpha) / 255);
+    }
+    out[i + 3] = alpha;
+  }
+  return out;
+};
+
+const maxChannelDifference = (a, b) => {
+  const [left, right] = [premultiplied(a), premultiplied(b)];
+  let max = 0;
+  for (let i = 0; i < left.length; i++) {
+    max = Math.max(max, Math.abs(left[i] - right[i]));
+  }
+  return max;
+};
 
 describe('committed PNG content', () => {
   const repoRoot = path.join(__dirname, '..', '..');
@@ -953,6 +974,16 @@ describe('generate from the committed sources', () => {
     firstRun = readAll(root);
   });
 
+  const committed = [
+    ...listFiles(path.join(repoRoot, APPICONSET)).map(
+      file => `${APPICONSET}/${file}`,
+    ),
+    ...fs
+      .readdirSync(path.join(repoRoot, ANDROID_RES), {recursive: true})
+      .filter(file => path.basename(file).startsWith('ic_launcher'))
+      .map(file => `${ANDROID_RES}/${file.split(path.sep).join('/')}`),
+  ].sort();
+
   afterAll(() => {
     fs.rmSync(root, {recursive: true, force: true});
     fs.rmSync(previewDir, {recursive: true, force: true});
@@ -962,17 +993,25 @@ describe('generate from the committed sources', () => {
     const outputs = Object.keys(firstRun).filter(
       file => !file.startsWith(`${SOURCE_DIR}/`),
     );
-    const committed = [
-      ...listFiles(path.join(repoRoot, APPICONSET)).map(
-        file => `${APPICONSET}/${file}`,
-      ),
-      ...fs
-        .readdirSync(path.join(repoRoot, ANDROID_RES), {recursive: true})
-        .filter(file => path.basename(file).startsWith('ic_launcher'))
-        .map(file => `${ANDROID_RES}/${file.split(path.sep).join('/')}`),
-    ].sort();
     expect(outputs).toEqual(committed);
   });
+
+  it.each(committed.filter(file => file.endsWith('.png')))(
+    'regenerates %s to the committed pixels',
+    relative => {
+      const expected = decodePng(
+        fs.readFileSync(path.join(repoRoot, relative)),
+      );
+      const actual = decodePng(firstRun[relative]);
+      const shape = ({width, height, colorType}) => ({
+        width,
+        height,
+        colorType,
+      });
+      expect(shape(actual)).toEqual(shape(expected));
+      expect(maxChannelDifference(actual, expected)).toBeLessThanOrEqual(2);
+    },
+  );
 
   it('writes byte-identical outputs on a second run', () => {
     generate({root});
