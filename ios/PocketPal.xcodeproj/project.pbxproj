@@ -540,6 +540,7 @@
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_0.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_1.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_tensor.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_common.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f16.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f32.metal",
@@ -552,6 +553,7 @@
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/misc.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mm.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv_mma.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/norm.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/pool.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.h",
@@ -576,7 +578,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_tensor fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mv_mma mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
 		};
 /* End PBXShellScriptBuildPhase section */
 
