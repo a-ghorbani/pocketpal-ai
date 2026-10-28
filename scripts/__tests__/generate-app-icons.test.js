@@ -517,3 +517,69 @@ describe('committed sources', () => {
     expect(outsideIds(shifted)).toEqual(['nudged']);
   });
 });
+
+describe('committed outputs', () => {
+  const repoRoot = path.join(__dirname, '..', '..');
+  const sources = Object.fromEntries(
+    Object.entries(SOURCE_FILES).map(([key, file]) => [
+      key,
+      fs.readFileSync(path.join(repoRoot, SOURCE_DIR, file), 'utf-8'),
+    ]),
+  );
+  const textOutputs = buildTextOutputs(sources);
+
+  it.each(Object.keys(textOutputs))('%s matches its sources', relative => {
+    expect(fs.readFileSync(path.join(repoRoot, relative), 'utf-8')).toBe(
+      textOutputs[relative],
+    );
+  });
+
+  it('cuts the face out of the monochrome layer and clips it at the pocket', () => {
+    const monochrome =
+      textOutputs[`${ANDROID_RES}/drawable/ic_launcher_monochrome.xml`];
+    expect(monochrome).toContain('android:fillType="evenOdd"');
+    expect(monochrome).toContain('<clip-path');
+  });
+
+  it('ships exactly three opaque 1024 iOS icons', () => {
+    const dir = path.join(repoRoot, APPICONSET);
+    expect(fs.readdirSync(dir).sort()).toEqual([
+      'AppIcon-dark.png',
+      'AppIcon-tinted.png',
+      'AppIcon.png',
+      'Contents.json',
+    ]);
+    for (const name of [
+      'AppIcon.png',
+      'AppIcon-dark.png',
+      'AppIcon-tinted.png',
+    ]) {
+      expect(pngHeader(fs.readFileSync(path.join(dir, name)))).toEqual({
+        width: 1024,
+        height: 1024,
+        colorType: 2,
+      });
+    }
+  });
+
+  it.each([
+    ['mdpi', 48],
+    ['hdpi', 72],
+    ['xhdpi', 96],
+    ['xxhdpi', 144],
+    ['xxxhdpi', 192],
+  ])('ships %s legacy icons at %ipx', (density, size) => {
+    for (const name of ['ic_launcher', 'ic_launcher_round']) {
+      const file = path.join(
+        repoRoot,
+        ANDROID_RES,
+        `mipmap-${density}`,
+        `${name}.png`,
+      );
+      expect(pngHeader(fs.readFileSync(file))).toMatchObject({
+        width: size,
+        height: size,
+      });
+    }
+  });
+});
