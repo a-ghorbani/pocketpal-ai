@@ -50,6 +50,14 @@ describe('parseSvg', () => {
       'unsupported id="c&lt;" on <clipPath>',
     ],
     [`<g id="g>">${SQUARE}</g>`, 'unsupported id="g>" on <g>'],
+    [
+      `<defs><clipPath id="icon-mask"><path d="M0 0H9V9Z"/></clipPath></defs><g clip-path="url(#icon-mask)">${SQUARE}</g>`,
+      'id icon-mask is reserved',
+    ],
+    [
+      '<path id="icon-mask" d="M0 0H9V9Z" fill="#000000"/>',
+      'id icon-mask is reserved',
+    ],
   ])('rejects %s naming %s', (body, name) => {
     expect(() => parseSvg(canvas(body))).toThrow(name);
   });

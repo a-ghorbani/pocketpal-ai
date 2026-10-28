@@ -30,6 +30,7 @@ const VIEWPORT_VIEWBOX = '0 0 112 112';
 const SAFE_RADIUS = 51.3333;
 const ROUNDED_MASK = '<rect width="112" height="112" rx="25.7471"/>';
 const CIRCLE_MASK = '<circle cx="56" cy="56" r="56"/>';
+const MASK_ID = 'icon-mask';
 const IOS_SIZE = 1024;
 const LEGACY_SIZES = {mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192};
 
@@ -161,6 +162,9 @@ function checkAttributes(node) {
   const allowed = ALLOWED_ATTRIBUTES[node.name];
   if (!allowed) {
     fail(`unsupported element <${node.name}>`);
+  }
+  if (node.attrs.id === MASK_ID) {
+    fail(`id ${MASK_ID} is reserved for the icon mask`);
   }
   for (const [key, value] of Object.entries(node.attrs)) {
     if (!allowed.includes(key)) {
@@ -499,9 +503,9 @@ function composition(
   const art = tree.svg.children.map(child => markup(child, recolor)).join('');
   const backdrop = `<rect x="-28" y="-28" width="168" height="168" fill="${background}"/>`;
   const clip = mask
-    ? `<defs><clipPath id="icon-mask">${mask}</clipPath></defs>`
+    ? `<defs><clipPath id="${MASK_ID}">${mask}</clipPath></defs>`
     : '';
-  const clipRef = mask ? ' clip-path="url(#icon-mask)"' : '';
+  const clipRef = mask ? ` clip-path="url(#${MASK_ID})"` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${clip}<g${clipRef}>${backdrop}${art}</g>${overlay}</svg>`;
 }
 
