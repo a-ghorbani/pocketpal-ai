@@ -23,6 +23,9 @@ const SQUARE = '<path id="square" d="M0 0H9V9Z" fill="#000000"/>';
 
 const vd = body => toVectorDrawable(parseSvg(canvas(body)));
 
+const visible = relative =>
+  relative.split(path.sep).every(part => !part.startsWith('.'));
+
 describe('parseSvg', () => {
   it.each([
     ['<rect width="1" height="1"/>', '<rect>'],
@@ -278,6 +281,20 @@ describe('generate', () => {
       );
     },
   );
+
+  it('survives stray .DS_Store files, deleting the appiconset one', () => {
+    writeSources();
+    const strays = [`${APPICONSET}/.DS_Store`, `${ANDROID_RES}/.DS_Store`];
+    for (const stray of strays) {
+      fs.mkdirSync(path.dirname(path.join(root, stray)), {recursive: true});
+      fs.writeFileSync(path.join(root, stray), 'finder');
+    }
+
+    generate({root});
+
+    expect(fs.existsSync(path.join(root, strays[0]))).toBe(false);
+    expect(fs.existsSync(path.join(root, strays[1]))).toBe(true);
+  });
 
   it('writes opaque iOS icons, exact legacy sizes and drops stale icons', () => {
     writeSources();
@@ -561,7 +578,7 @@ describe('committed outputs', () => {
 
   it('ships exactly three opaque 1024 iOS icons', () => {
     const dir = path.join(repoRoot, APPICONSET);
-    expect(fs.readdirSync(dir).sort()).toEqual([
+    expect(fs.readdirSync(dir).filter(visible).sort()).toEqual([
       'AppIcon-dark.png',
       'AppIcon-tinted.png',
       'AppIcon.png',
@@ -784,7 +801,7 @@ describe('Android launcher resources', () => {
 
   it('resolves both names on anydpi-v26 and every legacy density, with no dark variant', () => {
     const found = [];
-    for (const dir of fs.readdirSync(resRoot)) {
+    for (const dir of fs.readdirSync(resRoot).filter(visible)) {
       for (const file of fs.readdirSync(path.join(resRoot, dir))) {
         if (file.startsWith('ic_launcher')) {
           found.push(`${dir}/${file}`);
@@ -1038,6 +1055,7 @@ describe('generate from the committed sources', () => {
   const listFiles = dir =>
     fs
       .readdirSync(dir, {recursive: true})
+      .filter(visible)
       .filter(file => fs.statSync(path.join(dir, file)).isFile())
       .map(file => file.split(path.sep).join('/'))
       .sort();
