@@ -41,6 +41,15 @@ describe('parseSvg', () => {
     ['<g opacity="0.5">' + SQUARE + '</g>', 'opacity'],
     ['<path d="M0 0H9V9Z" fill="url(#g)"/>', 'fill="url(#g)"'],
     ['<path d="M0 0H9V9Z"/>', 'explicit fill'],
+    ...['a<b', 'a&amp;b', "a'b", 'a b', '1a', ''].map(id => [
+      `<path id="${id}" d="M0 0H9V9Z" fill="#000000"/>`,
+      `unsupported id="${id}" on <path>`,
+    ]),
+    [
+      `<defs><clipPath id="c&lt;"><path d="M0 0H9V9Z"/></clipPath></defs><g clip-path="url(#c)">${SQUARE}</g>`,
+      'unsupported id="c&lt;" on <clipPath>',
+    ],
+    [`<g id="g>">${SQUARE}</g>`, 'unsupported id="g>" on <g>'],
   ])('rejects %s naming %s', (body, name) => {
     expect(() => parseSvg(canvas(body))).toThrow(name);
   });

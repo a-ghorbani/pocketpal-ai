@@ -60,6 +60,7 @@ const ALLOWED_ATTRIBUTES = {
 };
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+const SAFE_ID = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
 const NUMBER_BODY = '-?(?:\\d+\\.?\\d*|\\.\\d+)(?:e-?\\d+)?';
 const NUMBER = new RegExp(`^${NUMBER_BODY}$`);
 const NUMBER_CAPTURE = `(${NUMBER_BODY})`;
@@ -166,6 +167,7 @@ function checkAttributes(node) {
       fail(`unsupported attribute ${key} on <${node.name}>`);
     }
     const bad =
+      (key === 'id' && !SAFE_ID.test(value)) ||
       ((key === 'fill' || key === 'stroke') &&
         !HEX_COLOR.test(value) &&
         !(key === 'fill' && value === 'none')) ||
