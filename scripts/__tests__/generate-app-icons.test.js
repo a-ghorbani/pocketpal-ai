@@ -675,6 +675,50 @@ describe('parseSvg rejects malformed input', () => {
     expect(() => parseSvg(canvas(body))).toThrow(message);
   });
 
+  it.each([
+    [
+      'a packed arc flag',
+      'M0 0A2.57 2.57 0 0139.2 53.0Z',
+      'A2.57 2.57 0 0139.2 53.0',
+    ],
+    ['a flag that is not 0 or 1', 'M0 0A1 1 0 2 1 9 9', 'A1 1 0 2 1 9 9'],
+    ['an unknown command', 'M0 0B9 9Z', 'B9 9'],
+    ['a sign used as a separator', 'M0 0L9-9Z', 'L9-9'],
+    ['a short argument list', 'M0 0L9Z', 'L9'],
+    ['arguments after Z', 'M0 0H9V9Z 1', 'Z 1'],
+  ])('rejects path data with %s, naming the path', (_, d, segment) => {
+    expect(() =>
+      parseSvg(canvas(`<path id="p" d="${d}" fill="#000000"/>`)),
+    ).toThrow(`path p has unsupported path data "${segment}"`);
+  });
+
+  it('rejects path data that does not start with a moveto', () => {
+    expect(() =>
+      parseSvg(canvas('<path id="p" d="L9 9" fill="#000000"/>')),
+    ).toThrow('path p has path data not starting with a moveto');
+  });
+
+  it('rejects unsupported clipPath path data, naming the clipPath', () => {
+    expect(() =>
+      parseSvg(
+        canvas(
+          '<defs><clipPath id="c"><path d="M0 0B9 9Z"/></clipPath></defs>' +
+            `<g clip-path="url(#c)">${SQUARE}</g>`,
+        ),
+      ),
+    ).toThrow('clipPath c has unsupported path data "B9 9"');
+  });
+
+  it('accepts separated arc flags, commas and relative commands', () => {
+    expect(() =>
+      parseSvg(
+        canvas(
+          '<path d="M0,0 l9 9 a1 1 0 1 0 2 2 A1,1 0 0,1 4 4 h1v1z" fill="#000000"/>',
+        ),
+      ),
+    ).not.toThrow();
+  });
+
   it('rejects a document that is not a single <svg>', () => {
     expect(() => parseSvg(canvas(SQUARE) + canvas(SQUARE))).toThrow(
       'single <svg>',

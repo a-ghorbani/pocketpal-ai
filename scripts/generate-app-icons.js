@@ -79,6 +79,21 @@ const TRANSFORMS = [
   {kind: 'scale', pattern: new RegExp(`^scale\\(${NUMBER_CAPTURE}\\)$`)},
 ];
 
+const PATH_ARGUMENTS = {
+  M: 2,
+  L: 2,
+  H: 1,
+  V: 1,
+  C: 6,
+  S: 4,
+  Q: 4,
+  T: 2,
+  A: 7,
+  Z: 0,
+};
+const PATH_SEGMENT = /([A-DF-Za-df-z])([^A-DF-Za-df-z]*)/y;
+const ARC_FLAGS = [3, 4];
+
 function fail(message) {
   throw new Error(`generate-app-icons: ${message}`);
 }
@@ -165,11 +180,39 @@ function checkAttributes(node) {
   }
 }
 
+function checkPathData(d, label) {
+  const text = d.trim();
+  if (!/^[Mm]/.test(text)) {
+    fail(`${label} has path data not starting with a moveto`);
+  }
+  PATH_SEGMENT.lastIndex = 0;
+  while (PATH_SEGMENT.lastIndex < text.length) {
+    const [segment, letter, body] = PATH_SEGMENT.exec(text);
+    const command = letter.toUpperCase();
+    const count = PATH_ARGUMENTS[command];
+    const args = body.trim() ? body.trim().split(/\s*,\s*|\s+/) : [];
+    const valid =
+      count !== undefined &&
+      (count ? args.length > 0 && args.length % count === 0 : !args.length) &&
+      args.every(
+        (arg, i) =>
+          NUMBER.test(arg) &&
+          (command !== 'A' ||
+            !ARC_FLAGS.includes(i % count) ||
+            /^[01]$/.test(arg)),
+      );
+    if (!valid) {
+      fail(`${label} has unsupported path data "${segment.trim()}"`);
+    }
+  }
+}
+
 function checkDrawnPath(node) {
   if (!node.attrs.d) {
     fail('<path> without d');
   }
   const label = node.attrs.id || node.attrs.d.slice(0, 20);
+  checkPathData(node.attrs.d, `path ${label}`);
   if (node.children.length) {
     fail(`<path> ${label} has children`);
   }
@@ -202,6 +245,7 @@ function readClipPaths(defs, clipPaths) {
     if (keys.length !== 1 || keys[0] !== 'd' || shape.children.length) {
       fail(`clipPath ${id} path may carry only d`);
     }
+    checkPathData(shape.attrs.d, `clipPath ${id}`);
     clipPaths.set(id, {d: shape.attrs.d, used: false});
   }
 }
