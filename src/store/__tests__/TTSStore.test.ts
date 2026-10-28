@@ -55,6 +55,7 @@ const mockPhononPlayStreaming = jest.fn(() => ({
   finalize: jest.fn().mockResolvedValue(undefined),
   cancel: jest.fn().mockResolvedValue(undefined),
 }));
+const mockEnsureVoiceFile = jest.fn().mockResolvedValue(true);
 const mockGetPhononSupport = jest
   .fn()
   .mockResolvedValue({supported: false, reason: 'not-compiled'});
@@ -175,6 +176,7 @@ jest.mock('../../services/tts', () => {
     getEngine,
     getNeuralEngine: getEngine,
     getPhononSupport: () => mockGetPhononSupport(),
+    ensureVoiceFile: (voice: unknown) => mockEnsureVoiceFile(voice),
   };
 });
 
@@ -196,6 +198,14 @@ const SUPERTONIC_VOICE: Voice = {
   name: 'Sarah',
   engine: 'supertonic',
   language: 'en',
+  gender: 'f',
+};
+
+const KOKORO_VOICE: Voice = {
+  id: 'af_bella',
+  name: 'Bella',
+  engine: 'kokoro',
+  language: 'en-us',
   gender: 'f',
 };
 
@@ -2186,6 +2196,265 @@ describe('TTSStore', () => {
       await store.preview(SYSTEM_VOICE);
       expect(mockSystemPlay).not.toHaveBeenCalled();
       expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+  });
+
+  describe('voice file ensure', () => {
+    const deferred = () => {
+      let resolve: (ok: boolean) => void = () => {};
+      const promise = new Promise<boolean>(r => (resolve = r));
+      return {promise, resolve};
+    };
+
+    it('ensures the restored voice on init when its engine is ready', async () => {
+      mockKokoroIsInstalled.mockResolvedValueOnce(true);
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(KOKORO_VOICE);
+
+      await store.init();
+
+      expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(1);
+      expect(mockEnsureVoiceFile).toHaveBeenCalledWith(
+        expect.objectContaining({engine: 'kokoro', id: 'af_bella'}),
+      );
+    });
+
+    it('ensures again when the voice changes', async () => {
+      mockKokoroIsInstalled.mockResolvedValueOnce(true);
+      const store = await makeStore();
+      store.setCurrentVoice(KOKORO_VOICE);
+      store.setCurrentVoice({...KOKORO_VOICE, id: 'af_heart', name: 'Heart'});
+
+      expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(2);
+      expect(mockEnsureVoiceFile).toHaveBeenLastCalledWith(
+        expect.objectContaining({id: 'af_heart'}),
+      );
+    });
+
+    it('waits for the engine to become ready', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(KOKORO_VOICE);
+      expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+
+      await store.downloadKokoro();
+
+      expect(store.kokoroDownloadState).toBe('ready');
+      expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failed ensure keeps the voice and its engine install state', async () => {
+      mockKokoroIsInstalled.mockResolvedValueOnce(true);
+      mockEnsureVoiceFile.mockResolvedValueOnce(false);
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(KOKORO_VOICE);
+
+      await store.init();
+      await flush();
+
+      expect(mockEnsureVoiceFile).toHaveBeenCalledTimes(1);
+      expect(store.currentVoice).toEqual(KOKORO_VOICE);
+      expect(store.kokoroDownloadState).toBe('ready');
+    });
+
+    it('never ensures a system voice', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+    });
+
+    it('play speaks only after the ensure resolves', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const ensure = deferred();
+      mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+      const playing = store.play('msg-1', 'hello');
+      await flush();
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+
+      ensure.resolve(true);
+      await playing;
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
+    });
+
+    it('play still calls the engine when the ensure fails', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockEnsureVoiceFile.mockResolvedValueOnce(false);
+
+      await store.play('msg-1', 'hello');
+
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('play never speaks when stopped during the ensure', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const ensure = deferred();
+      mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+      const playing = store.play('msg-1', 'hello');
+      await flush();
+      await store.stop();
+      ensure.resolve(true);
+      await playing;
+
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('play, stop, then play on the same message during the ensure speaks once', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const ensure = deferred();
+      mockEnsureVoiceFile
+        .mockReturnValueOnce(ensure.promise)
+        .mockReturnValueOnce(ensure.promise);
+
+      const playA = store.play('msg-1', 'hello');
+      await flush();
+      await store.stop();
+      const playB = store.play('msg-1', 'hello');
+      await flush();
+      ensure.resolve(true);
+      await Promise.all([playA, playB]);
+
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('preview, stop, then preview of the same voice during the ensure speaks once', async () => {
+      const store = await makeStore();
+      const ensure = deferred();
+      mockEnsureVoiceFile
+        .mockReturnValueOnce(ensure.promise)
+        .mockReturnValueOnce(ensure.promise);
+      const enginePlay = deferred();
+      mockSystemPlay.mockReturnValueOnce(enginePlay.promise);
+
+      const previewA = store.preview(SYSTEM_VOICE);
+      await flush();
+      await store.stop();
+      const previewB = store.preview(SYSTEM_VOICE);
+      await flush();
+      ensure.resolve(true);
+      await previewA;
+      await flush();
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(true);
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+
+      enginePlay.resolve(true);
+      await previewB;
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(false);
+    });
+
+    it('preview speaks only after the ensure, and still when it fails', async () => {
+      const store = await makeStore();
+      const ensure = deferred();
+      mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+      const previewing = store.preview(SYSTEM_VOICE);
+      await flush();
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+
+      ensure.resolve(false);
+      await previewing;
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+    });
+
+    it('a newer preview during the ensure wins; the older never plays', async () => {
+      const store = await makeStore();
+      const otherVoice: Voice = {...SYSTEM_VOICE, id: 'com.apple.voice.Tom'};
+      const ensureA = deferred();
+      mockEnsureVoiceFile.mockReturnValueOnce(ensureA.promise);
+
+      const previewA = store.preview(SYSTEM_VOICE);
+      await flush();
+      const previewB = store.preview(otherVoice);
+      await flush();
+      ensureA.resolve(true);
+      await Promise.all([previewA, previewB]);
+
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+      expect(mockSystemPlay).toHaveBeenCalledWith(
+        expect.any(String),
+        otherVoice,
+      );
+    });
+
+    it.each([
+      ['a chat auto-speak stream', SYSTEM_VOICE, false],
+      ['a voice-mode reply stream', SYSTEM_VOICE, true],
+      ['a Supertonic stream', SUPERTONIC_VOICE, false],
+    ])(
+      '%s ensures only after the stop, and starts only after the ensure',
+      async (_label, voice, voiceReply) => {
+        const store = await makeStore();
+        store.setCurrentVoice(voice);
+        store.setAutoSpeak(true);
+        store.setVoiceOutputActive(voiceReply);
+        const isSupertonic = voice.engine === 'supertonic';
+        const stopMock = isSupertonic ? mockSupertonicStop : mockSystemStop;
+        const playStreaming = isSupertonic
+          ? mockSupertonicPlayStreaming
+          : mockSystemPlayStreaming;
+        let finishStop: () => void = () => {};
+        stopMock.mockReturnValueOnce(
+          new Promise<void>(resolve => (finishStop = resolve)),
+        );
+        const ensure = deferred();
+        mockEnsureVoiceFile.mockClear();
+        mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+        store.onAssistantMessageStart('msg-1');
+        const [streamVoice, waitFor, opts] = playStreaming.mock.calls.at(
+          -1,
+        ) as unknown as [Voice, Promise<void>, object | undefined];
+        let released = false;
+        waitFor.then(() => (released = true));
+        expect(streamVoice).toEqual(voice);
+        expect(opts !== undefined).toBe(isSupertonic || voiceReply);
+
+        await flush();
+        expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+
+        finishStop();
+        await flush();
+        expect(mockEnsureVoiceFile).toHaveBeenCalledWith(voice);
+        expect(released).toBe(false);
+
+        ensure.resolve(true);
+        await flush();
+        expect(released).toBe(true);
+      },
+    );
+
+    it('the stream waits for the ensure after the stop', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      const ensure = deferred();
+      mockEnsureVoiceFile.mockReturnValueOnce(ensure.promise);
+
+      store.onAssistantMessageStart('msg-1');
+      const waitFor = (
+        mockSystemPlayStreaming.mock.calls[0] as unknown[]
+      )[1] as Promise<void> | undefined;
+      let released = false;
+      waitFor!.then(() => (released = true));
+
+      await flush();
+      expect(mockSystemStop).toHaveBeenCalled();
+      expect(mockEnsureVoiceFile).toHaveBeenCalledWith(SYSTEM_VOICE);
+      expect(released).toBe(false);
+
+      ensure.resolve(false);
+      await flush();
+      expect(released).toBe(true);
     });
   });
 });

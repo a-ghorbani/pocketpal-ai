@@ -104,10 +104,18 @@ export interface Engine {
   stop(): Promise<void>;
 }
 
+/** A voice's own file outside the engine's core files, and where it comes from. */
+export interface VoiceFileSource {
+  path: string;
+  url: string;
+}
+
 export interface NeuralEngine extends Engine {
   readonly id: NeuralEngineId;
   downloadModel(onProgress?: (progress: number) => void): Promise<void>;
   deleteModel(): Promise<void>;
   /** Frees an outdated install before the disk-space preflight. */
   reclaimLegacySpace?(): Promise<void>;
+  /** Absent when the engine's voices ship with its core files. */
+  voiceFile?(voiceId: string): VoiceFileSource;
 }

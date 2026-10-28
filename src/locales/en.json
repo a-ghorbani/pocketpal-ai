@@ -1655,6 +1655,8 @@
     "voiceRowTitle": "Voice",
     "voiceRowReady": "{{voice}} · ready",
     "voiceRowMissing": "Pick a natural voice. The system voice can't speak in voice mode.",
+    "voiceRowFileMissing": "{{voice}} isn't downloaded yet. Continue gets it.",
+    "voiceRowFileFailed": "Couldn't download {{voice}}. Connect to the internet and try again.",
     "chooseVoiceCta": "Choose a voice",
     "micNote": "We'll ask for microphone access next.",
     "micDenied": "Voice mode needs microphone access.",
