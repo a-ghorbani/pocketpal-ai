@@ -333,3 +333,187 @@ describe('buildTextOutputs without the rasterizer', () => {
     });
   });
 });
+
+const SAFE_CENTER = 56;
+const SAFE_RADIUS = 51.33;
+const ARGUMENT_COUNTS = {
+  M: 2,
+  L: 2,
+  H: 1,
+  V: 1,
+  C: 6,
+  S: 4,
+  Q: 4,
+  T: 2,
+  A: 7,
+  Z: 0,
+};
+
+function pathExtremes(d) {
+  const tokens = d.match(/[MLHVCSQTAZ]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/gi);
+  const extremes = [];
+  let current = [0, 0];
+  let start = [0, 0];
+  let lastControl = null;
+  let command = null;
+  let i = 0;
+  while (i < tokens.length) {
+    if (/[a-z]/i.test(tokens[i])) {
+      command = tokens[i++];
+    }
+    const upper = command.toUpperCase();
+    const relative = command !== upper;
+    const args = tokens.slice(i, i + ARGUMENT_COUNTS[upper]).map(Number);
+    i += ARGUMENT_COUNTS[upper];
+    const point = (x, y) =>
+      relative ? [current[0] + x, current[1] + y] : [x, y];
+    const reflected = lastControl
+      ? [2 * current[0] - lastControl[0], 2 * current[1] - lastControl[1]]
+      : current;
+    let end;
+    let controls = [];
+    let radius = 0;
+    switch (upper) {
+      case 'M':
+      case 'L':
+      case 'T':
+        end = point(args[0], args[1]);
+        controls = upper === 'T' ? [reflected] : [];
+        break;
+      case 'H':
+        end = [relative ? current[0] + args[0] : args[0], current[1]];
+        break;
+      case 'V':
+        end = [current[0], relative ? current[1] + args[0] : args[0]];
+        break;
+      case 'C':
+        controls = [point(args[0], args[1]), point(args[2], args[3])];
+        end = point(args[4], args[5]);
+        break;
+      case 'S':
+        controls = [reflected, point(args[0], args[1])];
+        end = point(args[2], args[3]);
+        break;
+      case 'Q':
+        controls = [point(args[0], args[1])];
+        end = point(args[2], args[3]);
+        break;
+      case 'A':
+        radius = Math.max(Math.abs(args[0]), Math.abs(args[1]));
+        end = point(args[5], args[6]);
+        break;
+      case 'Z':
+        end = start;
+        break;
+    }
+    lastControl = 'CSQT'.includes(upper) ? controls[controls.length - 1] : null;
+    for (const control of controls) {
+      extremes.push({point: control, radius: 0});
+    }
+    extremes.push({point: end, radius});
+    if (upper === 'M') {
+      start = end;
+      command = relative ? 'l' : 'L';
+    }
+    current = end;
+  }
+  return extremes;
+}
+
+function applyTransform(transform, [x, y], radius) {
+  const [a, b, c] = transform.values;
+  if (transform.kind === 'translate') {
+    return [[x + a, y + b], radius];
+  }
+  if (transform.kind === 'scale') {
+    return [[x * a, y * a], radius * Math.abs(a)];
+  }
+  const angle = (a * Math.PI) / 180;
+  const [dx, dy] = [x - b, y - c];
+  return [
+    [
+      b + dx * Math.cos(angle) - dy * Math.sin(angle),
+      c + dx * Math.sin(angle) + dy * Math.cos(angle),
+    ],
+    radius,
+  ];
+}
+
+function palPointsOutsideSafeCircle(text) {
+  const outside = [];
+  const visit = (node, transforms, inPal) => {
+    if (node.type === 'path') {
+      if (!inPal) {
+        return;
+      }
+      for (const extreme of pathExtremes(node.attrs.d)) {
+        let {point, radius} = extreme;
+        for (const transform of [...transforms].reverse()) {
+          [point, radius] = applyTransform(transform, point, radius);
+        }
+        const distance =
+          Math.hypot(point[0] - SAFE_CENTER, point[1] - SAFE_CENTER) + radius;
+        if (distance > SAFE_RADIUS) {
+          outside.push({id: node.attrs.id, point, distance});
+        }
+      }
+      return;
+    }
+    const nested = node.transform
+      ? [...transforms, node.transform]
+      : transforms;
+    for (const child of node.children) {
+      visit(child, nested, inPal || node.id === 'pal');
+    }
+  };
+  const tree = parseSvg(text);
+  let palGroups = 0;
+  const countPal = nodes => {
+    for (const node of nodes) {
+      if (node.type === 'group') {
+        palGroups += node.id === 'pal' ? 1 : 0;
+        countPal(node.children);
+      }
+    }
+  };
+  countPal(tree.children);
+  expect(palGroups).toBe(1);
+  for (const node of tree.children) {
+    visit(node, [], false);
+  }
+  return outside;
+}
+
+const outsideIds = text => [
+  ...new Set(palPointsOutsideSafeCircle(text).map(({id}) => id)),
+];
+
+describe('committed sources', () => {
+  const readSource = key =>
+    fs.readFileSync(
+      path.join(__dirname, '..', '..', SOURCE_DIR, SOURCE_FILES[key]),
+      'utf-8',
+    );
+
+  it.each(Object.keys(SOURCE_FILES))(
+    'keeps the pal of %s inside the safe circle',
+    key => {
+      expect(palPointsOutsideSafeCircle(readSource(key))).toEqual([]);
+    },
+  );
+
+  it('names the pal path that leaves the safe circle', () => {
+    const moved = readSource('foregroundLight').replace(
+      'M85.7529 46.8772',
+      'M115.7529 46.8772',
+    );
+    expect(outsideIds(moved)).toEqual(['band']);
+  });
+
+  it('applies group transforms before measuring', () => {
+    const shifted = canvas(
+      '<g id="pal"><g transform="translate(60 0)"><path id="nudged" d="M56 56H60" fill="#000000"/></g></g>',
+    );
+    expect(outsideIds(shifted)).toEqual(['nudged']);
+  });
+});
