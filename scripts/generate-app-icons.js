@@ -677,6 +677,7 @@ module.exports = {
   SOURCE_DIR,
   SOURCE_FILES,
   generate,
+  opaqueRgbPng,
   parseSvg,
   toVectorDrawable,
   buildTextOutputs,

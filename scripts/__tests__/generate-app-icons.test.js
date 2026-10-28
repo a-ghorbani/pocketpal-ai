@@ -10,6 +10,7 @@ const {
   SOURCE_DIR,
   SOURCE_FILES,
   generate,
+  opaqueRgbPng,
   parseSvg,
   toVectorDrawable,
   buildTextOutputs,
@@ -316,6 +317,17 @@ describe('generate', () => {
         });
       }
     }
+  });
+});
+
+describe('opaqueRgbPng', () => {
+  it('refuses a transparent pixel', () => {
+    expect(() =>
+      opaqueRgbPng(
+        {width: 1, height: 1, pixels: Buffer.from([0, 0, 0, 0])},
+        'x.png',
+      ),
+    ).toThrow('non-opaque pixel');
   });
 });
 
