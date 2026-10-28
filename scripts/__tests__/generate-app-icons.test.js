@@ -583,3 +583,494 @@ describe('committed outputs', () => {
     }
   });
 });
+
+describe('parseSvg rejects malformed input', () => {
+  const CLIP = '<path d="M0 0H9V9Z"/>';
+  it.each([
+    ['a mismatched closing tag', `<g>${SQUARE}</defs>`, 'closes <g>'],
+    [
+      'a repeated attribute',
+      '<path d="M0 0H9V9Z" fill="#000000" fill="#FFFFFF"/>',
+      'repeats fill',
+    ],
+    [
+      'a clip-path that is not a url',
+      `<g clip-path="none">${SQUARE}</g>`,
+      'clip-path "none"',
+    ],
+    ['a path without d', '<path fill="#000000"/>', 'without d'],
+    [
+      'a path with children',
+      `<path id="p" d="M0 0H9V9Z" fill="#000000">${SQUARE}</path>`,
+      'p has children',
+    ],
+    [
+      'a stroke without a stroke-width',
+      '<path id="s" d="M0 0L9 9" fill="none" stroke="#000000"/>',
+      's needs an explicit stroke-width',
+    ],
+    [
+      'an unknown fill-rule',
+      '<path d="M0 0H9V9Z" fill="#000000" fill-rule="inherit"/>',
+      'fill-rule="inherit"',
+    ],
+    [
+      'a clipPath without id',
+      `<defs><clipPath>${CLIP}</clipPath></defs>${SQUARE}`,
+      'without id',
+    ],
+    [
+      'a clipPath defined twice',
+      `<defs><clipPath id="c">${CLIP}</clipPath><clipPath id="c">${CLIP}</clipPath></defs>` +
+        `<g clip-path="url(#c)">${SQUARE}</g>`,
+      'defined twice',
+    ],
+    [
+      'a clipPath path carrying more than d',
+      '<defs><clipPath id="c"><path d="M0 0H9V9Z" fill="#000000"/></clipPath></defs>' +
+        `<g clip-path="url(#c)">${SQUARE}</g>`,
+      'may carry only d',
+    ],
+    [
+      'a <defs> outside the root',
+      `<g><defs><clipPath id="c">${CLIP}</clipPath></defs>${SQUARE}</g>`,
+      '<defs> here',
+    ],
+  ])('rejects %s', (_, body, message) => {
+    expect(() => parseSvg(canvas(body))).toThrow(message);
+  });
+
+  it('rejects a document that is not a single <svg>', () => {
+    expect(() => parseSvg(canvas(SQUARE) + canvas(SQUARE))).toThrow(
+      'single <svg>',
+    );
+  });
+});
+
+describe('safe-circle scan', () => {
+  it.each([
+    [
+      'an arc whose radius reaches outside',
+      '<path id="arc" d="M56 56A60 60 0 0 1 60 56" fill="#000000"/>',
+    ],
+    [
+      'a relative segment ending outside',
+      '<path id="relative" d="M56 56l0 52" fill="#000000"/>',
+    ],
+    [
+      'a curve whose control point is outside',
+      '<path id="curve" d="M50 56C50 120 60 120 60 56Z" fill="#000000"/>',
+    ],
+    [
+      'a scale group moving the path outside',
+      '<g transform="scale(2)"><path id="scaled" d="M56 56H58" fill="#000000"/></g>',
+    ],
+    [
+      'a rotate group moving the path outside',
+      '<g transform="rotate(90 0 56)"><path id="rotated" d="M56 56H58" fill="#000000"/></g>',
+    ],
+  ])('flags %s', (_, body) => {
+    const [id] = body.match(/id="([^"]+)"/).slice(1);
+    expect(outsideIds(canvas(`<g id="pal">${body}</g>`))).toEqual([id]);
+  });
+
+  it('ignores clip geometry and paths outside the pal group', () => {
+    const text = canvas(
+      '<defs><clipPath id="c"><path d="M-28 -28H140V140Z"/></clipPath></defs>' +
+        '<path id="rim" d="M-28 -28H140" fill="none" stroke="#000000" stroke-width="1"/>' +
+        '<g clip-path="url(#c)"><g id="pal"><path id="inside" d="M50 50H60V60Z" fill="#000000"/></g></g>',
+    );
+    expect(outsideIds(text)).toEqual([]);
+  });
+});
+
+function drawnPathIds(nodes, inPal = false, out = {pal: [], rest: []}) {
+  for (const node of nodes) {
+    if (node.type === 'path') {
+      (inPal ? out.pal : out.rest).push(node.attrs.id);
+    } else {
+      drawnPathIds(node.children, inPal || node.id === 'pal', out);
+    }
+  }
+  return out;
+}
+
+describe('committed source structure', () => {
+  const readSource = key =>
+    fs.readFileSync(
+      path.join(__dirname, '..', '..', SOURCE_DIR, SOURCE_FILES[key]),
+      'utf-8',
+    );
+  const FOREGROUND_PAL = [
+    'body',
+    'band',
+    'mouth',
+    'eye-left',
+    'eye-right',
+    'highlight-1',
+    'highlight-2',
+  ];
+
+  it.each([
+    ['foregroundLight', FOREGROUND_PAL, ['rim', 'pocket', 'road']],
+    ['foregroundDark', FOREGROUND_PAL, ['rim', 'pocket', 'road']],
+    ['monochrome', ['silhouette'], ['pocket-edge']],
+  ])(
+    'puts the whole pal of %s in the pal group and only bleed shapes outside',
+    (key, pal, rest) => {
+      expect(drawnPathIds(parseSvg(readSource(key)).children)).toEqual({
+        pal,
+        rest,
+      });
+    },
+  );
+
+  it('clips the monochrome pal on a wrapper group, never inside it', () => {
+    const {children} = parseSvg(readSource('monochrome'));
+    const wrapper = children.find(node => node.clipId);
+    expect(wrapper.clipId).toBe('pal-clip');
+    expect(wrapper.children.map(node => node.id)).toEqual(['pal']);
+    expect(wrapper.children[0].clipD).toBeUndefined();
+  });
+
+  it('draws the monochrome layer in opaque white only', () => {
+    const text = readSource('monochrome');
+    expect(text).not.toContain('fill-opacity');
+    const paints = [...text.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map(
+      ([, value]) => value,
+    );
+    expect(new Set(paints)).toEqual(new Set(['#FFFFFF', 'none']));
+    expect(text).toContain('fill-rule="evenodd"');
+  });
+
+  it('gives the dark foreground the light geometry with only the pal recoloured', () => {
+    const light = readSource('foregroundLight');
+    const dark = readSource('foregroundDark');
+    expect(light).toContain('id="body" d="');
+    expect(dark.replace('fill="#A86C34"', 'fill="#F5DBBC"')).toBe(light);
+  });
+});
+
+describe('Android launcher resources', () => {
+  const repoRoot = path.join(__dirname, '..', '..');
+  const resRoot = path.join(repoRoot, ANDROID_RES);
+
+  it('keeps the manifest on both mipmap names', () => {
+    const manifest = fs.readFileSync(
+      path.join(repoRoot, 'android/app/src/main/AndroidManifest.xml'),
+      'utf-8',
+    );
+    expect(manifest).toContain('android:icon="@mipmap/ic_launcher"');
+    expect(manifest).toContain('android:roundIcon="@mipmap/ic_launcher_round"');
+  });
+
+  it('resolves both names on anydpi-v26 and every legacy density, with no dark variant', () => {
+    const found = [];
+    for (const dir of fs.readdirSync(resRoot)) {
+      for (const file of fs.readdirSync(path.join(resRoot, dir))) {
+        if (file.startsWith('ic_launcher')) {
+          found.push(`${dir}/${file}`);
+        }
+      }
+    }
+    const densities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
+    expect(found.sort()).toEqual(
+      [
+        'drawable/ic_launcher_foreground.xml',
+        'drawable/ic_launcher_monochrome.xml',
+        'mipmap-anydpi-v26/ic_launcher.xml',
+        'mipmap-anydpi-v26/ic_launcher_round.xml',
+        'values/ic_launcher_background.xml',
+        ...densities.flatMap(density => [
+          `mipmap-${density}/ic_launcher.png`,
+          `mipmap-${density}/ic_launcher_round.png`,
+        ]),
+      ].sort(),
+    );
+  });
+
+  it('leaves flavour source sets without a launcher icon override', () => {
+    const flavours = fs
+      .readdirSync(path.join(repoRoot, 'android/app/src'))
+      .filter(name => name !== 'main');
+    for (const flavour of flavours) {
+      const res = path.join(repoRoot, 'android/app/src', flavour, 'res');
+      const icons = fs.existsSync(res)
+        ? fs
+            .readdirSync(res, {recursive: true})
+            .filter(file => path.basename(file).startsWith('ic_launcher'))
+        : [];
+      expect({flavour, icons}).toEqual({flavour, icons: []});
+    }
+  });
+});
+
+const PAETH = (a, b, c) => {
+  const p = a + b - c;
+  const [pa, pb, pc] = [Math.abs(p - a), Math.abs(p - b), Math.abs(p - c)];
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+};
+
+function decodePng(buffer) {
+  const chunks = [];
+  const idat = [];
+  for (let at = 8; at < buffer.length; ) {
+    const length = buffer.readUInt32BE(at);
+    const type = buffer.subarray(at + 4, at + 8).toString('ascii');
+    chunks.push(type);
+    if (type === 'IDAT') {
+      idat.push(buffer.subarray(at + 8, at + 8 + length));
+    }
+    at += 12 + length;
+  }
+  const {width, height, colorType} = pngHeader(buffer);
+  expect(buffer[24]).toBe(8);
+  const channels = {2: 3, 6: 4}[colorType];
+  const raw = require('zlib').inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    for (let x = 0; x < stride; x++) {
+      const value = raw[y * (stride + 1) + 1 + x];
+      const left = x >= channels ? pixels[y * stride + x - channels] : 0;
+      const up = y ? pixels[(y - 1) * stride + x] : 0;
+      const upLeft =
+        y && x >= channels ? pixels[(y - 1) * stride + x - channels] : 0;
+      const predictor = [
+        0,
+        left,
+        up,
+        Math.floor((left + up) / 2),
+        PAETH(left, up, upLeft),
+      ][filter];
+      pixels[y * stride + x] = (value + predictor) % 256;
+    }
+  }
+  const at = (u, v) => {
+    const x = Math.floor((u * width) / 112);
+    const y = Math.floor((v * height) / 112);
+    const from = y * stride + x * channels;
+    const [r, g, b, a = 255] = pixels.subarray(from, from + channels);
+    const hex = [r, g, b]
+      .map(c => c.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+    return {color: `#${hex}`, alpha: a};
+  };
+  return {chunks, colorType, at};
+}
+
+describe('committed PNG content', () => {
+  const repoRoot = path.join(__dirname, '..', '..');
+  const png = relative =>
+    decodePng(fs.readFileSync(path.join(repoRoot, relative)));
+  const BACKDROP = [1, 1];
+  const PAL_BODY = [49, 33];
+  const RIGHT_EYE = [66, 46.5];
+  const POCKET = [88, 92];
+
+  it.each([
+    ['AppIcon.png', '#FFFFFF', '#F5DBBC', '#000000'],
+    ['AppIcon-dark.png', '#181715', '#A86C34', '#000000'],
+    ['AppIcon-tinted.png', '#000000', '#FFFFFF', '#000000'],
+  ])(
+    '%s paints backdrop %s, pal %s and eye %s with no transparency chunk',
+    (name, backdrop, pal, eye) => {
+      const icon = png(`${APPICONSET}/${name}`);
+      expect(icon.chunks).toEqual(['IHDR', 'IDAT', 'IEND']);
+      expect(icon.at(...BACKDROP)).toEqual({color: backdrop, alpha: 255});
+      expect(icon.at(...PAL_BODY)).toEqual({color: pal, alpha: 255});
+      expect(icon.at(...RIGHT_EYE)).toEqual({color: eye, alpha: 255});
+    },
+  );
+
+  it.each(['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'])(
+    'masks the %s legacy icons as a rounded square and a circle over the iOS composition',
+    density => {
+      const square = png(`${ANDROID_RES}/mipmap-${density}/ic_launcher.png`);
+      const round = png(
+        `${ANDROID_RES}/mipmap-${density}/ic_launcher_round.png`,
+      );
+      const ios = png(`${APPICONSET}/AppIcon.png`);
+      for (const icon of [square, round]) {
+        expect(icon.colorType).toBe(6);
+        expect(icon.at(0, 0).alpha).toBe(0);
+        for (const point of [PAL_BODY, POCKET]) {
+          expect(icon.at(...point)).toEqual(ios.at(...point));
+        }
+      }
+      expect(square.at(14, 14)).toEqual({color: '#FFFFFF', alpha: 255});
+      expect(round.at(14, 14).alpha).toBe(0);
+    },
+  );
+});
+
+describe('generate from the committed sources', () => {
+  const repoRoot = path.join(__dirname, '..', '..');
+  let root;
+  let previewDir;
+  let firstRun;
+
+  const listFiles = dir =>
+    fs
+      .readdirSync(dir, {recursive: true})
+      .filter(file => fs.statSync(path.join(dir, file)).isFile())
+      .map(file => file.split(path.sep).join('/'))
+      .sort();
+  const readAll = dir =>
+    Object.fromEntries(
+      listFiles(dir).map(file => [file, fs.readFileSync(path.join(dir, file))]),
+    );
+
+  beforeAll(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-real-'));
+    previewDir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-preview-'));
+    for (const file of Object.values(SOURCE_FILES)) {
+      const target = path.join(root, SOURCE_DIR, file);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.copyFileSync(path.join(repoRoot, SOURCE_DIR, file), target);
+    }
+    generate({root, previewDir});
+    firstRun = readAll(root);
+  });
+
+  afterAll(() => {
+    fs.rmSync(root, {recursive: true, force: true});
+    fs.rmSync(previewDir, {recursive: true, force: true});
+  });
+
+  it('writes the committed output set and nothing else', () => {
+    const outputs = Object.keys(firstRun).filter(
+      file => !file.startsWith(`${SOURCE_DIR}/`),
+    );
+    const committed = [
+      ...listFiles(path.join(repoRoot, APPICONSET)).map(
+        file => `${APPICONSET}/${file}`,
+      ),
+      ...fs
+        .readdirSync(path.join(repoRoot, ANDROID_RES), {recursive: true})
+        .filter(file => path.basename(file).startsWith('ic_launcher'))
+        .map(file => `${ANDROID_RES}/${file.split(path.sep).join('/')}`),
+    ].sort();
+    expect(outputs).toEqual(committed);
+  });
+
+  it('writes byte-identical outputs on a second run', () => {
+    generate({root});
+    expect(readAll(root)).toEqual(firstRun);
+  });
+
+  it('writes previews only to the preview directory', () => {
+    expect(listFiles(previewDir)).toEqual([
+      'android-monochrome-themed-1024.png',
+      'android-monochrome-themed-144.png',
+      'canvas-foreground-dark.png',
+      'canvas-foreground-light.png',
+      'canvas-monochrome.png',
+      'ios-tinted-1024.png',
+      'ios-tinted-180.png',
+    ]);
+    expect(Object.keys(firstRun).some(file => file.includes('canvas-'))).toBe(
+      false,
+    );
+  });
+});
+
+describe('command line', () => {
+  let root;
+
+  const run = args => {
+    try {
+      const stdout = execFileSync(
+        'node',
+        [path.join(root, 'scripts', 'generate-app-icons.js'), ...args],
+        {
+          stdio: 'pipe',
+          env: {
+            ...process.env,
+            NODE_PATH: path.join(__dirname, '..', '..', 'node_modules'),
+          },
+        },
+      );
+      return {status: 0, stdout: stdout.toString()};
+    } catch (error) {
+      return {status: error.status, stderr: error.stderr.toString()};
+    }
+  };
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-cli-'));
+    const sources = {
+      foregroundLight: canvas(SQUARE),
+      foregroundDark: canvas(SQUARE),
+      monochrome: canvas(SQUARE),
+    };
+    for (const [key, text] of Object.entries(sources)) {
+      const target = path.join(root, SOURCE_DIR, SOURCE_FILES[key]);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.writeFileSync(target, text);
+    }
+    fs.copyFileSync(
+      GENERATOR_PATH,
+      path.join(root, 'scripts', 'generate-app-icons.js'),
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, {recursive: true, force: true});
+  });
+
+  it('reports what it wrote and exits zero', () => {
+    expect(run([])).toEqual({
+      status: 0,
+      stdout: 'wrote 19 outputs, 0 previews\n',
+    });
+  });
+
+  it.each([[['--bogus']], [['--preview']]])('exits non-zero on %j', args => {
+    const result = run(args);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('unexpected argument');
+    expect(fs.existsSync(path.join(root, 'android'))).toBe(false);
+  });
+});
+
+describe('generate on failure', () => {
+  let root;
+
+  afterEach(() => {
+    fs.rmSync(root, {recursive: true, force: true});
+  });
+
+  it('leaves existing outputs and stale icons untouched', () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-icons-keep-'));
+    const sources = {
+      foregroundLight: canvas(SQUARE),
+      foregroundDark: canvas('<rect width="1" height="1"/>'),
+      monochrome: canvas(SQUARE),
+    };
+    for (const [key, text] of Object.entries(sources)) {
+      const target = path.join(root, SOURCE_DIR, SOURCE_FILES[key]);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.writeFileSync(target, text);
+    }
+    const existing = {
+      [`${APPICONSET}/iPhone_App_60_2x.png`]: 'stale',
+      [`${ANDROID_RES}/drawable/ic_launcher_foreground.xml`]: 'previous',
+    };
+    for (const [relative, content] of Object.entries(existing)) {
+      fs.mkdirSync(path.dirname(path.join(root, relative)), {recursive: true});
+      fs.writeFileSync(path.join(root, relative), content);
+    }
+
+    expect(() => generate({root})).toThrow('<rect>');
+
+    for (const [relative, content] of Object.entries(existing)) {
+      expect(fs.readFileSync(path.join(root, relative), 'utf-8')).toBe(content);
+    }
+    expect(fs.readdirSync(path.join(root, APPICONSET))).toEqual([
+      'iPhone_App_60_2x.png',
+    ]);
+  });
+});
