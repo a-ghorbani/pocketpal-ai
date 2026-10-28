@@ -605,7 +605,11 @@ function readSources(root) {
 
 function assertOutsideRepo(root, dir) {
   const relative = path.relative(path.resolve(root), path.resolve(dir));
-  if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+  const outside =
+    relative === '..' ||
+    relative.startsWith('..' + path.sep) ||
+    path.isAbsolute(relative);
+  if (!outside) {
     fail(`--preview must point outside the repo, got ${dir}`);
   }
 }

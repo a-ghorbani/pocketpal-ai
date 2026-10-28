@@ -268,12 +268,15 @@ describe('generate', () => {
     expect(failure.stderr.toString()).toContain('<rect>');
   });
 
-  it('refuses a preview directory inside the repo', () => {
-    writeSources();
-    expect(() =>
-      generate({root, previewDir: path.join(root, 'previews')}),
-    ).toThrow('outside the repo');
-  });
+  it.each(['previews', '..previews'])(
+    'refuses the preview directory %s inside the repo',
+    name => {
+      writeSources();
+      expect(() => generate({root, previewDir: path.join(root, name)})).toThrow(
+        'outside the repo',
+      );
+    },
+  );
 
   it('writes opaque iOS icons, exact legacy sizes and drops stale icons', () => {
     writeSources();
