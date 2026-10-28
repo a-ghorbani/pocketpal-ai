@@ -900,6 +900,90 @@ const maxChannelDifference = (a, b) => {
   return max;
 };
 
+describe('decodePng', () => {
+  const WIDTH = 6;
+  const HEIGHT = 10;
+
+  const samplePixels = channels => {
+    let seed = 7;
+    return Buffer.from(
+      Array.from({length: WIDTH * HEIGHT * channels}, (_, i) => {
+        seed = (seed * 75 + 74) % 65537;
+        return channels === 4 && i % 4 === 3 ? 255 : seed % 256;
+      }),
+    );
+  };
+
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(require('zlib').crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+
+  const encodeWithEveryFilter = (colorType, pixels) => {
+    const channels = {2: 3, 6: 4}[colorType];
+    const stride = WIDTH * channels;
+    const rows = Buffer.alloc(HEIGHT * (stride + 1));
+    for (let y = 0; y < HEIGHT; y++) {
+      const filter = y % 5;
+      rows[y * (stride + 1)] = filter;
+      for (let x = 0; x < stride; x++) {
+        const left = x >= channels ? pixels[y * stride + x - channels] : 0;
+        const up = y ? pixels[(y - 1) * stride + x] : 0;
+        const upLeft =
+          y && x >= channels ? pixels[(y - 1) * stride + x - channels] : 0;
+        const predictor = [
+          0,
+          left,
+          up,
+          Math.floor((left + up) / 2),
+          PAETH(left, up, upLeft),
+        ][filter];
+        rows[y * (stride + 1) + 1 + x] =
+          (pixels[y * stride + x] - predictor + 256) % 256;
+      }
+    }
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(WIDTH, 0);
+    header.writeUInt32BE(HEIGHT, 4);
+    header[8] = 8;
+    header[9] = colorType;
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', header),
+      chunk('IDAT', require('zlib').deflateSync(rows)),
+      chunk('IEND', Buffer.alloc(0)),
+    ]);
+  };
+
+  const decodedByResvg = png => {
+    const {Resvg} = require('@resvg/resvg-js');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}"><image width="${WIDTH}" height="${HEIGHT}" image-rendering="optimizeSpeed" href="data:image/png;base64,${png.toString('base64')}"/></svg>`;
+    return Buffer.from(new Resvg(svg).render().pixels);
+  };
+
+  const opaqueRgba = (channels, pixels) =>
+    Buffer.from(
+      Array.from({length: WIDTH * HEIGHT * 4}, (_, i) =>
+        i % 4 === 3 ? 255 : pixels[Math.floor(i / 4) * channels + (i % 4)],
+      ),
+    );
+
+  it.each([2, 6])(
+    'decodes all five filter types in colour type %i',
+    colorType => {
+      const channels = {2: 3, 6: 4}[colorType];
+      const pixels = samplePixels(channels);
+      const png = encodeWithEveryFilter(colorType, pixels);
+      expect(decodedByResvg(png)).toEqual(opaqueRgba(channels, pixels));
+      expect(decodePng(png).pixels).toEqual(pixels);
+    },
+  );
+});
+
 describe('committed PNG content', () => {
   const repoRoot = path.join(__dirname, '..', '..');
   const png = relative =>
