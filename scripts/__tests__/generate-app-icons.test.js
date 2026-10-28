@@ -458,6 +458,21 @@ const ARGUMENT_COUNTS = {
   Z: 0,
 };
 
+const MITER_LIMIT = 4;
+
+function arcDiameter([x1, y1], [x2, y2], [rx, ry, rotation]) {
+  const [a, b] = [Math.abs(rx), Math.abs(ry)];
+  if (!a || !b) {
+    return 0;
+  }
+  const angle = (rotation * Math.PI) / 180;
+  const [dx, dy] = [(x1 - x2) / 2, (y1 - y2) / 2];
+  const x = Math.cos(angle) * dx + Math.sin(angle) * dy;
+  const y = Math.cos(angle) * dy - Math.sin(angle) * dx;
+  const scaleUp = Math.sqrt(Math.max(1, (x / a) ** 2 + (y / b) ** 2));
+  return 2 * Math.max(a, b) * scaleUp;
+}
+
 function pathExtremes(d) {
   const tokens = d.match(/[MLHVCSQTAZ]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/gi);
   const extremes = [];
@@ -508,8 +523,8 @@ function pathExtremes(d) {
         end = point(args[2], args[3]);
         break;
       case 'A':
-        radius = Math.max(Math.abs(args[0]), Math.abs(args[1]));
         end = point(args[5], args[6]);
+        radius = arcDiameter(current, end, args);
         break;
       case 'Z':
         end = start;
@@ -555,8 +570,12 @@ function palPointsOutsideSafeCircle(text) {
       if (!inPal) {
         return;
       }
+      const strokeReach = node.attrs.stroke
+        ? (Number(node.attrs['stroke-width']) * MITER_LIMIT) / 2
+        : 0;
       for (const extreme of pathExtremes(node.attrs.d)) {
         let {point, radius} = extreme;
+        radius += strokeReach;
         for (const transform of [...transforms].reverse()) {
           [point, radius] = applyTransform(transform, point, radius);
         }
@@ -805,6 +824,18 @@ describe('safe-circle scan', () => {
     [
       'an arc whose radius reaches outside',
       '<path id="arc" d="M56 56A60 60 0 0 1 60 56" fill="#000000"/>',
+    ],
+    [
+      'an arc bulging out between endpoints inside',
+      '<path id="bulge" d="M56 80A14 14 0 1 0 57 80" fill="#000000"/>',
+    ],
+    [
+      'an arc whose too-small radius scales up outside',
+      '<path id="scaled-arc" d="M46 100A1 1 0 0 0 66 100" fill="#000000"/>',
+    ],
+    [
+      'a stroked outline whose stroke reaches outside',
+      '<path id="outline" d="M56 106H57" fill="none" stroke="#000000" stroke-width="4"/>',
     ],
     [
       'a relative segment ending outside',
