@@ -60,20 +60,23 @@ const ALLOWED_ATTRIBUTES = {
 };
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
-const NUMBER = /^-?(\d+\.?\d*|\.\d+)(e-?\d+)?$/;
-const NUMBER_LIST = '(-?[\\d.]+(?:e-?\\d+)?)';
+const NUMBER_BODY = '-?(?:\\d+\\.?\\d*|\\.\\d+)(?:e-?\\d+)?';
+const NUMBER = new RegExp(`^${NUMBER_BODY}$`);
+const NUMBER_CAPTURE = `(${NUMBER_BODY})`;
 const TRANSFORMS = [
   {
     kind: 'translate',
-    pattern: new RegExp(`^translate\\(${NUMBER_LIST}[ ,]+${NUMBER_LIST}\\)$`),
+    pattern: new RegExp(
+      `^translate\\(${NUMBER_CAPTURE}[ ,]+${NUMBER_CAPTURE}\\)$`,
+    ),
   },
   {
     kind: 'rotate',
     pattern: new RegExp(
-      `^rotate\\(${NUMBER_LIST}[ ,]+${NUMBER_LIST}[ ,]+${NUMBER_LIST}\\)$`,
+      `^rotate\\(${NUMBER_CAPTURE}[ ,]+${NUMBER_CAPTURE}[ ,]+${NUMBER_CAPTURE}\\)$`,
     ),
   },
-  {kind: 'scale', pattern: new RegExp(`^scale\\(${NUMBER_LIST}\\)$`)},
+  {kind: 'scale', pattern: new RegExp(`^scale\\(${NUMBER_CAPTURE}\\)$`)},
 ];
 
 function fail(message) {

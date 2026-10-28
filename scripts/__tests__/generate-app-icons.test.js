@@ -99,14 +99,17 @@ describe('toVectorDrawable', () => {
     }
   });
 
-  it.each(['translate(1 2) rotate(3)', 'matrix(1 0 0 1 0 0)', 'rotate(3)'])(
-    'rejects transform %s naming it',
-    transform => {
-      expect(() =>
-        parseSvg(canvas(`<g transform="${transform}">${SQUARE}</g>`)),
-      ).toThrow(transform);
-    },
-  );
+  it.each([
+    'translate(1 2) rotate(3)',
+    'matrix(1 0 0 1 0 0)',
+    'rotate(3)',
+    'translate(1.2.3 4)',
+    'scale(.)',
+  ])('rejects transform %s naming it', transform => {
+    expect(() =>
+      parseSvg(canvas(`<g transform="${transform}">${SQUARE}</g>`)),
+    ).toThrow(transform);
+  });
 
   it('emits a referenced clipPath as the first child of its group', () => {
     const xml = vd(
