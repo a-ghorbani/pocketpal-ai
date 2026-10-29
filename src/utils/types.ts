@@ -564,6 +564,8 @@ export interface GGUFMetadata {
   n_head: number;
   n_head_kv: number;
   n_vocab: number;
+  /** False/absent when n_vocab is an architecture estimate rather than GGUF metadata. */
+  n_vocab_is_exact?: boolean;
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
