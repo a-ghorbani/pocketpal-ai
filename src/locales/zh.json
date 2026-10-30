@@ -1827,6 +1827,8 @@
     "teaserTitle": "语音对话是 Plus 功能",
     "teaserBody": "免提对话，它会朗读回答。",
     "teaserGetPlus": "获取 Plus",
-    "teaserKeepTyping": "继续打字，免费"
+    "teaserKeepTyping": "继续打字，免费",
+    "voiceRowFileMissing": "{{voice}} 还没有下载，点击“继续”即可下载。",
+    "voiceRowFileFailed": "无法下载 {{voice}}，请连接网络后重试。"
   }
 }
