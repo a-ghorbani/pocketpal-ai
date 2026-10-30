@@ -1720,7 +1720,7 @@
     "tierHintLargeTurbo": "多くのデバイスでは非常に低速",
     "useCta": "使用",
     "inUseLabel": "使用中",
-    "modelSectionHelper": "音声入力とハンズフリー音声で使用します。"
+    "modelSectionHelper": "音声入力とハンズフリー音声で使用されます。"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1807,10 +1807,10 @@
     "voiceRowReady": "{{voice}} · 準備完了",
     "voiceRowMissing": "自然な音声を選んでください。システム音声は音声モードでは使用できません。",
     "chooseVoiceCta": "音声を選択",
-    "micNote": "この後、マイクへのアクセスを確認します。",
+    "micNote": "この後、マイクへのアクセス許可を求めます。",
     "micDenied": "音声モードにはマイクへのアクセスが必要です。",
     "continueCta": "続行",
-    "memoryTightTitle": "メモリ不足気味",
+    "memoryTightTitle": "メモリに余裕がありません",
     "memoryTightBody": "音声モードは3つのモデルを同時に読み込みます。このデバイスでは動作が遅くなったり、アプリが終了したりする可能性があります。",
     "memoryWontFitTitle": "メモリ不足",
     "memoryWontFitBody": "このチャットモデルと一緒に音声認識を読み込むことはできません。音声モードを使うには、より小さいモデルを選んでください。",
@@ -1827,6 +1827,8 @@
     "teaserTitle": "音声での会話はPlusの機能です",
     "teaserBody": "ハンズフリーで話せば、音声で答えてくれます。",
     "teaserGetPlus": "Plusを入手",
-    "teaserKeepTyping": "テキスト入力を続ける（無料）"
+    "teaserKeepTyping": "テキスト入力を続ける（無料）",
+    "voiceRowFileMissing": "{{voice}}はまだダウンロードされていません。「続行」でダウンロードします。",
+    "voiceRowFileFailed": "{{voice}}をダウンロードできませんでした。インターネットに接続してもう一度お試しください。"
   }
 }
