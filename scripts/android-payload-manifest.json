@@ -29,7 +29,8 @@
         "assets/ggml-hexagon/libggml-htp-v73.so",
         "assets/ggml-hexagon/libggml-htp-v75.so",
         "assets/ggml-hexagon/libggml-htp-v79.so",
-        "assets/ggml-hexagon/libggml-htp-v81.so"
+        "assets/ggml-hexagon/libggml-htp-v81.so",
+        "assets/ggml-hexagon/libggml-htp-v85.so"
       ],
       "requiredSymbols": [
         {
