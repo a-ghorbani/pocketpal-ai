@@ -557,7 +557,7 @@
     "privacyPolicy": "Política de Privacidade",
     "termsOfService": "Termos de Serviço",
     "openSourceNotices": "Avisos de código aberto",
-    "phononNoticesCredit": "Modelo de voz Phonon e vozes da Gradium, licenciados sob a Apache-2.0. Construído sobre o Pocket TTS e o codec Mimi da Kyutai."
+    "phononNoticesCredit": "Modelo de voz Phonon e vozes da Gradium, licenciados sob a licença Apache-2.0. Construído sobre o Pocket TTS e o codec Mimi da Kyutai."
   },
   "feedback": {
     "title": "Enviar Feedback",
@@ -1578,7 +1578,7 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Início rápido e pouco uso de RAM. Apenas em inglês.",
-    "enginePhononCredit": "Modelo e vozes da Gradium (Apache-2.0), construído sobre o Mimi da Kyutai.",
+    "enginePhononCredit": "Modelo e vozes da Gradium (Apache-2.0), construídos sobre o Mimi da Kyutai.",
     "engineTierNatural": "inglês natural"
   },
   "onboarding": {
@@ -1813,7 +1813,7 @@
     "memoryTightTitle": "Memória limitada",
     "memoryTightBody": "O modo de voz mantém três modelos carregados ao mesmo tempo. Neste telemóvel, isso pode ser lento ou a app pode fechar-se.",
     "memoryWontFitTitle": "Memória insuficiente",
-    "memoryWontFitBody": "O reconhecimento de fala não cabe ao lado deste modelo de chat. Escolha um modelo mais pequeno para usar o modo de voz.",
+    "memoryWontFitBody": "O reconhecimento de fala não cabe na memória juntamente com este modelo de chat. Escolha um modelo mais pequeno para usar o modo de voz.",
     "memoryChatRow": "Modelo de chat · {{name}}",
     "memorySttRowModel": "Reconhecimento de fala · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
@@ -1823,10 +1823,12 @@
     "chooseSmallerModelCta": "Escolher um modelo mais pequeno",
     "startLabel": "Iniciar o modo de voz",
     "startLockedLabel": "Voz mãos-livres, PocketPal Plus",
-    "startLockedHint": "Abre uma pequena pré-visualização. Escrever e ditar continuam grátis.",
+    "startLockedHint": "Abre uma breve demonstração. Escrever e ditar continuam grátis.",
     "teaserTitle": "A conversa por voz é uma funcionalidade Plus",
     "teaserBody": "Fale sem usar as mãos. Responde em voz alta.",
     "teaserGetPlus": "Obter o Plus",
-    "teaserKeepTyping": "Continuar a escrever, grátis"
+    "teaserKeepTyping": "Continuar a escrever, grátis",
+    "voiceRowFileMissing": "{{voice}} ainda não está descarregada. Toque em Continuar para a obter.",
+    "voiceRowFileFailed": "Não foi possível descarregar {{voice}}. Ligue-se à internet e tente novamente."
   }
 }
