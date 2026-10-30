@@ -19,11 +19,12 @@ describe('Plus catalog', () => {
     },
   );
 
-  it('ships no feature yet', () => {
-    expect(PLUS_FEATURES.map(feature => feature.id)).toEqual([
-      'handsFreeVoice',
-      'localApiServer',
-    ]);
-    expect(PLUS_FEATURES.every(feature => !feature.shipped)).toBe(true);
+  it('ships hands-free voice only', () => {
+    expect(PLUS_FEATURES.map(feature => [feature.id, feature.shipped])).toEqual(
+      [
+        ['handsFreeVoice', true],
+        ['localApiServer', false],
+      ],
+    );
   });
 });

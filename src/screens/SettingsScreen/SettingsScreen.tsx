@@ -34,6 +34,7 @@ import {
   LinkExternalIcon,
   VolumeOnIcon,
   MicrophoneIcon,
+  VoiceWaveformIcon,
 } from '../../assets/icons';
 
 import {
@@ -63,6 +64,7 @@ import {
   asrStore,
   searchProviderStore,
   purchaseStore,
+  voiceModeStore,
 } from '../../store';
 import {authService} from '../../services';
 import type {SearchProviderId} from '../../services/search/types';
@@ -82,6 +84,7 @@ import {
   getSessionCacheInfo,
 } from '../../utils';
 import {type AvailableLanguage, languageDisplayNames, t} from '../../locales';
+import {asrTierHint, asrTierLabel} from '../../utils/asrTierLabel';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
@@ -1181,85 +1184,153 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                 )}
 
-                {/* Per-tier voice-model install/delete (only when enabled) */}
-                {asrStore.asrAvailable &&
-                  ASR_TIER_ORDER.map((tier: AsrTier) => {
-                    const state = asrStore.downloadStates[tier];
-                    const sizeMb = Math.round(
-                      ASR_TIERS[tier].estimatedBytes / (1024 * 1024),
-                    );
-                    // Match the preflight threshold (estimated * headroom) so a
-                    // user who frees exactly this amount clears the disk gate.
-                    const requiredMb = Math.ceil(
-                      (ASR_TIERS[tier].estimatedBytes *
-                        ASR_DISK_HEADROOM_FACTOR) /
-                        (1024 * 1024),
-                    );
-                    const tierLabel =
-                      tier === 'base'
-                        ? l10n.voiceInput.tierBase
-                        : tier === 'small'
-                          ? l10n.voiceInput.tierSmall
-                          : l10n.voiceInput.tierLargeTurbo;
-                    const lowDisk =
-                      state === 'error' &&
-                      asrStore.downloadError[tier] === ASR_INSUFFICIENT_STORAGE;
-                    const freeMb =
-                      asrStore.freeDiskBytes != null
-                        ? Math.floor(asrStore.freeDiskBytes / (1024 * 1024))
-                        : null;
-                    return (
-                      <View key={tier} style={styles.switchContainer}>
-                        <View style={styles.textContainer}>
-                          <Text variant="bodyMedium" style={styles.textLabel}>
-                            {tierLabel}
-                          </Text>
-                          <Text
-                            variant="labelSmall"
-                            style={styles.textDescription}>
-                            {t(l10n.voiceInput.tierSizeLabel, {sizeMb})}
-                          </Text>
-                          {lowDisk && freeMb != null ? (
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <VoiceWaveformIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        color={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.voiceMode.settingTitle}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.voiceMode.settingDescription}
+                    </Text>
+                    {!voiceModeStore.deviceSupported && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.voiceMode.unsupportedDeviceHelper}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="voice-mode-availability-switch"
+                    value={voiceModeStore.supported}
+                    onValueChange={value =>
+                      voiceModeStore.setUserVoiceModeOverride(value)
+                    }
+                  />
+                </View>
+
+                {(asrStore.asrAvailable || voiceModeStore.supported) && (
+                  <>
+                    <Divider />
+                    <View
+                      style={styles.switchContainer}
+                      testID="asr-models-header">
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.voiceMode.sttRowTitle}
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.voiceInput.modelSectionHelper}
+                        </Text>
+                      </View>
+                    </View>
+                    {ASR_TIER_ORDER.map((tier: AsrTier) => {
+                      const state = asrStore.downloadStates[tier];
+                      const sizeMb = Math.round(
+                        ASR_TIERS[tier].estimatedBytes / (1024 * 1024),
+                      );
+                      // Match the preflight threshold (estimated * headroom) so a
+                      // user who frees exactly this amount clears the disk gate.
+                      const requiredMb = Math.ceil(
+                        (ASR_TIERS[tier].estimatedBytes *
+                          ASR_DISK_HEADROOM_FACTOR) /
+                          (1024 * 1024),
+                      );
+                      const lowDisk =
+                        state === 'error' &&
+                        asrStore.downloadError[tier] ===
+                          ASR_INSUFFICIENT_STORAGE;
+                      const freeMb =
+                        asrStore.freeDiskBytes != null
+                          ? Math.floor(asrStore.freeDiskBytes / (1024 * 1024))
+                          : null;
+                      return (
+                        <View key={tier} style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text variant="bodyMedium" style={styles.textLabel}>
+                              {asrTierLabel(tier, l10n)}
+                            </Text>
                             <Text
                               variant="labelSmall"
-                              style={styles.errorText}
-                              testID={`asr-insufficient-storage-${tier}`}>
-                              {t(l10n.voiceInput.insufficientStorage, {
-                                requiredMb,
-                                freeMb,
-                              })}
+                              style={styles.textDescription}>
+                              {asrTierHint(tier, l10n)}
                             </Text>
-                          ) : null}
+                            <Text
+                              variant="labelSmall"
+                              style={styles.textDescription}>
+                              {t(l10n.voiceInput.tierSizeLabel, {sizeMb})}
+                            </Text>
+                            {lowDisk && freeMb != null ? (
+                              <Text
+                                variant="labelSmall"
+                                style={styles.errorText}
+                                testID={`asr-insufficient-storage-${tier}`}>
+                                {t(l10n.voiceInput.insufficientStorage, {
+                                  requiredMb,
+                                  freeMb,
+                                })}
+                              </Text>
+                            ) : null}
+                          </View>
+                          {state === 'ready' ? (
+                            <View style={styles.tierActions}>
+                              {tier === asrStore.selectedTier ? (
+                                <Text
+                                  variant="labelLarge"
+                                  style={styles.inUseLabel}
+                                  testID={`asr-in-use-${tier}`}>
+                                  {l10n.voiceInput.inUseLabel}
+                                </Text>
+                              ) : (
+                                <Button
+                                  mode="outlined"
+                                  compact
+                                  testID={`asr-use-${tier}`}
+                                  onPress={() => asrStore.selectTier(tier)}>
+                                  {l10n.voiceInput.useCta}
+                                </Button>
+                              )}
+                              <Button
+                                mode="outlined"
+                                compact
+                                testID={`asr-remove-${tier}`}
+                                onPress={() => asrStore.deleteModel(tier)}>
+                                {l10n.voiceInput.removeCta}
+                              </Button>
+                            </View>
+                          ) : state === 'downloading' ? (
+                            <Button
+                              mode="outlined"
+                              disabled
+                              style={styles.menuButton}>
+                              {l10n.voiceInput.downloadingLabel}
+                            </Button>
+                          ) : (
+                            <Button
+                              mode="contained"
+                              testID={`asr-install-${tier}`}
+                              onPress={() => asrStore.downloadModel(tier)}
+                              style={styles.menuButton}>
+                              {state === 'error'
+                                ? l10n.voiceInput.retryCta
+                                : l10n.voiceInput.installCta}
+                            </Button>
+                          )}
                         </View>
-                        {state === 'ready' ? (
-                          <Button
-                            mode="outlined"
-                            testID={`asr-remove-${tier}`}
-                            onPress={() => asrStore.deleteModel(tier)}
-                            style={styles.menuButton}>
-                            {l10n.voiceInput.removeCta}
-                          </Button>
-                        ) : state === 'downloading' ? (
-                          <Button
-                            mode="outlined"
-                            disabled
-                            style={styles.menuButton}>
-                            {l10n.voiceInput.downloadingLabel}
-                          </Button>
-                        ) : (
-                          <Button
-                            mode="contained"
-                            testID={`asr-install-${tier}`}
-                            onPress={() => asrStore.downloadModel(tier)}
-                            style={styles.menuButton}>
-                            {state === 'error'
-                              ? l10n.voiceInput.retryCta
-                              : l10n.voiceInput.installCta}
-                          </Button>
-                        )}
-                      </View>
-                    );
-                  })}
+                      );
+                    })}
+                  </>
+                )}
 
                 {/* Display Memory Usage (iOS only) */}
                 {Platform.OS === 'ios' && (

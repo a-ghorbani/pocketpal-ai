@@ -18,6 +18,7 @@ import {
   AlertIcon,
   CheckBoldIcon,
   ClockFastForwardIcon,
+  HeartIcon,
   InfoCircleIcon,
   SparkleFilledIcon,
   XIcon,
@@ -67,8 +68,7 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
   const [infoShown, setInfoShown] = useState(false);
 
   const products = purchaseStore.plusProducts;
-  const selected =
-    products.find(product => product.productId === selectedId) ?? products[0];
+  const selected = products.find(product => product.productId === selectedId);
   const rows = plusFeatureRows();
   const state = plusScreenState({
     plusUnlocked: purchaseStore.plusUnlocked,
@@ -148,6 +148,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         </View>
       );
     }
+    if (row.status === 'optIn') {
+      return (
+        <View style={styles.status}>
+          <Text style={styles.statusText}>{copy.optIn}</Text>
+        </View>
+      );
+    }
     if (row.status === 'soon') {
       return (
         <View style={styles.status}>
@@ -204,7 +211,13 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
   );
 
   const ctaLabel = () => {
-    const price = selected?.displayPrice ?? '';
+    if (paying) {
+      return copy.loading;
+    }
+    if (!selected) {
+      return copy.chooseAmount;
+    }
+    const price = selected.displayPrice;
     return state.unsupported
       ? t(copy.getPlusAnyway, {price})
       : t(copy.getPlus, {price});
@@ -255,20 +268,24 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
     if (!showsGrid) {
       return null;
     }
+    const disabled = paying || !selected;
     return (
       <Pressable
         key="buy"
         testID="plus-cta"
         accessibilityRole="button"
         accessibilityLabel={ctaLabel()}
-        accessibilityState={{busy: paying, disabled: paying}}
-        disabled={paying}
+        accessibilityState={{busy: paying, disabled}}
+        disabled={disabled}
         onPress={handleBuy}
-        style={[styles.primaryBtn, paying && styles.primaryBtnBusy]}>
+        style={[styles.primaryBtn, disabled && styles.primaryBtnBusy]}>
         {paying ? (
           <ActivityIndicator color={theme.colors.onBackground} />
         ) : (
-          <Text style={styles.primaryLabel}>{ctaLabel()}</Text>
+          <Text
+            style={[styles.primaryLabel, disabled && styles.primaryLabelBusy]}>
+            {ctaLabel()}
+          </Text>
         )}
       </Pressable>
     );
@@ -331,10 +348,10 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
         <View style={styles.header}>
           {purchased && (
             <View style={styles.thanksBadge}>
-              <SparkleFilledIcon
+              <HeartIcon
                 width={24}
                 height={24}
-                fill={theme.colors.secondary}
+                stroke={theme.colors.secondary}
               />
             </View>
           )}
@@ -352,13 +369,24 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
             <View key={row.id} testID={`plus-feature-${row.id}`}>
               {index > 0 && <View style={styles.featureDivider} />}
               <View style={styles.featureRow}>
-                <Text
-                  style={[
-                    styles.featureName,
-                    row.status !== 'ready' && styles.featureNameMuted,
-                  ]}>
-                  {copy.features[row.id]}
-                </Text>
+                <View style={styles.featureText}>
+                  <Text
+                    style={[
+                      styles.featureName,
+                      row.status !== 'ready' && styles.featureNameMuted,
+                    ]}>
+                    {copy.features[row.id]}
+                  </Text>
+                  {row.status === 'optIn' && (
+                    <Text
+                      testID={`plus-feature-note-${row.id}`}
+                      style={styles.featureNote}>
+                      {row.reason === 'offInSettings'
+                        ? copy.offInSettingsNote
+                        : copy.optInNote}
+                    </Text>
+                  )}
+                </View>
                 {statusView(row)}
               </View>
             </View>
@@ -402,6 +430,9 @@ export const PlusScreen: React.FC<PlusScreenProps> = observer(props => {
 
         {showsGrid && (
           <>
+            <Text testID="plus-free-line" style={styles.priceCaption}>
+              {copy.chatStaysFree}
+            </Text>
             {state.error ? (
               <View style={styles.inlineError}>
                 <AlertIcon width={16} height={16} stroke={theme.colors.error} />

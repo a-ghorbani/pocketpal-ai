@@ -62,6 +62,10 @@ import {mockServerStore} from '../__mocks__/stores/serverStore';
 import {mockRouterStore} from '../__mocks__/stores/routerStore';
 import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 import {mockASRStore} from '../__mocks__/stores/asrStore';
+import {
+  mockVoiceEntitlement,
+  mockVoiceModeStore,
+} from '../__mocks__/stores/voiceModeStore';
 import {mockSearchProviderStore} from '../__mocks__/stores/searchProviderStore';
 import {mockPurchaseStore} from '../__mocks__/stores/purchaseStore';
 
@@ -133,6 +137,8 @@ jest.mock('../src/store', () => {
     routerStore: mockRouterStore,
     ttsStore: mockTTSStore,
     asrStore: mockASRStore,
+    voiceModeStore: mockVoiceModeStore,
+    voiceEntitlement: mockVoiceEntitlement,
     searchProviderStore: mockSearchProviderStore,
     purchaseStore: mockPurchaseStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
@@ -171,9 +177,15 @@ jest.mock('../src/repositories/ChatSessionRepository', () => ({
       .chatSessionRepository,
 }));
 
+jest.mock('react-native-worklets', () =>
+  require('react-native-worklets/lib/module/mock'),
+);
+
+// React Native provides requestIdleCallback; Jest's environment doesn't.
+(global as any).requestIdleCallback = (callback: () => void) => callback();
+
 jest.mock('../src/utils/keepAwake', () => ({
-  activateKeepAwake: jest.fn(),
-  deactivateKeepAwake: jest.fn(),
+  acquireKeepAwake: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('react-native-share', () => ({

@@ -7,11 +7,10 @@
 
 #import "LlamaContextWrapper.h"
 
-// Import the C++ headers from the rnllama framework
-#include <rnllama/rn-llama.h>
-#include <rnllama/rn-completion.h>
-#include <rnllama/chat.h>
-#include <rnllama/common.h>
+#include "rn-llama.h"
+#include "rn-completion.h"
+#include "chat.h"
+#include "common.h"
 
 #include <string>
 #include <vector>

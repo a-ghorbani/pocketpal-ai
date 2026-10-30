@@ -1,6 +1,11 @@
 import {runInAction} from 'mobx';
 
-import {ASR_INSUFFICIENT_STORAGE} from '../services/asr';
+import {
+  ASR_DEFAULT_TIER,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIER_ORDER,
+} from '../services/asr';
+import type {AsrTier} from '../services/asr';
 import {asrStore} from '../store/ASRStore';
 import {modelStore} from '../store/ModelStore';
 
@@ -24,6 +29,9 @@ import {modelStore} from '../store/ModelStore';
  *   state::error-blocked  blocked permission → snackbar + open-Settings action
  *   state::error-memory   whisper won't fit next to the chat model → snackbar
  *   state::error-disk     selected tier disk-blocked → Settings storage line
+ *   tiers::none           gate open + no tier installed, default tier selected
+ *   tiers::<csv>          gate open + exactly these tiers installed; the first
+ *                         one listed is selected (tiers::small,base)
  */
 const ASR_AUTOMATION_STATE = 'ASR_AUTOMATION_STATE';
 
@@ -35,6 +43,10 @@ const WAVEFORM = [
 
 export async function runAsrCommand(cmd: string): Promise<void> {
   console.log(`[${ASR_AUTOMATION_STATE}] ${cmd}`);
+  if (cmd.startsWith('tiers::')) {
+    forceInstalledTiers(cmd.slice('tiers::'.length));
+    return;
+  }
   if (cmd === 'state::ready') {
     forceState({override: true, selectedTierReady: true});
     return;
@@ -103,5 +115,23 @@ function forceState(opts: {
     asrStore.captureState = 'idle';
     asrStore.lastError = null;
     asrStore.waitingForChat = false;
+  });
+}
+
+function forceInstalledTiers(csv: string): void {
+  const installed = csv
+    .split(',')
+    .filter((tier): tier is AsrTier =>
+      ASR_TIER_ORDER.includes(tier as AsrTier),
+    );
+  runInAction(() => {
+    asrStore.userASROverride = true;
+    for (const tier of ASR_TIER_ORDER) {
+      asrStore.downloadStates[tier] = installed.includes(tier)
+        ? 'ready'
+        : 'not_installed';
+      asrStore.downloadError[tier] = null;
+    }
+    asrStore.selectedTier = installed[0] ?? ASR_DEFAULT_TIER;
   });
 }

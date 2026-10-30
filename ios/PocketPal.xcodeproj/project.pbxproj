@@ -12,8 +12,8 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1A0D5411C2B6438BA6761FA8 /* Fraunces-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E99C8033A91D40AB8D2BD167 /* Fraunces-Medium.ttf */; };
 		212EA6EA37D90DE18EF6282E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		321B5096BCB1E35F8BCDE747 /* Pods_PocketPal_PocketPalTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */; };
 		3B10D24523854FB69C0BBFD0 /* Fraunces-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EF0088E7A2A54A98B6421742 /* Fraunces-Regular.ttf */; };
+		3EDC514D4078B7A89BED1E2B /* LlamaMetalGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CA3E88E37942C2F4847E70 /* LlamaMetalGateTests.swift */; };
 		468C5914EED04BB8A4C21D62 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 31A359F6A91445EA88D5326B /* Inter-Medium.ttf */; };
 		525EFBDA6DC64C2BBE87063A /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */; };
 		64C7CA9A61E64268BEC1A3BE /* Inter-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1C8910232AC14C2091248E32 /* Inter-Bold.ttf */; };
@@ -22,13 +22,14 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		76C57660BD9A47C38737D8FD /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5D438B7E51F640E5B4532B88 /* Inter-Regular.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		957BAF347AA43EA61C0B1EC2 /* LlamaMetalGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */; };
 		98A9C9EC8A4B4D7C9F59C8FE /* Inter-Thin.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 93A7641D83984354A782059B /* Inter-Thin.ttf */; };
 		9AE3DCE490A24E01AA31653A /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */; };
 		9BD11C540B6D45308B7727A2 /* Fraunces-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EE113D56B0AD433688D66860 /* Fraunces-MediumItalic.ttf */; };
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
 		A862F7232EE04CE50062E673 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A862F7222EE04CE50062E673 /* GoogleService-Info.plist */; };
-		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; };
+		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../node_modules/llama.rn/cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/common\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/tools/mtmd\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor/hash\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/common\" -I\"$(PODS_ROOT)/Headers/Private/Yoga\" -I\"${PODS_ROOT}/React-graphics\" -I\"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios\" -I\"${PODS_ROOT}/React-Fabric\" -I\"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx\" -I\"${PODS_ROOT}/React-FabricImage\" -I\"${PODS_ROOT}/ReactCommon\" -I\"${PODS_ROOT}/ReactCommon/react/nativemodule/core\" -I\"${PODS_ROOT}/React-runtimeexecutor\" -I\"${PODS_ROOT}/React-runtimeexecutor/platform/ios\" -I\"${PODS_ROOT}/React-NativeModulesApple\" -I\"${PODS_ROOT}/React-RCTFabric\" -I\"${PODS_ROOT}/React-utils\" -I\"${PODS_ROOT}/React-featureflags\" -I\"${PODS_ROOT}/React-debug\" -I\"${PODS_ROOT}/React-ImageManager\" -I\"${PODS_ROOT}/React-rendererdebug\" -I\"${PODS_ROOT}/React-renderercss\" -I\"$(PODS_ROOT)/ReactNativeDependencies/Headers\""; }; };
 		A86CF0D62EA9567800BFFCEE /* MustacheRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D52EA9567800BFFCEE /* MustacheRenderer.swift */; };
 		A8B4FFD32EA5731700CD3B4C /* LlamaInferenceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */; };
 		A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */; };
@@ -43,7 +44,9 @@
 		C12BD91DEBF24C6F8A87DF6E /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */; };
 		C59DFCFFEF9345419C9E30E2 /* Fraunces-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E99C8033A91D40AB8D2BD167 /* Fraunces-Medium.ttf */; };
 		D2383657A264CC8550057BF7 /* Pods_PocketPal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */; };
+		D8E18E11449A09A8A897589A /* LlamaMetalGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */; };
 		EB8350408C2C4824B1AEDD41 /* Fraunces-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5CA7744EABD04174A8E4568B /* Fraunces-Italic.ttf */; };
+		F445F07A7EF35EE42F33E70E /* Pods_PocketPalTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */; };
 		FF002F1D6D914619BAB71A78 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */; };
 /* End PBXBuildFile section */
 
@@ -64,9 +67,9 @@
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = PocketPal/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1C8910232AC14C2091248E32 /* Inter-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.ttf"; path = "../src/assets/fonts/Inter-Bold.ttf"; sourceTree = "<group>"; };
 		1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal-PocketPalTests.debug.xcconfig"; path = "Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests.debug.xcconfig"; sourceTree = "<group>"; };
-		2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPal_PocketPalTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		31A359F6A91445EA88D5326B /* Inter-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.ttf"; path = "../src/assets/fonts/Inter-Medium.ttf"; sourceTree = "<group>"; };
 		4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPal.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PocketPalTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CA7744EABD04174A8E4568B /* Fraunces-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Italic.ttf"; path = "../src/assets/fonts/Fraunces-Italic.ttf"; sourceTree = "<group>"; };
 		5D438B7E51F640E5B4532B88 /* Inter-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.ttf"; path = "../src/assets/fonts/Inter-Regular.ttf"; sourceTree = "<group>"; };
 		7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal-PocketPalTests.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests.profiling.xcconfig"; sourceTree = "<group>"; };
@@ -96,12 +99,17 @@
 		A8D9D0A86B69377BF32D2540 /* Pods-PocketPal.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.profiling.xcconfig"; sourceTree = "<group>"; };
 		AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light.ttf"; path = "../src/assets/fonts/Inter-Light.ttf"; sourceTree = "<group>"; };
 		B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.ttf"; path = "../src/assets/fonts/Inter-ExtraBold.ttf"; sourceTree = "<group>"; };
+		B6CA3E88E37942C2F4847E70 /* LlamaMetalGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LlamaMetalGateTests.swift; path = PocketPalTests/LlamaMetalGateTests.swift; sourceTree = "<group>"; };
+		BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LlamaMetalGate.swift; path = PocketPal/LlamaMetalGate.swift; sourceTree = "<group>"; };
 		C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.ttf"; path = "../src/assets/fonts/Inter-SemiBold.ttf"; sourceTree = "<group>"; };
+		CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.release.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.release.xcconfig"; sourceTree = "<group>"; };
+		DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.profiling.xcconfig"; sourceTree = "<group>"; };
 		E99C8033A91D40AB8D2BD167 /* Fraunces-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Medium.ttf"; path = "../src/assets/fonts/Fraunces-Medium.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		EE113D56B0AD433688D66860 /* Fraunces-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-MediumItalic.ttf"; path = "../src/assets/fonts/Fraunces-MediumItalic.ttf"; sourceTree = "<group>"; };
 		EF0088E7A2A54A98B6421742 /* Fraunces-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Fraunces-Regular.ttf"; path = "../src/assets/fonts/Fraunces-Regular.ttf"; sourceTree = "<group>"; };
 		F97DC2F923F71476344DBEAF /* Pods-PocketPal.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.debug.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.debug.xcconfig"; sourceTree = "<group>"; };
+		FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPalTests.debug.xcconfig"; path = "Target Support Files/Pods-PocketPalTests/Pods-PocketPalTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FF9D2CC3DF0F4073AB223CC1 /* JetBrainsMono-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "JetBrainsMono-Regular.ttf"; path = "../src/assets/fonts/JetBrainsMono-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -118,7 +126,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				321B5096BCB1E35F8BCDE747 /* Pods_PocketPal_PocketPalTests.framework in Frameworks */,
+				F445F07A7EF35EE42F33E70E /* Pods_PocketPalTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -163,6 +171,7 @@
 				A810010E2E92E09600935976 /* KeepAwakeModule.mm */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				BF2683BD3A5A47E1D34C52E9 /* LlamaMetalGate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -176,9 +185,17 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */,
-				2976BD78FB093478AA202FEA /* Pods_PocketPal_PocketPalTests.framework */,
+				5BE9178918FB554430859394 /* Pods_PocketPalTests.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3F8B6EF06A45472063001E32 /* PocketPalTests */ = {
+			isa = PBXGroup;
+			children = (
+				B6CA3E88E37942C2F4847E70 /* LlamaMetalGateTests.swift */,
+			);
+			name = PocketPalTests;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -194,6 +211,7 @@
 				A862F7222EE04CE50062E673 /* GoogleService-Info.plist */,
 				A826FC242E9ECA10003F1572 /* Env.xcconfig */,
 				13B07FAE1A68108700A75B9A /* PocketPal */,
+				3F8B6EF06A45472063001E32 /* PocketPalTests */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -223,6 +241,9 @@
 				1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */,
 				7679C04803B13C51110CF733 /* Pods-PocketPal-PocketPalTests.release.xcconfig */,
 				7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */,
+				FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */,
+				CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */,
+				DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -235,6 +256,8 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "PocketPal" */;
 			buildPhases = (
 				4AD29747771C45CD72B7462F /* [CP] Check Pods Manifest.lock */,
+				CF11501306DF402EAB570A09 /* [CP-User] Build llama.rn Metal kernels */,
+				5C5A2B7B349FDF0BEF3E7C03 /* [CP-User] Build whisper.rn Metal kernels */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
@@ -260,8 +283,6 @@
 				A826FC262E9ECA9B003F1572 /* Sources */,
 				A826FC272E9ECA9B003F1572 /* Frameworks */,
 				A826FC282E9ECA9B003F1572 /* Resources */,
-				D73BE89C66CAB1195A21EE23 /* [CP] Embed Pods Frameworks */,
-				D95D7475BD650A9CB6841F04 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -402,6 +423,47 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		5C5A2B7B349FDF0BEF3E7C03 /* [CP-User] Build whisper.rn Metal kernels */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/argsort.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/binbcast.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/common.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/conv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/dequantize.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/fa.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/gated_delta_net.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/misc.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/mul_mm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/norm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/pool.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/quantize.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/quantize.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/reduce.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/rope.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/softmax.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/solve_tri.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/ssm.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/tri.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/unary.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/upscale.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/kernels/wkv.metal",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-metal/ggml-metal-impl.h",
+				"$(SRCROOT)/../node_modules/whisper.rn/cpp/ggml-common.h",
+				"$(SRCROOT)/../scripts/build-ios-metallib.sh",
+			);
+			name = "[CP-User] Build whisper.rn Metal kernels";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/default.metallib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" --whisper \"${SRCROOT}/../node_modules/whisper.rn/cpp\" fa mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
+		};
 		67774D344B12F9AB3F9128F3 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -417,7 +479,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-PocketPal-PocketPalTests-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-PocketPalTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -458,39 +520,63 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PocketPal/Pods-PocketPal-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D73BE89C66CAB1195A21EE23 /* [CP] Embed Pods Frameworks */ = {
+		CF11501306DF402EAB570A09 /* [CP-User] Build llama.rn Metal kernels */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			inputPaths = (
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/argsort.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/binbcast.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/common.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/conv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/dequantize.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_aux.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_common.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_f16.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_f32.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q4_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q4_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_common.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f16.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f32.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q4_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q4_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q5_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q5_1.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/gated_delta_net.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/misc.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/norm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/pool.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/reduce.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/rope.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/softmax.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/solve_tri.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/ssm.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/tri.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/unary.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/upscale.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/wkv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-impl.h",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-common.h",
+				"$(SRCROOT)/../scripts/build-ios-metallib.sh",
 			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			name = "[CP-User] Build llama.rn Metal kernels";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/rnllama.metallib",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ggml-tensor.metallib",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D95D7475BD650A9CB6841F04 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PocketPal-PocketPalTests/Pods-PocketPal-PocketPalTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -512,6 +598,7 @@
 				A8B4FFD82EA5731700CD3B4C /* OpenPalChatIntent.swift in Sources */,
 				A8B4FFD92EA5731700CD3B4C /* PalEntity.swift in Sources */,
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				957BAF347AA43EA61C0B1EC2 /* LlamaMetalGate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -519,6 +606,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8E18E11449A09A8A897589A /* LlamaMetalGate.swift in Sources */,
+				3EDC514D4078B7A89BED1E2B /* LlamaMetalGateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -541,7 +630,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = PocketPal/Info.plist;
@@ -550,7 +639,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -580,7 +669,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -588,7 +677,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -643,7 +732,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -758,7 +847,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -833,7 +922,7 @@
 		};
 		A826FC312E9ECA9B003F1572 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1DD32FCAE4CC46F1E23FD870 /* Pods-PocketPal-PocketPalTests.debug.xcconfig */;
+			baseConfigurationReference = FA34A597862D59C10301EDCC /* Pods-PocketPalTests.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -844,20 +933,21 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketPal.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketPal";
 			};
@@ -865,7 +955,7 @@
 		};
 		A826FC322E9ECA9B003F1572 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7679C04803B13C51110CF733 /* Pods-PocketPal-PocketPalTests.release.xcconfig */;
+			baseConfigurationReference = CBF6C548BB3F2A8C092AF65F /* Pods-PocketPalTests.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -877,19 +967,20 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketPal.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketPal";
 			};
@@ -931,7 +1022,7 @@
 				DEVELOPMENT_TEAM = MYXGXY23Y6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1012,7 +1103,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -1020,7 +1111,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -1042,7 +1133,7 @@
 		};
 		A826FC372E9ECB47003F1572 /* Profiling */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7545B8526CB62FD9736F06EE /* Pods-PocketPal-PocketPalTests.profiling.xcconfig */;
+			baseConfigurationReference = DA6A370051DF3CD40E35EB5C /* Pods-PocketPalTests.profiling.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -1054,19 +1145,20 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 152;
+				CURRENT_PROJECT_VERSION = 157;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.20.1;
+				MARKETING_VERSION = 1.21.4;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketPal.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketPal";
 			};

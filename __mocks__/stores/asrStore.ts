@@ -21,7 +21,7 @@ type AsrErrorKind =
 
 class MockASRStore {
   userASROverride: boolean | null = null;
-  selectedTier: AsrTier = 'small';
+  selectedTier: AsrTier = 'base';
   spokenLanguage: string | null = null;
 
   downloadStates: Record<AsrTier, DownloadState> = {
@@ -49,7 +49,7 @@ class MockASRStore {
   init: jest.Mock;
   hasMemoryForCapture: jest.Mock;
   setUserASROverride: jest.Mock;
-  setSelectedTier: jest.Mock;
+  selectTier: jest.Mock;
   setSpokenLanguage: jest.Mock;
   setWaitingForChat: jest.Mock;
   refreshFreeDisk: jest.Mock;
@@ -66,7 +66,7 @@ class MockASRStore {
       init: false,
       hasMemoryForCapture: false,
       setUserASROverride: false,
-      setSelectedTier: false,
+      selectTier: false,
       setSpokenLanguage: false,
       setWaitingForChat: false,
       refreshFreeDisk: false,
@@ -85,10 +85,12 @@ class MockASRStore {
         this.userASROverride = v;
       });
     });
-    this.setSelectedTier = jest.fn((t: AsrTier) => {
-      runInAction(() => {
-        this.selectedTier = t;
-      });
+    this.selectTier = jest.fn((t: AsrTier) => {
+      if (this.downloadStates[t] === 'ready') {
+        runInAction(() => {
+          this.selectedTier = t;
+        });
+      }
     });
     this.setSpokenLanguage = jest.fn((language: string | null) => {
       runInAction(() => {
@@ -161,6 +163,10 @@ class MockASRStore {
 
   get isSelectedTierReady(): boolean {
     return this.selectedTierState === 'ready';
+  }
+
+  get setupTier(): AsrTier {
+    return this.isSelectedTierReady ? this.selectedTier : 'base';
   }
 }
 

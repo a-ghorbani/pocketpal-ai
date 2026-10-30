@@ -3,7 +3,7 @@ import Speech, {
 } from '@pocketpalai/react-native-speech';
 
 import {ttsRuntime} from './runtime';
-import type {Engine, StreamingHandle} from './types';
+import type {Engine, StreamOptions, StreamingHandle} from './types';
 
 /**
  * Characters we aim to pack into each synthesis batch after the first
@@ -32,9 +32,11 @@ const STREAM_TARGET_CHARS = 300;
 export function createEngineStreamingHandle(
   engine: Engine,
   voiceId: string,
-  options?: Omit<SpeechStreamOptions, 'targetChars' | 'onError'>,
+  options?: Omit<SpeechStreamOptions, 'targetChars' | 'onError'> &
+    StreamOptions,
   waitFor?: Promise<void>,
 ): StreamingHandle {
+  const {onProgress, ...streamOptions} = options ?? {};
   // The stream is created INSIDE `acquire` — after `loadInto()` has swapped
   // `Speech.currentEngine` to `engine`. Creating it earlier would bind the
   // stream's internal engine-factory to whichever engine was previously
@@ -61,8 +63,11 @@ export function createEngineStreamingHandle(
         }
         stream = Speech.createSpeechStream(voiceId, {
           targetChars: STREAM_TARGET_CHARS,
-          ...options,
+          ...streamOptions,
         });
+        if (onProgress) {
+          stream.onProgress(onProgress);
+        }
         acquired = true;
         for (const chunk of pending) {
           stream.append(chunk);

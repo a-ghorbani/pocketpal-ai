@@ -2,7 +2,6 @@ import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {refreshBody} from '../../services/iap/iapWire';
-import {PLUS_FEATURES} from '../../services/plus/catalog';
 import {PLUS_KEY} from '../PurchaseStore';
 import {
   MemoryStorage,
@@ -600,7 +599,6 @@ describe('PurchaseStore Plus', () => {
     });
 
     it('runs whether or not a Plus feature has shipped', async () => {
-      expect(PLUS_FEATURES.some(feature => feature.shipped)).toBe(false);
       const h = createHarness();
       h.store.currentEntitlements.mockResolvedValueOnce({
         ok: true,

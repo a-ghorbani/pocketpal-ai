@@ -134,6 +134,7 @@ export const ChatPalModelPickerSheet = observer(
     const renderTab = (tab: Tab, label: string, index: number) => (
       <Pressable
         key={tab}
+        testID={`chat-pal-model-picker-tab-${tab}`}
         style={[styles.tab, activeTab === tab && styles.activeTab]}
         onPress={() => handleTabPress(tab, index)}>
         <Text

@@ -70,3 +70,7 @@ declare module '@fugood/react-native-audio-pcm-stream' {
   const AudioRecord: PcmAudioRecord;
   export default AudioRecord;
 }
+
+// React Native provides `requestIdleCallback` at runtime; the project's TS
+// libs (no DOM) don't declare it.
+declare function requestIdleCallback(callback: () => void): number;

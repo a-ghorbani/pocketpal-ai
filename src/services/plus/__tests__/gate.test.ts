@@ -11,6 +11,10 @@ import {
 } from '../gate';
 import {setShipOverride, shipOverride} from '../shipOverride';
 
+jest.mock('../catalog', () =>
+  require('../../../../jest/fixtures/plus').mockUnshippedCatalog(),
+);
+
 const setUnlocked = (unlocked: boolean) =>
   runInAction(() => {
     purchaseStore.plusUnlocked = unlocked;

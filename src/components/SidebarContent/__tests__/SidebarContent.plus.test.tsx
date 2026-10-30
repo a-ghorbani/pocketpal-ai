@@ -16,6 +16,10 @@ import {plusGate} from '../../../services/plus/gate';
 import * as gate from '../../../services/plus/gate';
 import {setShipOverride} from '../../../services/plus/shipOverride';
 
+jest.mock('../../../services/plus/catalog', () =>
+  require('../../../../jest/fixtures/plus').mockUnshippedCatalog(),
+);
+
 jest.mock('../styles', () => {
   const actual = jest.requireActual('../styles');
   return {...actual, createStyles: jest.fn(actual.createStyles)};

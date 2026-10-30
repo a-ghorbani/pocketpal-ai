@@ -15,7 +15,14 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import {ensureVoiceFileAt} from '../../voiceFileDownload';
+import type {
+  NeuralEngine,
+  StreamOptions,
+  StreamingHandle,
+  Voice,
+  VoiceFileSource,
+} from '../../types';
 import {KOKORO_VOICES} from './voices';
 
 export type KokoroProgressCallback = (progress: number) => void;
@@ -36,7 +43,7 @@ export type KokoroProgressCallback = (progress: number) => void;
  * QA. The library default on iOS would otherwise include CoreML; we keep
  * it bare CPU for now.
  */
-export class KokoroEngine implements Engine {
+export class KokoroEngine implements NeuralEngine {
   readonly id = 'kokoro' as const;
 
   private getParentDir(): string {
@@ -57,6 +64,13 @@ export class KokoroEngine implements Engine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`voices/${voiceId}.bin`),
+      url: `${KOKORO_VOICES_BASE_URL}/${voiceId}.bin`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {
@@ -168,27 +182,7 @@ export class KokoroEngine implements Engine {
     const voicePhaseWeight = 1 - corePhaseWeight;
     let voicesDone = 0;
     for (const voice of KOKORO_VOICES) {
-      const target = `${voicesDir}/${voice.id}.bin`;
-      try {
-        const result = await RNFS.downloadFile({
-          fromUrl: `${KOKORO_VOICES_BASE_URL}/${voice.id}.bin`,
-          toFile: target,
-          background: false,
-          discretionary: false,
-          cacheable: false,
-          progressInterval: 1000,
-        }).promise;
-        if (result.statusCode !== 200) {
-          console.warn(
-            `[KokoroEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
-          );
-        }
-      } catch (voiceErr) {
-        console.warn(
-          `[KokoroEngine] voice ${voice.id} download failed:`,
-          voiceErr,
-        );
-      }
+      await ensureVoiceFileAt(voice, this.voiceFile(voice.id));
       voicesDone++;
       if (onProgress) {
         onProgress(
@@ -248,8 +242,12 @@ export class KokoroEngine implements Engine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {

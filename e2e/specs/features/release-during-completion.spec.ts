@@ -228,10 +228,15 @@ describe('Release During a Completion', function () {
 
     const stopTappedAt = Date.now();
     await tapControl(Selectors.chat.stopButton);
-    await browser.$(Selectors.chat.sendButton).waitForDisplayed({
-      timeout: STOP_TO_SEND_MS,
-      timeoutMsg: `Send did not come back within ${STOP_TO_SEND_MS}ms of Stop`,
-    });
+    await browser.waitUntil(
+      async () =>
+        (await browser.$(Selectors.chat.sendButton).isDisplayed()) ||
+        (await browser.$(Selectors.chat.voiceModeButton).isDisplayed()),
+      {
+        timeout: STOP_TO_SEND_MS,
+        timeoutMsg: `Composer did not go idle within ${STOP_TO_SEND_MS}ms of Stop`,
+      },
+    );
     await sendAndExpectReply(chatPage, FOLLOW_UP);
     console.log(
       `[release-during-completion] Stop tap to reply done: ${Date.now() - stopTappedAt}ms`,

@@ -1,5 +1,6 @@
 import Speech from '@pocketpalai/react-native-speech';
 
+import {PhononEngine} from '../engines/phonon';
 import {ttsRuntime} from '../runtime';
 import type {Engine, EngineId} from '../types';
 
@@ -55,6 +56,20 @@ describe('ttsRuntime', () => {
     expect(kitten.loadInto).toHaveBeenCalledTimes(1);
     expect(releaseMock).toHaveBeenCalledTimes(1);
     expect(ttsRuntime.getActiveEngineId()).toBe('kitten');
+  });
+
+  it('releases Kitten once and initializes Phonon when switching to a Phonon voice', async () => {
+    const kitten = makeEngine('kitten');
+
+    await ttsRuntime.acquire(kitten, async () => undefined);
+    await ttsRuntime.acquire(new PhononEngine(), async () => undefined);
+
+    expect(releaseMock).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({engine: 'phonon'}),
+    );
+    expect(ttsRuntime.getActiveEngineId()).toBe('phonon');
   });
 
   it('A → B → A re-initializes A (closes the per-wrapper-flag bug)', async () => {
@@ -120,6 +135,79 @@ describe('ttsRuntime', () => {
     // Next acquire on kokoro should re-load.
     await ttsRuntime.acquire(kokoro, async () => undefined);
     expect(kokoro.loadInto).toHaveBeenCalledTimes(2);
+  });
+
+  describe('invalidate()', () => {
+    it('reloads the active engine once at its next acquire', async () => {
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
+
+    it('never releases by itself, so an active stream keeps its engine', async () => {
+      const supertonic = makeEngine('supertonic');
+      let finishStream: () => void = () => {};
+      const streaming = ttsRuntime.acquire(
+        supertonic,
+        () => new Promise<void>(resolve => (finishStream = resolve)),
+      );
+      while (ttsRuntime.getActiveEngineId() !== 'supertonic') {
+        await Promise.resolve();
+      }
+
+      ttsRuntime.invalidate('supertonic');
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(ttsRuntime.getActiveEngineId()).toBe('supertonic');
+      finishStream();
+      await streaming;
+      expect(releaseMock).not.toHaveBeenCalled();
+
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op for an engine that is not active', async () => {
+      const kokoro = makeEngine('kokoro');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(kokoro.loadInto).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a no-op when no engine is active', async () => {
+      ttsRuntime.invalidate('supertonic');
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).not.toHaveBeenCalled();
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(1);
+    });
+
+    it('is cleared by a release', async () => {
+      const supertonic = makeEngine('supertonic');
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      ttsRuntime.invalidate('supertonic');
+      await ttsRuntime.release();
+      await ttsRuntime.acquire(supertonic, async () => undefined);
+
+      expect(releaseMock).toHaveBeenCalledTimes(1);
+      expect(supertonic.loadInto).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('stop()', () => {

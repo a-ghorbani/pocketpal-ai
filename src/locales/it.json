@@ -31,7 +31,8 @@
     "ok": "OK",
     "close": "Chiudi",
     "clear": "Cancella Tutto",
-    "gallery": "Galleria"
+    "gallery": "Galleria",
+    "noResults": "Nessun risultato"
   },
   "settings": {
     "modelInitializationSettings": "Impostazioni di Inizializzazione del Modello",
@@ -60,6 +61,9 @@
     "effectiveLabel": "efficace",
     "physicalBatchSize": "Dimensione fisica del batch",
     "physicalBatchSizeDescription": "Dimensione fisica del batch: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
-    "cpuThreads": "Thread CPU"
+    "cpuThreads": "Thread CPU",
+    "imageMaxTokens": "Token massimi per l'immagine",
+    "imageMaxTokensDescription": "Numero massimo di token per l'elaborazione dell'immagine: {{tokens}}{{effectiveTokens}} (più basso = maggiore velocità, minor dettaglio)",
+    "flashAttention": "Flash Attention"
   }
 }

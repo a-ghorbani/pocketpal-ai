@@ -8,6 +8,7 @@
 
 import {BasePage} from './BasePage';
 import {byExactTestId} from '../helpers/selectors';
+import {readControlEnabled} from '../helpers/control-state';
 
 declare const browser: WebdriverIO.Browser;
 declare const driver: WebdriverIO.Browser;
@@ -49,6 +50,11 @@ export class PlusPage extends BasePage {
 
   async ctaLabel(timeout = 20000): Promise<string> {
     return this.text('plus-cta', timeout);
+  }
+
+  async ctaEnabled(timeout = 20000): Promise<boolean> {
+    await this.waitForElement(byExactTestId('plus-cta'), timeout);
+    return readControlEnabled(byExactTestId('plus-cta'));
   }
 
   async selectTile(productId: string, timeout = 20000): Promise<void> {

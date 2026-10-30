@@ -10,7 +10,7 @@
     "error": "Fehler",
     "export": "Export",
     "networkError": "Netzwerkfehler. Bitte erneut versuchen.",
-    "downloadETA": "Verbleibende Zeit",
+    "downloadETA": "Restzeit",
     "calculating": "berechne...",
     "second": "Sek.",
     "seconds": "Sek",
@@ -30,7 +30,9 @@
     "ok": "OK",
     "close": "Schließen",
     "clear": "Alles löschen",
-    "gallery": "Galerie"
+    "gallery": "Galerie",
+    "stop": "Halt",
+    "noResults": "keine Ergebnisse"
   },
   "settings": {
     "modelInitializationSettings": "Einstellungen Modellinitialisierung",
@@ -154,7 +156,97 @@
     "removeRemoteModel": "Entferne {{modelName}} {{serverName}}?",
     "retryConnection": "Wiederholen",
     "enterUrlManually": "URL manuell eingeben",
-    "manageServers": "Server verwalten"
+    "manageServers": "Server verwalten",
+    "speculativeDecoding": "spekulative Entschlüsselung",
+    "speculativeDecodingDescription": "Verwenden Sie ein kleines Entwurfsmodell (oder ein eingebettetes MTP-Modell), um Tokens vorherzusagen und die Generierung zu beschleunigen. Experimentell.",
+    "speculativeNotMTPCapable": "Das aktive Modell unterstützt kein spekulatives Dekodieren und es ist kein kompatibles Entwurfsmodell zugeordnet. Die Funktion bleibt daher ohne Wirkung ausgeschaltet. Bei geeigneten Modellen wird sie automatisch angewendet.",
+    "speculativeDraftModel": "Entwurfsmodell",
+    "speculativeDraftModelDescription": "Erstellt Token-Entwürfe für das aktive Modell.",
+    "speculativeDraftModelNone": "Keines (eingebettetes MTP)",
+    "speculativeDraftModelIgnoredOverridden": "Das aktive Modell bringt ein eigenes Entwurfsmodell mit, daher wird diese Auswahl ignoriert.",
+    "speculativeDraftModelIgnoredIncompatible": "Dieses Entwurfsmodell ist mit dem aktiven Modell nicht kompatibel und wird daher ignoriert.",
+    "speculativeDraftModelIgnoredNotCapable": "Dieses Modell enthält keine Entwurfsschichten und kann daher nicht als Entwurfsmodell verwendet werden.",
+    "speculativeDraftKeyCacheType": "Cache-Typ für Entwurfs-Keys",
+    "speculativeDraftValueCacheType": "Cache-Typ für Entwurfs-Values",
+    "speculativeDraftNGpuLayers": "GPU-Schichten für Entwurf",
+    "speculativeDraftNGpuLayersDescription": "Anzahl der Schichten des Entwurfsmodells, die auf die GPU ausgelagert werden.",
+    "speculativeDraftCacheTypeInactiveDescription": "Wird angewendet, sobald spekulatives Dekodieren läuft.",
+    "ttsAvailability": "Text-to-Speech",
+    "ttsAvailabilityDescription": "Antworten des Assistenten vorlesen.",
+    "ttsAvailabilityLowMemoryWarning": "Der Speicher Ihres Geräts ist knapp – dies funktioniert möglicherweise nicht zuverlässig.",
+    "languageSheetTitle": "Sprache",
+    "languageSearchPlaceholder": "Sprachen suchen",
+    "internetSearch": {
+      "title": "Internetsuche",
+      "description": "Lassen Sie Pals mit ihren eigenen Werkzeugen im Web suchen. Verwenden Sie Ihren eigenen API-Schlüssel – PocketPal speichert Ihre Schlüssel nie und leitet Ihre Anfragen nicht weiter.",
+      "providerLabel": "Suchanbieter",
+      "providerGated": "Demnächst verfügbar",
+      "keyLabel": "API-Schlüssel",
+      "keyIsSet": "Schlüssel für {{provider}} ist hinterlegt.",
+      "keyNotSet": "Kein Schlüssel für {{provider}} hinterlegt.",
+      "keyOptional": "Für {{provider}} ist kein Schlüssel erforderlich. Mit einem Schlüssel gelten höhere Limits.",
+      "setKeyButton": "Schlüssel festlegen",
+      "updateKeyButton": "Schlüssel aktualisieren",
+      "clearKeyButton": "Schlüssel entfernen",
+      "keyInputPlaceholder": "Fügen Sie Ihren API-Schlüssel für {{provider}} ein",
+      "keyUpdateError": "Der Schlüssel konnte nicht aktualisiert werden. Bitte erneut versuchen.",
+      "showKeyAccessibilityLabel": "API-Schlüssel anzeigen",
+      "hideKeyAccessibilityLabel": "API-Schlüssel verbergen",
+      "resultCountLabel": "Ergebnisse pro Suche",
+      "resultCountDescription": "Weniger Ergebnisse lassen mehr Platz im Kontext des Modells.",
+      "consentTitle": "Suchanfragen verlassen Ihr Gerät",
+      "consentDescription": "Wenn ein Pal im Web sucht, wird Ihre Anfrage über das Internet an den ausgewählten Anbieter gesendet. Wenn ein Pal eine Seite liest, können die URL und der Seiteninhalt stattdessen an einen Standard-Reader-Dienst (r.jina.ai) gesendet werden, falls der ausgewählte Anbieter keinen eigenen Reader hat. Schlüssel und Anfragen werden nie an PocketPal gesendet.",
+      "consentAccept": "Ich verstehe",
+      "consentRequired": "Akzeptieren Sie den obigen Hinweis, um einen Schlüssel festzulegen und die Suche zu aktivieren.",
+      "consentGivenTitle": "Websuche ist aktiviert",
+      "consentGivenDescription": "Anfragen und Seitenabrufe können Ihr Gerät wie oben beschrieben verlassen.",
+      "consentRevoke": "Widerrufen"
+    },
+    "scanServerQr": "QR-Code des Servers scannen",
+    "scanQrPermissionMessage": "Erlauben Sie den Kamerazugriff, um den QR-Code eines Servers zu scannen. Sie können die Adresse auch eingeben.",
+    "scanQrNotServer": "Keine Serveradresse",
+    "scanQrUnavailable": "Scannen ist hier nicht möglich. Geben Sie stattdessen die Serveradresse ein.",
+    "scanQrNotReady": "Der Scanner wird vorbereitet. Sie können die Adresse auch eingeben.",
+    "requestTimeout": "Zeitüberschreitung bei Anfragen (Sekunden)",
+    "requestTimeoutPlaceholder": "Optional – leer lassen für Standardwert",
+    "requestTimeoutHelp": "Maximale Wartezeit auf die Antwort eines langsamen Servers. Leer lassen für den Standardwert.",
+    "serverType": "Servertyp",
+    "serverTypeHelp": "Automatisch erkannt; ändern Sie ihn, falls er falsch ist.",
+    "routerModels": {
+      "cancel": "Abbrechen",
+      "unloading": "Wird entladen…",
+      "stateLoading": "Wird geladen",
+      "stateLoaded": "Geladen",
+      "loadingPercent": "Wird geladen, {{percent}} Prozent",
+      "unloadModel": "{{model}} entladen",
+      "cancelLoadingModel": "Laden von {{model}} abbrechen",
+      "loadFailed": "Dieses Modell konnte nicht geladen werden.",
+      "unloadNotReleased": "Der Server hat dieses Modell nicht freigegeben.",
+      "serverUnreachable": "Dieser Server ist nicht erreichbar.",
+      "waitStopped": "Das Warten auf dieses Modell wurde beendet.",
+      "failureWithServerWords": "{{label}}\n\n„{{message}}“",
+      "dismiss": "Schließen",
+      "unloadBoundTitle": "Dieses Modell entladen?",
+      "unloadBoundBody": "Dieser Chat verwendet es. Es wird erneut geladen, sobald Sie Ihre nächste Nachricht senden.",
+      "unloadBoundConfirm": "Entladen"
+    },
+    "purchases": {
+      "title": "Käufe",
+      "statusOwned": "Gekauft",
+      "statusUnlocking": "Wird freigeschaltet",
+      "link": "Anmelden, um auf anderen Geräten zu nutzen"
+    },
+    "account": {
+      "title": "Konto",
+      "deleteAccount": "Konto löschen",
+      "confirmTitle": "Konto löschen?",
+      "confirmMessage": "Dadurch werden Ihr PalsHub-Konto und seine Bibliothek dauerhaft gelöscht. Über den App Store oder Google Play gekaufte Pals lassen sich auf diesem Gerät weiterhin mit Ihrem Store-Konto wiederherstellen. Kaufbelege werden aus rechtlichen Gründen anonymisiert aufbewahrt.",
+      "confirmWithoutApple": "Die Bestätigung über Apple war nicht möglich. Konto trotzdem löschen?",
+      "deleted": "Ihr Konto wurde gelöscht.",
+      "signInAgain": "Bitte melden Sie sich erneut an",
+      "creatorSupport": "Creator-Konten werden von unserem Support-Team gelöscht: {{contact}}",
+      "failed": "Löschen nicht möglich, bitte erneut versuchen"
+    }
   },
   "memory": {
     "shortWarning": "Speicherwarnung",
@@ -228,7 +320,7 @@
         "visionMode": "Bildverarbeitung an",
         "downloadWithVision": "Mit Bildverarbeitung downloaden",
         "downloadTextOnly": "Nur Text downloaden",
-        "visionToggleDescription": "Bildverarbeitung einschalten",
+        "visionToggleDescription": "Bildverarbeitungsfunktionen aktivieren",
         "projectionModelSize": "+{{size}} Projection Modell",
         "visionModeDescription": "Bilder und Text verarbeiten",
         "textOnlyModeDescription": "Nur Text verarbeiten",
@@ -341,7 +433,11 @@
         "author": "Autor",
         "requiresProjectionModel": "Benötigt Projection Modell",
         "downloadProjectionModel": "Projection Modell herunterladen",
-        "viewModelCardOnHuggingFace": "Model Card auf Hugging Face anschauen"
+        "viewModelCardOnHuggingFace": "Model Card auf Hugging Face anschauen",
+        "visionSupported": "Unterstützt",
+        "visionNotSupported": "Nicht unterstützt",
+        "visionUnknown": "Unbekannt",
+        "draftOnlyReason": "Nur Entwurfsmodell. Wählen Sie es unter Einstellungen → Spekulatives Dekodieren aus."
       },
       "accessibility": {
         "expandDetails": "Details erweitern",
@@ -402,7 +498,18 @@
       "multilingual": "Multilingual",
       "rewriting": "Umschreiben",
       "creativity": "Kreatives schreiben",
-      "vision": "Bildverarbeitung"
+      "vision": "Bildverarbeitung",
+      "mtp": "Spekulativ (MTP)",
+      "mtpDraft": "Spekulativer Entwurf"
+    },
+    "hubRun": {
+      "title": "Modell herunterladen",
+      "resolving": "Modelldetails werden geladen…",
+      "cancel": "Abbrechen",
+      "retry": "Erneut versuchen",
+      "invalidLinkTitle": "Ungültiger Link",
+      "invalidLinkMessage": "Bei diesem Hugging-Face-Link fehlt das Modell oder die Datei, oder sie sind ungültig.",
+      "resolveError": "Modelldetails konnten nicht geladen werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut."
     }
   },
   "completionParams": {
@@ -443,7 +550,14 @@
     "githubButton": "Sternvergabe auf Github",
     "orBy": "oder durch",
     "versionCopiedTitle": "Version kopiert",
-    "versionCopiedDescription": "Versionsinformationen wurden in die Zwischenablage kopiert"
+    "versionCopiedDescription": "Versionsinformationen wurden in die Zwischenablage kopiert",
+    "tour": "Tour",
+    "tourDescription": "Die Willkommensbildschirme erneut ansehen, um zu sehen, was PocketPal AI bietet.",
+    "showIntroButton": "Einführung erneut anzeigen",
+    "privacyPolicy": "Datenschutzerklärung",
+    "termsOfService": "Nutzungsbedingungen",
+    "openSourceNotices": "Open-Source Notizen",
+    "phononNoticesCredit": "Phonon-Sprachmodell und Stimmen von Gradium, lizenziert unter Apache-2.0. Basierend auf Pocket TTS und dem Mimi-Codec von Kyutai."
   },
   "feedback": {
     "title": "Feedback senden",
@@ -490,7 +604,12 @@
     "bubble": {
       "msPerToken": "{{value}} ms/Token",
       "tokensPerSec": "{{{value}} Token/sek",
-      "ttft": "{{value}}ms TTFT"
+      "ttft": "{{value}}ms TTFT",
+      "promptTokensPerSec": "{{value}} Prompt-Tokens/Sek",
+      "cachedTokens": "{{value}} aus Cache",
+      "draftAccepted": "Entwurf: {{accepted}}/{{total}} ({{pct}} %)",
+      "interrupted": "Unterbrochen",
+      "truncated": "Abgeschnitten – vermutlich ist der Kontext voll"
     },
     "exportUtils": {
       "fileSaved": "Datei gespeichert",
@@ -522,7 +641,9 @@
       "activateModelTitle": "Modell aktivieren, um zu starten",
       "activateModelDescription": "Wählen Sie das Modell aus und laden Sie es herunter. Tippen Sie nach dem Download neben dem Modell auf 'Laden' und beginnen Sie mit dem Chat.",
       "activateModelButton": "Modell auswählen",
-      "loading": "Laden..."
+      "loading": "Laden...",
+      "gettingReadyTitle": "{{name}} wird vorbereitet",
+      "gettingReadyDescription": "Wir benachrichtigen Sie, sobald Ihr Pal chatten kann. Tippen Sie oben auf das Banner, um den Fortschritt zu sehen."
     },
     "chatInput": {
       "inputPlaceholder": "Nachricht",
@@ -531,7 +652,8 @@
         "disableThinking": "Denkmodus deaktivieren",
         "thinkingEnabled": "Denkmodus aktiviert",
         "thinkingDisabled": "Denkmodus deaktiviert",
-        "thinkText": "Denken"
+        "thinkText": "Denken",
+        "cycleEffort": "Reasoning-Aufwand: {{level}}. Doppeltippen, um die Aufwandsstufe zu wechseln"
       }
     },
     "contentReportSheet": {
@@ -602,7 +724,7 @@
       "title_session": "Einstellungen Chatgenerierung (Session)",
       "title_preset": "Einstellungen Chatgenerierung (Preset)",
       "resetToSystemDefaults": "Standardwerte laden",
-      "resetToPreset": "Standardwerte laden",
+      "resetToPreset": "Voreinstellung laden",
       "applytoPresetAlert": {
         "title": "Erfolgreich",
         "message": "Diese Einstellungen werden auf alle zukünftigen Sitzungen angewendet"
@@ -619,7 +741,7 @@
       "error": "Fehler",
       "failedToSave": "Speichern der Pal-Einstellungen gescheitert",
       "resetToGlobal": "Auf globale Standardwerte zurücksetzen",
-      "resetToSystem": "Standardwerte laden",
+      "resetToSystem": "Standardwerte wiederherstellen",
       "clearPalSettings": "Lösche Pal-Einstellungen",
       "customSettingsFor": "Benutzerdefinierte Einstellungen für {{palName}}",
       "inheritedSettingsFor": "Geerbte Einstellungen für {{palName}}"
@@ -682,7 +804,8 @@
       "exportCurrentSession": "Exportiere aktuelle Sitzung",
       "exportAllSessions": "Alle Sitzungen exportieren",
       "exportChatSession": "Chat-Sitzung exportieren",
-      "importSessions": "Importiere Sitzungen"
+      "importSessions": "Importiere Sitzungen",
+      "exportCurrentSessionMarkdown": "Als Markdown exportieren"
     },
     "hfTokenSheet": {
       "title": "Hugging Face Token",
@@ -714,7 +837,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Modelleinstellungen",
-      "saveChanges": "Änderungen speichern"
+      "saveChanges": "Änderungen speichern",
+      "reasoningSection": "Reasoning",
+      "isReasoningModel": "Reasoning-Modell",
+      "isReasoningModelHelp": "Das Denken-Steuerelement für dieses Modell anzeigen, auch wenn es nicht automatisch erkannt wurde.",
+      "supportsEffort": "Unterstützt abgestufte Aufwandsstufen",
+      "effortValues": "Aufwandsstufen, die dieses Modell unterstützt",
+      "effortLevels": {
+        "minimal": "Minimal",
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "xhigh": "Sehr hoch",
+        "max": "Maximal"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face Modelle",
@@ -741,6 +877,30 @@
         "nameRequired": "Name ist erforderlich",
         "generatingPromptRequired": "Generierender Prompt ist erforderlich bei der Nutzung von AI Prompts",
         "promptModelRequired": "Prompt-Generierung Modell ist erforderlich, bei der Nutzung von AI-Prompt"
+      },
+      "talents": "Talente",
+      "talentNames": {
+        "render_html": "HTML-Vorschau",
+        "calculate": "Mathematische Ausdrücke",
+        "datetime": "Datum & Uhrzeit",
+        "web_search": "Websuche",
+        "read_url": "Webseite lesen"
+      },
+      "talentDescriptions": {
+        "render_html": "HTML-Dokumente direkt im Chat darstellen",
+        "calculate": "Mathematische Ausdrücke auswerten",
+        "datetime": "Aktuelles Datum und aktuelle Uhrzeit abrufen",
+        "web_search": "Das Internet nach aktuellen Informationen durchsuchen (erfordert API-Schlüssel in den Einstellungen)",
+        "read_url": "Den vollständigen Inhalt einer Webseite lesen (erfordert API-Schlüssel in den Einstellungen)"
+      },
+      "greeting": {
+        "sectionLabel": "Begrüßung",
+        "textLabel": "Begrüßungsnachricht",
+        "textPlaceholder": "Was soll dieser Pal in einem leeren Chat sagen?",
+        "suggestedPromptsLabel": "Vorgeschlagene Prompts",
+        "addPromptButton": "Prompt hinzufügen",
+        "promptPlaceholder": "Ein kurzer Prompt für den Chip",
+        "removePromptLabel": "Prompt entfernen"
       }
     },
     "assistantPalSheet": {
@@ -808,7 +968,8 @@
       "visionModelPlaceholder": "Wählen Sie ein Vision-Modell",
       "requiredModelsSection": "Erforderliche Modelle",
       "captureIntervalHelper": "Zeit zwischen automatischen Erfassungen in Millisekunden",
-      "create": "Erstellen"
+      "create": "Erstellen",
+      "captureInterval": "Erfassungsintervall"
     },
     "sendButton": {
       "accessibilityLabel": "Sende"
@@ -839,7 +1000,8 @@
       },
       "warnings": {
         "promptChanged": "Systemprompt wurde manuell geändert"
-      }
+      },
+      "generationBusy": "Eine Antwort wird noch generiert. Versuchen Sie es erneut, wenn sie fertig ist."
     },
     "sidebarContent": {
       "menuItems": {
@@ -873,8 +1035,11 @@
         "threeWeeksAgo": "Vor 3 Wochen",
         "fourWeeksAgo": "Vor 4 Wochen",
         "lastMonth": "Letzter Monat",
-        "older": "Älter"
-      }
+        "older": "Älter",
+        "pinned": "Angeheftet"
+      },
+      "pin": "Anheften",
+      "unpin": "Lösen"
     },
     "usageStats": {
       "tooltip": {
@@ -904,6 +1069,24 @@
       "importPals": "Importiere Pals",
       "importSuccess": "Erfolgreich {{count}} Pal(s) importiert.",
       "importError": "Import der Pals gescheitert. Bitte überprüfen Sie das Dateiformat."
+    },
+    "pendingIndicator": {
+      "preparingTool": "Werkzeug wird vorbereitet",
+      "buildingPage": "Seite wird erstellt",
+      "calculating": "Berechnung läuft",
+      "lookingUpTime": "Uhrzeit wird abgefragt",
+      "stopping": "Wird beendet…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} Tokens",
+      "elapsed": "{{seconds}} s"
+    },
+    "completionSettings": {
+      "serverDefault": "Serverstandard",
+      "usingServerDefault": "Serverstandard wird verwendet: {{value}}",
+      "usingServerDefaultUnreported": "Serverstandard wird verwendet (nicht gemeldet)",
+      "resetToServerDefault": "Serverstandard: {{value}} · Zurücksetzen",
+      "resetToServerDefaultAccessibilityLabel": "{{name}} auf den Serverstandard {{value}} zurücksetzen"
     }
   },
   "palsScreen": {
@@ -917,6 +1100,648 @@
     "videoAnalysisDescription": "Dies ist ein Video-basierter KI-Assistent, der Echtzeit-Kommentare des Videostreams der Kamera Ihres Geräts liefert.",
     "captureInterval": "Erfassungsinterval",
     "captureIntervalUnit": "ms",
-    "world": "Welt"
+    "world": "Welt",
+    "toneStyle": "Ton/Stil",
+    "aiRole": "Rolle der KI",
+    "userRole": "Meine Rolle",
+    "prompt": "Prompt",
+    "assistant": "Assistent",
+    "roleplay": "Rollenspiel",
+    "video": "Video",
+    "deletePal": "Pal löschen",
+    "deletePalMessage": "Möchten Sie diesen Pal wirklich löschen?",
+    "missingModel": "Modell fehlt",
+    "missingModelMessage": "Das Standardmodell „{{modelName}}“ für diesen Pal ist nicht verfügbar. Bitte laden Sie es im Bearbeitungsfenster herunter oder wählen Sie ein anderes Modell.",
+    "search": "Suchen",
+    "profile": "Profil",
+    "signIn": "Anmelden",
+    "addPal": "Pal hinzufügen",
+    "signInToAccessLibrary": "Melden Sie sich an, um auf Ihre Bibliothek von palshub.ai zuzugreifen",
+    "signOut": "Abmelden",
+    "signOutConfirmation": "Möchten Sie sich wirklich abmelden?",
+    "signOutError": "Abmelden fehlgeschlagen. Bitte erneut versuchen.",
+    "account": "Konto",
+    "signInToPalsHub": "Bei PalsHub anmelden",
+    "signInDescription": "Greifen Sie auf Ihre Bibliothek zu, erstellen Sie private Pals und synchronisieren Sie sie geräteübergreifend",
+    "searchAllPals": "Alle Pals durchsuchen...",
+    "deletePalConfirmation": "Möchten Sie „{{palName}}“ wirklich löschen?",
+    "filters": {
+      "all": "Alle",
+      "myPals": "Meine Pals",
+      "local": "Lokal",
+      "video": "Video",
+      "free": "Kostenlos",
+      "premium": "Premium"
+    },
+    "labels": {
+      "free": "Kostenlos",
+      "premium": "Premium",
+      "private": "Privat",
+      "download": "Herunterladen",
+      "getFree": "Kostenlos holen"
+    },
+    "sortOptions": {
+      "newest": "Neueste",
+      "oldest": "Älteste",
+      "rating": "Beste Bewertung",
+      "popular": "Am beliebtesten"
+    },
+    "palDetailSheet": {
+      "by": "von",
+      "unknown": "Unbekannt",
+      "rating": "Bewertung",
+      "reviews": "Rezensionen",
+      "created": "Erstellt",
+      "description": "Beschreibung",
+      "noDescriptionAvailable": "Keine Beschreibung verfügbar.",
+      "categories": "Kategorien",
+      "tags": "Tags",
+      "systemPrompt": "System-Prompt",
+      "downloaded": "Heruntergeladen",
+      "success": "Erfolgreich",
+      "palAddedToCollection": "Der Pal wurde zu Ihrer Sammlung hinzugefügt!",
+      "error": "Fehler",
+      "failedToLoadDetails": "Pal-Details konnten nicht geladen werden",
+      "failedToDownload": "Pal konnte nicht heruntergeladen werden",
+      "notAvailable": "k. A."
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Öffnen",
+      "install": "Installieren",
+      "pending": "Ausstehend",
+      "unlocking": "Wird freigeschaltet",
+      "retry": "Erneut versuchen",
+      "supportCode": "Support-Code: {{code}}",
+      "noLongerAvailable": "Dieser Pal ist nicht mehr verfügbar. Sie können {{refundLink}}.",
+      "refundLink": "Apple um eine Rückerstattung bitten",
+      "notCompleted": "Dieser Kauf konnte nicht abgeschlossen werden. Google erstattet Ihnen den Betrag.",
+      "withdrawnRefunding": "Dieser Pal wurde zurückgezogen. Wenden Sie sich für eine Rückerstattung an den Support.",
+      "invalid": "Wir konnten diesen Kauf nicht verifizieren.",
+      "heldInvalid": "Wir konnten diesen Kauf nicht freischalten. Wenden Sie sich mit diesem Code an den Support.",
+      "recommendedModel": "Empfohlenes Modell",
+      "sampleExchange": "Beispielunterhaltung",
+      "signInLine": "Bereits gekauft? Anmelden",
+      "licenseNotice": "Sie erwerben eine Lizenz zur Nutzung dieses Pals.",
+      "termsOfSale": "Verkaufsbedingungen",
+      "appleMediaTerms": "Apple Media Services-Bedingungen",
+      "linkPrompt": "Melden Sie sich an, um ihn auch auf Ihren anderen Geräten zu nutzen",
+      "linkSignIn": "Anmelden",
+      "dismiss": "Nicht jetzt",
+      "linkConflict": "Diese Käufe sind mit einem anderen Konto verknüpft.",
+      "restorePurchases": "Käufe wiederherstellen",
+      "badgePending": "Ausstehend",
+      "badgeUnlocking": "Wird freigeschaltet",
+      "badgeUpdate": "Update verfügbar",
+      "updatePrompt": "Eine neue Version des Creators ist verfügbar.",
+      "updatePromptWithNote": "Eine neue Version des Creators ist verfügbar: {{note}}.",
+      "updateButton": "Aktualisieren",
+      "updateConfirmText": "Dadurch werden Ihre Änderungen an den vom Creator geänderten Teilen ersetzt.",
+      "updateConfirm": "Aktualisieren",
+      "updateCancel": "Abbrechen",
+      "modelStep": {
+        "download": "Herunterladen · {{size}}",
+        "startChat": "Chat starten",
+        "needsMemory": "Dieser Pal benötigt für sein kleinstes Modell ein Gerät mit mindestens {{size}} Speicher.",
+        "noModelFits": "Dieses Gerät hat nicht genug Speicher für diesen Pal."
+      }
+    }
+  },
+  "validation": {
+    "nameRequired": "Name ist erforderlich",
+    "systemPromptRequired": "System-Prompt ist erforderlich",
+    "worldRequired": "Welt ist erforderlich",
+    "locationRequired": "Ort ist erforderlich",
+    "aiRoleRequired": "Rolle der KI ist erforderlich",
+    "userRoleRequired": "Rolle des Benutzers ist erforderlich",
+    "situationRequired": "Situation ist erforderlich",
+    "toneStyleRequired": "Ton/Stil ist erforderlich"
+  },
+  "camera": {
+    "permissionTitle": "Kameraberechtigung erforderlich",
+    "permissionMessage": "PocketPal benötigt Kamerazugriff, um Bilder zu analysieren",
+    "requestingPermission": "Kameraberechtigung wird angefordert...",
+    "noDevice": "Keine Kamera gefunden",
+    "errorTitle": "Kamerafehler",
+    "errorMessage": "Beim Aufnehmen des Fotos ist ein Fehler aufgetreten",
+    "flip": "Wechseln",
+    "analyzing": "Bild wird analysiert...",
+    "startCamera": "Kamera starten",
+    "stopCamera": "Kamera stoppen",
+    "promptPlaceholder": "Was möchten Sie über dieses Bild wissen?",
+    "takePhoto": "Kamera"
+  },
+  "video": {
+    "permissionTitle": "Kameraberechtigung erforderlich",
+    "permissionMessage": "PocketPal benötigt Kamerazugriff für die Videoanalyse",
+    "requestingPermission": "Kameraberechtigung wird angefordert...",
+    "noDevice": "Keine Kamera gefunden",
+    "errorTitle": "Kamerafehler",
+    "errorMessage": "Bei der Kamera ist ein Fehler aufgetreten",
+    "flip": "Wechseln",
+    "analyzing": "Video wird analysiert...",
+    "startCamera": "Kamera starten",
+    "stopCamera": "Kamera stoppen",
+    "promptPlaceholder": "Was möchten Sie über dieses Video wissen?",
+    "captureInterval": "Erfassungsintervall",
+    "captureIntervalUnit": "ms",
+    "liveCommentary": "Live-Kommentar",
+    "emptyPlaceholder": {
+      "title": "Willkommen bei Lookie",
+      "subtitle": "Private Echtzeit-Videoanalyse direkt auf dem Gerät",
+      "experimentalNotice": "Dies ist eine experimentelle Funktion. Die Genauigkeit hängt vom ausgewählten Modell ab, die Geschwindigkeit von den Spezifikationen Ihres Geräts, und manche Modelle funktionieren möglicherweise nicht.",
+      "howToUse": "So geht's:",
+      "step1": "• Bearbeiten Sie den Prompt (optional), um die Analyse zu steuern",
+      "step2": "• Tippen Sie auf die Kamera-Schaltfläche, um die Live-Videoanalyse zu starten",
+      "step3": "• Passen Sie die Snapshot-Häufigkeit an, solange die Kamera aktiv ist",
+      "step4": "• Wechseln Sie zu einem anderen Pal für normalen Text-Chat"
+    }
+  },
+  "screenTitles": {
+    "chat": "Chat",
+    "models": "Modelle",
+    "pals": "Pals (experimentell)",
+    "benchmark": "Benchmark",
+    "settings": "Einstellungen",
+    "appInfo": "App-Info",
+    "testCompletion": "Completion-Test"
+  },
+  "chat": {
+    "conversationReset": "Unterhaltung zurückgesetzt!",
+    "modelNotLoaded": "Modell nicht geladen. Bitte initialisieren Sie das Modell.",
+    "completionFailed": "Completion fehlgeschlagen: ",
+    "toolCallTruncated": "Werkzeugaufruf abgeschnitten – dem Modell ist vermutlich der Platz ausgegangen. Versuchen Sie einen größeren Kontext oder eine kleinere Anfrage.",
+    "speculativeInitFailed": "Dieses Gerät konnte das spekulative Dekodieren für dieses Modell nicht starten – vermutlich ist nicht genug Speicher für den Entwurfskontext vorhanden. Schalten Sie „Spekulatives Dekodieren“ unter Einstellungen → Erweiterte Einstellungen aus und versuchen Sie es erneut.",
+    "loadingModel": "Modell wird geladen ...",
+    "typeYourMessage": "Geben Sie hier Ihre Nachricht ein",
+    "load": "Laden",
+    "goToModels": "Zu den Modellen",
+    "readyToChat": "Bereit zum Chatten? Laden Sie das zuletzt verwendete Modell.",
+    "pleaseLoadModel": "Laden Sie ein Modell, um zu chatten.",
+    "multimodalNotEnabled": "Multimodal ist für dieses Modell nicht aktiviert. Bilder werden angezeigt, aber nicht von der KI verarbeitet.",
+    "cannotSendWithoutModel": "Laden Sie zuerst ein Modell",
+    "toolCompatWarning": "Dieses Modell unterstützt Werkzeugaufrufe möglicherweise nicht. Die Ergebnisse sind eventuell unzuverlässig.",
+    "softCapWarning": "Starten Sie einen neuen Chat für die beste Leistung.",
+    "contextWarning": "Diese Unterhaltung wird lang und es könnte bald der Platz ausgehen.",
+    "contextRemoteHedged": "Diese Antwort wurde möglicherweise abgeschnitten. Senden Sie die Anfrage erneut oder kürzen Sie sie.",
+    "contextFull": "In der Unterhaltung ist der Platz ausgegangen. Starten Sie einen neuen Chat oder erhöhen Sie die Kontextgröße.",
+    "contextFullRemote": "In der Unterhaltung ist der Platz ausgegangen. Starten Sie einen neuen Chat.",
+    "contextFullEscalated": "Immer noch kein Platz mehr. Starten Sie einen neuen Chat oder erhöhen Sie die Kontextgröße, um fortzufahren.",
+    "contextFullHeavyTalent": "In der Unterhaltung ist der Platz ausgegangen – {{talent}} benötigt tendenziell mehr. Starten Sie einen neuen Chat oder erhöhen Sie die Kontextgröße.",
+    "contextBannerDismiss": "Schließen",
+    "contextNewChat": "Neuer Chat",
+    "contextIncrease": "Kontext erhöhen",
+    "contextMoreRoom": "Mehr Platz",
+    "increaseContextTitle": "Diesem Chat mehr Platz geben",
+    "increaseContextBody": "Platz ist der Arbeitsspeicher des Modells – wie viel von diesem Chat es gleichzeitig im Blick behalten kann. Mehr Platz bedeutet längere Chats, bevor Antworten abgeschnitten werden.",
+    "increaseContextTokensUnit": "Tokens",
+    "increaseContextWordsRam": "~{{words}} Wörter · ≈{{ram}} RAM",
+    "increaseContextFitsChip": "Passt",
+    "increaseContextTightChip": "Knapp",
+    "increaseContextWontFitChip": "Passt nicht",
+    "increaseContextFitsStatus": "Angenehm für dieses Gerät.",
+    "increaseContextFitsUnconstrainedStatus": "Reichlich RAM – nur durch das Modell begrenzt.",
+    "increaseContextTightStatus": "Ab ca. {{tokens}} kann diesem Gerät der Speicher knapp und es langsamer werden. Es kann trotzdem versucht werden.",
+    "increaseContextWontFitStatus": "~{{tokens}} passen voraussichtlich nicht in den Speicher dieses Geräts. Wählen Sie eine kleinere Größe.",
+    "increaseContextModelMax": "{{tokens}} · Modellmaximum",
+    "increaseContextHedge": "Das erneute Laden dauert einige Sekunden. In Ihrem Chat geht nichts verloren.",
+    "increaseContextAdvanced": "Erweitert",
+    "increaseContextAdvancedBody": "Kontextgröße für diesen Chat: {{from}} → {{to}} Tokens (Modellmaximum {{max}}). Das Gerätelimit ist eine Schätzung und steigt, wenn größere Kontexte erfolgreich geladen werden.",
+    "increaseContextSliderA11yLabel": "Kontextgröße",
+    "increaseContextSliderA11yValue": "{{tokens}} Tokens",
+    "increaseContextConfirmSize": "Auf {{size}} setzen",
+    "increaseContextReloadingShort": "Wird neu geladen…",
+    "increaseContextNoFitBody": "Dieses Gerät kann für dieses Modell keinen größeren Kontext aufnehmen. Starten Sie einen neuen Chat, um fortzufahren.",
+    "increaseContextCancel": "Nicht jetzt",
+    "increaseContextReloading": "Modell wird mit größerem Kontext neu geladen…",
+    "increaseContextSuccess": "Kontext auf {{target}} Tokens erhöht.",
+    "increaseContextFailure": "Die Kontextgröße konnte nicht erhöht werden. Ihre vorherige Einstellung wurde wiederhergestellt.",
+    "palLoadHint": "Dieser Pal benötigt tendenziell mehr Platz, als die aktuelle Kontextgröße zulässt.",
+    "generatingPreview": "Vorschau wird generiert… ({{tokens}} Tokens)",
+    "generatingPreviewPending": "Vorschau wird generiert…",
+    "toolUsedChip": "{{name}} verwendet",
+    "toolErrorBlock": "{{name}} fehlgeschlagen",
+    "webSearch": {
+      "searched": "Gesucht: {{query}}",
+      "noResults": "Keine Ergebnisse",
+      "noResultsFor": "Keine Ergebnisse für {{query}}",
+      "resultsCount": "{{count}} Ergebnisse",
+      "resultsCountOne": "1 Ergebnis",
+      "searchResultsTitle": "Suchergebnisse",
+      "showResultsAccessibilityLabel": "Websuchergebnisse für {{query}} anzeigen",
+      "openLinkError": "Dieser Link konnte nicht geöffnet werden."
+    },
+    "routerLoading": "Modell wird geladen…",
+    "routerLoadingPercent": "Modell wird geladen · {{percent}} %"
+  },
+  "htmlPreview": {
+    "defaultTitle": "Vorschau",
+    "showPreview": "Gerenderte Vorschau anzeigen",
+    "showCode": "HTML-Code anzeigen",
+    "copyHtml": "HTML kopieren",
+    "closePreview": "Vorschau schließen",
+    "openFullscreen": "Vollbild öffnen: {{title}}"
+  },
+  "benchmark": {
+    "title": "Benchmark",
+    "modelSelector": {
+      "prompt": "Modell auswählen",
+      "noModels": "Keine Modelle heruntergeladen"
+    },
+    "buttons": {
+      "advancedSettings": "Erweiterte Einstellungen",
+      "startTest": "Test starten",
+      "runningTest": "Test läuft...",
+      "clearAll": "Alles löschen",
+      "done": "Fertig",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "share": "Teilen",
+      "sharing": "Wird geteilt...",
+      "viewRawData": "Rohdaten anzeigen",
+      "hideRawData": "Rohdaten ausblenden"
+    },
+    "messages": {
+      "pleaseSelectModel": "Bitte wählen und initialisieren Sie zuerst ein Modell",
+      "testWarning": "Hinweis: Der Test kann bei größeren Modellen 2–5 Minuten dauern und lässt sich nach dem Start nicht unterbrechen.",
+      "keepScreenOpen": "Bitte lassen Sie diesen Bildschirm geöffnet.",
+      "initializingModel": "Modell wird initialisiert...",
+      "modelMaxValue": "(max: {{maxValue}})",
+      "testFailed": "Der Test konnte nicht ausgeführt werden. Warten Sie, bis laufende Antworten abgeschlossen sind, und versuchen Sie es erneut."
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Erweiterte Einstellungen",
+        "testProfile": "Testprofil",
+        "customParameters": "Benutzerdefinierte Parameter",
+        "description": "Passen Sie die Benchmark-Parameter für bestimmte Testszenarien an."
+      },
+      "deleteResult": {
+        "title": "Ergebnis löschen",
+        "message": "Möchten Sie dieses Benchmark-Ergebnis wirklich löschen?"
+      },
+      "clearAllResults": {
+        "title": "Alle Ergebnisse löschen",
+        "message": "Möchten Sie wirklich alle Benchmark-Ergebnisse löschen?"
+      },
+      "shareResults": {
+        "title": "Benchmark-Ergebnisse teilen",
+        "sharedDataTitle": "Geteilte Daten umfassen:",
+        "deviceAndModelInfo": "• Gerätespezifikationen und Modellinfos",
+        "performanceMetrics": "• Leistungskennzahlen",
+        "dontShowAgain": "Diese Meldung nicht mehr anzeigen"
+      }
+    },
+    "sections": {
+      "testResults": "Testergebnisse"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "Parameter"
+      },
+      "config": {
+        "title": "Benchmark-Konfiguration",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Wdh.: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Modelleinstellungen",
+        "context": "Kontext: {{context}}",
+        "batch": "Batch: {{batch}}",
+        "ubatch": "UBatch: {{ubatch}}",
+        "cpuThreads": "CPU-Threads: {{threads}}",
+        "gpuLayers": "GPU-Schichten: {{layers}}",
+        "device": "Gerät: {{device}}",
+        "flashAttentionEnabled": "Flash Attention aktiviert",
+        "flashAttentionDisabled": "Flash Attention deaktiviert",
+        "cacheTypes": "Cache-Typen: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "Prompt-Verarbeitung",
+        "tokenGeneration": "Token-Generierung",
+        "totalTime": "Gesamtzeit",
+        "peakMemory": "Spitzenspeicher",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ Geteilt mit",
+        "leaderboardLink": "AI Phone Leaderboard ↗",
+        "cannotShare": "Teilen nicht möglich",
+        "cannotShareTooltip": "Ergebnisse lokaler Modelle können nicht geteilt werden",
+        "submitButton": "An Leaderboard senden",
+        "viewLeaderboard": "Leaderboard ansehen ↗"
+      },
+      "errors": {
+        "networkRetry": "Verbindung prüfen und erneut versuchen",
+        "appCheckRetry": "Übermittlung wiederholen",
+        "serverRetry": "Später erneut versuchen",
+        "genericRetry": "Erneut versuchen",
+        "failedToSubmit": "Benchmark konnte nicht übermittelt werden"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Geräteinformationen",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} Kerne • {{memory}}",
+      "sections": {
+        "basicInfo": "Grundlegende Infos",
+        "cpuDetails": "CPU-Details",
+        "gpuDetails": "GPU-Details",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "App-Info"
+      },
+      "fields": {
+        "architecture": "Architektur",
+        "totalMemory": "Gesamtspeicher",
+        "deviceId": "Geräte-ID",
+        "cpuCores": "CPU-Kerne",
+        "cpuModel": "CPU-Modell",
+        "chipset": "Chipsatz",
+        "instructions": "Befehlssätze",
+        "version": "Version",
+        "gpuType": "GPU-Typ",
+        "gpuRenderer": "Renderer",
+        "gpuVendor": "Hersteller",
+        "metalSupport": "Metal-Unterstützung",
+        "openclSupport": "OpenCL-Unterstützung",
+        "openclRequirement": "Erfordert i8mm und dotprod"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+    "hfAuthenticationError": "Hugging-Face-Authentifizierungsfehler: Token fehlt oder ist ungültig",
+    "hfAuthenticationErrorSearch": "Hugging-Face-Authentifizierungsfehler: Ungültiges Token",
+    "authenticationError": "Authentifizierungsfehler: Token fehlt oder ist ungültig",
+    "hfAuthorizationError": "Hugging-Face-Autorisierungsfehler: Keine Berechtigung für den Zugriff auf diese Ressource",
+    "authorizationError": "Autorisierungsfehler: Keine Berechtigung für den Zugriff auf diese Ressource",
+    "hfServerError": "Hugging-Face-Serverfehler: Problem beim API-Server",
+    "serverError": "Serverfehler: Problem beim API-Server",
+    "hfNetworkTimeout": "Netzwerk-Zeitüberschreitung: Die Anfrage an Hugging Face hat zu lange gedauert",
+    "networkTimeout": "Netzwerk-Zeitüberschreitung: Die Anfrage hat zu lange gedauert",
+    "hfNetworkError": "Netzwerkfehler: Verbindung zur Hugging-Face-API nicht möglich",
+    "networkError": "Netzwerkfehler: Verbindung zur API nicht möglich",
+    "downloadSetupFailedTitle": "Download-Vorbereitung fehlgeschlagen",
+    "downloadSetupFailedMessage": "Das Modell konnte nicht für den Download vorbereitet werden: {{message}}",
+    "cameraErrorTitle": "Kamerafehler",
+    "cameraErrorMessage": "Foto konnte nicht aufgenommen werden",
+    "galleryErrorTitle": "Galeriefehler",
+    "galleryErrorMessage": "Bilder konnten nicht ausgewählt werden"
+  },
+  "simulator": {
+    "cameraNotAvailable": "Die Kamera ist im Simulator nicht verfügbar. Bitte verwenden Sie ein physisches Gerät."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Stimme & Sprache",
+    "voiceRowTitle": "Stimme",
+    "notSet": "Nicht festgelegt",
+    "previewButton": "Vorhören",
+    "stopPreviewButton": "Vorschau stoppen",
+    "voicesTitle": "Stimmen",
+    "voicesEmptyHint": "Tippen Sie auf eine Stimme, um sie zu installieren und zu verwenden. Oder wählen Sie eine Systemstimme – diese sind immer verfügbar.",
+    "supertonicStepsLabel": "Qualität (Diffusionsschritte)",
+    "supertonicLanguageLabel": "Sprache",
+    "supertonicLanguageAuto": "Automatisch",
+    "supertonicLanguageSheetTitle": "Sprache",
+    "supertonicLanguageSearchPlaceholder": "Sprachen suchen",
+    "supertonicLanguageNames": {
+      "ar": "Arabisch",
+      "bg": "Bulgarisch",
+      "hr": "Kroatisch",
+      "cs": "Tschechisch",
+      "da": "Dänisch",
+      "nl": "Niederländisch",
+      "en": "Englisch",
+      "et": "Estnisch",
+      "fi": "Finnisch",
+      "fr": "Französisch",
+      "de": "Deutsch",
+      "el": "Griechisch",
+      "hi": "Hindi",
+      "hu": "Ungarisch",
+      "id": "Indonesisch",
+      "it": "Italienisch",
+      "ja": "Japanisch",
+      "ko": "Koreanisch",
+      "lv": "Lettisch",
+      "lt": "Litauisch",
+      "pl": "Polnisch",
+      "pt": "Portugiesisch",
+      "ro": "Rumänisch",
+      "ru": "Russisch",
+      "sk": "Slowakisch",
+      "sl": "Slowenisch",
+      "es": "Spanisch",
+      "sv": "Schwedisch",
+      "tr": "Türkisch",
+      "uk": "Ukrainisch",
+      "vi": "Vietnamesisch"
+    },
+    "toggleAutoSpeakLabel": "Automatisches Vorlesen umschalten",
+    "openSettingsLabel": "TTS-Einstellungen",
+    "playMessageLabel": "Nachricht abspielen",
+    "stopMessageLabel": "Nachricht stoppen",
+    "autoSpeakLabel": "Antworten automatisch vorlesen",
+    "autoSpeakDescription": "Neue Antworten beim Eintreffen vorlesen.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "System",
+    "stepsCount": "{{steps}} Schritte",
+    "engineKittenTagline": "Geringster Platzbedarf. Zuverlässig. Am besten für ältere Geräte.",
+    "engineKokoroTagline": "Höchste Qualität. Langsamerer Start. Einige Stimmen funktionieren möglicherweise nicht auf allen Geräten.",
+    "engineSupertonicTagline": "Schnellster Start. Benötigt mehr RAM. Kann gelegentlich Wörter auslassen.",
+    "engineSystemTagline": "Integrierte Stimmen des Betriebssystems. Immer verfügbar, ohne Installation.",
+    "engineSystemTitleIos": "iOS-Stimmen",
+    "engineSystemTitleAndroid": "Android-Stimmen",
+    "engineSystemTier": "immer verfügbar",
+    "engineTierLightest": "am leichtesten",
+    "engineTierBestQuality": "beste Qualität",
+    "engineTierFastestStart": "schnellster Start",
+    "engineSpecsLine": "{{voices}} Stimmen  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} Stimmen",
+    "engineRemoveTitle": "{{engineTitle}} entfernen?",
+    "engineRemoveBody": "Gibt ca. {{sizeMb}} MB auf diesem Gerät frei.",
+    "engineRemoveCancel": "Abbrechen",
+    "engineRemoveConfirm": "Entfernen",
+    "engineInstallCta": "Installieren · {{sizeMb}} MB",
+    "engineDownloadingLabel": "Wird heruntergeladen…  {{pct}} %  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "Erneut versuchen",
+    "voicesEmptyState": "Keine Stimmen gefunden.",
+    "kokoroDeviceNote": "Einige Stimmen funktionieren möglicherweise nicht auf allen Geräten.",
+    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um diese Engine zu installieren ({{freeMb}} MB verfügbar).",
+    "engineChipPhonon": "Phonon",
+    "enginePhononTagline": "Schnell startend und speicher sparend. Nur auf Englisch.",
+    "enginePhononCredit": "Modell und Stimmen von Gradium (Apache-2.0), basierend auf Kyutais Mimi.",
+    "engineTierNatural": "natürliches Englisch"
+  },
+  "voiceInput": {
+    "micLabel": "Diktieren",
+    "recordingLabel": "Aufnahme läuft",
+    "stopLabel": "Stoppen und transkribieren",
+    "cancelLabel": "Spracheingabe abbrechen",
+    "transcribingLabel": "Wird transkribiert…",
+    "setupLabel": "Spracheingabe einrichten",
+    "settingTitle": "Spracheingabe",
+    "settingDescription": "Tippen Sie im Chat auf das Mikrofon, um zu diktieren; die Sprache wird auf Ihrem Gerät transkribiert.",
+    "unsupportedDeviceHelper": "Dieses Gerät liegt unter der empfohlenen Spezifikation. Die Spracheingabe wird voraussichtlich langsam sein oder könnte fehlschlagen.",
+    "spokenLanguageLabel": "Gesprochene Sprache",
+    "spokenLanguageAuto": "Automatisch erkennen",
+    "spokenLanguageDetected": "Automatisch erkannt: {{language}}",
+    "resetLanguageCta": "Zurücksetzen",
+    "recordingLanguageAuto": "Sprache: automatisch",
+    "recordingLanguage": "Sprache: {{code}} (zum Zurücksetzen tippen)",
+    "waitingForChatLabel": "Transkription erfolgt, nachdem die Antwort abgeschlossen ist…",
+    "tierSizeLabel": "{{sizeMb}} MB",
+    "installCta": "Herunterladen",
+    "downloadingLabel": "Wird heruntergeladen…",
+    "retryCta": "Erneut versuchen",
+    "removeCta": "Entfernen",
+    "errorPermissionDenied": "Für die Spracheingabe wird Mikrofonzugriff benötigt.",
+    "errorPermissionBlocked": "Der Mikrofonzugriff ist blockiert. Aktivieren Sie ihn in den Einstellungen.",
+    "errorTranscribeFailed": "Transkription nicht möglich – bitte erneut versuchen.",
+    "errorNotInstalled": "Laden Sie ein Sprachmodell herunter, um die Spracheingabe zu nutzen.",
+    "errorInsufficientMemory": "Nicht genug Speicher für die Spracheingabe mit diesem Chat-Modell. Versuchen Sie ein kleineres Modell.",
+    "errorMicUnavailable": "Das Mikrofon reagiert nicht. Versuchen Sie es erneut oder wechseln Sie zu einem kleineren Chat-Modell.",
+    "errorTranscriptPartial": "Ein Teil Ihres Diktats konnte nicht transkribiert werden.",
+    "openSettingsLabel": "Einstellungen öffnen",
+    "insufficientStorage": "Nicht genug Speicherplatz – geben Sie {{requiredMb}} MB frei, um dieses Modell zu installieren ({{freeMb}} MB verfügbar)."
+  },
+  "onboarding": {
+    "back": "Zurück",
+    "skip": "Überspringen",
+    "skipForNow": "Vorerst überspringen",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "Lernen Sie Ihre Pals kennen.",
+      "titleAccent": "Pals.",
+      "body": "Kluge kleine Freunde, die in Ihrem Handy leben.\nLassen Sie uns alles einrichten – das dauert nur eine Minute.",
+      "cta": "Zeig mir alles",
+      "eyebrow": "Willkommen bei PocketPal"
+    },
+    "screen2": {
+      "title": "Jederzeit,\nüberall.",
+      "body": "Ihre Pals leben in Ihrem Handy.\nKein Internet, kein Empfang – sie funktionieren im Flugzeug, abseits des Stromnetzes und in entlegenen Dörfern.",
+      "highlight": "Kein Internet, kein Empfang",
+      "cta": "Weiter",
+      "eyebrow": "Die Idee",
+      "titleAccent": "Jederzeit,"
+    },
+    "screen3": {
+      "title": "Kleiner,\naber Ihrer.",
+      "titleAccent": "Kleiner,",
+      "body": "Pals auf Ihrem Handy sind schnell und privat – aber schlanker als Cloud-KI. Denken Sie an einen Begleiter für die Hosentasche, nicht an ein allwissendes Orakel.",
+      "highlight": "schnell und privat",
+      "cta": "Verstanden",
+      "eyebrow": "Ein Hinweis vorab"
+    },
+    "screen4": {
+      "title": "Nichts verlässt Ihr Handy.",
+      "titleAccent": "verlässt",
+      "body": "Keine Konten. Keine Cloud. Kein Tracking. Ihre Unterhaltungen bleiben Ihre.",
+      "highlight": "Keine Konten. Keine Cloud. Kein Tracking.",
+      "cta": "Los geht's",
+      "eyebrow": "Datenschutz-Versprechen"
+    },
+    "screen5": {
+      "title": "Wofür ist Ihr Pal gedacht?",
+      "body": "Wählen Sie, worüber Sie sprechen möchten – wir finden einen Pal, der zu Ihrem Handy passt.",
+      "topic": {
+        "smartchat": "Smart Chat",
+        "coding": "Programmieren",
+        "education": "Bildung",
+        "roleplay": "Rollenspiel",
+        "creative_writing": "Kreatives Schreiben",
+        "else": "Suchen Sie etwas anderes?"
+      },
+      "topicDescription": {
+        "smartchat": "Freundlicher Alltagsbegleiter",
+        "coding": "Code schreiben, debuggen, erklären",
+        "education": "Lernen, erklären, abfragen",
+        "roleplay": "Charaktere, Szenarien",
+        "creative_writing": "Geschichten, Ideen, Entwürfe",
+        "else": "Stöbern Sie später in der App durch alle Pals"
+      }
+    },
+    "screen6": {
+      "cta": "{{name}} herunterladen",
+      "ctaTemplate": "{{name}} herunterladen ({{size}})",
+      "useTemplate": "{{name}} verwenden",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB frei",
+      "recommended": "Empfohlen",
+      "downloaded": "Heruntergeladen",
+      "modelTier": {
+        "quick": "Schnell",
+        "balanced": "Ausgewogen",
+        "best": "Beste"
+      },
+      "subtitleTemplate": "{{name}} setzt auf ein kleines KI-Modell auf Ihrem Handy – wählen Sie eines, das passt.",
+      "pal": {
+        "pip": {
+          "body": "Wir haben den perfekten Pal für Sie gefunden – einen freundlichen Alltagsbegleiter. Klug genug für die meisten Aufgaben, leicht genug für jedes Handy."
+        },
+        "codie": {
+          "body": "Lernen Sie Codie kennen – Ihren lokalen Pair-Programmer. Er liest Code, schreibt Code und erklärt knifflige Stellen, ohne Ihr Handy jemals zu verlassen."
+        },
+        "sage": {
+          "body": "Sage ist geduldig, neugierig und führt Sie Schritt für Schritt durch Ideen. Ein Lernpartner für die Hosentasche."
+        },
+        "echo": {
+          "body": "Echo ist ein vielseitiger Rollenspiel-Begleiter – bleibt in der Rolle, malt Szenen aus und folgt Ihrer Geschichte, wohin sie auch führt."
+        },
+        "muse": {
+          "body": "Muse hilft Ihnen beim Schreiben. Sie schlägt Formulierungen vor, findet den Rhythmus und bewahrt Ihren Ton."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} wird heruntergeladen",
+    "titleByModel": "{{name}} wird heruntergeladen",
+    "extraInProgress": "+{{count}} weitere in Bearbeitung",
+    "failedTitle": "Download nicht abgeschlossen",
+    "retry": "Erneut versuchen"
+  },
+  "plus": {
+    "eyebrow": "PocketPal Plus",
+    "headline": "Lokale KI weiterentwickeln."
+  },
+  "voiceMode": {
+    "settingTitle": "Freihändige Sprachsteuerung",
+    "settingDescription": "Spreche mit dem Modell im Chat und höre seine Antworten.",
+    "unsupportedDeviceHelper": "Kann auf diesem Telefon langsam sein.",
+    "startingTitle": "Startet",
+    "startingHint": "Spracherkennung und die Stimme werden geladen. Das erste Laden kann etwas länger dauern.",
+    "startFailed": "Der Sprachmodus konnte nicht gestartet werden. Versuche es erneut.",
+    "micFailed": "Das Mikrofon konnte nicht verwendet werden, daher wurde der Sprachmodus beendet.",
+    "listeningTitle": "hört zu",
+    "listeningHint": "Pausiere, wenn du fertig bist, oder tippe auf die Wolke, um zu senden.",
+    "thinkingTitle": "Denkt nach",
+    "thinkingHint": "Tippe die Wolke zum Abbrechen",
+    "speakingTitle": "Spricht",
+    "speakingHint": "Rippe die Wolke zum Unterbrechen",
+    "mutedTitle": "Mikrofon aus",
+    "mutedHint": "Tippe auf das Mikrofon die Sprachausgabe erneut zu starten",
+    "errorTranscribe": "Das konnte ich nicht verstehen. Versuche es erneut.",
+    "errorReply": "Es konnte keine Antwort abgerufen werden. Versuche es erneut.",
+    "errorSpeech": "Die Antwort konnte nicht laut vorgelesen werden.",
+    "pullDownHint": "Nach unten ziehen, um den Chat zu sehen",
+    "showChatLabel": "Zeige Chat",
+    "swipeUpHint": "Nach oben wischen, um die Sprachansicht zu öffnen",
+    "cloudLabel": "Sprachmodus Cloud",
+    "openViewLabel": "Sprachansicht öffnen",
+    "micSwitchLabel": "Mikrofon",
+    "endLabel": "Sprachmodus beenden",
+    "setupTitle": "Sprachmodus einrichten",
+    "setupBody": "Zwei kleine Modelle laufen auf deinem Telefon, damit du offline sprechen kannst."
   }
 }

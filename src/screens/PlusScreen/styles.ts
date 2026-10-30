@@ -73,11 +73,18 @@ export const createStyles = (theme: Theme, compact: boolean) =>
         ? theme.colors.outline
         : theme.colors.surfaceVariant,
     },
+    featureText: {
+      flex: 1,
+      paddingVertical: theme.spacing.xs,
+    },
     featureName: {
       ...theme.typography.uiM,
       fontSize: 15,
-      flex: 1,
       color: theme.colors.onBackground,
+    },
+    featureNote: {
+      ...theme.typography.captionM,
+      color: theme.colors.onSurfaceVariant,
     },
     featureNameMuted: {
       color: theme.colors.onSurfaceVariant,
@@ -86,8 +93,10 @@ export const createStyles = (theme: Theme, compact: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.xs,
+      flexShrink: 1,
     },
     statusText: {
+      flexShrink: 1,
       ...theme.typography.uiS,
       fontSize: 13,
       color: theme.colors.onSurfaceVariant,

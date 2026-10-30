@@ -7,13 +7,20 @@ import {
   KITTEN_MODEL_BASE_URL,
   KITTEN_MODEL_FILES,
   KITTEN_MODEL_SUBDIR,
+  KITTEN_VOICES_BASE_URL,
   TTS_DICT_FILENAME,
   TTS_DICT_URL,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import type {
+  NeuralEngine,
+  StreamOptions,
+  StreamingHandle,
+  Voice,
+  VoiceFileSource,
+} from '../../types';
 import {KITTEN_VOICES} from './voices';
 
 export type KittenProgressCallback = (progress: number) => void;
@@ -27,7 +34,7 @@ export type KittenProgressCallback = (progress: number) => void;
  *
  * CPU-only execution is forced to match the other neural engines.
  */
-export class KittenEngine implements Engine {
+export class KittenEngine implements NeuralEngine {
   readonly id = 'kitten' as const;
 
   private getParentDir(): string {
@@ -48,6 +55,13 @@ export class KittenEngine implements Engine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`voices/${voiceId}.json`),
+      url: `${KITTEN_VOICES_BASE_URL}/${voiceId}.json`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {
@@ -167,8 +181,12 @@ export class KittenEngine implements Engine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {

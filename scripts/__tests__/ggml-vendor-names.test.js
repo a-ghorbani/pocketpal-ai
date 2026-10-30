@@ -11,10 +11,12 @@ const VENDORED_GGML = path.join(
   'ggml',
 );
 const HEXAGON_HEADER = path.join(VENDORED_GGML, 'include', 'ggml-hexagon.h');
+const WHISPER_CPP = path.join(ROOT, 'node_modules', 'whisper.rn', 'cpp');
 const MAIN_APPLICATION = path.join(
   ROOT,
   'android/app/src/main/java/com/pocketpalai/MainApplication.kt',
 );
+const APP_DELEGATE = path.join(ROOT, 'ios/PocketPal/AppDelegate.swift');
 const MANIFEST = JSON.parse(
   fs.readFileSync(
     path.join(__dirname, '..', 'android-payload-manifest.json'),
@@ -50,21 +52,42 @@ function walk(dir) {
   });
 }
 
-function vendoredGgmlSources(dir = path.join(VENDORED_GGML, 'src')) {
+function sources(dir, ext) {
   return fs.readdirSync(dir, {withFileTypes: true}).flatMap(entry => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      return vendoredGgmlSources(full);
+      return sources(full, ext);
     }
-    return /\.(c|cpp|h|hpp)$/.test(entry.name) ? [full] : [];
+    return ext.test(entry.name) ? [full] : [];
   });
 }
 
-const setenvNames = [
+const getenvNames = files =>
+  new Set(
+    files.flatMap(file =>
+      [
+        ...fs
+          .readFileSync(file, 'utf-8')
+          .matchAll(/getenv\(\s*"([A-Z0-9_]+)"\s*\)/g),
+      ].map(match => match[1]),
+    ),
+  );
+
+const androidSetenvNames = [
   ...fs
     .readFileSync(MAIN_APPLICATION, 'utf-8')
     .matchAll(/Os\.setenv\(\s*"([^"]+)"/g),
 ].map(match => match[1]);
+
+const iosSetenvNames = [
+  ...fs.readFileSync(APP_DELEGATE, 'utf-8').matchAll(/\bsetenv\(\s*"([^"]+)"/g),
+].map(match => match[1]);
+
+const setenvNames = [...androidSetenvNames, ...iosSetenvNames];
+const llamaSetenvNames = setenvNames.filter(name => name.startsWith('GGML_'));
+const whisperSetenvNames = setenvNames.filter(name =>
+  name.startsWith('WSP_GGML_'),
+);
 
 const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
   abi.requiredSymbols
@@ -75,8 +98,24 @@ const hexagonMustExport = MANIFEST.abis.flatMap(abi =>
 describe('the parse itself', () => {
   // Without these, a rename on either side makes every assertion below pass
   // over an empty set.
-  it('finds the env vars the app sets for ggml', () => {
-    expect(setenvNames.length).toBeGreaterThan(0);
+  it('finds the env vars Android sets for ggml', () => {
+    expect(androidSetenvNames.length).toBeGreaterThan(0);
+  });
+
+  it('finds the env vars iOS sets for ggml', () => {
+    expect(iosSetenvNames.length).toBeGreaterThan(0);
+  });
+
+  it("finds env vars for both llama.rn's and whisper.rn's ggml, and no other prefix", () => {
+    expect(llamaSetenvNames.length).toBeGreaterThan(0);
+    expect(whisperSetenvNames.length).toBeGreaterThan(0);
+    expect(
+      setenvNames.filter(
+        name =>
+          !llamaSetenvNames.includes(name) &&
+          !whisperSetenvNames.includes(name),
+      ),
+    ).toEqual([]);
   });
 
   it('finds the Hexagon symbols the payload gate requires', () => {
@@ -92,18 +131,16 @@ describe('names the app shares with the vendored ggml', () => {
     }
   });
 
-  it('sets only env vars the vendored ggml reads', () => {
-    const read = new Set(
-      vendoredGgmlSources().flatMap(file =>
-        [
-          ...fs
-            .readFileSync(file, 'utf-8')
-            .matchAll(/getenv\(\s*"([A-Z0-9_]+)"\s*\)/g),
-        ].map(match => match[1]),
-      ),
+  it("sets only GGML_ env vars llama.rn's vendored ggml reads", () => {
+    const read = getenvNames(
+      sources(path.join(VENDORED_GGML, 'src'), /\.(c|cpp|h|hpp)$/),
     );
-    const unread = setenvNames.filter(name => !read.has(name));
-    expect(unread).toEqual([]);
+    expect(llamaSetenvNames.filter(name => !read.has(name))).toEqual([]);
+  });
+
+  it("sets only WSP_GGML_ env vars whisper.rn's ggml reads", () => {
+    const read = getenvNames(sources(WHISPER_CPP, /\.(c|cpp|h|hpp|m)$/));
+    expect(whisperSetenvNames.filter(name => !read.has(name))).toEqual([]);
   });
 
   it('sets or passes no lm_-prefixed ggml name', () => {

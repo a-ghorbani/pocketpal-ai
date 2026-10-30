@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run patch-package first
-npx patch-package
+npx patch-package --error-on-fail || exit 1
 
 # Clone OpenCL headers if building llama.rn from source
 OPENCL_HEADERS_DIR="node_modules/llama.rn/third_party/OpenCL-Headers"

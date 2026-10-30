@@ -206,11 +206,14 @@ beforeEach(() => {
       await modelStore.context?.stopCompletion();
     }),
   };
+  (ttsStore as any).userTTSOverride = true;
   (ttsStore as any).autoSpeakEnabled = true;
 });
 
 afterEach(() => {
+  (ttsStore as any).userTTSOverride = null;
   (ttsStore as any).autoSpeakEnabled = false;
+  (ttsStore as any).voiceOutputActive = false;
   (talentRegistry as any).engines.delete('web_search');
 });
 
@@ -219,6 +222,25 @@ jest
   .mockImplementation(async () => 'mocked prompt');
 
 describe('useChatSession — auto-speak across agent steps', () => {
+  it('forwards a voice reply while auto-speak is off', async () => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    (ttsStore as any).voiceOutputActive = true;
+    scriptCompletion([{tokens: ['Paris', 'Paris is the capital.']}]);
+
+    await runTurn();
+
+    expect(spokenText()).toBe('Paris is the capital.');
+  });
+
+  it('forwards nothing while auto-speak and voice output are both off', async () => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    scriptCompletion([{tokens: ['Paris', 'Paris is the capital.']}]);
+
+    await runTurn();
+
+    expect(ttsStore.onAssistantMessageChunk).not.toHaveBeenCalled();
+  });
+
   it('speaks every step from its first character, a preamble step before its tools run', async () => {
     await offerSearchTool();
     scriptCompletion([
@@ -489,5 +511,152 @@ describe('useChatSession — auto-speak across agent steps', () => {
     expect(chatSessionStore.appendToolCall).toHaveBeenCalled();
     expect(spokenText()).toMatch(/Done\.$/);
     warn.mockRestore();
+  });
+});
+
+describe('useChatSession — a spoken turn with several tool calls', () => {
+  beforeEach(() => {
+    (ttsStore as any).autoSpeakEnabled = false;
+    (ttsStore as any).voiceOutputActive = true;
+  });
+
+  const sendSpoken = () => {
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    let sending!: Promise<unknown>;
+    act(() => {
+      sending = result.current.handleSendPress(textMessage, {spoken: true});
+    });
+    return {result, sending: () => sending};
+  };
+
+  it.each([
+    ['no text', []],
+    ['an echo of its calls', [echo('a')]],
+  ])(
+    'speaks only the final answer, once, after a step of three concurrent calls with %s',
+    async (_name, callStepTokens) => {
+      await offerSearchTool();
+      const delayMs: Record<string, number> = {a: 30, b: 10, c: 20};
+      const settled: string[] = [];
+      talentRegistry.register({
+        ...searchTalent,
+        execute: args =>
+          new Promise<TalentResult>(resolve =>
+            setTimeout(() => {
+              settled.push(args.query);
+              resolve({type: 'text', summary: args.query} as TalentResult);
+            }, delayMs[args.query]),
+          ),
+      });
+      scriptCompletion([
+        {
+          tokens: callStepTokens,
+          toolCalls: [searchCall('a'), searchCall('b'), searchCall('c')],
+        },
+        {tokens: ['The', 'The answer is 42.']},
+      ]);
+
+      const {sending} = sendSpoken();
+      await act(async () => {
+        await sending();
+      });
+
+      expect(settled).toEqual(['b', 'c', 'a']);
+      expect(
+        (chatSessionStore.appendToolOutcome as jest.Mock).mock.calls.map(
+          call => call[2].result.summary,
+        ),
+      ).toEqual(['a', 'b', 'c']);
+      expect(spokenText()).toBe('The answer is 42.');
+      expect(ttsStore.onAssistantMessageStart).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledTimes(1);
+      const finalStepStarted = callOrders(modelStore.context!.completion)[1];
+      chunkCalls().forEach((call, i) => {
+        if (call[1]) {
+          expect(
+            callOrders(ttsStore.onAssistantMessageChunk)[i],
+          ).toBeGreaterThan(finalStepStarted);
+        }
+      });
+    },
+  );
+
+  it('a Stop while its tool calls run cancels them and speaks nothing more', async () => {
+    await offerSearchTool();
+    const aborted: string[] = [];
+    let started = 0;
+    talentRegistry.register({
+      ...searchTalent,
+      execute: (args, ctx) =>
+        new Promise<TalentResult>(resolve => {
+          started += 1;
+          ctx?.signal?.addEventListener('abort', () => {
+            aborted.push(args.query);
+            resolve({type: 'error', summary: 'cancelled'} as TalentResult);
+          });
+        }),
+    });
+    scriptCompletion([
+      {
+        tokens: [echo('a')],
+        toolCalls: [searchCall('a'), searchCall('b'), searchCall('c')],
+      },
+      {tokens: ['Never spoken.']},
+    ]);
+
+    const {result, sending} = sendSpoken();
+    await act(async () => {
+      await new Promise(resolve => setImmediate(resolve));
+    });
+    expect(started).toBe(3);
+
+    await act(async () => {
+      await result.current.handleStopPress();
+      await sending();
+    });
+
+    expect(aborted.sort()).toEqual(['a', 'b', 'c']);
+    expect(modelStore.context!.completion).toHaveBeenCalledTimes(1);
+    expect(spokenText()).toBe('');
+    expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    expect(ttsStore.play).not.toHaveBeenCalled();
+  });
+
+  it('a run stopped without Stop (model switch) cancels its open stream and plays nothing', async () => {
+    await offerSearchTool();
+    talentRegistry.register({
+      ...searchTalent,
+      execute: (_args, ctx) =>
+        new Promise<TalentResult>(resolve => {
+          ctx?.signal?.addEventListener('abort', () =>
+            resolve({type: 'error', summary: 'cancelled'} as TalentResult),
+          );
+        }),
+    });
+    (ttsStore.onAssistantMessageStart as jest.Mock).mockImplementationOnce(
+      (messageId: string) => {
+        (ttsStore as any).playbackState = {mode: 'streaming', messageId};
+      },
+    );
+    scriptCompletion([
+      {tokens: ['Let me', 'Let me search.'], toolCalls: [searchCall('a')]},
+      {tokens: ['Never spoken.']},
+    ]);
+
+    const {sending} = sendSpoken();
+    await act(async () => {
+      await new Promise(resolve => setImmediate(resolve));
+    });
+    await act(async () => {
+      modelStore.abortActiveGeneration();
+      await sending();
+    });
+
+    expect(ttsStore.stop).toHaveBeenCalled();
+    expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    expect(ttsStore.play).not.toHaveBeenCalled();
+    (ttsStore as any).playbackState = {mode: 'idle'};
   });
 });

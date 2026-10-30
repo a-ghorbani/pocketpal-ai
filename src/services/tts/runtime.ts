@@ -20,6 +20,7 @@ import type {Engine, EngineId} from './types';
 class TTSRuntime {
   /** id of the engine currently loaded in native land, null if released. */
   private activeEngineId: EngineId | null = null;
+  private stale = false;
   /** FIFO chain of pending operations — guarantees no concurrent swaps. */
   private opMutex: Promise<unknown> = Promise.resolve();
 
@@ -32,12 +33,13 @@ class TTSRuntime {
    */
   async acquire<T>(engine: Engine, fn: () => Promise<T>): Promise<T> {
     return this.serialize(async () => {
-      if (this.activeEngineId !== engine.id) {
+      if (this.activeEngineId !== engine.id || this.stale) {
         if (this.activeEngineId !== null) {
           await this.releaseInternal();
         }
         await engine.loadInto();
         this.activeEngineId = engine.id;
+        this.stale = false;
       }
       return fn();
     });
@@ -76,6 +78,17 @@ class TTSRuntime {
     });
   }
 
+  /**
+   * Mark `engineId` for a reload at its next `acquire`, when it is the
+   * active engine. Never releases here: releasing under an active stream
+   * hangs its finalize.
+   */
+  invalidate(engineId: EngineId): void {
+    if (engineId === this.activeEngineId) {
+      this.stale = true;
+    }
+  }
+
   /** Read-only view of which engine is currently loaded. Test/diagnostic use. */
   getActiveEngineId(): EngineId | null {
     return this.activeEngineId;
@@ -88,6 +101,7 @@ class TTSRuntime {
    */
   _resetForTests(): void {
     this.activeEngineId = null;
+    this.stale = false;
     this.opMutex = Promise.resolve();
   }
 
@@ -105,6 +119,7 @@ class TTSRuntime {
       }
     }
     this.activeEngineId = null;
+    this.stale = false;
   }
 
   private serialize<T>(fn: () => Promise<T>): Promise<T> {

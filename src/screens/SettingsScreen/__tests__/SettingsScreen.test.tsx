@@ -2,6 +2,7 @@ import React from 'react';
 import {getBackendDevicesInfo} from 'llama.rn';
 import {Platform, Keyboard} from 'react-native';
 import {runInAction} from 'mobx';
+import {Divider} from 'react-native-paper';
 
 import {
   fireEvent,
@@ -18,6 +19,7 @@ import {
   uiStore,
   ttsStore,
   asrStore,
+  voiceModeStore,
 } from '../../../store';
 import {Menu} from '../../../components';
 import {l10n, t} from '../../../locales';
@@ -1385,10 +1387,14 @@ describe('SettingsScreen', () => {
 
   describe('voice input (ASR)', () => {
     afterEach(() => {
+      (voiceModeStore as any).reset();
       runInAction(() => {
         modelStore.deviceTier = 'low';
         asrStore.userASROverride = null;
+        asrStore.selectedTier = 'base';
+        asrStore.downloadStates.base = 'not_installed';
         asrStore.downloadStates.small = 'not_installed';
+        asrStore.downloadStates['large-turbo'] = 'not_installed';
         asrStore.downloadError.small = null;
         asrStore.freeDiskBytes = null;
         asrStore.spokenLanguage = null;
@@ -1488,13 +1494,82 @@ describe('SettingsScreen', () => {
       expect(asrStore.setUserASROverride).toHaveBeenCalledWith(true);
     });
 
-    it('offers install controls only when the gate is open', () => {
+    it.each([
+      [false, true, true],
+      [false, false, false],
+      [true, false, true],
+    ])(
+      'voice input %s, hands-free %s → model rows shown %s',
+      (dictation, handsFree, shown) => {
+        runInAction(() => {
+          modelStore.deviceTier = 'low';
+          asrStore.userASROverride = dictation;
+          voiceModeStore.userVoiceModeOverride = handsFree;
+        });
+        const {queryByTestId} = renderSettings();
+        expect(queryByTestId('asr-install-small') != null).toBe(shown);
+        expect(queryByTestId('asr-models-header') != null).toBe(shown);
+      },
+    );
+
+    it('adds one divider with the model section, none without it', () => {
+      const dividers = (handsFree: boolean) => {
+        runInAction(() => {
+          modelStore.deviceTier = 'low';
+          asrStore.userASROverride = false;
+          voiceModeStore.userVoiceModeOverride = handsFree;
+        });
+        const {UNSAFE_queryAllByType, unmount} = renderSettings();
+        const count = UNSAFE_queryAllByType(Divider).length;
+        unmount();
+        return count;
+      };
+      expect(dividers(true) - dividers(false)).toBe(1);
+    });
+
+    it('labels each tier with its speed and accuracy', () => {
       runInAction(() => {
-        modelStore.deviceTier = 'low';
-        asrStore.userASROverride = false;
+        asrStore.userASROverride = true;
+      });
+      const {getByText} = renderSettings();
+      expect(getByText('Default, fast')).toBeTruthy();
+      expect(
+        getByText('More accurate, slower. Better for other languages'),
+      ).toBeTruthy();
+      expect(getByText('Very slow on most phones')).toBeTruthy();
+      expect(
+        getByText('Used by voice input and hands-free voice.'),
+      ).toBeTruthy();
+    });
+
+    it('marks the in-use tier and switches to another installed one', () => {
+      runInAction(() => {
+        asrStore.userASROverride = true;
+        asrStore.selectedTier = 'base';
+        asrStore.downloadStates.base = 'ready';
+        asrStore.downloadStates.small = 'ready';
+      });
+      const {getByTestId, queryByTestId} = renderSettings();
+      expect(getByTestId('asr-in-use-base')).toBeTruthy();
+      expect(queryByTestId('asr-use-base')).toBeNull();
+      expect(queryByTestId('asr-in-use-small')).toBeNull();
+      expect(getByTestId('asr-install-large-turbo')).toBeTruthy();
+
+      act(() => {
+        fireEvent.press(getByTestId('asr-use-small'));
+      });
+
+      expect(asrStore.selectTier).toHaveBeenCalledWith('small');
+      expect(getByTestId('asr-in-use-small')).toBeTruthy();
+      expect(getByTestId('asr-use-base')).toBeTruthy();
+    });
+
+    it('marks no tier in use while none is installed', () => {
+      runInAction(() => {
+        asrStore.userASROverride = true;
       });
       const {queryByTestId} = renderSettings();
-      expect(queryByTestId('asr-install-small')).toBeNull();
+      expect(queryByTestId('asr-in-use-base')).toBeNull();
     });
 
     it('shows an install control for a not-installed tier when enabled', () => {
@@ -1550,6 +1625,49 @@ describe('SettingsScreen', () => {
           }),
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe('hands-free voice', () => {
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    afterEach(() => {
+      (voiceModeStore as any).reset();
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+    });
+
+    it('shows the device gate, with no helper, on a capable phone', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'high';
+      });
+      const {getByTestId, queryByText} = renderSettings();
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
+      expect(queryByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeNull();
+    });
+
+    it('is off with a heads-up on a weaker phone, and turns on from the switch', () => {
+      runInAction(() => {
+        modelStore.deviceTier = 'low';
+      });
+      const {getByTestId, getByText} = renderSettings();
+      const toggle = getByTestId('voice-mode-availability-switch');
+      expect(toggle.props.value).toBe(false);
+      expect(getByText(l10n.en.voiceMode.unsupportedDeviceHelper)).toBeTruthy();
+
+      act(() => {
+        fireEvent(toggle, 'valueChange', true);
+      });
+      expect(voiceModeStore.setUserVoiceModeOverride).toHaveBeenCalledWith(
+        true,
+      );
+      expect(getByTestId('voice-mode-availability-switch').props.value).toBe(
+        true,
+      );
     });
   });
 
