@@ -1827,6 +1827,8 @@
     "teaserGetPlus": "Отримати Plus",
     "teaserKeepTyping": "Продовжуйте друкувати, це безкоштовно",
     "sttRowModel": "Whisper {{tier}} · {{size}}",
-    "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}"
+    "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}",
+    "voiceRowFileMissing": "{{voice}} ще не завантажено. Натисніть «Продовжити» — і ми його завантажимо.",
+    "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз."
   }
 }
