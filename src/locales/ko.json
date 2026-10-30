@@ -1827,6 +1827,8 @@
     "teaserTitle": "음성 대화는 Plus 기능입니다",
     "teaserBody": "핸즈프리로 대화하세요. 음성으로 답해 줍니다.",
     "teaserGetPlus": "Plus 구매",
-    "teaserKeepTyping": "무료로 계속 입력하기"
+    "teaserKeepTyping": "무료로 계속 입력하기",
+    "voiceRowFileMissing": "{{voice}} 음성은 아직 다운로드되지 않았습니다. 계속 버튼을 누르면 다운로드합니다.",
+    "voiceRowFileFailed": "{{voice}} 음성을 다운로드하지 못했습니다. 인터넷에 연결한 뒤 다시 시도해 주세요."
   }
 }
