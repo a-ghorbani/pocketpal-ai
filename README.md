@@ -36,7 +36,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **🔒 Private by default** — every prompt, response, and document stays on your device. Nothing is uploaded or stored on external servers.
 - **✈️ Works offline** — download a model once and it just works, with no connection and no account. On a plane, on a trail, anywhere.
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
-- **🆓 Free and open source** — no subscription, no "pro" tier to unlock the AI. MIT-licensed and built in the open.
+- **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
 > **Privacy note:** The only data that ever leaves your device is what you explicitly choose to share — benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
 
@@ -58,6 +58,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **🗣️ Text-to-speech** — give your assistant a voice with on-device neural TTS (Kokoro and other engines), no cloud calls.
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app purchase.
+- **✨ PocketPal Plus** — an optional one-time purchase in the App Store and Google Play builds that adds hands-free voice conversation. Builds from source include every Plus feature.
 - **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside a tool-use loop.
 - **📥 Hugging Face integration** — search and download GGUF models, including gated ones, directly from the HF Hub with your access token.
 - **📊 Benchmarking** — measure tokens/sec and memory, and optionally compare on the [AI Phone Leaderboard](https://pocketpal.dev/leaderboard).
