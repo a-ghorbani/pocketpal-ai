@@ -1,0 +1,41 @@
+{
+  "common": {
+    "cancel": "Vazgeç",
+    "delete": "Sil",
+    "dismiss": "Kapat",
+    "rename": "Yeniden adlandır",
+    "reset": "Sıfırla",
+    "save": "Kaydet",
+    "stop": "Durdur",
+    "update": "Güncelle",
+    "error": "Hata",
+    "export": "Dışa aktar",
+    "networkError": "Ağ hatası. Lütfen yeniden deneyin.",
+    "calculating": "hesaplanıyor...",
+    "second": "sn",
+    "seconds": "sn",
+    "year": "yıl",
+    "years": "yıl",
+    "month": "ay",
+    "months": "ay",
+    "week": "hafta",
+    "weeks": "hafta",
+    "day": "gün",
+    "days": "gün",
+    "hour": "saat",
+    "hours": "saat",
+    "minute": "dk",
+    "minutes": "dk",
+    "justNow": "az önce",
+    "ok": "Tamam",
+    "close": "Kapat",
+    "clear": "Tümünü Temizle",
+    "gallery": "Sergi",
+    "noResults": "Sonuç yok"
+  },
+  "settings": {
+    "modelInitializationSettings": "Model Başlatma Ayarları",
+    "metal": "Metal",
+    "openCLDescription": "Adreno GPU’lar için ekran kartı hızlandırma. Komut satırı işleme daha hızlıdır, ancak içerik üretimi her zaman daha hızlı olmayabilir."
+  }
+}
