@@ -557,7 +557,7 @@
     "privacyPolicy": "Política de privacidad",
     "termsOfService": "Términos de servicio",
     "openSourceNotices": "Avisos de código abierto",
-    "phononNoticesCredit": "Modelo de voz y voces Phonon de Gradium, con licencia Apache-2.0. Basado en Pocket TTS y el códec Mimi de Kyutai."
+    "phononNoticesCredit": "Modelo de voz y voces Phonon de Gradium, con licencia Apache-2.0. Basados en Pocket TTS y el códec Mimi de Kyutai."
   },
   "feedback": {
     "title": "Enviar comentarios",
@@ -1578,7 +1578,7 @@
     "insufficientStorage": "Espacio insuficiente: libera {{requiredMb}} MB para instalar este motor ({{freeMb}} MB disponibles).",
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Inicio rápido y poco consumo de RAM. Solo en inglés.",
-    "enginePhononCredit": "Modelo y voces de Gradium (Apache-2.0), basado en Mimi de Kyutai.",
+    "enginePhononCredit": "Modelo y voces de Gradium (Apache-2.0), basados en Mimi de Kyutai.",
     "engineTierNatural": "inglés natural"
   },
   "onboarding": {
@@ -1827,6 +1827,8 @@
     "teaserTitle": "La conversación por voz es una función Plus",
     "teaserBody": "Habla sin usar las manos. Te responde en voz alta.",
     "teaserGetPlus": "Obtener Plus",
-    "teaserKeepTyping": "Seguir escribiendo, gratis"
+    "teaserKeepTyping": "Seguir escribiendo, gratis",
+    "voiceRowFileMissing": "Aún no has descargado {{voice}}. Toca Continuar para descargarla.",
+    "voiceRowFileFailed": "No se pudo descargar {{voice}}. Conéctate a internet e inténtalo de nuevo."
   }
 }
