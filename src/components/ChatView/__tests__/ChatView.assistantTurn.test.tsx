@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {StyleSheet} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {textMessage, user} from '../../../../jest/fixtures';
@@ -192,7 +193,7 @@ describe('ChatView — AssistantTurn integration', () => {
     expect(queryByTestId('soft-cap-warning')).toBeNull();
   });
 
-  it('long-press on assistant_turn message opens the menu (interaction Test #7)', () => {
+  it('the "…" on an assistant_turn row opens the menu (interaction Test #7)', () => {
     const turn = makeAssistantTurn([{content: 'hi assistant'}], 't1', 1);
     const userMsg: MessageType.Text = {
       ...textMessage,
@@ -201,47 +202,88 @@ describe('ChatView — AssistantTurn integration', () => {
       author: user,
       createdAt: 0,
     };
-    const externalLongPress = jest.fn();
-    const {UNSAFE_root, getByText} = render(
+    const {UNSAFE_root, getAllByTestId, getByText} = render(
       <ChatView
         messages={[turn, userMsg]}
         onSendPress={jest.fn()}
-        onMessageLongPress={externalLongPress}
         user={user}
       />,
       {withNavigation: true, withBottomSheetProvider: true},
     );
 
-    // The Message renderer wraps the row in a single Pressable. Find
-    // it by walking the tree for an onLongPress handler attached to a
-    // node whose subtree contains the assistant turn's text content
-    // (so we don't accidentally trigger the user message's pressable).
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+    const longPressNodes = UNSAFE_root.findAll(
+      (n: any) =>
+        typeof n.type === 'string' &&
+        typeof n.props.onTouchCancel === 'function',
     );
-    // Find the one whose subtree contains 'hi assistant'.
-    const target = longPressables.find((node: any) => {
-      const findText = (n: any): boolean => {
-        if (!n) return false;
-        if (typeof n.children === 'string')
-          return n.children.includes('hi assistant');
-        if (typeof n.props?.children === 'string')
-          return n.props.children.includes('hi assistant');
-        if (Array.isArray(n.children)) return n.children.some(findText);
-        if (n.children) return findText(n.children);
+    expect(longPressNodes).toHaveLength(1);
+    expect(
+      longPressNodes[0].findAll(
+        (n: any) => n.props?.markdown === 'user prompt',
+      ),
+    ).not.toHaveLength(0);
+    const assistantButton = getAllByTestId('message-menu-button').find(
+      (button: any) => {
+        for (let n = button.parent; n; n = n.parent) {
+          if (n.props?.testID === 'assistant-turn-footer') {
+            return true;
+          }
+        }
         return false;
-      };
-      return findText(node);
-    });
-    expect(target).toBeTruthy();
-    fireEvent(target!, 'longPress', {nativeEvent: {pageX: 1, pageY: 1}});
-    // External callback fires on every long-press, regardless of type.
-    expect(externalLongPress).toHaveBeenCalledTimes(1);
-    expect(externalLongPress.mock.calls[0][0].type).toBe('assistant_turn');
-    expect(externalLongPress.mock.calls[0][0].id).toBe('t1');
+      },
+    );
+    fireEvent.press(assistantButton!, {nativeEvent: {pageX: 1, pageY: 1}});
 
-    // The long-press also opens the menu — Copy label appears.
-    expect(getByText(l10n.en.components.chatView.menuItems.copy)).toBeTruthy();
+    expect(
+      getByText(l10n.en.components.chatView.menuItems.regenerate),
+    ).toBeTruthy();
+  });
+});
+
+describe('ChatView — footer controls are not clipped by the row', () => {
+  const nodeName = (n: any) =>
+    typeof n.type === 'string' ? n.type : (n.type?.displayName ?? n.type?.name);
+
+  const clippingAncestors = (control: any) => {
+    const clipping: string[] = [];
+    for (let n = control.parent; n; n = n.parent) {
+      if (nodeName(n) === 'CellRenderer') {
+        return clipping;
+      }
+      const overflow = StyleSheet.flatten(n.props?.style)?.overflow;
+      if (overflow === 'hidden' || overflow === 'scroll') {
+        clipping.push(`${nodeName(n)}:${overflow}`);
+      }
+    }
+    throw new Error('control is not inside a list cell');
+  };
+
+  it('keeps every ancestor up to the list cell overflow-visible', () => {
+    const turn = makeAssistantTurn([{content: 'hi assistant'}], 't1', 1);
+    const userMsg: MessageType.Text = {
+      ...textMessage,
+      id: 'u1',
+      text: 'user prompt',
+      author: user,
+      createdAt: 0,
+    };
+    const {getByTestId, getAllByTestId} = render(
+      <ChatView
+        messages={[turn, userMsg]}
+        onSendPress={jest.fn()}
+        user={user}
+      />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    const controls = [
+      getByTestId('footer-copy'),
+      ...getAllByTestId('message-menu-button'),
+    ];
+    expect(controls).toHaveLength(2);
+    for (const control of controls) {
+      expect(clippingAncestors(control)).toEqual([]);
+    }
   });
 });
 

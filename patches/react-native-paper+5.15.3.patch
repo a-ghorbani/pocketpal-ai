@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-paper/src/components/Menu/Menu.tsx b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
-index 669656c..dfe71ed 100644
+index 669656c..00c2b85 100644
 --- a/node_modules/react-native-paper/src/components/Menu/Menu.tsx
 +++ b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
 @@ -303,6 +303,11 @@ const Menu = ({
@@ -66,7 +66,17 @@ index 669656c..dfe71ed 100644
      });
    }, [removeListeners, theme]);
  
-@@ -646,7 +658,7 @@ const Menu = ({
+@@ -491,6 +503,9 @@ const Menu = ({
+       leftTransformation =
+         windowLayout.width - SCREEN_INDENT - menuLayout.width;
+     }
++    if (leftTransformation < SCREEN_INDENT) {
++      leftTransformation = SCREEN_INDENT;
++    }
+   }
+ 
+   // If the menu is larger than available vertical space,
+@@ -646,7 +661,7 @@ const Menu = ({
            <Pressable
              accessibilityLabel={overlayAccessibilityLabel}
              accessibilityRole="button"
@@ -75,7 +85,7 @@ index 669656c..dfe71ed 100644
              pointerEvents={visible ? 'auto' : 'none'}
              style={styles.pressableOverlay}
            />
-@@ -658,7 +670,7 @@ const Menu = ({
+@@ -658,7 +673,7 @@ const Menu = ({
              accessibilityViewIsModal={visible}
              style={[styles.wrapper, positionStyle, style]}
              pointerEvents={pointerEvents}

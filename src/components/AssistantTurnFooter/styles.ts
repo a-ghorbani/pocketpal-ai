@@ -10,6 +10,23 @@ export const styles = ({theme}: {theme: Theme}) =>
       paddingBottom: 12,
       gap: 5,
     },
+    copyButton: {
+      minWidth: 44,
+      minHeight: 44,
+      marginVertical: -14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    copyLeading: {
+      marginStart: -14,
+    },
+    textGroup: {
+      flexShrink: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: 5,
+    },
     timing: {
       color: theme.colors.textSecondary,
       fontSize: 10,

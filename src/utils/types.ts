@@ -646,6 +646,10 @@ export type RootDrawerParamList = {
   Settings: undefined;
 };
 
+export type PressPointEvent = {
+  nativeEvent: {pageX: number; pageY: number};
+};
+
 export type TokenNativeEvent = {
   contextId: number;
   tokenResult: TokenData;

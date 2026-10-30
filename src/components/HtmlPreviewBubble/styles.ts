@@ -2,7 +2,7 @@ import {StyleSheet} from 'react-native';
 
 // Plain object (not via StyleSheet.create) because react-syntax-highlighter's
 // customStyle is merged with Object.assign — a numeric StyleSheet id won't
-// flatten the upstream white PreTag fallback. See MarkdownView for the why.
+// flatten the upstream white PreTag fallback.
 export const codeHighlighterPreOverride = {
   backgroundColor: 'transparent',
 } as const;

@@ -20,11 +20,8 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
-import {
-  Selectors,
-  byPartialText,
-  nativeTextElement,
-} from '../../helpers/selectors';
+import {Selectors, byPartialText} from '../../helpers/selectors';
+import {readReplyText} from '../../helpers/element-text';
 import {Gestures} from '../../helpers/gestures';
 import {readControlEnabled, tapControl} from '../../helpers/control-state';
 import {saveFailureScreenshot} from '../../helpers/screenshots';
@@ -348,8 +345,7 @@ describe('Remote Server Features', () => {
     while (Date.now() - startTime < maxWaitMs) {
       try {
         const aiMessage = browser.$(Selectors.chat.aiMessage);
-        const textView = aiMessage.$(nativeTextElement());
-        responseText = await textView.getText().catch(() => '');
+        responseText = await readReplyText(aiMessage).catch(() => '');
 
         if (responseText && responseText.length > 0) {
           const stopButton = browser.$(Selectors.chat.stopButton);

@@ -12,7 +12,6 @@ import {themeFixtures} from './fixtures/theme';
 
 import {user as userFixture} from './fixtures';
 
-import {MarkdownProvider} from '../src/components/MarkdownView';
 import {UserContext} from '../src/utils';
 import type {Theme} from '../src/utils/types';
 
@@ -46,13 +45,8 @@ export const createWrapper = ({
       withBottomSheetProviderWrapper
     );
 
-    // Sits inside PaperProvider so the MarkdownProvider can read theme,
-    // and provides the ambient TRenderEngineProvider/RenderHTMLConfigProvider
-    // any component using RenderHTMLSource (e.g. MarkdownView) depends on.
     const withPaperProvider = (
-      <PaperProvider theme={theme}>
-        <MarkdownProvider>{withNavigationWrapper}</MarkdownProvider>
-      </PaperProvider>
+      <PaperProvider theme={theme}>{withNavigationWrapper}</PaperProvider>
     );
 
     const withSafeAreaWrapper = withSafeArea ? (

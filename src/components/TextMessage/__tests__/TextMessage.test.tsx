@@ -5,6 +5,7 @@ import {Linking} from 'react-native';
 
 import {derivedTextMessage} from '../../../../jest/fixtures';
 import {render as renderWithProviders} from '../../../../jest/test-utils';
+import {assistant} from '../../../utils/chat';
 import {TextMessage} from '../TextMessage';
 
 describe('text message', () => {
@@ -110,6 +111,96 @@ describe('text message', () => {
       />,
     );
     expect(queryByText(/web_search/)).toBeNull();
+  });
+
+  describe('selection and block popup', () => {
+    const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+    const markdownProps = () =>
+      (EnrichedMarkdownText as jest.Mock).mock.calls[0][0];
+
+    beforeEach(() => {
+      (EnrichedMarkdownText as jest.Mock).mockClear();
+    });
+
+    it('renders an assistant message without a step selectable and never animated', () => {
+      renderWithProviders(
+        <TextMessage
+          message={{...derivedTextMessage, author: assistant, text: 'Hi'}}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={false}
+          isActiveRun
+        />,
+      );
+
+      expect(markdownProps()).toEqual(
+        expect.objectContaining({
+          selectable: true,
+          enableBlockContextMenu: true,
+          streamingAnimation: false,
+        }),
+      );
+    });
+
+    it('turns selection and the block popup off on a user row', () => {
+      renderWithProviders(
+        <TextMessage
+          message={{...derivedTextMessage, text: 'Hi'}}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={false}
+        />,
+      );
+
+      expect(markdownProps()).toEqual(
+        expect.objectContaining({
+          selectable: false,
+          enableBlockContextMenu: false,
+        }),
+      );
+    });
+
+    it('keeps selection and the block popup on assistant step content', () => {
+      renderWithProviders(
+        <TextMessage
+          message={{...derivedTextMessage, author: assistant}}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={false}
+          step={{content: 'Step content'}}
+        />,
+      );
+
+      expect(markdownProps()).toEqual(
+        expect.objectContaining({
+          selectable: true,
+          enableBlockContextMenu: true,
+        }),
+      );
+    });
+
+    it('keeps selection and the block popup on a system row', () => {
+      renderWithProviders(
+        <TextMessage
+          message={{
+            ...derivedTextMessage,
+            author: assistant,
+            text: 'Context is full',
+            metadata: {system: true},
+          }}
+          messageWidth={440}
+          showName={false}
+          usePreviewData={false}
+        />,
+      );
+
+      expect(markdownProps()).toEqual(
+        expect.objectContaining({
+          selectable: true,
+          enableBlockContextMenu: true,
+        }),
+      );
+    });
   });
 
   it('renders call-shaped JSON in a message without a step', () => {
