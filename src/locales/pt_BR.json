@@ -557,7 +557,7 @@
     "privacyPolicy": "Política de Privacidade",
     "termsOfService": "Termos de Serviço",
     "openSourceNotices": "Avisos de código aberto",
-    "phononNoticesCredit": "Modelo de voz e vozes do Phonon pela Gradium, licenciados sob Apache-2.0. Construído sobre o Pocket TTS e o codec Mimi da Kyutai."
+    "phononNoticesCredit": "Modelo de voz e vozes Phonon, da Gradium, licenciados sob Apache-2.0. Construídos sobre o Pocket TTS e o codec Mimi da Kyutai."
   },
   "feedback": {
     "title": "Enviar Feedback",
@@ -1577,8 +1577,8 @@
     "kokoroDeviceNote": "Algumas vozes podem não funcionar em todos os dispositivos.",
     "insufficientStorage": "Espaço insuficiente — libere {{requiredMb}} MB para instalar este mecanismo ({{freeMb}} MB disponíveis).",
     "engineChipPhonon": "Phonon",
-    "enginePhononTagline": "Início rápido e leve no uso de RAM. Apenas em inglês.",
-    "enginePhononCredit": "Modelo e vozes da Gradium (Apache-2.0), construído sobre o Mimi da Kyutai.",
+    "enginePhononTagline": "Início rápido e pouco uso de RAM. Apenas em inglês.",
+    "enginePhononCredit": "Modelo e vozes da Gradium (Apache-2.0), construídos sobre o Mimi da Kyutai.",
     "engineTierNatural": "inglês natural"
   },
   "onboarding": {
@@ -1791,7 +1791,7 @@
     "errorSpeech": "Não foi possível reproduzir a resposta em voz alta.",
     "pullDownHint": "Arraste para baixo para ver o chat",
     "showChatLabel": "Mostrar chat",
-    "swipeUpHint": "Deslize para cima para a tela de voz",
+    "swipeUpHint": "Deslize para cima para ver a tela de voz",
     "cloudLabel": "Bolha do modo de voz",
     "openViewLabel": "Abrir tela de voz",
     "micSwitchLabel": "Microfone",
@@ -1825,8 +1825,10 @@
     "startLockedLabel": "Voz mãos-livres, PocketPal Plus",
     "startLockedHint": "Abre uma demonstração curta. Digitar e ditar continuam grátis.",
     "teaserTitle": "A conversa por voz é um recurso do Plus",
-    "teaserBody": "Fale sem usar as mãos. Ele responde em voz alta.",
+    "teaserBody": "Fale sem usar as mãos. O modelo responde em voz alta.",
     "teaserGetPlus": "Comprar o Plus",
-    "teaserKeepTyping": "Continuar digitando, grátis"
+    "teaserKeepTyping": "Continuar digitando, grátis",
+    "voiceRowFileMissing": "{{voice}} ainda não foi baixada. Toque em Continuar para baixar.",
+    "voiceRowFileFailed": "Não deu para baixar {{voice}}. Conecte-se à internet e tente novamente."
   }
 }
