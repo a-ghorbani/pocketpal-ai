@@ -1,6 +1,6 @@
 // Track deleted files for stateful behavior in tests
 const deletedFiles = new Set();
-export const stat = jest.fn();
+export const stat = jest.fn().mockResolvedValue({isFile: () => true});
 export const mkdir = jest.fn();
 export const unlink = jest.fn().mockImplementation(path => {
   deletedFiles.add(path);
@@ -57,6 +57,8 @@ export const __setDocumentDirectoryPath = path => {
     configurable: true,
   });
 };
+export const CachesDirectoryPath = '/path/to/caches';
+export const TemporaryDirectoryPath = '/path/to/tmp/';
 export const copyFile = jest.fn().mockResolvedValue(true);
 export const moveFile = jest.fn().mockResolvedValue(undefined);
 
@@ -77,6 +79,8 @@ const RNFS = {
   downloadFile,
   hash,
   DocumentDirectoryPath,
+  CachesDirectoryPath,
+  TemporaryDirectoryPath,
   LibraryDirectoryPath,
   MainBundlePath,
   copyFile,
