@@ -531,7 +531,7 @@
     "privacyPolicy": "Polityka Prywatności",
     "termsOfService": "Warunki korzystania z usługi",
     "openSourceNotices": "Licencje open source",
-    "phononNoticesCredit": "Model głosowy Phonon i głosy od Gradium, na licencji Apache-2.0. Oparte na Pocket TTS i kodeku Mimi od Kyutai."
+    "phononNoticesCredit": "Model głosowy Phonon i głosy autorstwa Gradium, na licencji Apache-2.0. Oparte na Pocket TTS i kodeku Mimi firmy Kyutai."
   },
   "feedback": {
     "usageFrequency": {
@@ -1466,8 +1466,8 @@
     "engineSystemTier": "zawsze dostępne",
     "engineTierLightest": "najlżejszy",
     "engineChipPhonon": "Phonon",
-    "enginePhononTagline": "Szybki start, mało pamięci RAM. Tylko język angielski.",
-    "enginePhononCredit": "Model i głosy od Gradium (Apache-2.0), oparte na Mimi od Kyutai.",
+    "enginePhononTagline": "Szybki start. Zużywa mało pamięci RAM. Tylko język angielski.",
+    "enginePhononCredit": "Model i głosy autorstwa Gradium (Apache-2.0), oparte na Mimi firmy Kyutai.",
     "engineTierNatural": "naturalny angielski"
   },
   "onboarding": {
@@ -1765,7 +1765,7 @@
       "subtitleMore": "{{first}}, {{second}} i więcej"
     },
     "optIn": "Wyłączone",
-    "optInNote": "Wyłączone na tym telefonie. Włącz je w ustawieniach, jeśli masz odwagę.",
+    "optInNote": "Wyłączone na tym telefonie. Włącz to w ustawieniach, jeśli masz odwagę.",
     "offInSettingsNote": "Wyłączone w ustawieniach.",
     "chatStaysFree": "Plus jest opcjonalny. Czatowanie pozostaje darmowe.",
     "chooseAmount": "Wybierz kwotę"
@@ -1786,7 +1786,7 @@
     "speakingHint": "Dotknij chmurki, aby przerwać",
     "mutedTitle": "Mikrofon wyłączony",
     "mutedHint": "Dotknij mikrofonu, aby znów mówić",
-    "errorTranscribe": "Nie udało się tego usłyszeć. Spróbuj ponownie.",
+    "errorTranscribe": "Nie udało się tego rozpoznać. Spróbuj ponownie.",
     "errorReply": "Nie udało się uzyskać odpowiedzi. Spróbuj ponownie.",
     "errorSpeech": "Nie udało się odtworzyć odpowiedzi na głos.",
     "pullDownHint": "Pociągnij w dół, aby zobaczyć czat",
@@ -1823,10 +1823,12 @@
     "chooseSmallerModelCta": "Wybierz mniejszy model",
     "startLabel": "Uruchom tryb głosowy",
     "startLockedLabel": "Rozmowa głosowa bez rąk, PocketPal Plus",
-    "startLockedHint": "Otwiera krótki podgląd. Pisanie i dyktowanie pozostają darmowe.",
+    "startLockedHint": "Otwiera krótkie demo. Pisanie i dyktowanie pozostają darmowe.",
     "teaserTitle": "Rozmowa głosowa to funkcja Plus",
     "teaserBody": "Rozmawiaj bez rąk. Odpowiada na głos.",
     "teaserGetPlus": "Kup Plus",
-    "teaserKeepTyping": "Pisz dalej, za darmo"
+    "teaserKeepTyping": "Pisz dalej, za darmo",
+    "voiceRowFileMissing": "{{voice}} nie jest jeszcze pobrany. Dotknij Kontynuuj, aby go pobrać.",
+    "voiceRowFileFailed": "Nie udało się pobrać {{voice}}. Połącz się z internetem i spróbuj ponownie."
   }
 }
