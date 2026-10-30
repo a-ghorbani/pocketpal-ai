@@ -1827,6 +1827,8 @@
     "teaserTitle": "المحادثة الصوتية من ميزات Plus",
     "teaserBody": "تحدّث بدون استخدام يديك، وسيرد عليك بصوت عالٍ.",
     "teaserGetPlus": "احصل على Plus",
-    "teaserKeepTyping": "تابع الكتابة مجانًا"
+    "teaserKeepTyping": "تابع الكتابة مجانًا",
+    "voiceRowFileMissing": "{{voice}} لم يُنزَّل بعد. اضغط «متابعة» لتنزيله.",
+    "voiceRowFileFailed": "تعذّر تنزيل {{voice}}. اتصل بالإنترنت وحاول مرة أخرى."
   }
 }
