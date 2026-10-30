@@ -1577,7 +1577,7 @@
       "vi": "Vietnam"
     },
     "engineChipPhonon": "Phonon",
-    "enginePhononTagline": "Pantas dimulakan dan ringan pada RAM. Bahasa Inggeris sahaja.",
+    "enginePhononTagline": "Pantas dimulakan dan ringan penggunaan RAM. Bahasa Inggeris sahaja.",
     "enginePhononCredit": "Model dan suara oleh Gradium (Apache-2.0), dibina di atas Mimi daripada Kyutai.",
     "engineTierNatural": "Inggeris semula jadi"
   },
@@ -1779,12 +1779,12 @@
     "startFailed": "Tidak dapat memulakan mod suara. Cuba lagi.",
     "micFailed": "Tidak dapat menggunakan mikrofon, jadi mod suara ditamatkan.",
     "listeningTitle": "Mendengar",
-    "listeningHint": "Berhenti sebentar apabila selesai, atau ketik gelembung untuk hantar",
+    "listeningHint": "Berhenti sebentar apabila selesai, atau ketik gelembung untuk menghantar",
     "thinkingTitle": "Berfikir",
-    "thinkingHint": "Ketik gelembung untuk batalkan",
+    "thinkingHint": "Ketik gelembung untuk membatalkan",
     "speakingTitle": "Bercakap",
-    "speakingHint": "Ketik gelembung untuk hentikan",
-    "mutedTitle": "Mikrofon mati",
+    "speakingHint": "Ketik gelembung untuk menghentikan",
+    "mutedTitle": "Mikrofon dimatikan",
     "mutedHint": "Ketik mikrofon untuk bercakap lagi",
     "errorTranscribe": "Tidak dapat mendengarnya dengan jelas. Cuba lagi.",
     "errorReply": "Tidak dapat memperoleh jawapan. Cuba lagi.",
@@ -1819,14 +1819,16 @@
     "memoryVoiceRow": "Suara · {{name}}",
     "memoryNeeded": "Diperlukan",
     "memoryNeededValue": "{{needed}} daripada {{available}} tersedia",
-    "continueAnywayCta": "Teruskan juga",
-    "chooseSmallerModelCta": "Pilih model lebih kecil",
+    "continueAnywayCta": "Tetap teruskan",
+    "chooseSmallerModelCta": "Pilih model yang lebih kecil",
     "startLabel": "Mulakan mod suara",
     "startLockedLabel": "Suara bebas tangan, PocketPal Plus",
     "startLockedHint": "Membuka pratonton pendek. Menaip dan input suara kekal percuma.",
     "teaserTitle": "Perbualan suara ialah ciri Plus",
-    "teaserBody": "Bercakap bebas tangan. Ia menjawab dengan kuat.",
+    "teaserBody": "Bercakap bebas tangan. Ia menjawab secara lisan.",
     "teaserGetPlus": "Dapatkan Plus",
-    "teaserKeepTyping": "Terus menaip, percuma"
+    "teaserKeepTyping": "Terus menaip, percuma",
+    "voiceRowFileMissing": "{{voice}} belum dimuat turun. Ketik Teruskan untuk memuat turunnya.",
+    "voiceRowFileFailed": "Tidak dapat memuat turun {{voice}}. Sambung ke internet dan cuba lagi."
   }
 }
