@@ -11,6 +11,7 @@ import {
   voiceEntitlement,
   voiceModeStore,
 } from '../../../store';
+import {isPlusUnlocked} from '../../../services/plus/gate';
 
 import {ChatScreen} from '../ChatScreen';
 
@@ -172,6 +173,42 @@ describe('ChatScreen voice mode entry', () => {
     ).toBe(true);
     runInAction(() => {
       purchaseStore.plusUnlocked = false;
+    });
+  });
+
+  describe('in an ungated build', () => {
+    const defaultSource = (voiceEntitlement as any).defaultSource;
+
+    beforeEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = false;
+      defaultSource.openPaywall.mockClear();
+      voiceEntitlement.register({
+        isUnlocked: () => voiceModeStore.unlockOverride ?? isPlusUnlocked(),
+        openPaywall: defaultSource.openPaywall,
+      });
+    });
+
+    afterEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = true;
+      voiceEntitlement.register(defaultSource);
+    });
+
+    it('shows no lock and a tap opens setup, not the teaser', async () => {
+      runInAction(() => {
+        modelStore.models = modelsList as any;
+        modelStore.activeModelId = modelsList[0].id;
+      });
+      const {getByTestId, queryByTestId} = renderScreen();
+      expect(purchaseStore.plusUnlocked).toBe(false);
+      expect(queryByTestId('voice-mode-lock')).toBeNull();
+
+      await act(async () => {
+        fireEvent.press(getByTestId('voice-mode-button'));
+      });
+
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      expect(defaultSource.openPaywall).not.toHaveBeenCalled();
+      expect(mockSheetsShown).toEqual(['setup']);
     });
   });
 

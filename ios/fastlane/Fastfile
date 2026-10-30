@@ -55,6 +55,7 @@ platform :ios do
     )
 
     verify_ios_payload(ipa: lane_context[SharedValues::IPA_OUTPUT_PATH])
+    sh(File.expand_path("../../scripts/verify-plus-gate.sh", Dir.pwd), File.expand_path(lane_context[SharedValues::IPA_OUTPUT_PATH]), "--gated")
 
     upload_to_testflight(
       api_key: api_key,

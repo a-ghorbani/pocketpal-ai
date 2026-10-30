@@ -19,9 +19,15 @@ let returnFocusOnClose = false;
 
 export const shouldReturnFocusOnClose = (): boolean => returnFocusOnClose;
 
-export const isPlusAvailable = (): boolean => available.get();
+export const isPlusAvailable = (): boolean =>
+  __PLUS_STORE_GATE__ && available.get();
 
-export const isPlusUnlocked = (): boolean => purchaseStore.plusUnlocked;
+export const isPlusUnlocked = (): boolean =>
+  !__PLUS_STORE_GATE__ || purchaseStore.plusUnlocked;
+
+export const PLUS_STORE_GATE_MARKER = __PLUS_STORE_GATE__
+  ? 'PLUS_STORE_GATE_ON'
+  : null;
 
 export const openPlus = (opts: PlusRequest = {}): void => {
   if (!isPlusAvailable()) {

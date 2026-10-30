@@ -46,6 +46,7 @@ const TestNavigator = () => (
 describe('SidebarContent Plus entry', () => {
   afterEach(() => {
     cleanup();
+    (global as any).__PLUS_STORE_GATE__ = true;
     setShipOverride([]);
     runInAction(() => {
       purchaseStore.plusUnlocked = false;
@@ -70,6 +71,19 @@ describe('SidebarContent Plus entry', () => {
         node => node.props.children,
       ),
     ).toEqual(['Settings', 'PocketPal Plus', 'App Info']);
+  });
+
+  it('has no Plus entry in an ungated build, even with a feature shipped', () => {
+    (global as any).__PLUS_STORE_GATE__ = false;
+    setShipOverride(['handsFreeVoice']);
+    const {getAllByText, queryByTestId} = render(<TestNavigator />);
+
+    expect(queryByTestId('drawer-item-plus')).toBeNull();
+    expect(
+      getAllByText(/^(Settings|PocketPal Plus|App Info)$/).map(
+        node => node.props.children,
+      ),
+    ).toEqual(['Settings', 'App Info']);
   });
 
   it('closes the drawer, then opens Plus with no callback', () => {
