@@ -376,6 +376,9 @@ jobs:
           fi
           echo "OK: prod bundle contains zero automation markers."
 
+      - name: Verify the Plus store gate
+        run: scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --ungated
+
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
@@ -529,6 +532,9 @@ jobs:
 
       - name: Verify iOS payload
         run: scripts/verify-ios-payload.sh ios/build/Build/Products/Release-iphonesimulator/PocketPal.app --require-marker
+
+      - name: Verify the Plus store gate
+        run: scripts/verify-plus-gate.sh ios/build/Build/Products/Release-iphonesimulator/PocketPal.app --ungated
 
       - name: AMX scan (llama-rn, whisper-rn)
         shell: bash -eo pipefail {0}

@@ -40,6 +40,20 @@ We highly encourage testing your changes before submitting a pull request.
   yarn android
   ```
 
+### Build flags
+
+`PLUS_STORE_GATE` is an environment variable of the command that bundles the JS, not a `.env` key.
+
+- Unset (the default): every PocketPal Plus feature is free and no purchase UI appears.
+- `true`: Plus is gated behind a purchase. Only the official store builds set it.
+- E2E builds (`E2E_BUILD=true`) are gated by default; `PLUS_STORE_GATE=false` turns that off.
+
+Set it on the process that bundles: Metro for debug builds, Gradle or Xcode for release builds. After changing it on a debug build, restart Metro with a clean cache:
+
+```bash
+PLUS_STORE_GATE=true yarn start:reset
+```
+
 ### Linting and Type Checking
 
 Make sure your code passes the lint and type check processes:

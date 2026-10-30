@@ -56,6 +56,9 @@ platform :android do
   desc "Upload the built Android bundle to the Alpha track"
   lane :upload_android_alpha do
     android_dir = File.expand_path('..', Dir.pwd)
+    aab = File.join(android_dir, "app/build/outputs/bundle/prodRelease/app-prod-release.aab")
+
+    sh(File.expand_path("../../scripts/verify-plus-gate.sh", Dir.pwd), aab, "--gated")
 
     upload_to_play_store(
       track: "alpha",
@@ -66,7 +69,7 @@ platform :android do
       # separate one from this lane's. Its fallback globs do not match this
       # project's flavored output path, so an absent value uploads the
       # metadata, no binary, and reports success.
-      aab: File.join(android_dir, "app/build/outputs/bundle/prodRelease/app-prod-release.aab"),
+      aab: aab,
       skip_upload_metadata: false,
       skip_upload_images: true,
       skip_upload_screenshots: true,

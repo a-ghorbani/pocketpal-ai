@@ -39,6 +39,7 @@ jobs:
       # builds no iOS target, so the postinstall download has nothing to supply.
       # The DSP libraries under bin/ are tarball content and arrive regardless.
       RNLLAMA_SKIP_POSTINSTALL: '1'
+      PLUS_STORE_GATE: 'true'
 
     steps:
       # Step 1: Checkout the code
@@ -215,6 +216,11 @@ jobs:
             --aab android/app/build/outputs/bundle/prodRelease/app-prod-release.aab \
             --report payload-report.txt
 
+      - name: Verify the Plus store gate
+        run: |
+          scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --gated
+          scripts/verify-plus-gate.sh android/app/build/outputs/bundle/prodRelease/app-prod-release.aab --gated
+
       - name: Upload payload report
         if: always()
         uses: actions/upload-artifact@v4
@@ -259,6 +265,7 @@ jobs:
     if: ${{ always() && (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') }}
     env:
       NODE_OPTIONS: '--max-old-space-size=8192'
+      PLUS_STORE_GATE: 'true'
 
     steps:
       - name: Checkout code
