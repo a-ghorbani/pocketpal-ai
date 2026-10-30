@@ -1788,7 +1788,7 @@
     "mutedHint": "Dotknij mikrofonu, aby znów mówić",
     "errorTranscribe": "Nie udało się tego rozpoznać. Spróbuj ponownie.",
     "errorReply": "Nie udało się uzyskać odpowiedzi. Spróbuj ponownie.",
-    "errorSpeech": "Nie udało się odtworzyć odpowiedzi na głos.",
+    "errorSpeech": "Nie udało się odczytać odpowiedzi na głos.",
     "pullDownHint": "Pociągnij w dół, aby zobaczyć czat",
     "showChatLabel": "Pokaż czat",
     "swipeUpHint": "Przesuń w górę, aby wrócić do widoku głosowego",
