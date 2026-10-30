@@ -1827,6 +1827,8 @@
     "teaserTitle": "Percakapan suara adalah fitur Plus",
     "teaserBody": "Bicara bebas genggam. Jawabannya dibacakan dengan lantang.",
     "teaserGetPlus": "Dapatkan Plus",
-    "teaserKeepTyping": "Tetap mengetik, gratis"
+    "teaserKeepTyping": "Tetap mengetik, gratis",
+    "voiceRowFileMissing": "{{voice}} belum diunduh. Ketuk Lanjutkan untuk mengunduhnya.",
+    "voiceRowFileFailed": "Tidak dapat mengunduh {{voice}}. Sambungkan ke internet dan coba lagi."
   }
 }
