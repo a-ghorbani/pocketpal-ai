@@ -1827,6 +1827,8 @@
     "teaserTitle": "שיחה קולית היא תכונת Plus",
     "teaserBody": "דבר בלי ידיים. התשובה נשמעת בקול.",
     "teaserGetPlus": "קבל את Plus",
-    "teaserKeepTyping": "המשך להקליד, בחינם"
+    "teaserKeepTyping": "המשך להקליד, בחינם",
+    "voiceRowFileMissing": "{{voice}} עוד לא הורד. הקש על \"המשך\" כדי להוריד אותו.",
+    "voiceRowFileFailed": "לא הצלחנו להוריד את {{voice}}. התחבר לאינטרנט ונסה שוב."
   }
 }
