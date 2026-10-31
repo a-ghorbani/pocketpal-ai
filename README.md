@@ -38,7 +38,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you turn on (web search, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
+> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
 
 ## Contents
 
@@ -93,7 +93,7 @@ PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer 
 | --- | --- |
 | **UI & Tool Use** | The React Native app (UI via React Native Paper, state via MobX, chat history in WatermelonDB). The **`AgentRunner`** drives each chat turn — streaming tokens, dispatching **Talents** (tools) when the model calls them, and feeding results back for follow-up reasoning. **Pals** are configurable personas; **PalsHub** is the in-app marketplace for sharing and buying them. In **voice mode**, your speech is transcribed, answered as a normal chat turn, and the reply is spoken back. |
 | **Bridging** | Native modules that connect JavaScript to the engines. [`llama.rn`](https://github.com/mybigday/llama.rn) bridges LLM inference over JSI; [`whisper.rn`](https://github.com/mybigday/whisper.rn) bridges speech recognition; [`@pocketpalai/react-native-speech`](https://github.com/a-ghorbani/react-native-speech) and `onnxruntime-react-native` bridge text-to-speech, with the `@pocketpalai/react-native-speech-phonon` add-on for Phonon. |
-| **Engine** | The inference engines. **llama.cpp** runs language models in the quantized **GGUF** format. **whisper.cpp** runs Whisper speech recognition models in the **GGML** format. **ONNX Runtime** runs the Kokoro, Kitten and Supertonic voice models in the **ONNX** format. **Phonon** runs natively: Rust on Android, Core ML on iOS. |
+| **Engine** | The inference engines. **llama.cpp** runs language models in the quantized **GGUF** format. **whisper.cpp** runs Whisper speech recognition models in the **GGML** format. **ONNX Runtime** runs the Kokoro, Kitten and Supertonic voice models in the **ONNX** format. **Phonon** runs natively in its own Rust runtime: on the CPU on Android, through Core ML on iOS. |
 | **Hardware** | Where the math actually happens. PocketPal targets **CPU** (universal fallback), **GPU** (Metal on iOS, OpenCL on Qualcomm Adreno for Android), and **NPU** (Qualcomm Hexagon, and the Apple Neural Engine for Phonon on iOS) — falling back gracefully and offloading partial layers when a full backend isn't available. |
 
 ## Using the app
@@ -288,7 +288,7 @@ A **Talent** is a tool the model can call mid-conversation. Engines are register
 
 Good first contributions:
 - A new **Talent** — implement a `TalentEngine` and register it in `src/services/talents/`.
-- A new **TTS engine** — add it under `src/services/tts/engines/`, add its id to `EngineId` (`types.ts`), and register it in `engineRegistry.ts`.
+- A new **TTS engine** — add it under `src/services/tts/engines/`, add its id to `EngineId` (`types.ts`), register it in `engineRegistry.ts`, then wire its download state into `TTSStore` and its entry into the TTS setup sheet's voice picker (`src/components/TTSSetupSheet/`).
 - A new **locale** — add a JSON file in `src/locales/` (or translate on [Weblate](https://hosted.weblate.org/projects/pocketpal-ai/)).
 
 </details>
