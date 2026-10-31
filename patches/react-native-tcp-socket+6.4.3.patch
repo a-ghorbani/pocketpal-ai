@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-tcp-socket/ios/TcpSockets.m b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
+index a5553c6..3527607 100644
+--- a/node_modules/react-native-tcp-socket/ios/TcpSockets.m
++++ b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
+@@ -293,10 +293,10 @@ RCT_EXPORT_METHOD(getCertificate:(nonnull NSNumber *)cId
+                            @"info" : @{
+                                @"id" : client.id,
+                                @"connection" : @{
+-                                   @"localAddress" : [socket localHost],
++                                   @"localAddress" : [socket localHost] ?: @"",
+                                    @"localPort" : [NSNumber
+                                        numberWithInt:[socket localPort]],
+-                                   @"remoteAddress" : [socket connectedHost],
++                                   @"remoteAddress" : [socket connectedHost] ?: @"",
+                                    @"remotePort" : [NSNumber
+                                        numberWithInt:[socket connectedPort]],
+                                    @"remoteFamily" : [socket isIPv4] ? @"IPv4"

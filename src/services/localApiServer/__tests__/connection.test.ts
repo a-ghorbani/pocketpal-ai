@@ -212,6 +212,30 @@ describe('handleConnection', () => {
     held.finish(0);
   });
 
+  it('drops an accepted socket whose peer left before any address was known', async () => {
+    jest.useFakeTimers();
+    const ctx = makeContext();
+    const gone = Object.assign(new FakeSocket(), {
+      localAddress: '',
+      remoteAddress: '',
+      remotePort: 0,
+    });
+    handleConnection(gone, ctx);
+    gone.peerClose();
+    jest.advanceTimersByTime(READ_DEADLINE_MS);
+    await flush();
+
+    expect(gone.writes).toEqual([]);
+    expect(ctx.openConnections.size).toBe(0);
+    expect(ctx.admit).not.toHaveBeenCalled();
+    expect(ctx.handleChat).not.toHaveBeenCalled();
+
+    const next = connect(ctx);
+    next.receive('GET /v1/models HTTP/1.1\r\nHost: localhost\r\n\r\n');
+    await flush();
+    expect(next.output).toMatch(/^HTTP\/1\.1 200 /);
+  });
+
   it('closes at once when its open connection is destroyed', async () => {
     const held = heldChat();
     const ctx = makeContext(held.handleChat);
