@@ -1,8 +1,13 @@
-/**
- * Memory display types
- *
- * Note: The actual memory fit calculation logic is in useMemoryCheck.ts
- * (getMemoryFitDetails function) to avoid circular dependencies.
- */
-
 export type MemoryFitStatus = 'fits' | 'tight' | 'wont_fit';
+
+/** Fits up to `fitBytes`, tight up to `totalBytes`, won't fit above. */
+export const memoryFitStatus = (
+  neededBytes: number,
+  fitBytes: number,
+  totalBytes: number,
+): MemoryFitStatus => {
+  if (neededBytes <= fitBytes) {
+    return 'fits';
+  }
+  return neededBytes <= totalBytes ? 'tight' : 'wont_fit';
+};
