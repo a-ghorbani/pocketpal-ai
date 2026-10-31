@@ -242,7 +242,7 @@ src/
 │   ├── plus/       # Plus feature catalog and gate
 │   ├── iap/        # In-app purchases (store bridge)
 │   ├── palshub/    # PalsHub marketplace integration
-│   ├── deviceRules/ # Device-compatibility rules (bundled, refreshed at launch)
+│   ├── deviceRules/ # Device-compatibility rules: parse, classify, launch-time fetch
 │   └── downloads/  # Model download manager
 ├── database/       # WatermelonDB schema, models, migrations
 ├── repositories/   # Data-access layer over the DB
