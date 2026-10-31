@@ -31,14 +31,14 @@ Chat with language models, give them a voice, and let them use tools — all on-
 
 ## Why PocketPal AI?
 
-Most AI apps are a thin window onto someone else's server — every message you type gets shipped off, logged, and analyzed somewhere you can't see. PocketPal flips that around: **the AI lives on your phone, and your conversations never leave it.**
+Most AI apps are a thin window onto someone else's server — every message you type gets shipped off, logged, and analyzed somewhere you can't see. PocketPal flips that around: **the AI lives on your phone, and your conversations stay on it unless you choose an online feature.**
 
-- **🔒 Private by default** — every prompt, response, and document stays on your device. None of it leaves your device unless you turn on an online feature such as web search or a remote server.
+- **🔒 Private by default** — every prompt, response, and document stays on your device unless you turn on an online feature such as web search or a remote server.
 - **✈️ Works offline** — download a model once and it just works, with no connection and no account. On a plane, on a trail, anywhere.
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app. The app also fetches public device-compatibility rules from the jsDelivr CDN at launch, and when it opens it checks purchases with the App Store or Google Play (and with PalsHub, if you bought premium Pals); none of this sends your chats or documents.
+> **Privacy note:** Your chats and documents leave your device only through features you turn on: web search and page reading, or a remote server. The app's other network use (model and voice downloads, PalsHub and purchases, device-compatibility rules from the jsDelivr CDN at launch, the opt-in benchmark leaderboard, and feedback or reports you submit) never attaches your chats.
 
 ## Contents
 
@@ -284,7 +284,7 @@ A **Talent** is a tool the model can call mid-conversation. Engines are register
 | `datetime` | `DatetimeEngine` | Current date / time |
 | `render_html` | `RenderHtmlEngine` | Renders model-produced HTML in chat |
 | `web_search` | `WebSearchEngine` | Searches the web (opt-in; needs a configured provider) |
-| `read_url` | `ReadUrlEngine` | Reads a web page (opt-in; needs a configured provider) |
+| `read_url` | `ReadUrlEngine` | Reads a web page from search results, a site you named, or a link on a page it read (opt-in; needs a configured provider) |
 
 Good first contributions:
 - A new **Talent** — implement a `TalentEngine` and register it in `src/services/talents/`.
