@@ -805,6 +805,33 @@ describe('useVoiceCapture', () => {
     expect(asrStore.captureState).toBe('idle');
   });
 
+  it('unmount during the memory check starts nothing', async () => {
+    let resolveFit:
+      | ((fit: {status: 'tight'; neededBytes: number}) => void)
+      | null = null;
+    mockMemoryFit.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveFit = resolve;
+        }),
+    );
+    const {result, unmount} = renderHook(() =>
+      useVoiceCapture({onTranscript: jest.fn()}),
+    );
+    await act(async () => {
+      result.current.start();
+    });
+
+    unmount();
+    await act(async () => {
+      resolveFit?.({status: 'tight', neededBytes: 5e9});
+    });
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
   it('unmount while transcribing stops whisper and rests the mic', async () => {
     mockTranscribe.mockImplementation(() => new Promise(() => {}));
     const {result, unmount} = await startRecording();
