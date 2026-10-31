@@ -41,8 +41,10 @@ export function useVoiceCapture(
   const {onTranscript} = options;
 
   const recordingRef = useRef(false);
-  // Bumped by start and cancel; work from an older session drops its result
-  // instead of writing capture state.
+  // Only the instance that started the capture cancels it on unmount.
+  const ownsCaptureRef = useRef(false);
+  // Bumped by start, cancel and unmount; work from an older session drops its
+  // result instead of writing capture state.
   const sessionRef = useRef(0);
   const segmenterRef = useRef<SpeechSegmenter | null>(null);
   const engineQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -190,6 +192,14 @@ export function useVoiceCapture(
     }
     const session = ++sessionRef.current;
     asrStore.setCaptureState('requesting_perm');
+    ownsCaptureRef.current = true;
+    when(
+      () =>
+        asrStore.captureState === 'idle' || asrStore.captureState === 'error',
+      () => {
+        ownsCaptureRef.current = false;
+      },
+    );
     (async () => {
       const fit = await asrStore.captureMemoryFit();
       if (session !== sessionRef.current) {
@@ -323,7 +333,7 @@ export function useVoiceCapture(
     });
     return () => {
       sub.remove();
-      if (recordingRef.current) {
+      if (recordingRef.current || ownsCaptureRef.current) {
         cancel();
       } else {
         session.current++;

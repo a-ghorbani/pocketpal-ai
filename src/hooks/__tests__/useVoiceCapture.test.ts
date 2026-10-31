@@ -727,4 +727,71 @@ describe('useVoiceCapture', () => {
     unmount();
     expect(mockAudioStop).toHaveBeenCalled();
   });
+
+  it('unmount during the permission prompt rests the mic and never records', async () => {
+    let resolvePerm: ((r: 'granted') => void) | null = null;
+    mockEnsureMicPermission.mockImplementation(
+      () =>
+        new Promise<'granted'>(resolve => {
+          resolvePerm = resolve;
+        }),
+    );
+    const {result, unmount} = renderHook(() =>
+      useVoiceCapture({onTranscript: jest.fn()}),
+    );
+    await act(async () => {
+      result.current.start();
+    });
+    expect(asrStore.captureState).toBe('requesting_perm');
+
+    unmount();
+    expect(asrStore.resetCapture).toHaveBeenCalled();
+    await act(async () => {
+      resolvePerm?.('granted');
+    });
+
+    expect(mockAudioStart).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it('unmount while transcribing stops whisper and rests the mic', async () => {
+    mockTranscribe.mockImplementation(() => new Promise(() => {}));
+    const {result, unmount} = await startRecording();
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(asrStore.captureState).toBe('transcribing');
+
+    unmount();
+
+    expect(mockCancelTranscription).toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it("unmounting another instance leaves this one's capture alone", async () => {
+    const other = renderHook(() => useVoiceCapture({onTranscript: jest.fn()}));
+    await startRecording();
+
+    other.unmount();
+
+    expect(asrStore.resetCapture).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('recording');
+  });
+
+  it('an instance whose capture ended does not cancel a newer one on unmount', async () => {
+    const first = await startRecording();
+    act(() => {
+      first.result.current.cancel();
+    });
+    await startRecording();
+    (asrStore.resetCapture as jest.Mock).mockClear();
+
+    first.unmount();
+
+    expect(asrStore.resetCapture).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('recording');
+  });
 });
