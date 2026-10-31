@@ -38,7 +38,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
+> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
 
 ## Contents
 
@@ -266,7 +266,7 @@ Versions are pinned in [`package.json`](package.json); the highlights:
 | Persistence | WatermelonDB (chat history), AsyncStorage (settings), Keychain (secrets) |
 | LLM | `llama.rn` `0.13.0-rc.9` → llama.cpp b11960 · GGUF |
 | ASR | `whisper.rn` `0.7.4` → whisper.cpp · GGML; mic via `@fugood/react-native-audio-pcm-stream` `1.1.4` |
-| TTS | `@pocketpalai/react-native-speech` `2.8.2` + `onnxruntime-react-native` `1.24.3` · ONNX; `@pocketpalai/react-native-speech-phonon` `0.1.3` |
+| TTS | `@pocketpalai/react-native-speech` `2.8.2` + `onnxruntime-react-native` `^1.23.2` · ONNX; `@pocketpalai/react-native-speech-phonon` `0.1.3` |
 | Tooling | Yarn 1 (Classic), ESLint, Prettier, Jest, Husky + Commitlint |
 
 </details>
@@ -288,8 +288,8 @@ A **Talent** is a tool the model can call mid-conversation. Engines are register
 
 Good first contributions:
 - A new **Talent** — implement a `TalentEngine` and register it in `src/services/talents/`.
-- A new **TTS engine** — add it under `src/services/tts/engines/`, add its id to `EngineId` (`types.ts`), register it in `engineRegistry.ts`, then wire its download state into `TTSStore` and its entry into the TTS setup sheet's voice picker (`src/components/TTSSetupSheet/`).
-- A new **locale** — add a JSON file in `src/locales/` (or translate on [Weblate](https://hosted.weblate.org/projects/pocketpal-ai/)).
+- A new **TTS engine** — model it on an existing engine in `src/services/tts/engines/`, and search `src/` for that engine's name, ignoring case, to find every registry, store, setup-sheet and string entry it needs.
+- A new **locale** — translate on [Weblate](https://hosted.weblate.org/projects/pocketpal-ai/); registering a new language in the app follows the steps in `src/locales/index.ts`.
 
 </details>
 
