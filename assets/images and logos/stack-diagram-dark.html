@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Editable source of stack-diagram-dark.png.
-     Render from this directory: google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=1200,1049 --screenshot=stack-diagram-dark.png stack-diagram-dark.html
+     Render from this directory: google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=1480,809 --screenshot=stack-diagram-dark.png stack-diagram-dark.html
      The window height must equal the frame height; adjust it when rows are added or removed. -->
 <html lang="en">
 <head>
@@ -14,9 +14,9 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { background: #1e1e1e; }
-  body { width: 1200px; font-family: Inter, sans-serif; line-height: normal; white-space: nowrap; }
+  body { width: 1480px; font-family: Inter, sans-serif; line-height: normal; white-space: nowrap; }
 
-  .frame { min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 56px 64px; background: #0d0d0f; border-radius: 28px; overflow: hidden; }
+  .frame { min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 56px 48px; background: #0d0d0f; border-radius: 28px; overflow: hidden; }
   .header { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .title { font-size: 34px; font-weight: 700; color: #fafafa; }
   .subtitle { font-size: 16px; font-weight: 400; color: #a1a1aa; }
@@ -24,26 +24,25 @@
 
   .layer { display: flex; align-items: center; gap: 24px; width: 100%; padding: 22px 24px; background: #161619; border-radius: 18px; box-shadow: inset 0 0 0 1px #2a2a2e; }
   .layer.top { align-items: flex-start; }
-  .layer-label { display: flex; flex-direction: column; gap: 4px; flex: 0 0 230px; }
+  .layer-label { display: flex; flex-direction: column; gap: 4px; flex: 0 0 170px; }
   .layer-name { font-size: 18px; font-weight: 600; color: #ffd60a; }
   .layer-sub { font-size: 13px; font-weight: 400; color: #71717a; }
 
   .chips { display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 12px; flex: 1; min-width: 0; }
-  .chip { display: flex; align-items: center; gap: 9px; padding: 10px 14px; background: #232327; border-radius: 10px; box-shadow: inset 0 0 0 1px #3a3a40; font-size: 15px; font-weight: 500; color: #ededed; }
+  .chip { display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 14px; background: #232327; border-radius: 10px; box-shadow: inset 0 0 0 1px #3a3a40; font-size: 15px; font-weight: 500; color: #ededed; }
   .chip.engine { gap: 10px; }
   .format { font-size: 14px; font-weight: 500; color: #8a8a92; }
   .logo { width: 22px; height: 22px; flex: none; background: center / contain no-repeat; }
-  .logo.llama-cpp { width: 131.64px; height: 26px; }
+  .logo.llama-cpp { width: 121.52px; height: 24px; }
 
-  .paths { display: flex; flex-direction: column; gap: 20px; flex: 1; min-width: 0; }
-  .path-row { display: flex; align-items: flex-start; gap: 40px; }
+  .cols { display: grid; grid-template-columns: 217px 173px auto; column-gap: 24px; align-items: start; justify-items: start; flex: 1; min-width: 0; }
+  .tts-cols { display: grid; grid-template-columns: 428px 264px; column-gap: 12px; row-gap: 10px; align-items: center; justify-items: start; }
   .path { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
   .path-label, .voices-label { font-size: 11px; font-weight: 600; letter-spacing: 0.66px; color: #80808a; }
-  .stack { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-  .box { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #202024; border-radius: 12px; box-shadow: inset 0 0 0 1px #3a3a40; }
-  .box-title { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 500; color: #ededed; }
+  .box { grid-column: 1 / -1; justify-self: stretch; display: grid; grid-template-columns: subgrid; align-items: center; justify-items: start; row-gap: 12px; padding: 12px 14px; background: #202024; border-radius: 12px; box-shadow: inset 0 0 0 1px #3a3a40; }
+  .box-title { grid-column: 1 / -1; display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 500; color: #ededed; }
   .voices { display: flex; align-items: center; gap: 8px; }
-  .chip.voice { padding: 9px 14px 9px 12px; }
+  .chip.voice { padding: 0 14px 0 12px; }
   .avatar { width: 24px; height: 24px; flex: none; border-radius: 6px; background: center / cover no-repeat; }
 
   .logo.react { background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIiIGhlaWdodD0iMjIiIHZpZXdCb3g9IjAgMCAyMiAyMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBpZD0ibG9nbyI+PHBhdGggaWQ9IlZlY3RvciIgZD0iTTEzLjA0NDIgMTEuMDAzN0MxMy4wNDQyIDExLjU0NzEgMTIuODI4MyAxMi4wNjgzIDEyLjQ0NDIgMTIuNDUyN0MxMi4wNiAxMi44MzcgMTEuNTM4OSAxMy4wNTMxIDEwLjk5NTQgMTMuMDUzM0MxMC40NTE4IDEzLjA1MzMgOS45MzA0NyAxMi44Mzc0IDkuNTQ2MDggMTIuNDUzQzkuMTYxNyAxMi4wNjg2IDguOTQ1NzUgMTEuNTQ3MyA4Ljk0NTc1IDExLjAwMzdDOC45NDU3NSAxMC40NjAyIDkuMTYxNTcgOS45MzkwMiA5LjU0NTc2IDkuNTU0NjZDOS45Mjk5NSA5LjE3MDMgMTAuNDUxMSA4Ljk1NDI0IDEwLjk5NDUgOC45NTRDMTEuNTM4MSA4Ljk1NCAxMi4wNTk0IDkuMTY5OTUgMTIuNDQzOCA5LjU1NDMzQzEyLjgyODIgOS45Mzg3MiAxMy4wNDQyIDEwLjQ2MDEgMTMuMDQ0MiAxMS4wMDM3Wk0xNS40NzE1IDEuMjA0NUMxNC4yMzc3IDEuMjA0NSAxMi42MjM0IDIuMDg0NSAxMC45OTA4IDMuNjA4QzkuMzU5MTcgMi4wOTI3NSA3Ljc0NCAxLjIyMjgzIDYuNTExMDggMS4yMjI4M0M2LjEzNTI1IDEuMjIyODMgNS43OTMzMyAxLjMwODA4IDUuNDk3MjUgMS40Nzc2N0M0LjIzNjgzIDIuMjA0NTggMy45NTQ1IDQuNDY5NjcgNC42MDUzMyA3LjMxMjI1QzEuODE1IDguMTczOTIgMCA5LjU1MTY3IDAgMTEuMDAzN0MwIDEyLjQ2MTIgMS44MjQxNyAxMy44NDI2IDQuNjIyNzUgMTQuNjk3OEMzLjk3NzQyIDE3LjU1MTQgNC4yNjUyNSAxOS44MjAyIDUuNTI4NDIgMjAuNTQ2MkM1LjgyMTc1IDIwLjcxNzYgNi4xNjA5MiAyMC43OTgyIDYuNTM4NTggMjAuNzk4MkM3Ljc3MTUgMjAuNzk4MiA5LjM4NjY3IDE5LjkxODMgMTEuMDE5MiAxOC4zOTI5QzEyLjY1MDkgMTkuOTA5MSAxNC4yNjYxIDIwLjc3OSAxNS40OTkgMjAuNzc5QzE1Ljg3NDggMjAuNzc5IDE2LjIxNjggMjAuNjk2NSAxNi41MTI4IDIwLjUyNjlDMTcuNzcyMyAxOS44MDA5IDE4LjA1NTYgMTcuNTM1OCAxNy40MDQ4IDE0LjY5MjNDMjAuMTg1IDEzLjgzOCAyMiAxMi40NTc1IDIyIDExLjAwMzdDMjIgOS41NDYxNyAyMC4xNzU4IDguMTY0NzUgMTcuMzc3MyA3LjMwNzY3QzE4LjAyMjYgNC40NTY4MyAxNy43MzQ4IDIuMTg2MjUgMTYuNDcxNiAxLjQ1OTMzQzE2LjE4MDEgMS4yOTA2NyAxNS44NDE4IDEuMjA1NDIgMTUuNDcxNSAxLjIwNDVaTTE1LjQ2NjkgMi4yMDM2N1YyLjIwOTE3QzE1LjY3MzIgMi4yMDkxNyAxNS44MzkxIDIuMjQ5NSAxNS45Nzg0IDIuMzI1NThDMTYuNTg4OSAyLjY3NTc1IDE2Ljg1MzggNC4wMDc2NyAxNi42NDc2IDUuNzIwOTJDMTYuNTk4MSA2LjE0MjU4IDE2LjUxNzQgNi41ODcxNyAxNi40MTg0IDcuMDQwOTJDMTUuNTM4NCA2LjgyNDU4IDE0LjU3OTYgNi42NTg2NyAxMy41NzAzIDYuNTUxNDJDMTIuOTY1MyA1LjcyMTgzIDEyLjMzNzQgNC45NjgzMyAxMS43MDQ5IDQuMzA4MzNDMTMuMTY0MyAyLjk1MTY3IDE0LjUzNDcgMi4yMDczMyAxNS40Njc4IDIuMjA0NThMMTUuNDY2OSAyLjIwMzY3Wk02LjUxMTA4IDIuMjIyQzcuNDM4NzUgMi4yMjIgOC44MTU1OCAyLjk2MjY3IDEwLjI3ODYgNC4zMTJDOS42NDk3NSA0Ljk3MiA5LjAyMjc1IDUuNzIwOTIgOC40MjY5MiA2LjU1MDVDNy40MTIxNyA2LjY1Nzc1IDYuNDUyNDIgNi44MjM2NyA1LjU3MzMzIDcuMDQzNjdDNS40NzA2NyA2LjU5NDUgNS4zOTQ1OCA2LjE2IDUuMzQwNSA1Ljc0MkM1LjEyOTY3IDQuMDI5NjcgNS4zOSAyLjY5ODY3IDUuOTk1IDIuMzQzOTJDNi4xNjkxNyAyLjI2MTQyIDYuMzYxNjcgMi4yMjY1OCA2LjUxMTA4IDIuMjIyWk0xMC45ODYyIDUuMDE3ODNDMTEuNDAzMyA1LjQ0NjgzIDExLjgyMDQgNS45MjcxNyAxMi4yMzI5IDYuNDUxNUMxMS44Mjk2IDYuNDMzMTcgMTEuNDE3MSA2LjQyMDMzIDExIDYuNDIwMzNDMTAuNTc4MyA2LjQyMDMzIDEwLjE2MTMgNi40Mjk1IDkuNzUzMzMgNi40NTE1QzEwLjE1NjcgNS45MjcxNyAxMC41NzM3IDUuNDQ3NzUgMTAuOTg2MiA1LjAxNzgzWk0xMSA3LjQyNUMxMS42NzgzIDcuNDI1IDEyLjM1MzkgNy40NTYxNyAxMy4wMTg1IDcuNTEwMjVDMTMuMzkwNyA4LjA0Mzc1IDEzLjc1MzcgOC42MTMgMTQuMTAyOSA5LjIxNTI1QzE0LjQ0MzkgOS44MDE5MiAxNC43NTM3IDEwLjM5NzcgMTUuMDM2MSAxMC45OTkxQzE0Ljc1MzcgMTEuNTk5NSAxNC40NDM5IDEyLjE5OTkgMTQuMTA3NSAxMi43ODY2QzEzLjc1OTIgMTMuMzkxNiAxMy4zOTg5IDEzLjk2NzMgMTMuMDI1OCAxNC41MDA4QzEyLjM1ODUgMTQuNTU4NSAxMS42ODIgMTQuNTkwNiAxMSAxNC41OTA2QzEwLjMyMTcgMTQuNTkwNiA5LjY0NjA4IDE0LjU1ODUgOC45ODE1IDE0LjUwNTNDOC42MDkzMyAxMy45NzE4IDguMjQ2MzMgMTMuNDAxNyA3Ljg5NzA4IDEyLjgwMDNDNy41NTYwOCAxMi4yMTM3IDcuMjQ2MjUgMTEuNjE3OCA2Ljk2MzkyIDExLjAxNjVDNy4yNDE2NyAxMC40MTQzIDcuNTU2MDggOS44MTI5MiA3Ljg5MjUgOS4yMjUzM0M4LjI0MDgzIDguNjIwMzMgOC42MDEwOCA4LjA0NjUgOC45NzQxNyA3LjUxM0M5LjY0MTUgNy40NTQzMyAxMC4zMTggNy40MjMxNyAxMSA3LjQyMzE3VjcuNDI1Wk03LjY2NzkyIDcuNjU3ODNDNy40NDc5MiA4LjAwMzQyIDcuMjI3OTIgOC4zNTcyNSA3LjAyMjU4IDguNzIxMTdDNi44MTYzMyA5LjA3ODY3IDYuNjIzODMgOS40MzggNi40NDA1IDkuNzk3MzNDNi4xOTc1OCA5LjE5NiA1Ljk5MTMzIDguNTk2NSA1LjgyMDgzIDguMDEyNThDNi40MDc1IDcuODc1MDggNy4wMjYyNSA3Ljc1MjI1IDcuNjY3OTIgNy42NTc4M1pNMTQuMzIyOSA3LjY1NzgzQzE0Ljk2IDcuNzUyMjUgMTUuNTc0MiA3Ljg2ODY3IDE2LjE2MTggOC4wMTI1OEMxNS45OTY4IDguNTkxOTIgMTUuNzkwNSA5LjE4Nzc1IDE1LjU1NjggOS43ODQ1QzE1LjM3MzQgOS40MjcgMTUuMTgwOSA5LjA2Njc1IDE0Ljk3MDEgOC43MDgzM0MxNC43NjM4IDguMzQ5IDE0LjU0MzggNy45OTg4MyAxNC4zMjM4IDcuNjU3ODNIMTQuMzIyOVpNMTcuMTMwNyA4LjI3NjU4QzE3LjU3NDMgOC40MTQwOCAxNy45OTYgOC41NjcxNyAxOC4zOTExIDguNzMzMDhDMTkuOTc4OCA5LjQxMTQyIDIxLjAwNTQgMTAuMjk4OCAyMS4wMDU0IDExLjAwMjhDMjEuMDAwOCAxMS43MDY4IDE5Ljk3NDIgMTIuNTk3NyAxOC4zODY1IDEzLjI3MTVDMTguMDAxNSAxMy40MzY1IDE3LjU3OTggMTMuNTg1IDE3LjE0NDQgMTMuNzIzNEMxNi44ODc3IDEyLjg0NTIgMTYuNTUyMyAxMS45MzA0IDE2LjEzNjEgMTAuOTkxOEMxNi41NDg2IDEwLjA1OTUgMTYuODc4NiA5LjE0OTI1IDE3LjEzMDcgOC4yNzQ3NVY4LjI3NjU4Wk00Ljg1MTkyIDguMjgwMjVDNS4xMDY3NSA5LjE2MDI1IDUuNDQzMTcgMTAuMDc0MiA1Ljg2MDI1IDExLjAxMTlDNS40NDc3NSAxMS45NDQyIDUuMTE1OTIgMTIuODU0NCA0Ljg2NDc1IDEzLjcyODlDNC40MjEwOCAxMy41OTE0IDMuOTk5NDIgMTMuNDM3NCAzLjYwODkyIDEzLjI3MDZDMi4wMjEyNSAxMi41OTUgMC45OTQ1ODMgMTEuNzA2OCAwLjk5NDU4MyAxMS4wMDI4QzAuOTk0NTgzIDEwLjI5ODggMi4wMjEyNSA5LjQwNTkyIDMuNjA4OTIgOC43MzMwOEMzLjk5MzkyIDguNTY4MDggNC40MTU1OCA4LjQxOTU4IDQuODUxOTIgOC4yODAyNVpNMTUuNTU2OCAxMi4yMDM2QzE1Ljc5OTcgMTIuODA1OCAxNi4wMDU5IDEzLjQwNjIgMTYuMTc2NCAxMy45ODkyQzE1LjU4OTcgMTQuMTMzMiAxNC45NzAxIDE0LjI1NTEgMTQuMzI4NCAxNC4zNDY4QzE0LjU0ODQgMTQuMDAzIDE0Ljc2ODQgMTMuNjQ4MyAxNC45NzQ3IDEzLjI4NTNDMTUuMTgwOSAxMi45Mjc4IDE1LjM3MjUgMTIuNTYyOSAxNS41NTY4IDEyLjIwMzZaTTYuNDQwNSAxMi4yMjE5QzYuNjIzODMgMTIuNTgxMiA2LjgxNjMzIDEyLjkzOTcgNy4wMjcxNyAxMy4yOTlDNy4yMzggMTMuNjU2NSA3LjQ1MzQyIDE0LjAwNjcgNy42NzM0MiAxNC4zNDY4QzcuMDM2MzMgMTQuMjUzMiA2LjQyMjE3IDE0LjEzNTkgNS44MzQ1OCAxMy45OTI5QzUuOTk5NTggMTMuNDE1NCA2LjIwNjc1IDEyLjgxNzcgNi40Mzk1OCAxMi4yMjFMNi40NDA1IDEyLjIyMTlaTTE2LjQyNjcgMTQuOTZDMTYuNTI5MyAxNS40MTE5IDE2LjYxIDE1Ljg0NzMgMTYuNjU5NSAxNi4yNjQ0QzE2Ljg3MDMgMTcuOTc2OCAxNi42MSAxOS4zMDc4IDE2LjAwNSAxOS42NjM0QzE1Ljg3MDIgMTkuNzQ1OSAxNS42OTUyIDE5Ljc4MDggMTUuNDg4OSAxOS43ODA4QzE0LjU2MTIgMTkuNzgwOCAxMy4xODQ0IDE5LjA0MSAxMS43MjE0IDE3LjY5MDhDMTIuMzUwMyAxNy4wMzA4IDEyLjk3NzMgMTYuMjgyNyAxMy41NzMxIDE1LjQ1NDFDMTQuNTg3OCAxNS4zNDU5IDE1LjU0NzYgMTUuMTggMTYuNDI2NyAxNC45NlpNNS41ODI1IDE0Ljk2OTJDNi40NjI1IDE1LjE4MzcgNy40MjEzMyAxNS4zNDk2IDguNDMwNTggMTUuNDU2OEM5LjAzNTU4IDE2LjI4NjQgOS42NjM1IDE3LjAzOTkgMTAuMjk2IDE3LjY5OUM4LjgzMzkyIDE5LjA1ODQgNy40NjE2NyAxOS44MDI4IDYuNTI4NSAxOS44MDI4QzYuMzI2ODMgMTkuNzk4MiA2LjE1NjMzIDE5Ljc1NjkgNi4wMjE1OCAxOS42ODE4QzUuNDExMDggMTkuMzMzNCA1LjE0NjE3IDE4LjAwMDYgNS4zNTI0MiAxNi4yODczQzUuNDAxOTIgMTUuODY1NyA1LjQ4MzUgMTUuNDIyIDUuNTgyNSAxNC45NjkyWk05Ljc2MjUgMTUuNTU1OEMxMC4xNjU4IDE1LjU3NDIgMTAuNTc4MyAxNS41ODcgMTAuOTk1NCAxNS41ODdDMTEuNDE3MSAxNS41ODcgMTEuODM0MiAxNS41Nzc4IDEyLjI0MjEgMTUuNTU1OEMxMS44Mzg3IDE2LjA4MDIgMTEuNDIxNyAxNi41NTk2IDExLjAwOTIgMTYuOTkwNEMxMC41OTIxIDE2LjU1OTYgMTAuMTc1IDE2LjA4MDIgOS43NjI1IDE1LjU1NThaIiBmaWxsPSJ3aGl0ZSIvPjwvZz48L3N2Zz4="); }
@@ -81,20 +80,18 @@
 
   <div class="layer top">
     <div class="layer-label"><p class="layer-name">Bridging</p><p class="layer-sub">native modules</p></div>
-    <div class="paths">
-      <div class="path-row">
-        <div class="path">
-          <p class="path-label">LLM</p>
-          <div class="chip"><span class="logo react"></span>llama.rn</div>
-        </div>
-        <div class="path">
-          <p class="path-label">SPEECH-TO-TEXT</p>
-          <div class="chip"><span class="logo react"></span>whisper.rn</div>
-        </div>
+    <div class="cols">
+      <div class="path">
+        <p class="path-label">LLM</p>
+        <div class="chip"><span class="logo react"></span>llama.rn</div>
+      </div>
+      <div class="path">
+        <p class="path-label">SPEECH-TO-TEXT</p>
+        <div class="chip"><span class="logo react"></span>whisper.rn</div>
       </div>
       <div class="path">
         <p class="path-label">TEXT-TO-SPEECH</p>
-        <div class="stack">
+        <div class="tts-cols">
           <div class="box">
             <div class="box-title"><span class="logo react"></span>react-native-speech</div>
             <div class="voices">
@@ -102,13 +99,11 @@
               <div class="chip voice"><span class="avatar kokoro"></span>Kokoro</div>
               <div class="chip voice"><span class="avatar kitten"></span>Kitten</div>
               <div class="chip voice"><span class="avatar supertonic"></span>Supertonic</div>
-              <div class="chip">Phonon</div>
             </div>
+            <div class="chip">Phonon</div>
           </div>
-          <div class="chips">
-            <div class="chip"><span class="logo onnx"></span>onnxruntime-react-native</div>
-            <div class="chip"><span class="logo react"></span>react-native-speech-phonon</div>
-          </div>
+          <div class="chip"><span class="logo onnx"></span>onnxruntime-react-native</div>
+          <div class="chip"><span class="logo react"></span>react-native-speech-phonon</div>
         </div>
       </div>
     </div>
@@ -118,11 +113,13 @@
 
   <div class="layer">
     <div class="layer-label"><p class="layer-name">Engine</p><p class="layer-sub">C / C++ / Rust</p></div>
-    <div class="chips">
+    <div class="cols">
       <div class="chip engine"><span class="logo llama-cpp"></span><span class="format">· GGUF</span></div>
       <div class="chip engine">whisper.cpp<span class="format">· GGML</span></div>
-      <div class="chip engine"><span class="logo onnx"></span>ONNX Runtime<span class="format">· ONNX</span></div>
-      <div class="chip engine">Phonon<span class="format">· GGUF / Core ML</span></div>
+      <div class="tts-cols">
+        <div class="chip engine"><span class="logo onnx"></span>ONNX Runtime<span class="format">· ONNX</span></div>
+        <div class="chip engine">Phonon<span class="format">· GGUF / Core ML</span></div>
+      </div>
     </div>
   </div>
 
