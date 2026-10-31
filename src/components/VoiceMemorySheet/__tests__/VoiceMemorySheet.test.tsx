@@ -79,6 +79,9 @@ describe('VoiceMemorySheet', () => {
     expect(getByText(strings.memoryWontFitTitle)).toBeTruthy();
     expect(getByText(strings.memoryWontFitBody)).toBeTruthy();
     expect(queryByText(strings.memoryTightBody)).toBeNull();
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /3\.7 GB of 3\.3 GB available/,
+    );
     expect(queryByTestId('voice-memory-continue')).toBeNull();
     expect(getByTestId('voice-memory-smaller-model')).toBeTruthy();
   });

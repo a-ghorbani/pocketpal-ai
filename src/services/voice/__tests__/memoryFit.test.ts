@@ -64,6 +64,7 @@ describe('voiceMemoryFit', () => {
       ttsBytes: TTS_ENGINE_RUNTIME_BYTES.kitten,
     });
     expect(fit.status).toBe('wont_fit');
+    expect(fit.breakdown.availableBytes).toBe(7.4e9);
   });
 
   it('fits a 1.4 GB chat model on the same phone', () => {
@@ -132,10 +133,14 @@ describe('voiceMemoryFit', () => {
         chatBytes,
         sttTier: 'base',
         ttsBytes,
-      }).status;
-    expect(at(4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1)).toBe('tight');
-    expect(at(6e9 - sttBytes - ttsBytes)).toBe('tight');
-    expect(at(6e9 - sttBytes - ttsBytes + 1)).toBe('wont_fit');
+      });
+    expect(at(4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1).status).toBe('tight');
+    const tight = at(6e9 - sttBytes - ttsBytes);
+    expect(tight.status).toBe('tight');
+    expect(tight.breakdown.availableBytes).toBe(4e9 * ASR_IOS_CEILING_SHARE);
+    const wontFit = at(6e9 - sttBytes - ttsBytes + 1);
+    expect(wontFit.status).toBe('wont_fit');
+    expect(wontFit.breakdown.availableBytes).toBe(6e9);
   });
 
   it.each([

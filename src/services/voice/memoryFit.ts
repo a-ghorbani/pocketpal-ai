@@ -53,10 +53,12 @@ export const voiceMemoryFit = ({
     {kind: 'stt', bytes: sttBytes},
     {kind: 'tts', bytes: ttsBytes},
   ];
-  const availableBytes = memoryBudget(memory);
   const neededBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
+  const status = asrMemoryStatus(memory, neededBytes);
+  const availableBytes =
+    status === 'wont_fit' ? memory.totalBytes : memoryBudget(memory);
   return {
-    status: asrMemoryStatus(memory, neededBytes),
+    status,
     sttTier,
     breakdown: {rows, neededBytes, availableBytes},
   };
