@@ -32,3 +32,27 @@ describe('NJITService', () => {
     expect(result.latencyMicroseconds).toBeGreaterThanOrEqual(0);
   });
 });
+
+import { SQLiteShardProvider } from '../SQLiteShardProvider';
+
+describe('SQLiteShardProvider (Air-Gapped Local RAG)', () => {
+  it('stores and loads shards into NJITService without tool-calling', async () => {
+    const provider = new SQLiteShardProvider();
+    const service = NJITService.getInstance();
+
+    const sampleShard = NJITService.createSampleShard(
+      'ahyeon-profile',
+      'kpop-ahyeon',
+      'Ahyeon Vocal Stems & Profile',
+      1024
+    );
+
+    await provider.putShard(sampleShard);
+    const loaded = await provider.loadShardToNJIT('ahyeon-profile');
+    expect(loaded).toBe(true);
+
+    const grafted = service.graftToContext('ahyeon-profile');
+    expect(grafted.success).toBe(true);
+    expect(grafted.tokensInjected).toBe(1024);
+  });
+});
