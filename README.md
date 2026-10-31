@@ -55,7 +55,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 ## Features
 
 - **🧠 On-device chat** — run GGUF language models (Gemma, Qwen, Phi, Llama, and more) fully offline.
-- **🗣️ Text-to-speech** — give your assistant a voice with on-device neural voices (Kokoro, Kitten, Supertonic, and Phonon on supported devices) that make no cloud calls, or your phone's system voices.
+- **🗣️ Text-to-speech** — give your assistant a voice with on-device neural voices (Kokoro, Kitten, Supertonic, and Phonon on supported devices) that synthesize speech on your phone, or your phone's system voices.
 - **🎙️ Voice input** — dictate messages with on-device Whisper speech recognition (whisper.cpp).
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app purchase.
