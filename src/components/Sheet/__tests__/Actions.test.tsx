@@ -32,7 +32,7 @@ const barStyle = (utils: ReturnType<typeof renderBar>) =>
   StyleSheet.flatten(
     (utils.toJSON() as ReactTestRendererJSON).props
       .style as StyleProp<ViewStyle>,
-  );
+  ) as ViewStyle;
 
 describe('Actions', () => {
   beforeEach(() => {

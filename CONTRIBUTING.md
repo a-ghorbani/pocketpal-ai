@@ -40,6 +40,20 @@ We highly encourage testing your changes before submitting a pull request.
   yarn android
   ```
 
+### Build flags
+
+`PLUS_STORE_GATE` is an environment variable of the command that bundles the JS, not a `.env` key.
+
+- Unset (the default): every PocketPal Plus feature is free and no purchase UI appears.
+- `true`: Plus is gated behind a purchase. Only the official store builds set it.
+- E2E builds (`E2E_BUILD=true`) are gated by default; `PLUS_STORE_GATE=false` turns that off.
+
+Set it on the process that bundles: Metro for debug builds, Gradle or Xcode for release builds. After changing it on a debug build, restart Metro with a clean cache:
+
+```bash
+PLUS_STORE_GATE=true yarn start:reset
+```
+
 ### Linting and Type Checking
 
 Make sure your code passes the lint and type check processes:
@@ -95,3 +109,13 @@ Before opening a pull request, make sure:
 - Your changes are focused and kept to a **single logical change**.
 - Your code is linted and passes type checks.
 - Tests are added or updated if applicable.
+- CI passes. Pull requests with failing checks are not reviewed until they pass.
+- You have run the change on at least one platform and described how you verified it. For visible UI changes, attach screenshots or a recording. Pull requests without this may be closed without review.
+
+Using an AI agent? Point it at [`AGENTS.md`](./AGENTS.md).
+
+## License
+
+By contributing to PocketPal AI (this repository), you agree to license your contributions under the MIT license.
+
+You also confirm that you have the right to submit the contribution, and that it does not include code or content you are not permitted to license under MIT.

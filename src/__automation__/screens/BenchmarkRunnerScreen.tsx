@@ -21,7 +21,7 @@ import {modelStore} from '../../store';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {getDeviceOptions} from '../../utils/deviceSelection';
 import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
-import {activateKeepAwake, deactivateKeepAwake} from '../../utils/keepAwake';
+import {acquireKeepAwake} from '../../utils/keepAwake';
 import type {Model} from '../../utils/types';
 import {
   BENCH_LOG_RE,
@@ -565,7 +565,7 @@ export async function runMatrix(
   // logging on or benchmarkActive=true. Both cleanup calls in the
   // finally are idempotent — safe to call even if their setup
   // counterpart never ran or only partially ran.
-  let keepAwakeClaimed = false;
+  let releaseKeepAwake: (() => void) | undefined;
   let report: BenchmarkReport | undefined;
   let path: string | undefined;
   let shellWritten = false;
@@ -585,14 +585,7 @@ export async function runMatrix(
     // The runner from this point on calls `initLlama` directly per cell;
     // it never touches `modelStore.context` / `modelStore.activeModelId`.
     await modelStore.enterBenchmarkMode();
-    // Claimed only after enterBenchmarkMode so a local chat's own
-    // deactivate has already run; the native flag is not ref-counted.
-    keepAwakeClaimed = true;
-    try {
-      activateKeepAwake();
-    } catch (e) {
-      console.warn(`[BENCH] keep-awake activate failed: ${String(e)}`);
-    }
+    releaseKeepAwake = acquireKeepAwake();
     const startTimestamp = new Date().toISOString();
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
     path = reportPath(safeStamp);
@@ -1074,13 +1067,7 @@ export async function runMatrix(
     }
     throw e;
   } finally {
-    if (keepAwakeClaimed) {
-      try {
-        deactivateKeepAwake();
-      } catch (e) {
-        console.warn(`[BENCH] keep-awake deactivate failed: ${String(e)}`);
-      }
-    }
+    releaseKeepAwake?.();
     // Outer matrix-level finally: success and failure paths converge here.
     // No "restore settings" step is required — under the isolated
     // lifecycle the runner never wrote to `modelStore.contextInitParams`,

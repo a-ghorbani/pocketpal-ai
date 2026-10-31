@@ -106,6 +106,7 @@ import {resolveModelCaps} from '../utils/modelCaps';
 import type {CapabilityEnv, ModelCapabilityView} from '../utils/modelCaps';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
+import {vtrace} from '../utils/voiceTrace';
 import {
   createContextInitParams,
   createDefaultContextInitParams,
@@ -185,7 +186,7 @@ class ModelStore {
     return [...filterProjectionModels(this.models), ...this.remoteModels];
   }
 
-  appState: AppStateStatus = AppState.currentState;
+  appState: AppStateStatus = AppState.currentState as AppStateStatus;
   useAutoRelease: boolean = true;
   // UI loading state - true during model load/release transitions
   isContextLoading: boolean = false;
@@ -260,6 +261,8 @@ class ModelStore {
   availableMemoryCeiling: number | undefined = undefined;
   // Updated after successful model load using GGUF estimator
   largestSuccessfulLoad: number | undefined = undefined;
+  // Estimated memory of the loaded local context; undefined when none.
+  loadedModelBytes: number | undefined = undefined;
   // Projection models orphaned by the vision heal, awaiting deletion; drained
   // every launch (see drainPendingProjectionCleanup).
   pendingProjectionCleanupIds: string[] = [];
@@ -1160,28 +1163,37 @@ class ModelStore {
       const model = this.models.find(
         m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
       );
+      this.clearAutoReleaseFlags();
       if (model) {
+        this.pendingModelId = model.id;
+        await this.contextOperationMutex;
+        if (this.pendingModelId !== model.id || this.wasAutoReleased) {
+          return;
+        }
         console.log('Reloading auto-released model:', model.id);
         await this.initContext(model);
       }
-      this.clearAutoReleaseFlags();
     }
   };
 
   handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    console.log(`App state change: ${this.appState} → ${nextAppState}`);
+    const prevAppState = this.appState;
+    runInAction(() => {
+      this.appState = nextAppState;
+    });
+    console.log(`App state change: ${prevAppState} → ${nextAppState}`);
 
     if (
-      this.appState.match(/inactive|background/) &&
+      prevAppState.match(/inactive|background/) &&
       nextAppState === 'active'
     ) {
       // Coming to foreground - check if we need to reload auto-released model
       await this.checkAndReloadAutoReleasedModel();
       this.probeSessionCapsIfUnanswered();
-    } else if (this.appState === 'active' && nextAppState === 'inactive') {
+    } else if (prevAppState === 'active' && nextAppState === 'inactive') {
       // active → inactive: NO action (per requirements)
       console.log('Active → Inactive: No auto-release action');
-    } else if (this.appState === 'inactive' && nextAppState === 'background') {
+    } else if (prevAppState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
       // Skip for remote models — no native context to release, and
       // releaseContext() would clear the engine with no reload path.
@@ -1194,7 +1206,7 @@ class ModelStore {
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
       }
-    } else if (this.appState === 'active' && nextAppState === 'background') {
+    } else if (prevAppState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
       // Skip for remote models — same reason as above.
       if (
@@ -1207,10 +1219,6 @@ class ModelStore {
         await this.releaseContext();
       }
     }
-
-    runInAction(() => {
-      this.appState = nextAppState;
-    });
   };
 
   /**
@@ -2404,6 +2412,20 @@ class ModelStore {
         this.pendingModelId = null;
       });
 
+      try {
+        const loadedBytes = getModelMemoryRequirement(
+          model,
+          projectionModel,
+          this.memoryEstimateSettings,
+          pairedDraftModel(draftConfig),
+        );
+        runInAction(() => {
+          this.loadedModelBytes = loadedBytes;
+        });
+      } catch (error) {
+        console.warn('[ModelStore] Failed to estimate loaded model:', error);
+      }
+
       // Update largestSuccessfulLoad using GGUF estimator
       try {
         const estimated = getModelMemoryRequirement(
@@ -2462,6 +2484,11 @@ class ModelStore {
     chatSessionStore.exitEditMode();
     this.isReleasingContext = true;
     try {
+      vtrace('abortActive', {
+        by: 'release',
+        clearActiveModel,
+        app: this.appState,
+      });
       await this.generationSlot.abortActive();
       return await this.releaseEngine(clearActiveModel);
     } finally {
@@ -2529,6 +2556,7 @@ class ModelStore {
         this.engine = undefined;
         this.activeRemoteBinding = undefined;
         this.activeContextSettings = undefined;
+        this.loadedModelBytes = undefined;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
@@ -2574,6 +2602,7 @@ class ModelStore {
   };
 
   manualReleaseContext = async () => {
+    this.pendingModelId = null;
     await this.releaseContext(true); // Clear active model for manual release
   };
 
@@ -2685,6 +2714,8 @@ class ModelStore {
     if (!model.serverId || !model.remoteModelId) {
       throw new Error('Model is missing remote configuration');
     }
+
+    this.pendingModelId = model.id;
 
     // Release any existing context (local or remote)
     await this.releaseContext();
@@ -3414,6 +3445,7 @@ class ModelStore {
     this.generationSlot.tryAcquire(this.grantableEngine);
 
   abortActiveGeneration = (): void => {
+    vtrace('abortActive', {by: 'abortActiveGeneration'});
     this.generationSlot.abortActive();
   };
 

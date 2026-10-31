@@ -6,12 +6,20 @@ import {
   SystemPromptContext,
 } from './types';
 import type {SearchAccess} from './searchAccess';
+import {SEARCH_NOT_SET_UP_MESSAGE} from './searchAccess';
 import type {SearchHit} from '../search/types';
-import {budgetHits, getCachedHits, setCachedHits} from '../search/searchBudget';
+import {
+  budgetHits,
+  cacheKey,
+  getCachedHits,
+  setCachedHits,
+} from '../search/searchBudget';
 import {wrapUntrusted} from './untrustedContent';
 import {allowReadUrls} from './readUrlAllowlist';
 
 const PER_SNIPPET_CHARS = 280;
+
+const inFlight = new Map<string, Promise<SearchHit[]>>();
 
 const formatHit = (hit: SearchHit): string => {
   const date = hit.publishedAt ? ` *(${hit.publishedAt})*` : '';
@@ -56,11 +64,10 @@ export class WebSearchEngine implements TalentEngine {
     }
 
     if (!this.access.canSearch()) {
-      const provider = this.access.getActiveProvider();
       return {
         type: 'error',
-        summary: `web_search: ${provider.id} not enabled`,
-        errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
+        summary: `web_search: ${SEARCH_NOT_SET_UP_MESSAGE}`,
+        errorMessage: SEARCH_NOT_SET_UP_MESSAGE,
       };
     }
 
@@ -70,10 +77,20 @@ export class WebSearchEngine implements TalentEngine {
     let hits: SearchHit[];
     try {
       const cached = getCachedHits(provider.id, query, maxResults);
+      const key = cacheKey(provider.id, query, maxResults);
+      const shared = inFlight.get(key);
       if (cached) {
         hits = cached;
+      } else if (shared) {
+        hits = await shared;
       } else {
-        hits = await provider.search(query, {maxResults}, ctx?.signal);
+        const request = provider.search(query, {maxResults}, ctx?.signal);
+        inFlight.set(key, request);
+        try {
+          hits = await request;
+        } finally {
+          inFlight.delete(key);
+        }
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);

@@ -1,0 +1,165 @@
+import type {Tier} from '../deviceRules/types';
+import type {AsrTier, AsrTierManifest} from './types';
+
+/**
+ * Device tiers (the model picker's classification) that get voice input by
+ * default. Below these the feature is hidden unless the user opts in via
+ * Settings (see ASRStore availability gate).
+ */
+export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
+
+/**
+ * Android starts a recording only when the loaded chat model plus whisper fit
+ * this share of total RAM. The system's free-memory figure is not reliable
+ * enough to gate on.
+ */
+export const ASR_ANDROID_RAM_SHARE = 0.45;
+
+/**
+ * iOS starts a recording only when the loaded chat model plus whisper fit this
+ * share of the memory free before any load. That reading likely misses the
+ * chat model's GPU memory: a pair that fit it once aborted whisper's init.
+ */
+export const ASR_IOS_CEILING_SHARE = 0.8;
+
+/**
+ * Maximum recording length (ms). Reaching it ends capture as if the user
+ * tapped stop.
+ */
+export const ASR_MAX_RECORD_MS = 180_000;
+
+/**
+ * A recording that has delivered no audio by then is reported as a microphone
+ * failure. Silence still delivers audio; a Bluetooth mic can take ~2 s to start.
+ */
+export const ASR_NO_AUDIO_MS = 3_000;
+
+/** The recording timer is highlighted for this long before the cap (ms). */
+export const ASR_RECORD_WARNING_MS = 10_000;
+
+/** Silence after speech that ends a segment for transcription (ms). */
+export const ASR_SEGMENT_PAUSE_MS = 700;
+
+/**
+ * A pause only ends a segment this long (ms). Whisper decodes a fixed 30 s
+ * window per call, so a short segment costs as much as a long one.
+ */
+export const ASR_MIN_SEGMENT_MS = 15_000;
+
+/**
+ * A segment is cut here even without a pause (ms), inside whisper's 30 s
+ * window.
+ */
+export const ASR_MAX_SEGMENT_MS = 25_000;
+
+/** Silence kept before speech when a segment starts (ms). */
+export const ASR_SEGMENT_LEAD_IN_MS = 300;
+
+/** Trailing characters of earlier segments passed to whisper as context. */
+export const ASR_PROMPT_CHARS = 200;
+
+/** Bytes per captured PCM chunk: 50 ms of 16 kHz mono 16-bit audio. */
+export const ASR_CHUNK_BYTES = 1600;
+
+/** Captured chunks per waveform level: one level every 100 ms. */
+export const ASR_LEVEL_CHUNKS = 2;
+
+/** Number of recent levels kept for the recording waveform. */
+export const ASR_LEVEL_HISTORY = 40;
+
+/** Capture sample rate (Hz). Whisper operates on 16 kHz mono PCM. */
+export const ASR_SAMPLE_RATE = 16_000;
+
+/** Capture channel count (mono). */
+export const ASR_CHANNELS = 1;
+
+/** Capture bit depth (16-bit signed PCM, the pcm-stream native default). */
+export const ASR_BITS_PER_SAMPLE = 16;
+
+/**
+ * Energy-VAD floor. A frame whose RMS amplitude (normalized to [0,1]) reaches
+ * this counts as voiced; a buffer with less than `ASR_MIN_SPEECH_MS` of voiced
+ * frames is treated as silence and never decoded — Whisper is autoregressive
+ * and hallucinates text on silence. See energyVad.ts.
+ */
+export const ASR_VAD_RMS_FLOOR = 0.01;
+
+/** Energy-VAD frame length (ms). */
+export const ASR_VAD_FRAME_MS = 30;
+
+/** Minimum voiced duration (ms) required before a buffer is decoded. */
+export const ASR_MIN_SPEECH_MS = 300;
+
+/** Subdirectory (relative to the platform model root) for ASR model files. */
+export const ASR_PARENT_SUBDIR = 'asr';
+
+/**
+ * On-disk model generation this app expects. The version sentinel written as
+ * the final step of a successful download records this value; `isInstalled`
+ * requires it to match, forcing a clean re-download when a tier's file layout
+ * or version changes.
+ */
+export const ASR_MODEL_VERSION = 1;
+
+/** Local sentinel file recording a tier's installed model version. */
+export const ASR_VERSION_SENTINEL_FILENAME = 'model-version.json';
+
+/**
+ * Sentinel stored on `downloadError[tier]` when a download is blocked by the
+ * disk-space preflight (rather than a network/IO failure). The Settings tier
+ * row checks for this exact value to render the insufficient-storage line.
+ * Namespaced so it can never collide with a real `Error.message`.
+ */
+export const ASR_INSUFFICIENT_STORAGE = 'asr::insufficient-storage';
+
+/**
+ * Free-disk headroom multiplier applied to a tier's `estimatedBytes` for the
+ * download preflight. Single source of truth so the preflight threshold and
+ * the Settings insufficient-storage message agree on the required figure.
+ */
+export const ASR_DISK_HEADROOM_FACTOR = 1.2;
+
+/** HuggingFace base URL for the whisper.cpp GGML models. */
+const WHISPER_CPP_BASE_URL =
+  'https://huggingface.co/ggerganov/whisper.cpp/resolve/main';
+
+/**
+ * Per-tier model manifests. Each tier is an independent on-disk install with
+ * its own subdirectory and sentinel. `estimatedBytes` is the exact summed
+ * HuggingFace byte total of the downloaded file(s), feeding the disk-space
+ * preflight (`estimated * ASR_DISK_HEADROOM_FACTOR`), so it must be >= the
+ * real total.
+ *
+ * The iOS CoreML encoder sidecar (`ggml-<size>-encoder.mlmodelc`) is an
+ * optional accelerator: its absence degrades to the GGUF CPU path and never
+ * blocks transcription, so it is not part of the install-truth manifest.
+ */
+export const ASR_TIERS: Record<AsrTier, AsrTierManifest> = {
+  base: {
+    tier: 'base',
+    modelFilename: 'ggml-base-q8_0.bin',
+    modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-base-q8_0.bin`,
+    estimatedBytes: 81_768_585,
+    runtimeBytes: 330_000_000,
+  },
+  small: {
+    tier: 'small',
+    modelFilename: 'ggml-small-q8_0.bin',
+    modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-small-q8_0.bin`,
+    estimatedBytes: 264_464_607,
+    runtimeBytes: 650_000_000,
+  },
+  'large-turbo': {
+    tier: 'large-turbo',
+    modelFilename: 'ggml-large-v3-turbo-q5_0.bin',
+    modelUrl: `${WHISPER_CPP_BASE_URL}/ggml-large-v3-turbo-q5_0.bin`,
+    estimatedBytes: 574_041_195,
+    runtimeBytes: 1_200_000_000,
+  },
+};
+
+/** Default tier: base, fast on every measured phone. */
+export const ASR_DEFAULT_TIER: AsrTier = 'base';
+
+/** Ordered tiers for UI listing (low-end → flagship). */
+export const ASR_TIER_ORDER: AsrTier[] = ['base', 'small', 'large-turbo'];

@@ -39,7 +39,7 @@ export class HFSearchSheet extends BasePage {
    * Check if sheet is displayed
    */
   async isDisplayed(): Promise<boolean> {
-    return this.isElementDisplayed(Selectors.hfSearch.view, 3000);
+    return this.isElementDisplayed(Selectors.hfSearch.searchBar, 3000);
   }
 
   /**
@@ -55,7 +55,7 @@ export class HFSearchSheet extends BasePage {
    * Wait for sheet to close
    */
   async waitForClose(timeout = 5000): Promise<void> {
-    await this.waitForElementToDisappear(Selectors.hfSearch.view, timeout);
+    await this.waitForElementToDisappear(Selectors.hfSearch.searchBar, timeout);
   }
 
   /**
@@ -101,15 +101,16 @@ export class HFSearchSheet extends BasePage {
       } catch {
         if (Date.now() >= deadline) {
           throw new Error(
-            `${Selectors.hfSearch.view} still displayed after ${timeout}ms of close attempts`,
+            `${Selectors.hfSearch.searchBar} still displayed after ${timeout}ms of close attempts`,
           );
         }
       }
     }
   }
 
+  // Keyed on the search bar: XCUITest reports the sheet's container view as not visible on RN 0.87.
   private async isOpen(): Promise<boolean> {
-    return this.getElement(Selectors.hfSearch.view)
+    return this.getElement(Selectors.hfSearch.searchBar)
       .isDisplayed()
       .catch(() => false);
   }

@@ -1,7 +1,9 @@
 import React from 'react';
 import {fireEvent} from '@testing-library/react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {render} from '../../../../../jest/test-utils';
+import {measuresIncludeStatusBar} from '../../../../utils/edgeToEdge';
 import {Dropdown} from '../Dropdown';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
 
@@ -10,7 +12,15 @@ const options = [
   {value: 'b', label: 'Beta'},
 ];
 
+jest.mock('../../../../utils/edgeToEdge', () => ({
+  measuresIncludeStatusBar: jest.fn(() => false),
+}));
+
 describe('Dropdown', () => {
+  afterEach(() => {
+    (measuresIncludeStatusBar as jest.Mock).mockReturnValue(false);
+  });
+
   it('defaults to testID=ui-dropdown and role=button', () => {
     const {getByTestId} = render(
       <Dropdown value="a" options={options} onChange={() => {}} />,
@@ -51,6 +61,23 @@ describe('Dropdown', () => {
         typeof node.props?.source === 'string' && node.props.source === 'check',
     );
     expect(checks.length).toBe(1);
+  });
+
+  it('passes statusBarHeight 0 when RN measures in edge-to-edge window coordinates', () => {
+    (measuresIncludeStatusBar as jest.Mock).mockReturnValue(true);
+    (useSafeAreaInsets as jest.Mock).mockReturnValue({
+      top: 47,
+      right: 0,
+      bottom: 34,
+      left: 0,
+    });
+    const PaperMenu = require('react-native-paper').Menu;
+    const {getByTestId, UNSAFE_getByType} = render(
+      <Dropdown value="a" options={options} onChange={() => {}} />,
+    );
+    fireEvent.press(getByTestId('ui-dropdown'));
+
+    expect(UNSAFE_getByType(PaperMenu).props.statusBarHeight).toBe(0);
   });
 });
 

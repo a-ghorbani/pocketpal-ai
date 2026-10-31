@@ -311,6 +311,9 @@ describe('PurchaseStore link and restore', () => {
   describe('restore', () => {
     it('syncs, then installs every entitlement', async () => {
       const h = createHarness();
+      runInAction(() => {
+        h.purchases.availability = 'ready';
+      });
       h.store.currentEntitlements.mockResolvedValue({
         ok: true,
         transactions: [tx({unfinished: false})],
@@ -402,6 +405,9 @@ describe('PurchaseStore link and restore', () => {
       it('Android: keeps a hold written after the query started', async () => {
         (Platform as any).OS = 'android';
         const h = createHarness({records: [held()]});
+        runInAction(() => {
+          h.purchases.availability = 'ready';
+        });
         h.api.verify.mockResolvedValueOnce([
           result('invalid', {palId: 'P2', supportCode: 'SUP-2'}),
         ]);

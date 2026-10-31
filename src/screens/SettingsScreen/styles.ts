@@ -78,6 +78,14 @@ export const createStyles = (theme: Theme) =>
       minWidth: 100,
       maxWidth: '100%',
     },
+    tierActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    inUseLabel: {
+      color: theme.colors.primary,
+    },
     // A control too wide to share its row (e.g. the draft-model picker, whose
     // values are model filenames) sits under the title/description instead.
     // Also keeps the menu anchor at the row's left edge, on-screen.

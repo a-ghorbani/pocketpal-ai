@@ -5,13 +5,14 @@ import {
   Animated,
   Easing,
   ScrollView,
+  type ScrollViewInstance,
   LayoutAnimation,
   Platform,
   UIManager,
 } from 'react-native';
 
 import LinearGradient from 'react-native-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
+import {MaskedView} from '../libraryViews';
 import {createStyles} from './styles';
 
 // Enable LayoutAnimation for Android
@@ -43,7 +44,7 @@ export const ResponseBubble: React.FC<ResponseBubbleProps> = ({children}) => {
   const chevronRotation = useRef(new Animated.Value(0)).current;
 
   // Reference to the ScrollView for auto-scrolling
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
 
   // Toggle between partial and expanded states
   const toggleState = () => {

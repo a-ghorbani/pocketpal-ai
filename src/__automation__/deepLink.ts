@@ -8,7 +8,14 @@
  *   pocketpal://tts?cmd=download::<engine>
  *   pocketpal://tts?cmd=synthesize::<engine>
  *   pocketpal://tts?cmd=release
+ *   pocketpal://asr?cmd=state::<ready|not-installed|unsupported|recording|
+ *                              transcribing|waiting-chat|error-capture|
+ *                              error-blocked|error-memory|error-disk>
+ *   pocketpal://asr?cmd=tiers::<none|csv of base,small,large-turbo>
+ *   pocketpal://voice?cmd=<verb>::<arg>   (voice mode, see voiceAutomation.ts)
  *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
+ *   pocketpal://e2e/plus-feature   (locked feature behind Plus; Android
+ *                                   routes it in useDeepLinking.ts too)
  *   pocketpal://e2e/benchmark   (Android: cold-launch path lives in
  *                                useDeepLinking.ts since RN's Android side
  *                                doesn't deliver the URL via DeepLinkService)
@@ -16,6 +23,7 @@
 import type {DeepLinkParams} from '../services/DeepLinkService';
 import {ROUTES} from '../utils/navigationConstants';
 import {isBenchmarkRunnerUrl, parseBenchmarkAutostart} from './benchmarkRoute';
+import {isPlusFeatureUrl} from './plusFeatureRoute';
 
 interface NavigationLike {
   navigate: (route: string, params?: Record<string, unknown>) => void;
@@ -45,6 +53,16 @@ export async function dispatchAutomationDeepLink(
     await runTtsCommand(params.queryParams.cmd);
     return true;
   }
+  if (params.host === 'asr' && params.queryParams?.cmd) {
+    const {runAsrCommand} = require('./asrAutomation');
+    await runAsrCommand(params.queryParams.cmd);
+    return true;
+  }
+  if (params.host === 'voice' && params.queryParams?.cmd) {
+    const {runVoiceCommand} = require('./voiceAutomation');
+    await runVoiceCommand(params.queryParams.cmd);
+    return true;
+  }
   if (params.host === 'iap' && params.queryParams?.cmd) {
     const {fakeStore} = require('./fakeStore');
     await fakeStore.run(params.queryParams.cmd);
@@ -60,6 +78,10 @@ export async function dispatchAutomationDeepLink(
     navigation?.navigate(ROUTES.BENCHMARK_RUNNER, {
       autostart: parseBenchmarkAutostart(params.url),
     });
+    return true;
+  }
+  if (isPlusFeatureUrl(params.url)) {
+    navigation?.navigate(ROUTES.PLUS_TEST_FEATURE);
     return true;
   }
   return false;

@@ -137,7 +137,7 @@ const runRow = async (row: Row) => {
 };
 
 const canonicalOf = (request: string): string => {
-  const url = new URL(request);
+  const url = new URL(request) as URL & {hash: string};
   url.hash = '';
   return url.toString();
 };

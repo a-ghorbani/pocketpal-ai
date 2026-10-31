@@ -6,7 +6,7 @@ import {
   type WithTimingConfig,
 } from 'react-native-reanimated';
 
-import type {KeyboardState} from './keyboardTarget';
+import type {KeyboardState} from './gorhomInternal';
 
 const BAR_PADDING = 10;
 const LIFT_MARGIN = 1;

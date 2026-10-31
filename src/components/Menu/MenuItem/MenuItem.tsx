@@ -1,4 +1,4 @@
-import {View, Animated} from 'react-native';
+import {View, Animated, type HostInstance} from 'react-native';
 import React, {useRef, useState, useEffect} from 'react';
 import {StyleProp, TextStyle, ViewStyle} from 'react-native';
 
@@ -50,7 +50,7 @@ export const MenuItem: React.FC<MenuItemProps> = ({
 }) => {
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const [submenuPosition, setSubmenuPosition] = useState({x: 0, y: 0});
-  const itemRef = useRef<View>(null);
+  const itemRef = useRef<HostInstance>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const theme = useTheme();

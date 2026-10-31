@@ -11,11 +11,14 @@ import {URL_PATTERN} from '../search/searchBudget';
 const allowed = new Map<string, string>();
 const userSites = new Set<string>();
 
+// RN types URL as read-only; the url polyfill installed in index.js has setters.
+type WritableUrl = URL & {hash: string; hostname: string};
+
 // The RN URL polyfill does not lowercase hosts, so ASCII case is folded here.
 const canonicalize = (raw: string): URL | null => {
-  let parsed: URL;
+  let parsed: WritableUrl;
   try {
-    parsed = new URL(raw.trim());
+    parsed = new URL(raw.trim()) as WritableUrl;
   } catch {
     return null;
   }

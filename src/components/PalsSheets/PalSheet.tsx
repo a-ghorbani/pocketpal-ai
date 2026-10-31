@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {View, type TextInputInstance} from 'react-native';
 
 import {z} from 'zod';
 import {observer} from 'mobx-react-lite';
@@ -126,7 +126,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     }, [activeSchema, l10n]);
 
     // This is used for "Enter" on an text field to focus the next one
-    const inputRefs = useRef<{[key: string]: RNTextInput | null}>({});
+    const inputRefs = useRef<{[key: string]: TextInputInstance | null}>({});
     const [isSaving, setIsSaving] = useState(false);
 
     // Manages values, errors, touches & makes Zod the source of truth for validation.
@@ -459,7 +459,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                   mode="contained"
                   loading={isSaving}
                   disabled={isSaving}
-                  onPress={methods.handleSubmit(onSubmit)}
+                  onPress={() => methods.handleSubmit(onSubmit)()}
                   testID="submit-button">
                   {isEditing
                     ? l10n.common.save

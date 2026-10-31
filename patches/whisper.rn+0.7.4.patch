@@ -1,0 +1,101 @@
+diff --git a/node_modules/whisper.rn/android/src/main/CMakeLists.txt b/node_modules/whisper.rn/android/src/main/CMakeLists.txt
+index 8d17d4f..c5a3772 100644
+--- a/node_modules/whisper.rn/android/src/main/CMakeLists.txt
++++ b/node_modules/whisper.rn/android/src/main/CMakeLists.txt
+@@ -114,6 +114,7 @@ endfunction()
+ build_library("rnwhisper" "generic" "")
+ 
+ if (${ANDROID_ABI} STREQUAL "arm64-v8a")
++    build_library("rnwhisper_v8fp16_va_2_dotprod" "arm" "-march=armv8.2-a+fp16+dotprod")
+     build_library("rnwhisper_v8fp16_va_2" "arm" "-march=armv8.2-a+fp16")
+     build_library("rnwhisper_v8" "arm" "-march=armv8-a")
+ elseif (${ANDROID_ABI} STREQUAL "armeabi-v7a")
+diff --git a/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java b/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
+index 10e4aa2..facf488 100644
+--- a/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
++++ b/node_modules/whisper.rn/android/src/main/java/com/rnwhisper/RNWhisper.java
+@@ -38,9 +38,15 @@ public class RNWhisper {
+ 
+     String cpuFeatures = getCpuFeatures();
+     boolean hasFp16 = cpuFeatures.contains("fp16") || cpuFeatures.contains("fphp");
++    boolean hasDotProd = cpuFeatures.contains("asimddp") || cpuFeatures.contains("dotprod");
+ 
+     try {
+       if (isArm64V8a()) {
++        if (hasFp16 && hasDotProd && tryLoadLibrary("rnwhisper_v8fp16_va_2_dotprod")) {
++          libsLoaded = true;
++          return true;
++        }
++
+         if (hasFp16 && tryLoadLibrary("rnwhisper_v8fp16_va_2")) {
+           libsLoaded = true;
+           return true;
+diff --git a/node_modules/whisper.rn/cpp/whisper.cpp b/node_modules/whisper.rn/cpp/whisper.cpp
+index 46bec1f..78b842c 100644
+--- a/node_modules/whisper.rn/cpp/whisper.cpp
++++ b/node_modules/whisper.rn/cpp/whisper.cpp
+@@ -3447,6 +3447,19 @@ struct whisper_state * whisper_init_state(whisper_context * ctx) {
+         return nullptr;
+     }
+ 
++    if (ctx->params.use_gpu) {
++        bool has_gpu = false;
++        for (wsp_ggml_backend_t backend : state->backends) {
++            const auto type = wsp_ggml_backend_dev_type(wsp_ggml_backend_get_device(backend));
++            has_gpu = has_gpu || type == WSP_GGML_BACKEND_DEVICE_TYPE_GPU || type == WSP_GGML_BACKEND_DEVICE_TYPE_IGPU;
++        }
++        if (!has_gpu) {
++            WHISPER_LOG_ERROR("%s: GPU backend init failed after the probe\n", __func__);
++            whisper_free_state(state);
++            return nullptr;
++        }
++    }
++
+     // at this point, we don't know yet how many decoders will be used
+     // later during decoding, if more decoders are used, we will recreate the KV cache respectively
+     state->kv_self_n_dec = 1;
+@@ -3807,6 +3820,17 @@ struct whisper_context * whisper_init_with_params_no_state(struct whisper_model_
+     whisper_context * ctx = new whisper_context;
+     ctx->params = params;
+ 
++    // make_buft_list places the weights on the GPU whenever use_gpu is set, even if its backend cannot init
++    if (ctx->params.use_gpu) {
++        wsp_ggml_backend_t probe = whisper_backend_init_gpu(ctx->params);
++        if (probe) {
++            wsp_ggml_backend_free(probe);
++        } else {
++            ctx->params.use_gpu = false;
++            WHISPER_LOG_WARN("%s: GPU backend init failed, falling back to CPU\n", __func__);
++        }
++    }
++
+     // A C++ exception escaping this extern "C" function aborts non-C++ callers
+     // (Rust via whisper-rs, Go via cgo, ...). whisper_model_load can throw
+     // (std::runtime_error here; vk::SystemError from the Vulkan backend during
+diff --git a/node_modules/whisper.rn/whisper-rn.podspec b/node_modules/whisper.rn/whisper-rn.podspec
+index e24aa83..ea6efde 100644
+--- a/node_modules/whisper.rn/whisper-rn.podspec
++++ b/node_modules/whisper.rn/whisper-rn.podspec
+@@ -38,13 +38,16 @@ Pod::Spec.new do |s|
+   if ENV["RNWHISPER_BUILD_FROM_SOURCE"] == "1"
+     s.source_files = "ios/**/*.{h,m,mm}", "cpp/**/*.{h,cpp,hpp,c,m,mm}"
+     s.exclude_files = "cpp/ggml-metal/*.m"
+-    s.resources = [
+-      "cpp/ggml-metal/kernels",
+-      "cpp/ggml-metal/ggml-metal-impl.h",
+-      "cpp/ggml-common.h"
+-    ]
+     base_compiler_flags += " -DRNWHISPER_BUILD_FROM_SOURCE"
+-    header_search_paths << '"$(PODS_TARGET_SRCROOT)/cpp"'
++    base_compiler_flags += " -Dggml=rnwhisper_ggml" +
++      " -Ddl_load_library=rnwhisper_dl_load_library" +
++      " -Ddl_get_sym=rnwhisper_dl_get_sym" +
++      " -Ddl_error=rnwhisper_dl_error" +
++      " -Ddl_handle_deleter=rnwhisper_dl_handle_deleter" +
++      " -Dnode_info=rnwhisper_node_info" +
++      " -Dcmp_top_k=rnwhisper_cmp_top_k" +
++      " -DThreadPool=rnwhisper_ThreadPool"
++    ["cpp", "cpp/ggml-cpu", "cpp/coreml", "cpp/jsi"].each { |dir| header_search_paths << "\"$(PODS_TARGET_SRCROOT)/#{dir}\"" }
+ 
+     s.subspec "no-require-arc" do |ss|
+       ss.requires_arc = false

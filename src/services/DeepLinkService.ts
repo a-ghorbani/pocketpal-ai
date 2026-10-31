@@ -23,7 +23,9 @@ export interface DeepLinkParams {
 export type DeepLinkHandler = (params: DeepLinkParams) => void;
 
 class DeepLinkService {
-  private eventEmitter: NativeEventEmitter | null = null;
+  private eventEmitter: NativeEventEmitter<{
+    onDeepLink: [DeepLinkParams];
+  }> | null = null;
   private listeners: DeepLinkHandler[] = [];
   private subscription: any = null;
 

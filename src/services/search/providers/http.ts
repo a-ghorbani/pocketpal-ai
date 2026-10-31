@@ -33,7 +33,11 @@ const withTimeout = async (
   const timer = setTimeout(() => fire('timer'), timeoutMs);
   callerSignal?.addEventListener('abort', onCallerAbort);
   try {
-    return await fetch(input, {...init, signal: controller.signal});
+    return await fetch(input, {
+      ...init,
+      credentials: 'omit',
+      signal: controller.signal,
+    });
   } catch (e) {
     if (firedBy === 'caller') {
       throw new Error('cancelled');
@@ -58,12 +62,81 @@ const assertWithinDeclaredSize = (res: Response): void => {
   }
 };
 
+const DEFAULT_RETRY_WAIT_MS = 1000;
+
+const MAX_RETRY_WAIT_MS = 2000;
+
+const parseSecondsMs = (value: string): number | null =>
+  /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) * 1000 : null;
+
+const retryAfterMs = (value: string): number | null => {
+  const seconds = parseSecondsMs(value);
+  if (seconds !== null) {
+    return seconds;
+  }
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? null : date - Date.now();
+};
+
+const rateLimitResetMs = (value: string): number | null => {
+  const waits = value
+    .split(',')
+    .map(parseSecondsMs)
+    .filter((ms): ms is number => ms !== null);
+  return waits.length > 0 ? Math.min(...waits) : null;
+};
+
+/** The wait before retrying a 429, or null when the server asks for longer. */
+const rateLimitRetryWaitMs = (res: Response): number | null => {
+  const retryAfter = res.headers?.get?.('retry-after');
+  const reset =
+    res.headers?.get?.('x-ratelimit-reset') ??
+    res.headers?.get?.('ratelimit-reset');
+  const hint =
+    retryAfter != null
+      ? retryAfterMs(retryAfter)
+      : reset != null
+        ? rateLimitResetMs(reset)
+        : null;
+  if (hint === null || hint < 0) {
+    return DEFAULT_RETRY_WAIT_MS;
+  }
+  return hint <= MAX_RETRY_WAIT_MS ? hint : null;
+};
+
+const waitOrCancel = (ms: number, signal?: AbortSignal | null) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('cancelled'));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      reject(new Error('cancelled'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort);
+  });
+
 export const fetchJson = async <T>(
   input: string,
   init: RequestInit,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    retryOn429 = false,
+  }: {timeoutMs?: number; retryOn429?: boolean} = {},
 ): Promise<T> => {
-  const res = await withTimeout(input, init, timeoutMs);
+  let res = await withTimeout(input, init, timeoutMs);
+  const retryWaitMs =
+    retryOn429 && res.status === 429 ? rateLimitRetryWaitMs(res) : null;
+  if (retryWaitMs !== null) {
+    await waitOrCancel(retryWaitMs, init.signal);
+    res = await withTimeout(input, init, timeoutMs);
+  }
   if (!res.ok) {
     throw new Error(`request failed (${res.status})`);
   }

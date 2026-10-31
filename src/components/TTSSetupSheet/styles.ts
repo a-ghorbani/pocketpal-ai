@@ -11,7 +11,7 @@ export const createStyles = (theme: Theme) =>
 
     // Engine logo (used by EngineLogo)
     engineLogoCenter: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -126,6 +126,13 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12,
       lineHeight: 16,
       opacity: 0.7,
+    },
+    engineGroupCreditText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      lineHeight: 16,
+      opacity: 0.7,
+      marginBottom: 12,
     },
     engineGroupEmpty: {
       color: theme.colors.onSurfaceVariant,

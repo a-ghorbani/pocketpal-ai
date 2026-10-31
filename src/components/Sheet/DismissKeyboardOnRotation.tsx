@@ -4,8 +4,8 @@ import {useBottomSheetInternal} from '@gorhom/bottom-sheet';
 
 import {useScreenHeight} from './screenSize';
 
-// gorhom 5.2.8 sizes a lift only on keyboard events, against the pre-rotation
-// container, so a rotation mid-lift leaves the sheet sized for the old keyboard.
+// gorhom sizes a lift only on keyboard events, against the pre-rotation container,
+// so a rotation mid-lift leaves the sheet sized for the old keyboard.
 export const DismissKeyboardOnRotation = () => {
   const sheet = useBottomSheetInternal(true);
   const screenHeight = useScreenHeight();

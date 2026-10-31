@@ -4,7 +4,7 @@ import React, {useState, useCallback, useContext} from 'react';
 import {v4 as uuidv4} from 'uuid';
 import {observer} from 'mobx-react';
 import RNDeviceInfo from 'react-native-device-info';
-import Slider from '@react-native-community/slider';
+import {Slider} from '../../components/libraryViews';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Text, Button, Card, ActivityIndicator, Icon} from 'react-native-paper';
 

@@ -50,6 +50,7 @@ export class ExaProvider implements SearchProvider {
         }),
         signal,
       },
+      {retryOn429: true},
     );
     const results = data?.results;
     if (!Array.isArray(results)) {

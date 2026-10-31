@@ -38,13 +38,15 @@ export const createStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    ...(variant === 'pill'
+      ? {
+          borderRadius: theme.radius.l,
+          backgroundColor: selected
+            ? theme.colors.secondaryContainer
+            : 'transparent',
+        }
+      : {}),
   };
-  if (variant === 'pill') {
-    item.borderRadius = theme.radius.l;
-    item.backgroundColor = selected
-      ? theme.colors.secondaryContainer
-      : 'transparent';
-  }
   const label: TextStyle = {
     ...s.labelStyle,
     color: disabled

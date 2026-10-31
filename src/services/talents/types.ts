@@ -49,7 +49,6 @@ export interface SystemPromptContext {
   activeTalents: ReadonlySet<string>;
 }
 
-/** Aborts when the run is stopped. */
 export interface TalentExecuteContext {
   signal: AbortSignal;
 }

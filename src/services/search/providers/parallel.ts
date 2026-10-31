@@ -38,6 +38,7 @@ export class ParallelProvider implements SearchProvider {
         }),
         signal,
       },
+      {retryOn429: true},
     );
     const results = data?.results;
     if (!Array.isArray(results)) {

@@ -1,7 +1,16 @@
+require 'shellwords'
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
     "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+# react-native-permissions setup helper (resolved via node for hoisting).
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native-permissions/scripts/setup.rb",
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
@@ -12,6 +21,9 @@ Pod::UI.puts "📱 Minimum iOS version supported: #{ios_version}".green
 platform :ios, ios_version
 prepare_react_native_project!
 
+# Compile only the Microphone permission handler (on-device voice input).
+setup_permissions(['Microphone'])
+
 # linkage = ENV['USE_FRAMEWORKS']
 # if linkage != nil
 #   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -21,6 +33,98 @@ use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+ENV['RNLLAMA_BUILD_FROM_SOURCE'] = '1'
+ENV['RNWHISPER_BUILD_FROM_SOURCE'] = '1'
+
+def exclude_x86_64_simulator(project)
+  project.build_configurations.each do |config|
+    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+  end
+end
+
+# The AppIntents wrapper includes llama.rn's core headers, which only the
+# llama-rn pod's own header paths resolve (common.h before ggml-cpu/common.h).
+def add_llama_rn_headers_to_wrapper(installer, user_project)
+  pod_target = installer.pod_targets.find { |t| t.name == 'llama-rn' } or
+    raise Pod::Informative, 'llama-rn pod target not found'
+  search_paths = pod_target.root_spec.consumer(:ios).pod_target_xcconfig['HEADER_SEARCH_PATHS'] or
+    raise Pod::Informative, 'llama-rn sets no HEADER_SEARCH_PATHS'
+  pod_dir = Pathname.new(installer.sandbox.pod_dir('llama-rn')).realpath
+  pod_dir_from_srcroot = pod_dir.relative_path_from(Pathname.new(user_project.project_dir).realpath)
+  flags = Shellwords.split(search_paths)
+    .reject { |path| path == '$(inherited)' }
+    .map { |path| %(-I"#{path.sub('$(PODS_TARGET_SRCROOT)', "$(SRCROOT)/#{pod_dir_from_srcroot}")}") }
+    .join(' ')
+
+  app_target = user_project.native_targets.find { |t| t.name == 'PocketPal' } or
+    raise Pod::Informative, 'PocketPal target not found'
+  wrapper = app_target.source_build_phase.files.find { |f| f.file_ref&.display_name == 'LlamaContextWrapper.mm' } or
+    raise Pod::Informative, 'LlamaContextWrapper.mm is not in the PocketPal Sources phase'
+  wrapper.settings = (wrapper.settings || {}).merge('COMPILER_FLAGS' => flags)
+end
+
+# Header maps index every target's headers by basename, so llama.rn's and
+# whisper.rn's same-named ggml headers (ggml.h, ggml-impl.h, ...) resolve into
+# each other. Without them only explicit search paths apply; llama.rn needs two
+# that only its header map supplied.
+def resolve_ggml_headers_by_search_path(installer)
+  extra_search_paths = {
+    'llama-rn' => [
+      '"$(PODS_TARGET_SRCROOT)/vendor/llama.cpp/vendor/nlohmann"',
+      *ReactNativePodsUtils.create_header_search_path_for_frameworks(
+        'PODS_CONFIGURATION_BUILD_DIR', 'ReactCodegen', 'ReactCodegen', ['RNLlamaSpec'], false,
+      ).map { |path| %("#{path}") },
+    ],
+    'whisper-rn' => [],
+  }
+  extra_search_paths.each do |name, paths|
+    target = installer.pods_project.targets.find { |t| t.name == name } or
+      raise Pod::Informative, "#{name} pod target not found"
+    target.build_configurations.each do |config|
+      config.build_settings['USE_HEADERMAP'] = 'NO'
+      next if paths.empty?
+      inherited = Array(config.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)')
+      config.build_settings['HEADER_SEARCH_PATHS'] = (inherited + paths).uniq
+    end
+  end
+end
+
+podfile_dir = Pathname.new(__dir__).realpath
+from_srcroot = ->(path) { Pathname.new(path).relative_path_from(podfile_dir).to_s }
+# whisper.rn's package exports hide package.json from require.resolve, so walk
+# node's own node_modules lookup order instead.
+package_dir = ->(package) {
+  dir = Pod::Executable.execute_command('node', ['-p',
+    'const [, name, from] = process.argv;
+    require("module").createRequire(`${from}/`).resolve.paths(name)
+      .map(dir => require("path").join(dir, name))
+      .find(dir => require("fs").existsSync(`${dir}/package.json`)) ?? ""', package, __dir__]).strip
+  raise Pod::Informative, "#{package} not found in node_modules" if dir.empty?
+  Pathname.new(dir).realpath
+}
+parse_metal_kernels = ->(package, metal_dir, macro) {
+  kernels = metal_dir.join('ggml-metal-device.m').read[/^#define #{macro}((?:.*\\\n)+.*)/, 1]
+    .to_s.scan(/X\(\s*\w+\s*,\s*(\w+)\s*\)/).flatten
+  raise Pod::Informative, "No #{macro} kernels found in #{package}" if kernels.empty?
+  missing = kernels.reject { |name| metal_dir.join("kernels/#{name}.metal").file? }
+  raise Pod::Informative, "#{package} Metal kernels missing: #{missing.join(', ')}" unless missing.empty?
+  kernels
+}
+
+ggml_src_dir = package_dir.('llama.rn').join('vendor/llama.cpp/ggml/src')
+ggml_metal_dir = ggml_src_dir.join('ggml-metal')
+metal_kernels = parse_metal_kernels.('llama.rn', ggml_metal_dir, 'GGML_METAL_LIBS')
+metal_kernel_files = ggml_metal_dir.join('kernels').children.select(&:file?).sort
+metal_headers = [ggml_metal_dir.join('ggml-metal-impl.h'), ggml_src_dir.join('ggml-common.h')]
+
+whisper_cpp_dir = package_dir.('whisper.rn').join('cpp')
+whisper_metal_dir = whisper_cpp_dir.join('ggml-metal')
+whisper_metal_kernels = parse_metal_kernels.('whisper.rn', whisper_metal_dir, 'WSP_GGML_METAL_LIBS')
+whisper_metal_kernel_files = whisper_metal_dir.join('kernels').children.select(&:file?).sort
+whisper_metal_headers = [whisper_metal_dir.join('ggml-metal-impl.h'), whisper_cpp_dir.join('ggml-common.h')]
+
+metallib_script = podfile_dir.join('../scripts/build-ios-metallib.sh')
+app_resources_dir = '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)'
 
 target 'PocketPal' do
   config = use_native_modules!
@@ -30,6 +134,25 @@ target 'PocketPal' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+
+  script_phase :name => 'Build llama.rn Metal kernels',
+    :execution_position => :before_compile,
+    :input_files => [*metal_kernel_files, *metal_headers, metallib_script]
+      .map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
+    :output_files => [
+      "#{app_resources_dir}/rnllama.metallib",
+      "#{app_resources_dir}/ggml-tensor.metallib",
+    ],
+    :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" "${SRCROOT}/#{from_srcroot.(ggml_src_dir)}" ) +
+      metal_kernels.join(' ')
+
+  script_phase :name => 'Build whisper.rn Metal kernels',
+    :execution_position => :before_compile,
+    :input_files => [*whisper_metal_kernel_files, *whisper_metal_headers, metallib_script]
+      .map { |path| "$(SRCROOT)/#{from_srcroot.(path)}" },
+    :output_files => ["#{app_resources_dir}/default.metallib"],
+    :script => %("${SRCROOT}/#{from_srcroot.(metallib_script)}" --whisper "${SRCROOT}/#{from_srcroot.(whisper_cpp_dir)}" ) +
+      whisper_metal_kernels.join(' ')
 
   # # Required for Firebase with New Architecture
   # pod 'Firebase',         :modular_headers => true
@@ -41,7 +164,7 @@ target 'PocketPal' do
   # pod 'RNFBAppCheck', :path => '../node_modules/@react-native-firebase/app-check'
 
   target 'PocketPalTests' do
-    inherit! :complete
+    inherit! :search_paths
     # Pods for testing
   end
 
@@ -58,11 +181,19 @@ target 'PocketPal' do
   # Mustache template rendering for iOS Shortcuts
   pod 'GRMustache.swift'
 
-  # Force llama-rn to build as static library to avoid duplicate headers
+  # Force llama-rn and whisper-rn to build as static libraries. Both vendor a
+  # ggml fork whose headers share filenames (ggml.h, ggml-cpu.h, ...); under
+  # use_frameworks! the framework header-copy phases otherwise collide
+  # ("Multiple commands produce .../Headers/ggml-*.h"). Static linkage skips
+  # the framework Headers dir. llama.rn's ggml is unprefixed; whisper.rn's C
+  # symbols are wsp_-prefixed and the whisper.rn patch renames its unprefixed
+  # C++, so both link into one executable without collision.
   pre_install do |installer|
     installer.pod_targets.each do |pod|
-      # Fix "Multiple commands produce" for llama-rn
-      if pod.name == 'llama-rn' || pod.name.start_with?('llama')
+      if pod.name == 'llama-rn' ||
+         pod.name.start_with?('llama') ||
+         pod.name == 'whisper-rn' ||
+         pod.name.start_with?('whisper')
         puts "Forcing #{pod.name} to static_library build type"
         def pod.build_type
           Pod::BuildType.static_library
@@ -87,16 +218,18 @@ target 'PocketPal' do
     # namespace google, which is illegal as a module import once a Swift C++
     # interop target (NitroModules) imports the React headers. Keep those two
     # headers textual in glog's module map.
-    glog_modulemap = File.join(installer.sandbox.root, 'Target Support Files', 'glog', 'glog-textual.modulemap')
-    File.write(glog_modulemap, <<~MODULEMAP)
-      framework module glog {
-        umbrella header "glog-umbrella.h"
-        textual header "log_severity.h"
-        textual header "vlog_is_on.h"
-        export *
-        module * { export * }
-      }
-    MODULEMAP
+    if installer.pods_project.targets.any? { |t| t.name == 'glog' }
+      glog_modulemap = File.join(installer.sandbox.root, 'Target Support Files', 'glog', 'glog-textual.modulemap')
+      File.write(glog_modulemap, <<~MODULEMAP)
+        framework module glog {
+          umbrella header "glog-umbrella.h"
+          textual header "log_severity.h"
+          textual header "vlog_is_on.h"
+          export *
+          module * { export * }
+        }
+      MODULEMAP
+    end
 
     installer.pods_project.targets.each do |target|
       if target.name == 'fmt'
@@ -109,6 +242,14 @@ target 'PocketPal' do
           config.build_settings['MODULEMAP_FILE'] = '${PODS_ROOT}/Target Support Files/glog/glog-textual.modulemap'
         end
       end
+    end
+
+    resolve_ggml_headers_by_search_path(installer)
+    exclude_x86_64_simulator(installer.pods_project)
+    installer.aggregate_targets.map(&:user_project).uniq(&:path).each do |user_project|
+      exclude_x86_64_simulator(user_project)
+      add_llama_rn_headers_to_wrapper(installer, user_project)
+      user_project.save
     end
   end
 

@@ -9,10 +9,13 @@ Fixes # (issue number)
 - [ ] iOS
 - [ ] Android
 
+## Evidence
+
+How you verified the change on a device, simulator or emulator. For visible UI changes, attach screenshots or a recording (here or in a PR comment). Write "N/A" with a reason for changes with no runtime effect (docs, CI, tests only).
+
 ## Checklist
 
-- [ ] Necessary comments have been made.
 - [ ] I have tested this change on:
   - [ ] iOS Simulator/Device
   - [ ] Android Emulator/Device
-- [ ] Unit tests and integration tests pass locally.
+- [ ] Lint, type check and unit tests pass locally.

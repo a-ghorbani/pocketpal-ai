@@ -1,4 +1,4 @@
-import type {KeyboardState} from '../src/components/Sheet/keyboardTarget';
+import type {KeyboardState} from '../src/components/Sheet/gorhomInternal';
 
 export type MockSheetContext = ReturnType<typeof mockSheetContext>;
 

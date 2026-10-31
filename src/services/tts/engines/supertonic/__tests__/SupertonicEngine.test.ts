@@ -26,6 +26,16 @@ import {
   __resetCreatedStreams,
 } from '../../../../../../__mocks__/external/@pocketpalai/react-native-speech';
 
+const CURRENT_MANIFEST = JSON.stringify(
+  {voices: SUPERTONIC_VOICES.map(v => v.id)},
+  null,
+  2,
+);
+const LEGACY_MANIFEST = JSON.stringify({
+  baseUrl: 'https://example.invalid/voice_styles',
+  voices: SUPERTONIC_VOICES.map(v => v.id),
+});
+
 const setPlatform = (os: 'ios' | 'android') => {
   Object.defineProperty(Platform, 'OS', {
     configurable: true,
@@ -160,6 +170,60 @@ describe('SupertonicEngine', () => {
         ),
         expect.any(String),
       );
+    });
+
+    it('downloads voice styles through .part', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new SupertonicEngine().downloadModel();
+
+      for (const voice of SUPERTONIC_VOICES) {
+        expect(RNFS.downloadFile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            toFile: expect.stringMatching(
+              new RegExp(`/tts/supertonic/${voice.id}\\.json\\.part$`),
+            ),
+          }),
+        );
+      }
+    });
+
+    it('stays installed when a voice style returns non-200, leaving no file at its path', async () => {
+      let call = 0;
+      (RNFS.downloadFile as jest.Mock).mockImplementation(() => {
+        call++;
+        return {
+          promise: Promise.resolve({
+            statusCode: call <= SUPERTONIC_MODEL_FILES.length ? 200 : 404,
+            bytesWritten: 0,
+          }),
+          jobId: call,
+        };
+      });
+
+      await expect(
+        new SupertonicEngine().downloadModel(),
+      ).resolves.toBeUndefined();
+
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(RNFS.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining(`/${SUPERTONIC_VERSION_SENTINEL_FILENAME}`),
+        expect.any(String),
+      );
+    });
+
+    it('writes the voices manifest without a baseUrl', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new SupertonicEngine().downloadModel();
+
+      const manifestCall = (RNFS.writeFile as jest.Mock).mock.calls.find(
+        ([p]: [string]) =>
+          p.endsWith(`/${SUPERTONIC_VOICES_MANIFEST_FILENAME}`),
+      );
+      expect(JSON.parse(manifestCall![1])).toEqual({
+        voices: SUPERTONIC_VOICES.map(v => v.id),
+      });
     });
 
     it('writes the version sentinel as the final disk write', async () => {
@@ -322,6 +386,187 @@ describe('SupertonicEngine', () => {
       expect(Speech.initialize).toHaveBeenCalledTimes(1);
     });
 
+    it('rewrites the voices manifest without a baseUrl before Speech.initialize', async () => {
+      (RNFS.readFile as jest.Mock).mockResolvedValue(LEGACY_MANIFEST);
+
+      await new SupertonicEngine().loadInto();
+
+      const writeCalls = (RNFS.writeFile as jest.Mock).mock.calls;
+      expect(writeCalls).toHaveLength(1);
+      expect(writeCalls[0]![0]).toMatch(
+        new RegExp(`/tts/supertonic/${SUPERTONIC_VOICES_MANIFEST_FILENAME}$`),
+      );
+      expect(JSON.parse(writeCalls[0]![1])).not.toHaveProperty('baseUrl');
+      expect(
+        (RNFS.writeFile as jest.Mock).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        (Speech.initialize as jest.Mock).mock.invocationCallOrder[0]!,
+      );
+    });
+
+    describe('legacy manifest repair in loadInto', () => {
+      const modelDir = '/path/to/library/Application Support/tts/supertonic';
+      const manifestPath = `${modelDir}/${SUPERTONIC_VOICES_MANIFEST_FILENAME}`;
+      const stylePath = (id: string) => `${modelDir}/${id}.json`;
+      const truncatedStyle = '{"style_dp":{';
+      const usableStyle = '{"style_dp":{"data":[1]},"style_ttl":{"data":[1]}}';
+
+      const mockDisk = (files: Record<string, string>) => {
+        (RNFS.exists as jest.Mock).mockImplementation(
+          async (path: string) => path in files,
+        );
+        (RNFS.readFile as jest.Mock).mockImplementation(
+          async (path: string) => {
+            if (!(path in files)) {
+              throw new Error(`ENOENT: ${path}`);
+            }
+            return files[path];
+          },
+        );
+      };
+
+      const order = (mock: unknown, index = 0) =>
+        (mock as jest.Mock).mock.invocationCallOrder[index]!;
+
+      it('removes a truncated style, keeps a usable one, then writes the manifest once', async () => {
+        mockDisk({
+          [manifestPath]: LEGACY_MANIFEST,
+          [stylePath('F1')]: truncatedStyle,
+          [stylePath('M1')]: usableStyle,
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+        expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+        expect(RNFS.writeFile).toHaveBeenCalledWith(
+          manifestPath,
+          CURRENT_MANIFEST,
+        );
+        expect(order(RNFS.unlink)).toBeLessThan(order(RNFS.writeFile));
+        expect(order(RNFS.writeFile)).toBeLessThan(order(Speech.initialize));
+      });
+
+      it('removes a style that holds an HTTP error body', async () => {
+        mockDisk({
+          [manifestPath]: LEGACY_MANIFEST,
+          [stylePath('F2')]: '{"error":"Entry not found"}',
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F2'));
+        expect(order(RNFS.unlink)).toBeLessThan(order(Speech.initialize));
+      });
+
+      it('neither checks styles nor rewrites a manifest the app wrote', async () => {
+        mockDisk({
+          [manifestPath]: CURRENT_MANIFEST,
+          [stylePath('F1')]: truncatedStyle,
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        expect(RNFS.readFile).toHaveBeenCalledTimes(1);
+        expect(RNFS.readFile).toHaveBeenCalledWith(manifestPath);
+        expect(RNFS.unlink).not.toHaveBeenCalled();
+        expect(Speech.initialize).toHaveBeenCalledTimes(1);
+      });
+
+      it('repairs and rewrites a manifest whose voice list is stale', async () => {
+        mockDisk({
+          [manifestPath]: JSON.stringify(
+            {voices: SUPERTONIC_VOICES.slice(1).map(v => v.id)},
+            null,
+            2,
+          ),
+          [stylePath('F1')]: truncatedStyle,
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+        expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+        expect(RNFS.writeFile).toHaveBeenCalledWith(
+          manifestPath,
+          CURRENT_MANIFEST,
+        );
+        expect(order(RNFS.unlink)).toBeLessThan(order(Speech.initialize));
+        expect(order(RNFS.writeFile)).toBeLessThan(order(Speech.initialize));
+      });
+
+      it('rejects without writing the manifest or initializing when a removal fails', async () => {
+        mockDisk({
+          [manifestPath]: LEGACY_MANIFEST,
+          [stylePath('F1')]: truncatedStyle,
+        });
+        (RNFS.unlink as jest.Mock).mockRejectedValueOnce(new Error('EACCES'));
+
+        await expect(new SupertonicEngine().loadInto()).rejects.toThrow(
+          'EACCES',
+        );
+
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        expect(Speech.initialize).not.toHaveBeenCalled();
+      });
+
+      it('removes a style missing style_ttl', async () => {
+        mockDisk({
+          [manifestPath]: LEGACY_MANIFEST,
+          [stylePath('F1')]: '{"style_dp":{"data":[1]}}',
+          [stylePath('M1')]: usableStyle,
+        });
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+      });
+
+      it('treats a missing manifest as legacy: repairs, writes it, then initializes', async () => {
+        mockDisk({[stylePath('F1')]: truncatedStyle});
+
+        await new SupertonicEngine().loadInto();
+
+        expect(RNFS.unlink).toHaveBeenCalledWith(stylePath('F1'));
+        expect(RNFS.writeFile).toHaveBeenCalledTimes(1);
+        expect(RNFS.writeFile).toHaveBeenCalledWith(
+          manifestPath,
+          CURRENT_MANIFEST,
+        );
+        expect(order(RNFS.writeFile)).toBeLessThan(order(Speech.initialize));
+      });
+
+      it('rejects without writing the manifest or initializing when a style read fails', async () => {
+        mockDisk({[manifestPath]: LEGACY_MANIFEST});
+        (RNFS.exists as jest.Mock).mockImplementation(
+          async (path: string) => path === stylePath('F1'),
+        );
+
+        await expect(new SupertonicEngine().loadInto()).rejects.toThrow(
+          'ENOENT',
+        );
+
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        expect(Speech.initialize).not.toHaveBeenCalled();
+      });
+
+      it('rejects without initializing when the manifest write fails', async () => {
+        mockDisk({[manifestPath]: LEGACY_MANIFEST});
+        (RNFS.writeFile as jest.Mock).mockRejectedValueOnce(
+          new Error('ENOSPC'),
+        );
+
+        await expect(new SupertonicEngine().loadInto()).rejects.toThrow(
+          'ENOSPC',
+        );
+
+        expect(Speech.initialize).not.toHaveBeenCalled();
+      });
+    });
+
     it('forwards the language argument to Speech.speak when provided', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
@@ -367,6 +612,30 @@ describe('SupertonicEngine', () => {
           inferenceSteps: 5,
         }),
       );
+    });
+
+    it('merges voice stream options with language and subscribes progress', async () => {
+      const onProgress = jest.fn();
+      new SupertonicEngine().playStreaming(anyVoice, undefined, {
+        language: 'en',
+        firstChunk: 'clause',
+        onProgress,
+      });
+      await flush();
+
+      const [voiceId, options] = (Speech.createSpeechStream as jest.Mock).mock
+        .calls[0];
+      expect(voiceId).toBe(anyVoice.id);
+      expect(options).toEqual(
+        expect.objectContaining({
+          language: 'en',
+          firstChunk: 'clause',
+        }),
+      );
+      expect(options).not.toHaveProperty('onProgress');
+      const [stream] = __getCreatedStreams();
+      expect(stream!.onProgress).toHaveBeenCalledTimes(1);
+      expect(stream!.onProgress).toHaveBeenCalledWith(onProgress);
     });
 
     it('forwards appendText to the lib stream once the engine is acquired', async () => {
