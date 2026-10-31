@@ -1,11 +1,11 @@
 import {useCallback, useEffect, useRef} from 'react';
-import {AppState, type AppStateStatus} from 'react-native';
+import {Alert, AppState, type AppStateStatus} from 'react-native';
 
 import {fromByteArray, toByteArray} from 'base64-js';
 import {when} from 'mobx';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
-import {asrStore} from '../store';
+import {asrStore, uiStore} from '../store';
 import {
   ASR_BITS_PER_SAMPLE,
   ASR_CHANNELS,
@@ -41,8 +41,10 @@ export function useVoiceCapture(
   const {onTranscript} = options;
 
   const recordingRef = useRef(false);
-  // Bumped by start and cancel; work from an older session drops its result
-  // instead of writing capture state.
+  // Only the instance that started the capture cancels it on unmount.
+  const ownsCaptureRef = useRef(false);
+  // Bumped by start, cancel and unmount; work from an older session drops its
+  // result instead of writing capture state.
   const sessionRef = useRef(0);
   const segmenterRef = useRef<SpeechSegmenter | null>(null);
   const engineQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -54,6 +56,7 @@ export function useVoiceCapture(
   const noAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
+  const startRef = useRef(() => {});
 
   const enqueueEngine = useCallback((work: () => Promise<void>) => {
     engineQueueRef.current = engineQueueRef.current.then(work).catch(err => {
@@ -189,13 +192,44 @@ export function useVoiceCapture(
     }
     const session = ++sessionRef.current;
     asrStore.setCaptureState('requesting_perm');
+    ownsCaptureRef.current = true;
+    when(
+      () =>
+        asrStore.captureState === 'idle' || asrStore.captureState === 'error',
+      () => {
+        ownsCaptureRef.current = false;
+      },
+    );
     (async () => {
-      const fits = await asrStore.hasMemoryForCapture();
+      const fit = await asrStore.captureMemoryFit();
       if (session !== sessionRef.current) {
         return;
       }
-      if (!fits) {
+      if (fit.status === 'wont_fit') {
         asrStore.setError('insufficient_memory');
+        return;
+      }
+      if (fit.status === 'tight') {
+        asrStore.resetCapture();
+        const l10n = uiStore.l10n;
+        Alert.alert(
+          l10n.voiceInput.memoryAlertTitle,
+          l10n.voiceInput.memoryAlertBody,
+          [
+            {text: l10n.common.cancel, style: 'cancel'},
+            {
+              text: l10n.voiceInput.memoryAlertTryAnyway,
+              onPress: () => {
+                if (session !== sessionRef.current) {
+                  return;
+                }
+                asrStore.acceptCaptureMemory(fit.neededBytes);
+                startRef.current();
+              },
+            },
+          ],
+          {cancelable: true},
+        );
         return;
       }
       let result;
@@ -269,6 +303,7 @@ export function useVoiceCapture(
       }, ASR_NO_AUDIO_MS);
     })();
   }, [finish, teardownCapture, transcribeSegment]);
+  startRef.current = start;
 
   const stop = useCallback(() => {
     finish(sessionRef.current).catch(() => {});
@@ -290,6 +325,7 @@ export function useVoiceCapture(
 
   // Release capture on background and unmount so the mic is never leaked.
   useEffect(() => {
+    const session = sessionRef;
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (next === 'background' && recordingRef.current) {
         stop();
@@ -297,8 +333,10 @@ export function useVoiceCapture(
     });
     return () => {
       sub.remove();
-      if (recordingRef.current) {
+      if (recordingRef.current || ownsCaptureRef.current) {
         cancel();
+      } else {
+        session.current++;
       }
     };
   }, [cancel, stop]);

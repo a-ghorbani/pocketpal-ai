@@ -120,17 +120,21 @@ describe('ASRStore', () => {
       modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
     });
 
+    const status = async () => (await store.captureMemoryFit()).status;
+
     it.each([
-      [undefined, true],
-      [2.5e9, true],
-      [3.5e9, false],
-    ])(
-      'Android, 8 GB, chat model %s bytes → fits %s',
-      async (chatBytes, fits) => {
+      [undefined, 'fits'],
+      [2.5e9, 'fits'],
+      [3.5e9, 'tight'],
+      [8e9 - ASR_TIERS.base.runtimeBytes, 'tight'],
+      [8e9 - ASR_TIERS.base.runtimeBytes + 1, 'wont_fit'],
+    ] as const)(
+      'Android, 8 GB, chat model %s bytes → %s',
+      async (chatBytes, expected) => {
         Platform.OS = 'android';
         (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
         modelStore.loadedModelBytes = chatBytes;
-        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+        await expect(status()).resolves.toBe(expected);
       },
     );
 
@@ -139,63 +143,109 @@ describe('ASRStore', () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
       modelStore.loadedModelBytes = 3e9;
       forceSelected('base');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(store.captureMemoryFit()).resolves.toEqual({
+        status: 'fits',
+        neededBytes: 3e9 + ASR_TIERS.base.runtimeBytes,
+      });
       forceSelected('large-turbo');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      await expect(store.captureMemoryFit()).resolves.toEqual({
+        status: 'tight',
+        neededBytes: 3e9 + ASR_TIERS['large-turbo'].runtimeBytes,
+      });
     });
 
     it.each([
-      ['1.7B', 1.9e9, 'small', true],
-      ['4B Q4', 3.2e9, 'base', false],
-      ['4B Q4', 3.2e9, 'small', false],
-      ['4B Q8', 4.3e9, 'base', false],
+      ['1.7B', 1.9e9, 'small', 'fits'],
+      ['4B Q4', 3.2e9, 'base', 'tight'],
+      ['4B Q4', 3.2e9, 'small', 'tight'],
+      ['4B Q8', 4.3e9, 'base', 'tight'],
+      ['8B', 5.9e9, 'base', 'wont_fit'],
     ] as const)(
-      'iOS, 4.2 GB free before any load, chat model %s + %s → fits %s',
-      async (_name, chatBytes, tier, fits) => {
+      'iOS, 4.2 GB free before any load, 6 GB RAM, chat model %s + %s → %s',
+      async (_name, chatBytes, tier, expected) => {
         Platform.OS = 'ios';
+        (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
         modelStore.availableMemoryCeiling = 4.2e9;
         // A past oversized load must not raise the budget.
         modelStore.largestSuccessfulLoad = 5.3e9;
         modelStore.loadedModelBytes = chatBytes;
         forceSelected(tier);
-        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+        await expect(status()).resolves.toBe(expected);
       },
     );
 
-    it('iOS keeps a fifth of the free memory in reserve', async () => {
+    it('iOS warns above four fifths of the free memory', async () => {
       Platform.OS = 'ios';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
       modelStore.availableMemoryCeiling = 4e9;
       forceSelected('base');
       modelStore.loadedModelBytes = 3.2e9 - ASR_TIERS.base.runtimeBytes;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
       modelStore.loadedModelBytes += 1;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      await expect(status()).resolves.toBe('tight');
     });
 
     it('iOS budgets the selected whisper model', async () => {
       Platform.OS = 'ios';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
       modelStore.availableMemoryCeiling = 4.2e9;
       modelStore.loadedModelBytes = 2.5e9;
       forceSelected('small');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
       forceSelected('large-turbo');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      await expect(status()).resolves.toBe('tight');
     });
 
-    it('iOS does not block recording before any ceiling is known', async () => {
+    it('iOS does not warn before any ceiling is known', async () => {
       Platform.OS = 'ios';
       modelStore.availableMemoryCeiling = undefined;
       modelStore.largestSuccessfulLoad = undefined;
       modelStore.loadedModelBytes = 4.3e9;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
     });
 
-    it('does not block recording when memory cannot be read', async () => {
+    it('fits a need no larger than the one accepted, and warns again above it', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      forceSelected('base');
+      modelStore.loadedModelBytes = 5e9;
+      const {neededBytes} = await store.captureMemoryFit();
+      store.acceptCaptureMemory(neededBytes);
+      await expect(status()).resolves.toBe('fits');
+      modelStore.loadedModelBytes = 4e9;
+      await expect(status()).resolves.toBe('fits');
+      modelStore.loadedModelBytes = 5e9 + 1;
+      await expect(status()).resolves.toBe('tight');
+    });
+
+    it('checking a tight need does not accept it', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      modelStore.loadedModelBytes = 5e9;
+      await expect(status()).resolves.toBe('tight');
+      expect(store.acceptedCaptureBytes).toBeNull();
+      await expect(status()).resolves.toBe('tight');
+    });
+
+    it('an accepted need never lets a need above total RAM through', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      store.acceptCaptureMemory(20e9);
+      modelStore.loadedModelBytes = 9e9;
+      await expect(status()).resolves.toBe('wont_fit');
+    });
+
+    it('does not persist the accepted need', () => {
+      const [[, options]] = (makePersistable as jest.Mock).mock.calls;
+      expect(options.properties).not.toContain('acceptedCaptureBytes');
+    });
+
+    it('does not warn when memory cannot be read', async () => {
       Platform.OS = 'android';
       (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
         new Error('unavailable'),
       );
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
     });
   });
 
