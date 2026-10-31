@@ -33,7 +33,6 @@ export interface VoiceMemoryFit {
   };
 }
 
-/** Warns above the budget, offers Continue anyway up to total RAM. */
 export const voiceMemoryFit = ({
   memory,
   chatBytes,

@@ -19,7 +19,6 @@ interface VoiceMemorySheetProps {
   onChooseSmallerModel: () => void;
 }
 
-/** Warns above the budget, offers Continue anyway up to total RAM. */
 export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
   fit,
   chatModelName,
