@@ -38,7 +38,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app.
+> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app. The app also fetches public device-compatibility rules at launch and checks purchases with the App Store or Google Play when it opens; neither sends your chats or personal data.
 
 ## Contents
 
