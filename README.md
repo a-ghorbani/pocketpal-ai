@@ -237,7 +237,7 @@ src/
 │   ├── talents/    # Tool engines + registries
 │   ├── search/     # Web search providers for the search talents
 │   ├── tts/        # TTS engines (kokoro, kitten, supertonic, phonon, system)
-│   ├── asr/        # Whisper speech recognition (dictation)
+│   ├── asr/        # Whisper speech recognition (dictation and voice mode)
 │   ├── voice/      # Hands-free voice mode
 │   ├── plus/       # Plus feature catalog and gate
 │   ├── iap/        # In-app purchases (store bridge)
@@ -288,7 +288,7 @@ A **Talent** is a tool the model can call mid-conversation. Engines are register
 
 Good first contributions:
 - A new **Talent** — implement a `TalentEngine` and register it in `src/services/talents/`.
-- A new **TTS engine** — add it under `src/services/tts/engines/` and list it in `getAllEngines` (`engineRegistry.ts`).
+- A new **TTS engine** — add it under `src/services/tts/engines/`, add its id to `EngineId` (`types.ts`), and register it in `engineRegistry.ts`.
 - A new **locale** — add a JSON file in `src/locales/` (or translate on [Weblate](https://hosted.weblate.org/projects/pocketpal-ai/)).
 
 </details>
