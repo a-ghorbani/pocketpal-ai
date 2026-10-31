@@ -159,6 +159,9 @@ describe('LocalApiServerStore lifecycle', () => {
     '0.1.2.3',
     '127.0.0.1',
     '999.1.1.1',
+    '256.1.1.1',
+    '1.2.3.256',
+    '127.10.0.1',
     'fe80::1',
     '',
   ])('shows the loopback URL for the unusable address %p', async address => {
@@ -169,15 +172,19 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
   });
 
-  it.each(['192.168.1.23', '10.0.0.7'])(
-    'shows the network URL for %p',
-    async address => {
-      store.setLanEnabled(true);
-      getIpAddress.mockResolvedValueOnce(address);
-      await startRunning();
-      expect(store.baseUrl).toBe(`http://${address}:8080/v1`);
-    },
-  );
+  it.each([
+    '192.168.1.23',
+    '10.0.0.7',
+    '172.16.0.5',
+    '169.255.0.1',
+    '10.254.0.1',
+    '1.2.3.255',
+  ])('shows the network URL for %p', async address => {
+    store.setLanEnabled(true);
+    getIpAddress.mockResolvedValueOnce(address);
+    await startRunning();
+    expect(store.baseUrl).toBe(`http://${address}:8080/v1`);
+  });
 
   it('drops the network URL when the foreground re-read finds only a link-local address', async () => {
     store.setLanEnabled(true);

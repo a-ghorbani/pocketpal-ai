@@ -130,6 +130,21 @@ describe('LocalApiServerCard', () => {
     expect(getByText('Not on Wi-Fi, so no network URL is shown.')).toBeTruthy();
   });
 
+  it('shows the Wi-Fi URL without the not-on-Wi-Fi note when an address is known', () => {
+    setState({
+      enabled: true,
+      status: 'running',
+      lanEnabled: true,
+      lanAddress: '192.168.1.23',
+      baseUrl: 'http://192.168.1.23:8080/v1',
+    });
+    const {getByTestId, queryByText} = render(<LocalApiServerCard />);
+    expect(getByTestId('local-api-server-url').props.children).toBe(
+      'http://192.168.1.23:8080/v1',
+    );
+    expect(queryByText('Not on Wi-Fi, so no network URL is shown.')).toBeNull();
+  });
+
   it('says browser pages are refused without a key', () => {
     const {getByText} = render(<LocalApiServerCard />);
     expect(
@@ -247,9 +262,8 @@ describe('LocalApiServerCard', () => {
   });
 
   it('sets a key through a sheet and never shows it back', async () => {
-    const {getByTestId, queryByText, queryByDisplayValue} = render(
-      <LocalApiServerCard />,
-    );
+    const {getByTestId, queryByTestId, queryByText, queryByDisplayValue} =
+      render(<LocalApiServerCard />);
     fireEvent.press(getByTestId('local-api-server-key-button'));
     fireEvent.changeText(getByTestId('local-api-server-key-input'), 'secret');
     await act(async () => {
@@ -257,6 +271,7 @@ describe('LocalApiServerCard', () => {
     });
 
     expect(store.setApiKey).toHaveBeenCalledWith('secret');
+    expect(queryByTestId('local-api-server-key-input')).toBeNull();
     expect(queryByText('secret')).toBeNull();
     expect(queryByDisplayValue('secret')).toBeNull();
     expect(queryByText('Requests must send this key')).toBeTruthy();
@@ -284,12 +299,13 @@ describe('LocalApiServerCard', () => {
   });
 
   it('drops the key draft when the sheet is cancelled', () => {
-    const {getByTestId, getByText, queryByDisplayValue} = render(
+    const {getByTestId, getByText, queryByTestId, queryByDisplayValue} = render(
       <LocalApiServerCard />,
     );
     fireEvent.press(getByTestId('local-api-server-key-button'));
     fireEvent.changeText(getByTestId('local-api-server-key-input'), 'draft');
     fireEvent.press(getByText('Cancel'));
+    expect(queryByTestId('local-api-server-key-input')).toBeNull();
     fireEvent.press(getByTestId('local-api-server-key-button'));
 
     expect(store.setApiKey).not.toHaveBeenCalled();
@@ -325,5 +341,20 @@ describe('LocalApiServerCard', () => {
     fireEvent.press(getByTestId('local-api-server-key-button'));
     expect(store.setApiKey).not.toHaveBeenCalled();
     expect(queryByDisplayValue('draft')).toBeNull();
+  });
+
+  it('keeps the sheet open with the draft when saving the key fails', async () => {
+    store.setApiKey.mockResolvedValueOnce(false);
+    const {getByTestId} = render(<LocalApiServerCard />);
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+    fireEvent.changeText(getByTestId('local-api-server-key-input'), 'secret');
+    await act(async () => {
+      fireEvent.press(getByTestId('local-api-server-key-save'));
+    });
+
+    expect(store.setApiKey).toHaveBeenCalledWith('secret');
+    expect(getByTestId('local-api-server-key-input').props.value).toBe(
+      'secret',
+    );
   });
 });
