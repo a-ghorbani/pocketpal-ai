@@ -54,10 +54,19 @@ const toListenError = (error: unknown): LocalApiServerError => {
     : 'listen_failed';
 };
 
-const usableAddress = (address: string) =>
-  /^\d{1,3}(\.\d{1,3}){3}$/.test(address) && address !== ALL_INTERFACES_HOST
-    ? address
-    : undefined;
+const usableAddress = (address: string) => {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(address)) {
+    return undefined;
+  }
+  const octets = address.split('.').map(Number);
+  const [first, second] = octets;
+  const unusable =
+    octets.some(octet => octet > 255) ||
+    first === 0 ||
+    first === 127 ||
+    (first === 169 && second === 254);
+  return unusable ? undefined : address;
+};
 
 /**
  * Owns the local API listener. Every `start()` and `stop()` moves the epoch,

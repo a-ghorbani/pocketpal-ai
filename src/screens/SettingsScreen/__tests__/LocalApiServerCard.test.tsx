@@ -96,9 +96,13 @@ describe('LocalApiServerCard', () => {
       enabled: true,
       status: 'running',
       lanEnabled: true,
+      lanAddress: undefined,
       baseUrl: 'http://127.0.0.1:8080/v1',
     });
-    const {getByText} = render(<LocalApiServerCard />);
+    const {getByText, getByTestId} = render(<LocalApiServerCard />);
+    expect(getByTestId('local-api-server-url').props.children).toBe(
+      'http://127.0.0.1:8080/v1',
+    );
     expect(
       getByText(
         'The server is reachable on every network this phone is on: Wi-Fi, mobile data, hotspot and VPN. Set an API key to limit who can use it.',

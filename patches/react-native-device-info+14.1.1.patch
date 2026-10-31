@@ -1,0 +1,78 @@
+diff --git a/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m b/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
+index 948c561..e51d8fb 100644
+--- a/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
++++ b/node_modules/react-native-device-info/ios/RNDeviceInfo/RNDeviceInfo.m
+@@ -684,44 +684,46 @@ RCT_EXPORT_METHOD(getSupportedAbis:(RCTPromiseResolveBlock)resolve rejecter:(RCT
+ }
+ 
+ - (NSString *) getIpAddress {
+-    NSString *address = @"0.0.0.0";
++    NSString *en0Address = nil;
++    NSString *en1Address = nil;
+     struct ifaddrs *interfaces = NULL;
+     struct ifaddrs *temp_addr = NULL;
+     int success = 0;
+     // retrieve the current interfaces - returns 0 on success
+     success = getifaddrs(&interfaces);
+     if (success == 0) {
+-        // Loop through linked list of interfaces
+-        temp_addr = interfaces;
+-        while(temp_addr != NULL) {
+-            sa_family_t addr_family = temp_addr->ifa_addr->sa_family;
+-            // Check for IPv4 or IPv6-only interfaces
+-            if(addr_family == AF_INET || addr_family == AF_INET6) {
+-                NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
+-                    if(
+-                        // Check if interface is en0 which is the wifi connection the iPhone
+-                        // and the ethernet connection on the Apple TV
+-                        [ifname isEqualToString:@"en0"] ||
+-                        // Check if interface is en1 which is the wifi connection on the Apple TV
+-                        [ifname isEqualToString:@"en1"]
+-                    ) {
+-                        const struct sockaddr_in *addr = (const struct sockaddr_in*)temp_addr->ifa_addr;
+-                        socklen_t addr_len = addr_family == AF_INET ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN;
+-                        char addr_buffer[addr_len];
+-                        // We use inet_ntop because it also supports getting an address from
+-                        // interfaces that are IPv6-only
+-                        const char *netname = inet_ntop(addr_family, &addr->sin_addr, addr_buffer, addr_len);
+-
+-                         // Get NSString from C String
+-                        address = [NSString stringWithUTF8String:netname];
+-                    }
++        // Prefer the first routable IPv4 of the Wi-Fi interface (en0, then en1):
++        // skip IPv6 and link-local 169.254.0.0/16 addresses
++        for (temp_addr = interfaces; temp_addr != NULL; temp_addr = temp_addr->ifa_next) {
++            if (temp_addr->ifa_addr == NULL || temp_addr->ifa_addr->sa_family != AF_INET) {
++                continue;
++            }
++            const struct sockaddr_in *addr = (const struct sockaddr_in*)temp_addr->ifa_addr;
++            if ((ntohl(addr->sin_addr.s_addr) >> 16) == 0xA9FE) {
++                continue;
++            }
++            NSString* ifname = [NSString stringWithUTF8String:temp_addr->ifa_name];
++            BOOL isEn0 = en0Address == nil && [ifname isEqualToString:@"en0"];
++            BOOL isEn1 = en1Address == nil && [ifname isEqualToString:@"en1"];
++            if (!isEn0 && !isEn1) {
++                continue;
++            }
++            char addr_buffer[INET_ADDRSTRLEN];
++            const char *netname = inet_ntop(AF_INET, &addr->sin_addr, addr_buffer, INET_ADDRSTRLEN);
++            if (netname == NULL) {
++                continue;
++            }
++            NSString *address = [NSString stringWithUTF8String:netname];
++            if (isEn0) {
++                en0Address = address;
++            } else {
++                en1Address = address;
+             }
+-            temp_addr = temp_addr->ifa_next;
+         }
+     }
+     // Free memory
+     freeifaddrs(interfaces);
+-    return address;
++    return en0Address ?: en1Address ?: @"0.0.0.0";
+ }
+ 
+ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getIpAddressSync) {
