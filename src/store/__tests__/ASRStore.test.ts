@@ -218,6 +218,15 @@ describe('ASRStore', () => {
       await expect(status()).resolves.toBe('tight');
     });
 
+    it('checking a tight need does not accept it', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      modelStore.loadedModelBytes = 5e9;
+      await expect(status()).resolves.toBe('tight');
+      expect(store.acceptedCaptureBytes).toBeNull();
+      await expect(status()).resolves.toBe('tight');
+    });
+
     it('an accepted need never lets a need above total RAM through', async () => {
       Platform.OS = 'android';
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);

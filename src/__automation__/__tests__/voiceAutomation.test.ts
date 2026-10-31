@@ -126,6 +126,21 @@ describe('runVoiceCommand', () => {
     },
   );
 
+  it('on iOS with total RAM unreadable, memory::wont-fit leaves the chat size alone', async () => {
+    Platform.OS = 'ios';
+    jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+    (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValueOnce(
+      new Error('unavailable'),
+    );
+    runInAction(() => {
+      modelStore.loadedModelBytes = 1e9;
+    });
+
+    await runVoiceCommand('memory::wont-fit');
+
+    expect(modelStore.loadedModelBytes).toBe(1e9);
+  });
+
   it('seed::spoken adds a spoken question and a spoken answer', async () => {
     await runVoiceCommand('seed::spoken');
 

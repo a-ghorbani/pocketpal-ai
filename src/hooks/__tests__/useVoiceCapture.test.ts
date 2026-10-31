@@ -129,6 +129,14 @@ describe('useVoiceCapture', () => {
     );
     expect(mockEnsureMicPermission).not.toHaveBeenCalled();
     expect(mockAudioStart).not.toHaveBeenCalled();
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('records without asking when memory fits', async () => {
+    await startRecording();
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
   });
 
   describe('when memory is tight', () => {
@@ -197,6 +205,49 @@ describe('useVoiceCapture', () => {
 
       await waitFor(() => expect(asrStore.captureState).toBe('recording'));
       expect(mockMemoryFit).toHaveBeenCalledTimes(2);
+    });
+
+    it('asks again when the need grew past the one accepted', async () => {
+      const {buttons} = await openAlert();
+      mockMemoryFit.mockResolvedValueOnce({
+        status: 'tight',
+        neededBytes: need + 1,
+      });
+
+      await act(async () => {
+        buttons[1].onPress?.();
+      });
+
+      await waitFor(() => expect(mockAlert).toHaveBeenCalledTimes(2));
+      expect(asrStore.acceptCaptureMemory).toHaveBeenCalledWith(need);
+      expect(asrStore.captureState).toBe('idle');
+      expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+      expect(mockAudioStart).not.toHaveBeenCalled();
+    });
+
+    it('Try anyway on an alert a newer tap replaced does nothing', async () => {
+      const {result, buttons: stale} = await openAlert();
+      mockMemoryFit.mockResolvedValueOnce({status: 'tight', neededBytes: need});
+      await act(async () => {
+        result.current.start();
+      });
+      await waitFor(() => expect(mockAlert).toHaveBeenCalledTimes(2));
+
+      await act(async () => {
+        stale[1].onPress?.();
+      });
+
+      expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
+      expect(mockMemoryFit).toHaveBeenCalledTimes(2);
+      expect(mockAudioStart).not.toHaveBeenCalled();
+      expect(asrStore.captureState).toBe('idle');
+
+      const current = mockAlert.mock.calls[1][2] as AlertButton[];
+      await act(async () => {
+        current[1].onPress?.();
+      });
+      await waitFor(() => expect(asrStore.captureState).toBe('recording'));
+      expect(asrStore.acceptCaptureMemory).toHaveBeenCalledTimes(1);
     });
 
     it('Try anyway after unmount starts nothing', async () => {

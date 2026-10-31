@@ -55,6 +55,7 @@ describe('VoiceMemorySheet', () => {
     });
 
     expect(getByText(strings.memoryTightTitle)).toBeTruthy();
+    expect(getByText(strings.memoryTightBody)).toBeTruthy();
     expect(getByText('Chat model · Gemma')).toBeTruthy();
     expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByText('Voice · Supertonic')).toBeTruthy();
@@ -69,13 +70,15 @@ describe('VoiceMemorySheet', () => {
   });
 
   it("when it won't fit, offers no Continue anyway", () => {
-    const {getByText, queryByTestId, getByTestId} = renderSheet({
+    const {getByText, queryByText, queryByTestId, getByTestId} = renderSheet({
       status: 'wont_fit',
       sttTier: 'base',
       breakdown,
     });
 
     expect(getByText(strings.memoryWontFitTitle)).toBeTruthy();
+    expect(getByText(strings.memoryWontFitBody)).toBeTruthy();
+    expect(queryByText(strings.memoryTightBody)).toBeNull();
     expect(queryByTestId('voice-memory-continue')).toBeNull();
     expect(getByTestId('voice-memory-smaller-model')).toBeTruthy();
   });
