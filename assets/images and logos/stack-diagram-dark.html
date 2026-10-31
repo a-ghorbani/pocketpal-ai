@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Editable source of stack-diagram-dark.png.
-     Render from this directory: google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=1200,811 --screenshot=stack-diagram-dark.png stack-diagram-dark.html -->
+     Render from this directory: google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=1200,1049 --screenshot=stack-diagram-dark.png stack-diagram-dark.html -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -15,7 +15,7 @@
   html { background: #1e1e1e; }
   body { width: 1200px; font-family: Inter, sans-serif; line-height: normal; white-space: nowrap; }
 
-  .frame { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 56px 64px; background: #0d0d0f; border-radius: 28px; overflow: hidden; }
+  .frame { min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 56px 64px; background: #0d0d0f; border-radius: 28px; overflow: hidden; }
   .header { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .title { font-size: 34px; font-weight: 700; color: #fafafa; }
   .subtitle { font-size: 16px; font-weight: 400; color: #a1a1aa; }
@@ -34,7 +34,8 @@
   .logo { width: 22px; height: 22px; flex: none; background: center / contain no-repeat; }
   .logo.llama-cpp { width: 131.64px; height: 26px; }
 
-  .paths { display: flex; align-items: flex-start; gap: 40px; flex: 1; min-width: 0; }
+  .paths { display: flex; flex-direction: column; gap: 20px; flex: 1; min-width: 0; }
+  .path-row { display: flex; align-items: flex-start; gap: 40px; }
   .path { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
   .path-label, .voices-label { font-size: 11px; font-weight: 600; letter-spacing: 0.66px; color: #80808a; }
   .stack { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -71,6 +72,7 @@
       <div class="chip">WatermelonDB</div>
       <div class="chip">Tool-use loop</div>
       <div class="chip">Pals · PalsHub · Talents</div>
+      <div class="chip">Voice mode</div>
     </div>
   </div>
 
@@ -79,9 +81,15 @@
   <div class="layer top">
     <div class="layer-label"><p class="layer-name">Bridging</p><p class="layer-sub">native modules</p></div>
     <div class="paths">
-      <div class="path">
-        <p class="path-label">LLM</p>
-        <div class="chip"><span class="logo react"></span>llama.rn</div>
+      <div class="path-row">
+        <div class="path">
+          <p class="path-label">LLM</p>
+          <div class="chip"><span class="logo react"></span>llama.rn</div>
+        </div>
+        <div class="path">
+          <p class="path-label">SPEECH-TO-TEXT</p>
+          <div class="chip">whisper.rn</div>
+        </div>
       </div>
       <div class="path">
         <p class="path-label">TEXT-TO-SPEECH</p>
@@ -93,9 +101,13 @@
               <div class="chip voice"><span class="avatar kokoro"></span>Kokoro</div>
               <div class="chip voice"><span class="avatar kitten"></span>Kitten</div>
               <div class="chip voice"><span class="avatar supertonic"></span>Supertonic</div>
+              <div class="chip">Phonon</div>
             </div>
           </div>
-          <div class="chip"><span class="logo onnx"></span>onnxruntime-react-native</div>
+          <div class="chips">
+            <div class="chip"><span class="logo onnx"></span>onnxruntime-react-native</div>
+            <div class="chip"><span class="logo react"></span>react-native-speech-phonon</div>
+          </div>
         </div>
       </div>
     </div>
@@ -104,10 +116,12 @@
   <span class="arrow"></span>
 
   <div class="layer">
-    <div class="layer-label"><p class="layer-name">Engine</p><p class="layer-sub">C / C++</p></div>
+    <div class="layer-label"><p class="layer-name">Engine</p><p class="layer-sub">C / C++ / Rust</p></div>
     <div class="chips">
       <div class="chip engine"><span class="logo llama-cpp"></span><span class="format">· GGUF</span></div>
+      <div class="chip engine">whisper.cpp<span class="format">· GGML</span></div>
       <div class="chip engine"><span class="logo onnx"></span>ONNX Runtime<span class="format">· ONNX</span></div>
+      <div class="chip engine">Phonon<span class="format">· Rust / Core ML</span></div>
     </div>
   </div>
 
@@ -120,6 +134,7 @@
       <div class="chip"><span class="logo apple"></span>GPU · Metal (iOS)</div>
       <div class="chip"><span class="logo qualcomm"></span>GPU · OpenCL / Adreno</div>
       <div class="chip"><span class="logo qualcomm"></span>NPU · Hexagon</div>
+      <div class="chip"><span class="logo apple"></span>NPU · Neural Engine (Phonon on iOS)</div>
     </div>
   </div>
 </div>
