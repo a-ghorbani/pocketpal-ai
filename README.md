@@ -38,7 +38,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** Your chats and documents leave your device only through features you turn on: web search and page reading, or a remote server. The app's other network use (model and voice downloads, PalsHub and purchases, device-compatibility rules from the jsDelivr CDN at launch, the opt-in benchmark leaderboard, and feedback or reports you submit) never attaches your chats.
+> **Privacy note:** Your chats and documents leave your device only through features you turn on: web search and page reading, a remote server, or a system voice your phone runs online. The app's other network use (model and voice downloads, PalsHub and purchases, device-compatibility rules from the jsDelivr CDN at launch, the opt-in benchmark leaderboard, and feedback or reports you submit) never attaches your chats.
 
 ## Contents
 
@@ -55,7 +55,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 ## Features
 
 - **🧠 On-device chat** — run GGUF language models (Gemma, Qwen, Phi, Llama, and more) fully offline.
-- **🗣️ Text-to-speech** — give your assistant a voice with on-device neural voices (Kokoro, Kitten, Supertonic, and Phonon on supported devices) with no cloud calls, or your phone's built-in system voices.
+- **🗣️ Text-to-speech** — give your assistant a voice with on-device neural voices (Kokoro, Kitten, Supertonic, and Phonon on supported devices) that make no cloud calls, or your phone's system voices.
 - **🎙️ Voice input** — dictate messages with on-device Whisper speech recognition (whisper.cpp).
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app purchase.
@@ -242,6 +242,7 @@ src/
 │   ├── plus/       # Plus feature catalog and gate
 │   ├── iap/        # In-app purchases (store bridge)
 │   ├── palshub/    # PalsHub marketplace integration
+│   ├── deviceRules/ # Device-compatibility rules (bundled, refreshed at launch)
 │   └── downloads/  # Model download manager
 ├── database/       # WatermelonDB schema, models, migrations
 ├── repositories/   # Data-access layer over the DB
