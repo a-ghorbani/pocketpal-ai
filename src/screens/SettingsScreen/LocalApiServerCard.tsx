@@ -103,138 +103,144 @@ export const LocalApiServerCard: React.FC = observer(() => {
   };
 
   return (
-    <Card elevation={0} style={styles.card} testID="local-api-server-card">
-      <Card.Title title={copy.title} />
-      <Card.Content>
-        <View style={styles.settingItemContainer}>
-          <View style={styles.switchContainer}>
-            <View style={styles.textContainer}>
-              <Text variant="titleMedium" style={styles.textLabel}>
-                {copy.enable}
-              </Text>
-              <Text variant="labelSmall" style={styles.textDescription}>
-                {copy.enableDescription}
-              </Text>
-            </View>
-            <Switch
-              testID="local-api-server-switch"
-              value={store.enabled}
-              onValueChange={onSwitchChange}
-            />
-          </View>
-
-          {store.status === 'starting' && (
+    <>
+      <Card elevation={0} style={styles.card} testID="local-api-server-card">
+        <Card.Title title={copy.title} />
+        <Card.Content>
+          <View style={styles.settingItemContainer}>
             <View style={styles.switchContainer}>
-              <Text variant="bodyMedium">{copy.starting}</Text>
-              <ActivityIndicator size="small" />
-            </View>
-          )}
-
-          {store.status === 'running' && store.baseUrl && (
-            <View style={styles.textContainer}>
-              <Text variant="labelSmall" style={styles.textDescription}>
-                {copy.url}
-              </Text>
-              <View style={styles.switchContainer}>
-                <Text
-                  variant="titleMedium"
-                  selectable
-                  testID="local-api-server-url"
-                  style={styles.textLabel}>
-                  {store.baseUrl}
+              <View style={styles.textContainer}>
+                <Text variant="titleMedium" style={styles.textLabel}>
+                  {copy.enable}
                 </Text>
-                <Button
-                  mode="text"
-                  compact
-                  onPress={() => Clipboard.setString(store.baseUrl ?? '')}>
-                  {copy.copyUrl}
-                </Button>
+                <Text variant="labelSmall" style={styles.textDescription}>
+                  {copy.enableDescription}
+                </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.textDescription}>
-                {servedModel
-                  ? t(copy.servedModel, {model: servedModel.name})
-                  : copy.noModel}
-              </Text>
-              {store.lanEnabled && !store.lanAddress && (
-                <Text variant="labelSmall" style={styles.textDescription}>
-                  {copy.notOnWifi}
-                </Text>
-              )}
+              <Switch
+                testID="local-api-server-switch"
+                value={store.enabled}
+                onValueChange={onSwitchChange}
+              />
             </View>
-          )}
 
-          {store.status === 'failed' && store.lastError && (
-            <Text
-              variant="bodyMedium"
-              style={styles.errorText}
-              testID="local-api-server-error">
-              {t(copy.errors[ERROR_COPY[store.lastError]], {port: store.port})}
-            </Text>
-          )}
+            {store.status === 'starting' && (
+              <View style={styles.switchContainer}>
+                <Text variant="bodyMedium">{copy.starting}</Text>
+                <ActivityIndicator size="small" />
+              </View>
+            )}
 
-          <Divider />
-
-          {!editable && (
-            <Text variant="labelSmall" style={styles.textDescription}>
-              {copy.stopToEdit}
-            </Text>
-          )}
-
-          <TextInput
-            testID="local-api-server-port-input"
-            label={copy.port}
-            value={portDraft}
-            onChangeText={onPortChange}
-            onBlur={onPortBlur}
-            keyboardType="number-pad"
-            editable={editable}
-            disabled={!editable}
-            error={portInvalid}
-            helperText={portInvalid ? copy.portInvalid : undefined}
-          />
-
-          <View style={styles.switchContainer}>
-            <View style={styles.textContainer}>
-              <Text variant="titleMedium" style={styles.textLabel}>
-                {copy.lan}
-              </Text>
-              {store.lanEnabled && (
+            {store.status === 'running' && store.baseUrl && (
+              <View style={styles.textContainer}>
                 <Text variant="labelSmall" style={styles.textDescription}>
-                  {copy.lanWarning}
+                  {copy.url}
                 </Text>
-              )}
-            </View>
-            <Switch
-              testID="local-api-server-lan-switch"
-              value={store.lanEnabled}
-              disabled={!editable}
-              onValueChange={value => {
-                store.setLanEnabled(value);
-              }}
-            />
-          </View>
+                <View style={styles.switchContainer}>
+                  <Text
+                    variant="titleMedium"
+                    selectable
+                    testID="local-api-server-url"
+                    style={styles.textLabel}>
+                    {store.baseUrl}
+                  </Text>
+                  <Button
+                    mode="text"
+                    compact
+                    onPress={() => Clipboard.setString(store.baseUrl ?? '')}>
+                    {copy.copyUrl}
+                  </Button>
+                </View>
+                <Text variant="bodyMedium" style={styles.textDescription}>
+                  {servedModel
+                    ? t(copy.servedModel, {model: servedModel.name})
+                    : copy.noModel}
+                </Text>
+                {store.lanEnabled && !store.lanAddress && (
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {copy.notOnWifi}
+                  </Text>
+                )}
+              </View>
+            )}
 
-          <View style={styles.switchContainer}>
-            <View style={styles.textContainer}>
-              <Text variant="titleMedium" style={styles.textLabel}>
-                {copy.apiKey}
+            {store.status === 'failed' && store.lastError && (
+              <Text
+                variant="bodyMedium"
+                style={styles.errorText}
+                testID="local-api-server-error">
+                {t(copy.errors[ERROR_COPY[store.lastError]], {
+                  port: store.port,
+                })}
               </Text>
+            )}
+
+            <Divider />
+
+            {!editable && (
               <Text variant="labelSmall" style={styles.textDescription}>
-                {store.hasApiKey ? copy.apiKeySet : copy.apiKeyNotSet}
+                {copy.stopToEdit}
               </Text>
-            </View>
-            <Button
-              testID="local-api-server-key-button"
-              mode="outlined"
+            )}
+
+            <TextInput
+              testID="local-api-server-port-input"
+              label={copy.port}
+              value={portDraft}
+              onChangeText={onPortChange}
+              onBlur={onPortBlur}
+              keyboardType="number-pad"
+              editable={editable}
               disabled={!editable}
-              onPress={() =>
-                store.hasApiKey ? store.clearApiKey() : setKeySheetVisible(true)
-              }>
-              {store.hasApiKey ? copy.clearApiKey : copy.setApiKey}
-            </Button>
+              error={portInvalid}
+              helperText={portInvalid ? copy.portInvalid : undefined}
+            />
+
+            <View style={styles.switchContainer}>
+              <View style={styles.textContainer}>
+                <Text variant="titleMedium" style={styles.textLabel}>
+                  {copy.lan}
+                </Text>
+                {store.lanEnabled && (
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {copy.lanWarning}
+                  </Text>
+                )}
+              </View>
+              <Switch
+                testID="local-api-server-lan-switch"
+                value={store.lanEnabled}
+                disabled={!editable}
+                onValueChange={value => {
+                  store.setLanEnabled(value);
+                }}
+              />
+            </View>
+
+            <View style={styles.switchContainer}>
+              <View style={styles.textContainer}>
+                <Text variant="titleMedium" style={styles.textLabel}>
+                  {copy.apiKey}
+                </Text>
+                <Text variant="labelSmall" style={styles.textDescription}>
+                  {store.hasApiKey ? copy.apiKeySet : copy.apiKeyNotSet}
+                </Text>
+              </View>
+              <Button
+                testID="local-api-server-key-button"
+                mode="outlined"
+                disabled={!editable}
+                onPress={() =>
+                  store.hasApiKey
+                    ? store.clearApiKey()
+                    : setKeySheetVisible(true)
+                }>
+                {store.hasApiKey ? copy.clearApiKey : copy.setApiKey}
+              </Button>
+            </View>
           </View>
-        </View>
-      </Card.Content>
+        </Card.Content>
+      </Card>
 
       <Sheet
         isVisible={keySheetVisible}
@@ -267,6 +273,6 @@ export const LocalApiServerCard: React.FC = observer(() => {
           </View>
         </Sheet.Actions>
       </Sheet>
-    </Card>
+    </>
   );
 });
