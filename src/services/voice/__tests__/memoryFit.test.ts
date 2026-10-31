@@ -6,7 +6,11 @@ import {voiceMemoryFit} from '../memoryFit';
 const sttBytes = ASR_TIERS.base.runtimeBytes;
 const ttsBytes = TTS_ENGINE_RUNTIME_BYTES.supertonic;
 const android = (totalBytes: number) => ({os: 'android' as const, totalBytes});
-const ios = (ceilingBytes: number) => ({os: 'ios' as const, ceilingBytes});
+const ios = (ceilingBytes: number, totalBytes = 6e9) => ({
+  os: 'ios' as const,
+  ceilingBytes,
+  totalBytes,
+});
 
 describe('voiceMemoryFit', () => {
   it("won't fit a 3.23 GB chat model on a 7.4 GB Android phone", () => {
