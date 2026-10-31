@@ -9,6 +9,25 @@ import {mockModelStore} from '../../../../__mocks__/stores/modelStore';
 
 import {LocalApiServerCard} from '../LocalApiServerCard';
 
+jest.mock('../../../components/Sheet/Sheet', () => {
+  const {Pressable, View} = require('react-native');
+  const MockSheet = ({children, isVisible, title, onClose}: any) => {
+    if (!isVisible) {
+      return null;
+    }
+    return (
+      <View testID="sheet">
+        <View testID="sheet-title">{title}</View>
+        <Pressable testID="sheet-close" onPress={onClose} />
+        {children}
+      </View>
+    );
+  };
+  MockSheet.ScrollView = ({children}: any) => <View>{children}</View>;
+  MockSheet.Actions = ({children}: any) => <View>{children}</View>;
+  return {Sheet: MockSheet};
+});
+
 const setState = (state: Partial<typeof store>) =>
   runInAction(() => Object.assign(store, state));
 
@@ -227,7 +246,7 @@ describe('LocalApiServerCard', () => {
     expect(store.setLanEnabled).toHaveBeenCalledWith(true);
   });
 
-  it('sets a key through a dialog and never shows it back', async () => {
+  it('sets a key through a sheet and never shows it back', async () => {
     const {getByTestId, queryByText, queryByDisplayValue} = render(
       <LocalApiServerCard />,
     );
@@ -264,7 +283,7 @@ describe('LocalApiServerCard', () => {
     ).toBe(true);
   });
 
-  it('drops the key draft when the dialog is cancelled', () => {
+  it('drops the key draft when the sheet is cancelled', () => {
     const {getByTestId, getByText, queryByDisplayValue} = render(
       <LocalApiServerCard />,
     );
@@ -273,6 +292,37 @@ describe('LocalApiServerCard', () => {
     fireEvent.press(getByText('Cancel'));
     fireEvent.press(getByTestId('local-api-server-key-button'));
 
+    expect(store.setApiKey).not.toHaveBeenCalled();
+    expect(queryByDisplayValue('draft')).toBeNull();
+  });
+
+  it('opens the key sheet empty and disables Save until a key is typed', () => {
+    const {getByTestId} = render(<LocalApiServerCard />);
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+
+    expect(getByTestId('local-api-server-key-input').props.value).toBe('');
+    const save = getByTestId('local-api-server-key-save');
+    expect(save.props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(save);
+    expect(store.setApiKey).not.toHaveBeenCalled();
+
+    fireEvent.changeText(getByTestId('local-api-server-key-input'), 'k');
+    expect(
+      getByTestId('local-api-server-key-save').props.accessibilityState
+        ?.disabled,
+    ).toBe(false);
+  });
+
+  it('drops the key draft when the sheet is dismissed', () => {
+    const {getByTestId, queryByTestId, queryByDisplayValue} = render(
+      <LocalApiServerCard />,
+    );
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+    fireEvent.changeText(getByTestId('local-api-server-key-input'), 'draft');
+    fireEvent.press(getByTestId('sheet-close'));
+    expect(queryByTestId('local-api-server-key-input')).toBeNull();
+
+    fireEvent.press(getByTestId('local-api-server-key-button'));
     expect(store.setApiKey).not.toHaveBeenCalled();
     expect(queryByDisplayValue('draft')).toBeNull();
   });

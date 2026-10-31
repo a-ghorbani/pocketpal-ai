@@ -11,7 +11,7 @@ import {
   Text,
 } from 'react-native-paper';
 
-import {Dialog, Divider, TextInput} from '../../components';
+import {Divider, Sheet, TextInput} from '../../components';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import type {Translations} from '../../locales/types';
@@ -44,7 +44,7 @@ export const LocalApiServerCard: React.FC = observer(() => {
 
   const [portDraft, setPortDraft] = useState(String(store.port));
   const [portInvalid, setPortInvalid] = useState(false);
-  const [keyDialogVisible, setKeyDialogVisible] = useState(false);
+  const [keySheetVisible, setKeySheetVisible] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
 
   useEffect(() => {
@@ -93,13 +93,13 @@ export const LocalApiServerCard: React.FC = observer(() => {
   const saveKey = async () => {
     if (await store.setApiKey(keyDraft)) {
       setKeyDraft('');
-      setKeyDialogVisible(false);
+      setKeySheetVisible(false);
     }
   };
 
-  const closeKeyDialog = () => {
+  const closeKeySheet = () => {
     setKeyDraft('');
-    setKeyDialogVisible(false);
+    setKeySheetVisible(false);
   };
 
   return (
@@ -228,9 +228,7 @@ export const LocalApiServerCard: React.FC = observer(() => {
               mode="outlined"
               disabled={!editable}
               onPress={() =>
-                store.hasApiKey
-                  ? store.clearApiKey()
-                  : setKeyDialogVisible(true)
+                store.hasApiKey ? store.clearApiKey() : setKeySheetVisible(true)
               }>
               {store.hasApiKey ? copy.clearApiKey : copy.setApiKey}
             </Button>
@@ -238,32 +236,37 @@ export const LocalApiServerCard: React.FC = observer(() => {
         </View>
       </Card.Content>
 
-      <Dialog
-        testID="local-api-server-key-dialog"
-        visible={keyDialogVisible}
-        onDismiss={closeKeyDialog}
+      <Sheet
+        isVisible={keySheetVisible}
+        onClose={closeKeySheet}
         title={copy.apiKey}
-        avoidKeyboard
-        actions={[
-          {label: l10n.common.cancel, onPress: closeKeyDialog},
-          {
-            label: l10n.common.save,
-            onPress: saveKey,
-            mode: 'contained',
-            disabled: keyDraft.length === 0,
-            testID: 'local-api-server-key-save',
-          },
-        ]}>
-        <TextInput
-          testID="local-api-server-key-input"
-          value={keyDraft}
-          onChangeText={setKeyDraft}
-          placeholder={copy.apiKeyPlaceholder}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </Dialog>
+        snapPoints={['50%']}>
+        <Sheet.ScrollView contentContainerStyle={styles.keySheetContent}>
+          <TextInput
+            testID="local-api-server-key-input"
+            value={keyDraft}
+            onChangeText={setKeyDraft}
+            placeholder={copy.apiKeyPlaceholder}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </Sheet.ScrollView>
+        <Sheet.Actions>
+          <View style={styles.keySheetActions}>
+            <Button mode="text" onPress={closeKeySheet}>
+              {l10n.common.cancel}
+            </Button>
+            <Button
+              testID="local-api-server-key-save"
+              mode="contained"
+              onPress={saveKey}
+              disabled={keyDraft.length === 0}>
+              {l10n.common.save}
+            </Button>
+          </View>
+        </Sheet.Actions>
+      </Sheet>
     </Card>
   );
 });

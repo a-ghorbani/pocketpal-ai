@@ -135,4 +135,13 @@ export const createStyles = (theme: Theme) =>
     segmentedButtons: {
       marginVertical: 8,
     },
+    keySheetContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    keySheetActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
   });
