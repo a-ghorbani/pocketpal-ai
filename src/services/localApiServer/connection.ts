@@ -9,7 +9,7 @@ export const READ_DEADLINE_MS = 30_000;
 
 export interface ConnectionSocket {
   on(event: 'data', listener: (data: Uint8Array) => void): unknown;
-  on(event: 'close' | 'error', listener: () => void): unknown;
+  on(event: 'close' | 'end' | 'error', listener: () => void): unknown;
   write(
     data: string,
     encoding: 'utf8',
@@ -54,6 +54,7 @@ export function handleConnection(
   let closed = false;
   let headAnswered = false;
   let settled = false;
+  let receivedAny = false;
   let endRequested = false;
   let pendingWrites = 0;
 
@@ -164,7 +165,13 @@ export function handleConnection(
 
   socket.on('close', onClosed);
   socket.on('error', onClosed);
+  socket.on('end', () => {
+    if (!receivedAny) {
+      connection.destroy();
+    }
+  });
   socket.on('data', data => {
+    receivedAny = true;
     if (settled || closed) {
       return;
     }

@@ -278,6 +278,25 @@ describe('handleConnection', () => {
     expect(socket.destroyed).toBe(false);
   });
 
+  it('frees the slot at once when a client half-closes before sending anything', async () => {
+    jest.useFakeTimers();
+    const ctx = makeContext();
+    const silent = Array.from({length: MAX_OPEN_CONNECTIONS}, () =>
+      connect(ctx),
+    );
+    silent.forEach(socket => socket.emit('end'));
+
+    expect(silent.every(socket => socket.destroyed)).toBe(true);
+    expect(silent.every(socket => socket.writes.length === 0)).toBe(true);
+    expect(ctx.openConnections.size).toBe(0);
+
+    const next = connect(ctx);
+    next.receive('GET /v1/models HTTP/1.1\r\nHost: localhost\r\n\r\n');
+    await flush();
+    expect(next.destroyed).toBe(false);
+    expect(next.output).toMatch(/^HTTP\/1\.1 200 /);
+  });
+
   it('closes the connection when a write hits a closed socket', async () => {
     const held = heldChat();
     const ctx = makeContext(held.handleChat);
