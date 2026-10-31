@@ -183,6 +183,7 @@ describe('useVoiceMode', () => {
     (AudioRecord.init as jest.Mock).mockResolvedValue(undefined);
     (check as jest.Mock).mockResolvedValue('granted');
     (hasVoiceFile as jest.Mock).mockResolvedValue(true);
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
     Platform.OS = 'ios';
     runInAction(() => {
       chatSessionStore.activeSessionId = 'session-1';
@@ -831,9 +832,36 @@ describe('useVoiceMode', () => {
       });
     });
 
-    it("won't enter on Continue anyway when whisper won't fit", async () => {
+    it('a failed load after Continue anyway warns and leaves voice mode closed', async () => {
       runInAction(() => {
-        model.loadedModelBytes = 5e9;
+        model.loadedModelBytes =
+          5e9 * ASR_IOS_CEILING_SHARE -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      engine.prepare.mockRejectedValueOnce(new Error('load'));
+      jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+
+      await enter();
+      expect(hook.result.current.sheet).toMatchObject({
+        fit: {status: 'tight'},
+      });
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+      await flush();
+
+      expect(engine.prepare).toHaveBeenCalledWith('base');
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({message: uiStore.l10n.voiceMode.startFailed}),
+      );
+    });
+
+    it("won't enter on Continue anyway when the models pass total RAM", async () => {
+      runInAction(() => {
+        model.loadedModelBytes = 8e9;
       });
       const {enter, hook, engine} = renderVoiceMode();
 

@@ -1664,7 +1664,7 @@
     "memoryTightTitle": "Memory is tight",
     "memoryTightBody": "Voice mode keeps three models loaded at once. On this phone that may be slow, or the app may close.",
     "memoryWontFitTitle": "Not enough memory",
-    "memoryWontFitBody": "Speech recognition won't fit next to this chat model. Choose a smaller model to use voice mode.",
+    "memoryWontFitBody": "These models need more memory than this phone has. Choose a smaller model to use voice mode.",
     "memoryChatRow": "Chat model · {{name}}",
     "memorySttRowModel": "Speech recognition · Whisper {{tier}}",
     "memoryVoiceRow": "Voice · {{name}}",

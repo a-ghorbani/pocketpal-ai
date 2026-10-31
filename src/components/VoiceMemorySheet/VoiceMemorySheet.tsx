@@ -19,11 +19,7 @@ interface VoiceMemorySheetProps {
   onChooseSmallerModel: () => void;
 }
 
-/**
- * Shown before entering voice mode when the chat model, whisper and the
- * voice don't comfortably fit together. Continuing is offered only when
- * whisper itself fits.
- */
+/** Warns above the budget, offers Continue anyway up to total RAM. */
 export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
   fit,
   chatModelName,

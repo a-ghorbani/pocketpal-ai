@@ -1,6 +1,11 @@
 import {ASR_IOS_CEILING_SHARE, ASR_TIERS} from '../../asr/constants';
-import {whisperFits} from '../../asr/whisperFits';
+import {
+  asrMemoryStatus,
+  memoryBudget,
+  type DeviceMemory,
+} from '../../asr/whisperFits';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../tts/constants';
+import {formatBytes} from '../../../utils/formatters';
 import {voiceMemoryFit} from '../memoryFit';
 
 const sttBytes = ASR_TIERS.base.runtimeBytes;
@@ -13,12 +18,50 @@ const ios = (ceilingBytes: number, totalBytes = 6e9) => ({
 });
 
 describe('voiceMemoryFit', () => {
-  it("won't fit a 3.23 GB chat model on a 7.4 GB Android phone", () => {
+  it('is tight for a 3.23 GB chat model on a 7.4 GB Android phone', () => {
     const fit = voiceMemoryFit({
       memory: android(7.4e9),
       chatBytes: 3.23e9,
       sttTier: 'base',
-      ttsBytes,
+      ttsBytes: TTS_ENGINE_RUNTIME_BYTES.kitten,
+    });
+    expect(fit.status).toBe('tight');
+  });
+
+  it('is tight for an 8 GB chat model with Small and a voice on a 16 GB phone', () => {
+    const fit = voiceMemoryFit({
+      memory: android(15.8e9),
+      chatBytes: 8e9,
+      sttTier: 'small',
+      ttsBytes: 0.5e9,
+    });
+    expect(fit.status).toBe('tight');
+  });
+
+  it.each([
+    ['8 GB', 8e9, '8.5 GB'],
+    ['9.5 GB', 9.5e9, '10 GB'],
+  ])(
+    'is tight for a %s chat model with Base and Phonon on a 12 GB phone',
+    (_name, chatBytes, needed) => {
+      const fit = voiceMemoryFit({
+        memory: android(12.2e9),
+        chatBytes,
+        sttTier: 'base',
+        ttsBytes: TTS_ENGINE_RUNTIME_BYTES.phonon,
+      });
+      expect(fit.status).toBe('tight');
+      expect(formatBytes(fit.breakdown.neededBytes, 1)).toBe(needed);
+      expect(formatBytes(fit.breakdown.availableBytes, 1)).toBe('5.5 GB');
+    },
+  );
+
+  it("won't fit when the models pass total RAM", () => {
+    const fit = voiceMemoryFit({
+      memory: android(7.4e9),
+      chatBytes: 7.2e9,
+      sttTier: 'base',
+      ttsBytes: TTS_ENGINE_RUNTIME_BYTES.kitten,
     });
     expect(fit.status).toBe('wont_fit');
   });
@@ -82,19 +125,22 @@ describe('voiceMemoryFit', () => {
     expect(fit.status).toBe('tight');
   });
 
-  it("on iOS won't fit when whisper alone passes pre-load free memory", () => {
-    const fit = voiceMemoryFit({
-      memory: ios(4e9),
-      chatBytes: 4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1,
-      sttTier: 'base',
-      ttsBytes,
-    });
-    expect(fit.status).toBe('wont_fit');
+  it("on iOS won't fit only above total RAM", () => {
+    const at = (chatBytes: number) =>
+      voiceMemoryFit({
+        memory: ios(4e9, 6e9),
+        chatBytes,
+        sttTier: 'base',
+        ttsBytes,
+      }).status;
+    expect(at(4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1)).toBe('tight');
+    expect(at(6e9 - sttBytes - ttsBytes)).toBe('tight');
+    expect(at(6e9 - sttBytes - ttsBytes + 1)).toBe('wont_fit');
   });
 
   it.each([
     ['1.7B', 1.9e9, 'fits'],
-    ['4B Q4', 3.2e9, 'wont_fit'],
+    ['4B Q4', 3.2e9, 'tight'],
   ] as const)(
     'on iOS with 4.2 GB free before any load, chat model %s with Base → %s',
     (_name, chatBytes, status) => {
@@ -160,7 +206,7 @@ describe('voiceMemoryFit', () => {
     [ios(4e9), 2e9],
     [ios(0), 9e9],
   ])(
-    "won't fit exactly where dictation refuses whisper (%o, %d)",
+    'status is the ASR status of the summed rows (%o, %d)',
     (memory, chatBytes) => {
       const fit = voiceMemoryFit({
         memory,
@@ -168,8 +214,39 @@ describe('voiceMemoryFit', () => {
         sttTier: 'base',
         ttsBytes,
       });
-      expect(fit.status === 'wont_fit').toBe(
-        !whisperFits(memory, chatBytes, sttBytes),
+      expect(fit.status).toBe(
+        asrMemoryStatus(memory, chatBytes + sttBytes + ttsBytes),
+      );
+    },
+  );
+
+  const memories: DeviceMemory[] = [
+    android(4e9),
+    android(7.4e9),
+    android(15.8e9),
+    ios(0),
+    ios(4.2e9),
+    ios(4.2e9, Infinity),
+  ];
+  const grid = memories.flatMap(memory =>
+    [0, 1.36e9, 3.23e9, 8e9].flatMap(chatBytes =>
+      (['base', 'small'] as const).flatMap(sttTier =>
+        [
+          TTS_ENGINE_RUNTIME_BYTES.kitten,
+          TTS_ENGINE_RUNTIME_BYTES.supertonic,
+        ].map(tts => [memory, chatBytes, sttTier, tts] as const),
+      ),
+    ),
+  );
+
+  it.each(grid)(
+    'fits exactly when the rows fit the budget (%o, chat %d, %s, voice %d)',
+    (memory, chatBytes, sttTier, tts) => {
+      const fit = voiceMemoryFit({memory, chatBytes, sttTier, ttsBytes: tts});
+      const needed = chatBytes + ASR_TIERS[sttTier].runtimeBytes + tts;
+      expect(fit.status === 'fits').toBe(
+        (memory.os === 'ios' && memory.ceilingBytes === 0) ||
+          needed <= memoryBudget(memory),
       );
     },
   );

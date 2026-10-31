@@ -2,7 +2,7 @@ import {Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import DeviceInfo from 'react-native-device-info';
 
-import {readDeviceMemory} from '../../services/asr';
+import {ASR_TIERS, readDeviceMemory} from '../../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../../services/tts';
 import {voiceMemoryFit} from '../../services/voice';
 import {
@@ -111,6 +111,18 @@ describe('runVoiceCommand', () => {
         ttsBytes: TTS_ENGINE_RUNTIME_BYTES.supertonic,
       });
       expect(fit.status).toBe(status);
+    },
+  );
+
+  it.each(['android', 'ios'] as const)(
+    'on %s, memory::wont-fit sizes the models past total RAM',
+    async os => {
+      Platform.OS = os;
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      await runVoiceCommand('memory::wont-fit');
+
+      const stt = ASR_TIERS[asrStore.selectedTier].runtimeBytes;
+      expect((modelStore.loadedModelBytes ?? 0) + stt).toBeGreaterThan(8e9);
     },
   );
 
