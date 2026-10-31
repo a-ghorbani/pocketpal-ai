@@ -33,12 +33,12 @@ Chat with language models, give them a voice, and let them use tools — all on-
 
 Most AI apps are a thin window onto someone else's server — every message you type gets shipped off, logged, and analyzed somewhere you can't see. PocketPal flips that around: **the AI lives on your phone, and your conversations never leave it.**
 
-- **🔒 Private by default** — every prompt, response, and document stays on your device. Nothing leaves it unless you turn on an online feature such as web search or a remote server.
+- **🔒 Private by default** — every prompt, response, and document stays on your device. None of it leaves your device unless you turn on an online feature such as web search or a remote server.
 - **✈️ Works offline** — download a model once and it just works, with no connection and no account. On a plane, on a trail, anywhere.
 - **📱 Runs on hardware you already own** — real language models, voices, and tools, tuned to make the most of your phone's CPU, GPU, and NPU.
 - **🆓 Free and open source** — chat, models, voices and tools are free, with no account. The store builds offer an optional one-time **PocketPal Plus** purchase for hands-free voice; builds from source include it. MIT-licensed.
 
-> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app. The app also fetches public device-compatibility rules at launch and checks purchases with the App Store or Google Play when it opens; neither sends your chats or personal data.
+> **Privacy note:** The only data that ever leaves your device is what you choose to send — online features you use (model downloads from Hugging Face, PalsHub and purchases, web search and page reading, remote servers), benchmark results (if you opt into the leaderboard) and feedback you submit through the app. The app also fetches public device-compatibility rules from the jsDelivr CDN at launch, and when it opens it checks purchases with the App Store or Google Play (and with PalsHub, if you bought premium Pals); none of this sends your chats or documents.
 
 ## Contents
 
