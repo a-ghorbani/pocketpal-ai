@@ -17,9 +17,9 @@ import {
   ASR_LEVEL_HISTORY,
   ASR_TIERS,
   ASR_TIER_ORDER,
+  asrMemoryStatus,
   whisperAsrEngine,
   readDeviceMemory,
-  whisperFits,
 } from '../services/asr';
 import type {
   AsrDownloadState,
@@ -27,6 +27,7 @@ import type {
   AsrTier,
   CaptureState,
 } from '../services/asr';
+import type {MemoryFitStatus} from '../utils/memoryDisplay';
 
 import {modelStore} from './ModelStore';
 
@@ -88,6 +89,8 @@ export class ASRStore {
   recordingStartedAt: number | null = null;
   // True while transcription waits for a CPU-bound chat reply to finish.
   waitingForChat: boolean = false;
+  // Not persisted, so after the app is killed the next dictation warns again.
+  acceptedCaptureBytes: number | null = null;
 
   constructor() {
     makeAutoObservable<ASRStore, 'hydrated' | 'reconciled'>(
@@ -113,23 +116,27 @@ export class ASRStore {
     return tier !== null && ASR_DEVICE_TIERS.includes(tier);
   }
 
-  /**
-   * Whether whisper fits next to the loaded chat model, by the app's estimate
-   * of both (`whisperFits`). Android's free-memory figure can be far off
-   * (#982), so Android budgets against total RAM. iOS does not count mmap'd
-   * chat weights against the app, so iOS budgets against what it reported
-   * free before any load, keeping a reserve (ASR_IOS_CEILING_SHARE).
-   */
-  async hasMemoryForCapture(): Promise<boolean> {
+  /** The chat model plus whisper against device memory; an accepted need fits. */
+  async captureMemoryFit(): Promise<{
+    status: MemoryFitStatus;
+    neededBytes: number;
+  }> {
     const memory = await readDeviceMemory(modelStore);
-    return (
-      memory == null ||
-      whisperFits(
-        memory,
-        modelStore.loadedModelBytes ?? 0,
-        ASR_TIERS[this.selectedTier].runtimeBytes,
-      )
-    );
+    const neededBytes =
+      (modelStore.loadedModelBytes ?? 0) +
+      ASR_TIERS[this.selectedTier].runtimeBytes;
+    const status = memory ? asrMemoryStatus(memory, neededBytes) : 'fits';
+    const accepted =
+      this.acceptedCaptureBytes !== null &&
+      neededBytes <= this.acceptedCaptureBytes;
+    return {
+      status: status === 'tight' && accepted ? 'fits' : status,
+      neededBytes,
+    };
+  }
+
+  acceptCaptureMemory(neededBytes: number): void {
+    this.acceptedCaptureBytes = neededBytes;
   }
 
   /**

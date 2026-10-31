@@ -24,15 +24,6 @@ export const memoryBudget = (memory: DeviceMemory): number =>
     ? memory.ceilingBytes * ASR_IOS_CEILING_SHARE
     : androidMemoryBudget(memory.totalBytes);
 
-/** Whether whisper fits next to the loaded chat model; an unknown iOS ceiling fits. */
-export const whisperFits = (
-  memory: DeviceMemory,
-  chatBytes: number,
-  whisperBytes: number,
-): boolean =>
-  (memory.os === 'ios' && memory.ceilingBytes === 0) ||
-  chatBytes + whisperBytes <= memoryBudget(memory);
-
 /** Fits within the budget, tight up to total RAM; an unknown iOS ceiling fits. */
 export const asrMemoryStatus = (
   memory: DeviceMemory,

@@ -6,7 +6,6 @@ export {
   androidMemoryBudget,
   asrMemoryStatus,
   memoryBudget,
-  whisperFits,
 } from './whisperFits';
 export {readDeviceMemory} from './deviceMemory';
 export type {DeviceMemory} from './whisperFits';
