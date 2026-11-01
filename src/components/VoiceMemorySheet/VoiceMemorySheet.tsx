@@ -7,6 +7,7 @@ import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
 import {L10nContext, formatBytes} from '../../utils';
 import {asrTierLabel} from '../../utils/asrTierLabel';
+import {advertisedRamBytes} from '../../utils/memoryDisplay';
 import {t} from '../../locales';
 import type {VoiceMemoryFit} from '../../services/voice';
 
@@ -37,6 +38,10 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
       ? breakdown.totalBytes
       : 0;
   const total = Math.max(totalBytes, breakdown?.neededBytes ?? 0, 1);
+  const advertisedTotal = totalBytes ? advertisedRamBytes(totalBytes) : 0;
+  const showTotal =
+    advertisedTotal > 0 &&
+    !(wontFit && (breakdown?.neededBytes ?? 0) <= advertisedTotal);
 
   const rowStyle = {
     chat: {
@@ -111,10 +116,10 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
               testID="voice-memory-needed">
               <Text variant="titleSmall">{strings.memoryNeeded}</Text>
               <Text variant="titleSmall">
-                {totalBytes
+                {showTotal
                   ? t(strings.memoryNeededOfTotal, {
                       needed: formatBytes(breakdown.neededBytes, 1),
-                      total: formatBytes(totalBytes, 1),
+                      total: formatBytes(advertisedTotal, 1),
                     })
                   : formatBytes(breakdown.neededBytes, 1)}
               </Text>
