@@ -97,6 +97,17 @@ describe('VoiceMemorySheet', () => {
     );
   });
 
+  it('when tight but needing more than the shown total, shows only the needed figure', () => {
+    const {getByTestId} = renderSheet({
+      status: 'tight',
+      sttTier: 'base',
+      breakdown: {...breakdown, neededBytes: 12.05e9, totalBytes: 12.1e9},
+    });
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /^Needed12\.1 GB$/,
+    );
+  });
+
   it('shows only the rows the fit counts', () => {
     const {queryByText, getByTestId, getByText} = renderSheet({
       status: 'tight',

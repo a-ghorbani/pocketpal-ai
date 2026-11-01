@@ -39,9 +39,8 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
       : 0;
   const total = Math.max(totalBytes, breakdown?.neededBytes ?? 0, 1);
   const advertisedTotal = totalBytes ? advertisedRamBytes(totalBytes) : 0;
-  const showTotal =
-    advertisedTotal > 0 &&
-    !(wontFit && (breakdown?.neededBytes ?? 0) <= advertisedTotal);
+  const neededFitsTotal = (breakdown?.neededBytes ?? 0) <= advertisedTotal;
+  const showTotal = advertisedTotal > 0 && wontFit !== neededFitsTotal;
 
   const rowStyle = {
     chat: {
