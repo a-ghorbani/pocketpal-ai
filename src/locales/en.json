@@ -1672,7 +1672,7 @@
     "memorySttRowModel": "Speech recognition · Whisper {{tier}}",
     "memoryVoiceRow": "Voice · {{name}}",
     "memoryNeeded": "Needed",
-    "memoryNeededValue": "{{needed}} of {{available}} available",
+    "memoryNeededOfTotal": "{{needed}} of {{total}} on this phone",
     "continueAnywayCta": "Continue anyway",
     "chooseSmallerModelCta": "Choose a smaller model",
     "startLabel": "Start voice mode",

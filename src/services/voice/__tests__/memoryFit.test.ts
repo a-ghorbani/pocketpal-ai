@@ -36,6 +36,7 @@ describe('voiceMemoryFit', () => {
       ttsBytes: 0.5e9,
     });
     expect(fit.status).toBe('tight');
+    expect(fit.breakdown.totalBytes).toBe(15.8e9);
   });
 
   it.each([
@@ -52,7 +53,7 @@ describe('voiceMemoryFit', () => {
       });
       expect(fit.status).toBe('tight');
       expect(formatBytes(fit.breakdown.neededBytes, 1)).toBe(needed);
-      expect(formatBytes(fit.breakdown.availableBytes, 1)).toBe('5.5 GB');
+      expect(formatBytes(fit.breakdown.totalBytes, 1)).toBe('12.2 GB');
     },
   );
 
@@ -64,7 +65,7 @@ describe('voiceMemoryFit', () => {
       ttsBytes: TTS_ENGINE_RUNTIME_BYTES.kitten,
     });
     expect(fit.status).toBe('wont_fit');
-    expect(fit.breakdown.availableBytes).toBe(7.4e9);
+    expect(fit.breakdown.totalBytes).toBe(7.4e9);
   });
 
   it('fits a 1.4 GB chat model on the same phone', () => {
@@ -82,7 +83,7 @@ describe('voiceMemoryFit', () => {
         {kind: 'tts', bytes: ttsBytes},
       ],
       neededBytes: 1.4e9 + sttBytes + ttsBytes,
-      availableBytes: 7.4e9 * 0.45,
+      totalBytes: 7.4e9,
     });
   });
 
@@ -112,7 +113,7 @@ describe('voiceMemoryFit', () => {
         {kind: 'tts', bytes: ttsBytes},
       ],
       neededBytes: 2e9 + sttBytes + ttsBytes,
-      availableBytes: 4e9 * ASR_IOS_CEILING_SHARE,
+      totalBytes: 6e9,
     });
   });
 
@@ -137,10 +138,10 @@ describe('voiceMemoryFit', () => {
     expect(at(4e9 * ASR_IOS_CEILING_SHARE - sttBytes + 1).status).toBe('tight');
     const tight = at(6e9 - sttBytes - ttsBytes);
     expect(tight.status).toBe('tight');
-    expect(tight.breakdown.availableBytes).toBe(4e9 * ASR_IOS_CEILING_SHARE);
+    expect(tight.breakdown.totalBytes).toBe(6e9);
     const wontFit = at(6e9 - sttBytes - ttsBytes + 1);
     expect(wontFit.status).toBe('wont_fit');
-    expect(wontFit.breakdown.availableBytes).toBe(6e9);
+    expect(wontFit.breakdown.totalBytes).toBe(6e9);
   });
 
   it.each([
@@ -158,6 +159,17 @@ describe('voiceMemoryFit', () => {
       expect(fit.status).toBe(status);
     },
   );
+
+  it('on iOS passes an unreadable total RAM through when tight', () => {
+    const fit = voiceMemoryFit({
+      memory: ios(4e9, Infinity),
+      chatBytes: 4e9,
+      sttTier: 'base',
+      ttsBytes,
+    });
+    expect(fit.status).toBe('tight');
+    expect(fit.breakdown.totalBytes).toBe(Infinity);
+  });
 
   it('fits on iOS while pre-load free memory is unknown', () => {
     const fit = voiceMemoryFit({

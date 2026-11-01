@@ -1,10 +1,6 @@
 import {ASR_TIERS} from '../asr/constants';
 import type {AsrTier} from '../asr/types';
-import {
-  asrMemoryStatus,
-  memoryBudget,
-  type DeviceMemory,
-} from '../asr/whisperFits';
+import {asrMemoryStatus, type DeviceMemory} from '../asr/whisperFits';
 import type {MemoryFitStatus} from '../../utils/memoryDisplay';
 
 export interface VoiceMemoryInputs {
@@ -29,7 +25,7 @@ export interface VoiceMemoryFit {
     /** Sums to `neededBytes`. */
     rows: VoiceMemoryRow[];
     neededBytes: number;
-    availableBytes: number;
+    totalBytes: number;
   };
 }
 
@@ -43,7 +39,7 @@ export const voiceMemoryFit = ({
     return {
       status: 'fits',
       sttTier,
-      breakdown: {rows: [], neededBytes: 0, availableBytes: 0},
+      breakdown: {rows: [], neededBytes: 0, totalBytes: 0},
     };
   }
   const sttBytes = ASR_TIERS[sttTier].runtimeBytes;
@@ -53,12 +49,9 @@ export const voiceMemoryFit = ({
     {kind: 'tts', bytes: ttsBytes},
   ];
   const neededBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
-  const status = asrMemoryStatus(memory, neededBytes);
-  const availableBytes =
-    status === 'wont_fit' ? memory.totalBytes : memoryBudget(memory);
   return {
-    status,
+    status: asrMemoryStatus(memory, neededBytes),
     sttTier,
-    breakdown: {rows, neededBytes, availableBytes},
+    breakdown: {rows, neededBytes, totalBytes: memory.totalBytes},
   };
 };
