@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "音声認識 · Whisper {{tier}}",
     "memoryVoiceRow": "音声 · {{name}}",
     "memoryNeeded": "必要メモリ",
-    "memoryNeededValue": "{{needed}} / 利用可能 {{available}}",
     "continueAnywayCta": "それでも続行",
     "chooseSmallerModelCta": "より小さいモデルを選択",
     "startLabel": "音声モードを開始",

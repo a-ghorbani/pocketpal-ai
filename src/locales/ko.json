@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "음성 인식 · Whisper {{tier}}",
     "memoryVoiceRow": "음성 · {{name}}",
     "memoryNeeded": "필요",
-    "memoryNeededValue": "사용 가능 {{available}} 중 {{needed}}",
     "continueAnywayCta": "그래도 계속",
     "chooseSmallerModelCta": "더 작은 모델 선택",
     "startLabel": "음성 모드 시작",

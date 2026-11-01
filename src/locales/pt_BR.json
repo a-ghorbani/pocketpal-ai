@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "Reconhecimento de fala · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
     "memoryNeeded": "Necessário",
-    "memoryNeededValue": "{{needed}} de {{available}} disponíveis",
     "continueAnywayCta": "Continuar mesmo assim",
     "chooseSmallerModelCta": "Escolher um modelo menor",
     "startLabel": "Iniciar modo de voz",

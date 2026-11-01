@@ -1816,7 +1816,6 @@
     "memoryChatRow": "Модель чату · {{name}}",
     "memoryVoiceRow": "Голос · {{name}}",
     "memoryNeeded": "Потрібно",
-    "memoryNeededValue": "{{needed}} з {{available}} доступних",
     "continueAnywayCta": "Продовжити все одно",
     "chooseSmallerModelCta": "Оберіть меншу модель",
     "startLabel": "Увімкнути голосовий режим",

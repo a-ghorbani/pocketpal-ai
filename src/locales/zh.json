@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "语音识别 · Whisper {{tier}}",
     "memoryVoiceRow": "语音 · {{name}}",
     "memoryNeeded": "需要",
-    "memoryNeededValue": "{{needed}}（可用 {{available}}）",
     "continueAnywayCta": "仍要继续",
     "chooseSmallerModelCta": "选择更小的模型",
     "startLabel": "启动语音模式",

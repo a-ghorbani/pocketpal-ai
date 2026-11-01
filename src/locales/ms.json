@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "Pengecaman pertuturan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
     "memoryNeeded": "Diperlukan",
-    "memoryNeededValue": "{{needed}} daripada {{available}} tersedia",
     "continueAnywayCta": "Tetap teruskan",
     "chooseSmallerModelCta": "Pilih model yang lebih kecil",
     "startLabel": "Mulakan mod suara",

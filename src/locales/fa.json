@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "تشخیص گفتار · Whisper {{tier}}",
     "memoryVoiceRow": "صدا · {{name}}",
     "memoryNeeded": "مورد نیاز",
-    "memoryNeededValue": "{{needed}} از {{available}} در دسترس",
     "continueAnywayCta": "باز هم ادامه",
     "chooseSmallerModelCta": "انتخاب مدل کوچک‌تر",
     "startLabel": "شروع حالت صوتی",

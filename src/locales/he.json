@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "זיהוי דיבור · Whisper {{tier}}",
     "memoryVoiceRow": "קול · {{name}}",
     "memoryNeeded": "נדרש",
-    "memoryNeededValue": "{{needed}} מתוך {{available}} זמינים",
     "continueAnywayCta": "המשך בכל זאת",
     "chooseSmallerModelCta": "בחר מודל קטן יותר",
     "startLabel": "הפעל מצב קולי",

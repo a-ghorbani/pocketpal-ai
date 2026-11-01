@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "Pengenalan ucapan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
     "memoryNeeded": "Dibutuhkan",
-    "memoryNeededValue": "{{needed}} dari {{available}} tersedia",
     "continueAnywayCta": "Tetap lanjutkan",
     "chooseSmallerModelCta": "Pilih model lebih kecil",
     "startLabel": "Mulai mode suara",

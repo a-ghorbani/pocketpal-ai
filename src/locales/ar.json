@@ -1818,7 +1818,6 @@
     "memorySttRowModel": "التعرّف على الكلام · Whisper {{tier}}",
     "memoryVoiceRow": "الصوت · {{name}}",
     "memoryNeeded": "المطلوب",
-    "memoryNeededValue": "{{needed}} من {{available}} متاحة",
     "continueAnywayCta": "متابعة رغم ذلك",
     "chooseSmallerModelCta": "اختيار نموذج أصغر",
     "startLabel": "بدء الوضع الصوتي",

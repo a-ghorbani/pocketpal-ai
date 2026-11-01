@@ -1816,7 +1816,6 @@
     "memoryChatRow": "對話模型 · {{name}}",
     "memoryVoiceRow": "語音 · {{name}}",
     "memoryNeeded": "需要",
-    "memoryNeededValue": "需要 {{needed}} / 可用 {{available}}",
     "continueAnywayCta": "不論如何繼續",
     "chooseSmallerModelCta": "選擇較小的模型",
     "startLabel": "開啟語音模式",
