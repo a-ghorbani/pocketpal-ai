@@ -359,6 +359,12 @@ describe.each(SERVER_TYPE_OPTIONS)('the %s token limit', serverType => {
     ).toEqual({temperature: 0.5});
   });
 
+  it('keeps a zero temperature beside an omitted limit', () => {
+    expect(samplerBody(serverType, {temperature: 0, n_predict: 0})).toEqual({
+      temperature: 0,
+    });
+  });
+
   it('sends the smallest positive n_predict', () => {
     expect(samplerBody(serverType, {n_predict: 1})).toEqual({
       max_completion_tokens: 1,
