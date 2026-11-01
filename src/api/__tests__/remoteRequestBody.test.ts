@@ -154,11 +154,10 @@ describe.each(SERVER_TYPE_OPTIONS)('a turn to a %s server', serverType => {
 });
 
 describe('the samplers a turn forwards', () => {
-  it('sends only the three that are always sent when every control is on its app default', async () => {
+  it('sends only temperature and top_p when every control is on its app default', async () => {
     expect(await extrasOf('llama.cpp', defaultCompletionParams)).toEqual({
       temperature: defaultCompletionParams.temperature,
       top_p: defaultCompletionParams.top_p,
-      max_completion_tokens: defaultCompletionParams.n_predict,
     });
   });
 
@@ -170,7 +169,6 @@ describe('the samplers a turn forwards', () => {
 
     expect(extras.top_k).toBe(defaultCompletionParams.top_k! + 1);
     expect(Object.keys(extras).sort()).toEqual([
-      'max_completion_tokens',
       'temperature',
       'top_k',
       'top_p',

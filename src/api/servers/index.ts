@@ -303,7 +303,9 @@ export function profileFor(serverType: ServerType | undefined): ServerProfile {
 /**
  * `sendNames[p]: samplers[p]` for every forwarded param holding a finite
  * number. A missing or non-finite value is omitted, never coerced: a server
- * reading JSON `null` for a sampler either 400s or silently defaults.
+ * reading JSON `null` for a sampler either 400s or silently defaults. A
+ * non-positive `n_predict` means no limit and is omitted too: strict servers
+ * reject a token limit below 1.
  */
 function sendSamplers(
   sendNames: Partial<Record<SamplerParam, string>>,
@@ -312,9 +314,10 @@ function sendSamplers(
   const body: Record<string, number> = {};
   for (const [param, wireName] of Object.entries(sendNames)) {
     const value = finiteNumber(samplers[param as SamplerParam]);
-    if (value !== undefined) {
-      body[wireName] = value;
+    if (value === undefined || (param === 'n_predict' && value <= 0)) {
+      continue;
     }
+    body[wireName] = value;
   }
   return body;
 }
