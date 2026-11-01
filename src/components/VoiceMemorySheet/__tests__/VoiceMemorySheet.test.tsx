@@ -29,7 +29,7 @@ const breakdown = {
     {kind: 'tts' as const, bytes: 0.5e9},
   ],
   neededBytes: 3.73e9,
-  availableBytes: 3.33e9,
+  totalBytes: 7.4e9,
 };
 const onContinue = jest.fn();
 const onChooseSmallerModel = jest.fn();
@@ -47,7 +47,7 @@ const renderSheet = (fit: VoiceMemoryFit | null) =>
   );
 
 describe('VoiceMemorySheet', () => {
-  it('when tight, shows the three models, needed vs available and both actions', () => {
+  it('when tight, shows the three models, needed vs total RAM and both actions', () => {
     const {getByText, getByTestId} = renderSheet({
       status: 'tight',
       sttTier: 'base',
@@ -55,11 +55,12 @@ describe('VoiceMemorySheet', () => {
     });
 
     expect(getByText(strings.memoryTightTitle)).toBeTruthy();
+    expect(getByText(strings.memoryTightBody)).toBeTruthy();
     expect(getByText('Chat model · Gemma')).toBeTruthy();
     expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByText('Voice · Supertonic')).toBeTruthy();
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
-      /3\.7 GB of 3\.3 GB available/,
+      /3\.7 GB of 8 GB on this phone/,
     );
 
     fireEvent.press(getByTestId('voice-memory-continue'));
@@ -69,15 +70,42 @@ describe('VoiceMemorySheet', () => {
   });
 
   it("when it won't fit, offers no Continue anyway", () => {
-    const {getByText, queryByTestId, getByTestId} = renderSheet({
+    const {getByText, queryByText, queryByTestId, getByTestId} = renderSheet({
       status: 'wont_fit',
       sttTier: 'base',
-      breakdown,
+      breakdown: {...breakdown, neededBytes: 9e9},
     });
 
     expect(getByText(strings.memoryWontFitTitle)).toBeTruthy();
+    expect(getByText(strings.memoryWontFitBody)).toBeTruthy();
+    expect(queryByText(strings.memoryTightBody)).toBeNull();
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /9 GB of 8 GB on this phone/,
+    );
     expect(queryByTestId('voice-memory-continue')).toBeNull();
     expect(getByTestId('voice-memory-smaller-model')).toBeTruthy();
+  });
+
+  it("when it won't fit but needs no more than the shown total, shows only the needed figure", () => {
+    const {getByTestId} = renderSheet({
+      status: 'wont_fit',
+      sttTier: 'base',
+      breakdown: {...breakdown, neededBytes: 7.6e9},
+    });
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /^Needed7\.6 GB$/,
+    );
+  });
+
+  it('when tight but needing more than the shown total, shows only the needed figure', () => {
+    const {getByTestId} = renderSheet({
+      status: 'tight',
+      sttTier: 'base',
+      breakdown: {...breakdown, neededBytes: 12.05e9, totalBytes: 12.1e9},
+    });
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /^Needed12\.1 GB$/,
+    );
   });
 
   it('shows only the rows the fit counts', () => {
@@ -90,7 +118,7 @@ describe('VoiceMemorySheet', () => {
           {kind: 'tts', bytes: 0.6e9},
         ],
         neededBytes: 1e9,
-        availableBytes: 0.8e9,
+        totalBytes: 4e9,
       },
     });
 
@@ -98,7 +126,18 @@ describe('VoiceMemorySheet', () => {
     expect(getByText('Speech recognition · Whisper Base')).toBeTruthy();
     expect(getByTestId('voice-memory-tts')).toHaveTextContent(/600 MB/);
     expect(getByTestId('voice-memory-needed')).toHaveTextContent(
-      /1 GB of 800 MB available/,
+      /1 GB of 4 GB on this phone/,
+    );
+  });
+
+  it('shows only the needed figure when total RAM is unknown', () => {
+    const {getByTestId} = renderSheet({
+      status: 'tight',
+      sttTier: 'base',
+      breakdown: {...breakdown, totalBytes: Infinity},
+    });
+    expect(getByTestId('voice-memory-needed')).toHaveTextContent(
+      /^Needed3\.7 GB$/,
     );
   });
 

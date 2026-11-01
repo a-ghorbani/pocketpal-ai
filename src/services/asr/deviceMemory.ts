@@ -14,9 +14,16 @@ export async function readDeviceMemory(
   chat: ChatLoadHistory,
 ): Promise<DeviceMemory | null> {
   if (Platform.OS === 'ios') {
+    let totalBytes = Infinity;
+    try {
+      totalBytes = await DeviceInfo.getTotalMemory();
+    } catch (err) {
+      console.warn('[asr] total memory read failed:', err);
+    }
     return {
       os: 'ios',
       ceilingBytes: chat.availableMemoryCeiling ?? 0,
+      totalBytes,
     };
   }
   try {
