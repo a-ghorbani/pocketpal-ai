@@ -41,6 +41,7 @@ jest.mock('../../services/tts/voiceFiles', () => ({
 }));
 
 let mockBlur: (() => void) | undefined;
+let mockFocus: (() => void) | undefined;
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useFocusEffect: (effect: () => (() => void) | undefined) => {
@@ -48,6 +49,9 @@ jest.mock('@react-navigation/native', () => ({
     useEffect(() => {
       const cleanup = effect();
       mockBlur = cleanup;
+      mockFocus = () => {
+        mockBlur = effect();
+      };
       return cleanup;
     }, [effect]);
   },
@@ -759,6 +763,78 @@ describe('useVoiceMode', () => {
 
         expect(readMemory()).toHaveBeenCalledTimes(1);
         expect(hook.result.current.sheet).toMatchObject({kind: 'memory'});
+      });
+
+      it('accepts a voice tap again after a wait that ended on a left screen', async () => {
+        const {hook, enter} = await openSetup();
+        startLoading();
+
+        const {done} = await startSetupDone(hook);
+        act(() => mockBlur?.());
+        finishLoad(tightBytes);
+        await act(async () => {
+          await done;
+        });
+        expect(hook.result.current.sheet).toBeNull();
+
+        act(() => mockFocus?.());
+        await enter();
+
+        expect(hook.result.current.sheet).toMatchObject({
+          kind: 'memory',
+          fit: {status: 'tight'},
+        });
+      });
+
+      it('keeps ignoring voice taps when an older wait times out while a newer one waits', async () => {
+        const {hook, engine, enter} = await openSetup();
+        releaseModel();
+        jest.useFakeTimers();
+
+        const {done: first} = await startSetupDone(hook);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS / 2);
+        });
+        const {done: second} = await startSetupDone(hook);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS / 2 + 1);
+        });
+        jest.useRealTimers();
+        await act(async () => {
+          await first;
+        });
+
+        await enter();
+        expect(hook.result.current.sheet).toBeNull();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(uiStore.setChatWarning).not.toHaveBeenCalled();
+
+        finishLoad(tightBytes);
+        await act(async () => {
+          await second;
+        });
+        expect(readMemory()).toHaveBeenCalledTimes(1);
+        expect(hook.result.current.sheet).toMatchObject({kind: 'memory'});
+      });
+
+      it('shows no memory sheet over a voice session that is already open', async () => {
+        const {hook, engine, enter} = await openSetup();
+        await enter();
+        expect(voiceModeStore.phase).toBe('listening');
+        runInAction(() => {
+          model.loadedModelBytes = tightBytes;
+        });
+        readMemory().mockClear();
+
+        await act(async () => {
+          await hook.result.current.setupDone();
+        });
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(engine.prepare).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
       });
     });
 
