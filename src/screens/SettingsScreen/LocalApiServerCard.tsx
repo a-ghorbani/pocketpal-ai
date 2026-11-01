@@ -1,5 +1,5 @@
 import React, {useContext, useEffect, useState} from 'react';
-import {View} from 'react-native';
+import {Keyboard, View} from 'react-native';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import {observer} from 'mobx-react-lite';
@@ -92,12 +92,14 @@ export const LocalApiServerCard: React.FC = observer(() => {
 
   const saveKey = async () => {
     if (await store.setApiKey(keyDraft)) {
+      Keyboard.dismiss();
       setKeyDraft('');
       setKeySheetVisible(false);
     }
   };
 
   const closeKeySheet = () => {
+    Keyboard.dismiss();
     setKeyDraft('');
     setKeySheetVisible(false);
   };

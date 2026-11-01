@@ -2,6 +2,7 @@ import React from 'react';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import {runInAction} from 'mobx';
+import {Keyboard} from 'react-native';
 
 import {render, fireEvent, act} from '../../../../jest/test-utils';
 import {mockLocalApiServerStore as store} from '../../../../__mocks__/stores/localApiServerStore';
@@ -356,5 +357,39 @@ describe('LocalApiServerCard', () => {
     expect(getByTestId('local-api-server-key-input').props.value).toBe(
       'secret',
     );
+  });
+
+  describe('closing the key sheet', () => {
+    let dismiss: jest.SpyInstance;
+
+    beforeEach(() => {
+      dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    });
+
+    afterEach(() => dismiss.mockRestore());
+
+    it('dismisses the keyboard on save', async () => {
+      const {getByTestId} = render(<LocalApiServerCard />);
+      fireEvent.press(getByTestId('local-api-server-key-button'));
+      fireEvent.changeText(getByTestId('local-api-server-key-input'), 'k');
+      await act(async () => {
+        fireEvent.press(getByTestId('local-api-server-key-save'));
+      });
+      expect(dismiss).toHaveBeenCalled();
+    });
+
+    it('dismisses the keyboard on cancel', () => {
+      const {getByTestId, getByText} = render(<LocalApiServerCard />);
+      fireEvent.press(getByTestId('local-api-server-key-button'));
+      fireEvent.press(getByText('Cancel'));
+      expect(dismiss).toHaveBeenCalled();
+    });
+
+    it('dismisses the keyboard when the sheet is dismissed', () => {
+      const {getByTestId} = render(<LocalApiServerCard />);
+      fireEvent.press(getByTestId('local-api-server-key-button'));
+      fireEvent.press(getByTestId('sheet-close'));
+      expect(dismiss).toHaveBeenCalled();
+    });
   });
 });
