@@ -675,7 +675,11 @@ export function useVoiceMode({
       () => controller.chooseSmallerModel(),
       [controller],
     ),
-    dismissSheet: useCallback(() => setSheet(null), []),
+    dismissSheet: useCallback(
+      (kind: NonNullable<VoiceModeSheet>['kind']) =>
+        setSheet(current => (current?.kind === kind ? null : current)),
+      [],
+    ),
     tapCloud: useCallback(() => controller.tapCloud(), [controller]),
     toggleMute: useCallback(() => controller.toggleMute(), [controller]),
     end: useCallback(() => controller.exit('end'), [controller]),

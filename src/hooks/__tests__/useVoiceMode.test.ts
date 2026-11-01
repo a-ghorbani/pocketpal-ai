@@ -278,7 +278,7 @@ describe('useVoiceMode', () => {
       const {enter, hook} = renderVoiceMode();
       await enter();
 
-      act(() => hook.result.current.dismissSheet());
+      act(() => hook.result.current.dismissSheet('teaser'));
 
       expect(hook.result.current.sheet).toBeNull();
       expect(focusInput).not.toHaveBeenCalled();
@@ -683,6 +683,37 @@ describe('useVoiceMode', () => {
       expect(engine.prepare).toHaveBeenCalledWith('base');
     });
 
+    it("keeps the memory sheet opened by setup when the setup sheet's close lands late", async () => {
+      runInAction(() => {
+        asrStore.downloadStates.base = 'not_installed';
+        model.loadedModelBytes =
+          5e9 * ASR_IOS_CEILING_SHARE -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+
+      runInAction(() => {
+        asrStore.downloadStates.base = 'ready';
+      });
+      await act(async () => {
+        await hook.result.current.setupDone();
+      });
+      act(() => hook.result.current.dismissSheet('setup'));
+
+      expect(hook.result.current.sheet).toMatchObject({
+        kind: 'memory',
+        fit: {status: 'tight'},
+      });
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+      expect(engine.prepare).toHaveBeenCalledWith('base');
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
     describe('with Small in use', () => {
       const tightFor = (tier: 'base' | 'small') =>
         5e9 * ASR_IOS_CEILING_SHARE -
@@ -766,6 +797,24 @@ describe('useVoiceMode', () => {
 
         expect(hook.result.current.sheet).toEqual({kind: 'setup'});
         expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it("keeps the setup sheet Continue anyway reopened when the memory sheet's close lands late", async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook} = renderVoiceMode();
+        await enter();
+        runInAction(() => {
+          asrStore.downloadStates.small = 'not_installed';
+        });
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        act(() => hook.result.current.dismissSheet('memory'));
+
+        expect(hook.result.current.sheet).toEqual({kind: 'setup'});
       });
 
       it('Continue anyway enters with Small when nothing changed', async () => {
