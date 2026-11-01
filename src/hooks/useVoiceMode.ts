@@ -2,7 +2,7 @@ import {useCallback, useEffect, useState} from 'react';
 import {AppState, type AppStateStatus} from 'react-native';
 
 import {toByteArray} from 'base64-js';
-import {comparer, reaction} from 'mobx';
+import {comparer, reaction, when} from 'mobx';
 import {useFocusEffect} from '@react-navigation/native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 import {
@@ -92,6 +92,11 @@ const withStartTimeout = (loading: Promise<void>): Promise<void> => {
   return Promise.race([loading, timeout]).finally(() => clearTimeout(timer));
 };
 
+const chatModelSettled = () =>
+  modelStore.appState === 'active' &&
+  ((!modelStore.isContextLoading && modelStore.contextId !== undefined) ||
+    !modelStore.activeModelId);
+
 async function isSetupComplete(): Promise<boolean> {
   return (
     asrStore.isSelectedTierReady &&
@@ -108,7 +113,10 @@ async function isSetupComplete(): Promise<boolean> {
  */
 class VoiceModeController {
   port: VoiceTurnPort;
+  focused = false;
   private open = false;
+  private setupWait = 0;
+  private setupPending = false;
   private disposed = false;
   private session = 0;
   private exiting: Promise<void> | null = null;
@@ -150,7 +158,7 @@ class VoiceModeController {
   }
 
   async requestEntry(actions: VoiceEntryActions): Promise<void> {
-    if (this.open || this.disposed) {
+    if (this.open || this.disposed || this.setupPending) {
       return;
     }
     this.actions = actions;
@@ -159,6 +167,34 @@ class VoiceModeController {
     }
     if (!(await isSetupComplete())) {
       this.showSheet({kind: 'setup'});
+      return;
+    }
+    await this.checkMemoryAndEnter();
+  }
+
+  async setupDone(): Promise<void> {
+    const wait = ++this.setupWait;
+    this.setupPending = true;
+    this.showSheet(null);
+    let timedOut = false;
+    try {
+      await when(chatModelSettled, {timeout: VOICE_START_TIMEOUT_MS});
+    } catch {
+      timedOut = true;
+    }
+    if (wait === this.setupWait) {
+      this.setupPending = false;
+    }
+    if (
+      wait !== this.setupWait ||
+      !this.focused ||
+      this.disposed ||
+      this.open
+    ) {
+      return;
+    }
+    if (timedOut) {
+      warn(uiStore.l10n.voiceMode.startFailed);
       return;
     }
     await this.checkMemoryAndEnter();
@@ -643,13 +679,14 @@ export function useVoiceMode({
   }, [controller]);
 
   useFocusEffect(
-    useCallback(
-      () => () => {
+    useCallback(() => {
+      controller.focused = true;
+      return () => {
+        controller.focused = false;
         setSheet(current => (current?.kind === 'teaser' ? null : current));
         controller.exit('blur');
-      },
-      [controller],
-    ),
+      };
+    }, [controller]),
   );
 
   const continueAnyway = useCallback(async () => {
@@ -666,10 +703,7 @@ export function useVoiceMode({
     getPlus: useCallback(() => controller.getPlus(), [controller]),
     keepTyping: useCallback(() => controller.keepTyping(), [controller]),
     sheet,
-    setupDone: useCallback(() => {
-      setSheet(null);
-      return controller.checkMemoryAndEnter();
-    }, [controller]),
+    setupDone: useCallback(() => controller.setupDone(), [controller]),
     continueAnyway,
     chooseSmallerModel: useCallback(
       () => controller.chooseSmallerModel(),
