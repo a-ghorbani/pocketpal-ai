@@ -140,6 +140,7 @@ export const createStyles = (theme: Theme) =>
       paddingBottom: 32,
     },
     keySheetActions: {
+      width: '100%',
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: 8,
