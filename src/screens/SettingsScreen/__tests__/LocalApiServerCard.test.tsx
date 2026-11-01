@@ -10,9 +10,13 @@ import {mockModelStore} from '../../../../__mocks__/stores/modelStore';
 
 import {LocalApiServerCard} from '../LocalApiServerCard';
 
+const mockSheetProps: any[] = [];
+
 jest.mock('../../../components/Sheet/Sheet', () => {
   const {Pressable, View} = require('react-native');
-  const MockSheet = ({children, isVisible, title, onClose}: any) => {
+  const MockSheet = (props: any) => {
+    mockSheetProps.push(props);
+    const {children, isVisible, title, onClose} = props;
     if (!isVisible) {
       return null;
     }
@@ -357,6 +361,14 @@ describe('LocalApiServerCard', () => {
     expect(getByTestId('local-api-server-key-input').props.value).toBe(
       'secret',
     );
+  });
+
+  it('opens the key sheet at one of its own snap points', () => {
+    const {getByTestId} = render(<LocalApiServerCard />);
+    fireEvent.press(getByTestId('local-api-server-key-button'));
+    const props = mockSheetProps[mockSheetProps.length - 1];
+    expect(props.isVisible).toBe(true);
+    expect(props.index ?? 0).toBeLessThan(props.snapPoints.length);
   });
 
   describe('closing the key sheet', () => {
