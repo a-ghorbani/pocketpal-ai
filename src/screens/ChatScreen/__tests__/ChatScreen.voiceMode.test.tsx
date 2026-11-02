@@ -24,8 +24,21 @@ jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
 }));
 
 const mockSheetsShown: string[] = [];
+const mockSheet = {
+  setupVisible: false,
+  closeSetup: () => {},
+  closeMemory: () => {},
+};
 jest.mock('../../../components/VoiceSetupSheet', () => ({
-  VoiceSetupSheet: ({isVisible}: {isVisible: boolean}) => {
+  VoiceSetupSheet: ({
+    isVisible,
+    onClose,
+  }: {
+    isVisible: boolean;
+    onClose: () => void;
+  }) => {
+    mockSheet.setupVisible = isVisible;
+    mockSheet.closeSetup = onClose;
     if (isVisible) {
       mockSheetsShown.push('setup');
     }
@@ -33,7 +46,8 @@ jest.mock('../../../components/VoiceSetupSheet', () => ({
   },
 }));
 jest.mock('../../../components/VoiceMemorySheet', () => ({
-  VoiceMemorySheet: ({fit}: {fit: unknown}) => {
+  VoiceMemorySheet: ({fit, onClose}: {fit: unknown; onClose: () => void}) => {
+    mockSheet.closeMemory = onClose;
     if (fit) {
       mockSheetsShown.push('memory');
     }
@@ -210,6 +224,26 @@ describe('ChatScreen voice mode entry', () => {
       expect(defaultSource.openPaywall).not.toHaveBeenCalled();
       expect(mockSheetsShown).toEqual(['setup']);
     });
+  });
+
+  it("each sheet's close clears only its own sheet", async () => {
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.models = modelsList as any;
+      modelStore.activeModelId = modelsList[0].id;
+      asrStore.downloadStates.base = 'not_installed';
+    });
+    const {getByTestId} = renderScreen();
+    await act(async () => {
+      fireEvent.press(getByTestId('voice-mode-button'));
+    });
+    expect(mockSheet.setupVisible).toBe(true);
+
+    act(() => mockSheet.closeMemory());
+    expect(mockSheet.setupVisible).toBe(true);
+
+    act(() => mockSheet.closeSetup());
+    expect(mockSheet.setupVisible).toBe(false);
   });
 
   it('shows the voice view over the chat while open in full view', () => {
