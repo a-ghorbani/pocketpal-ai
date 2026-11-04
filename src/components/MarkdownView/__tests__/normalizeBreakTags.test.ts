@@ -63,6 +63,20 @@ describe('normalizeBreakTags', () => {
     expect(normalizeBreakTags(text)).toBe('````\n```\n~~~~\n<br>\n````\n ');
   });
 
+  it('reads a fence-like code span as a paragraph line', () => {
+    expect(normalizeBreakTags('```npm install``` fails<br>why')).toBe(
+      '```npm install``` fails why',
+    );
+    expect(normalizeBreakTags('```foo``` first\nsecond<br>')).toBe(
+      '```foo``` first\nsecond ',
+    );
+  });
+
+  it('keeps a fence open past a line with text after the marker', () => {
+    const text = '```\n``` x\n<br>\n```\n<br>';
+    expect(normalizeBreakTags(text)).toBe('```\n``` x\n<br>\n```\n ');
+  });
+
   it('keeps everything after an unclosed fence literal', () => {
     const text = 'a<br>\n```py\nx = 1<br>\n<br>';
     expect(normalizeBreakTags(text)).toBe('a \n```py\nx = 1<br>\n<br>');

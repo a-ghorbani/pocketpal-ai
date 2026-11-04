@@ -263,32 +263,43 @@ describe('message', () => {
       toPlain.mockRestore();
     });
 
-    it('starts no hold or press-in while the keyboard is up', () => {
-      jest.useFakeTimers();
-      const keyboard = jest.spyOn(Keyboard, 'isVisible').mockReturnValue(true);
-      const spring = jest.spyOn(Animated, 'spring');
-      const onMessageMenuPress = jest.fn();
-      const {UNSAFE_root} = renderWithProviders(
-        <Message
-          {...rowProps}
-          message={derivedTextMessage}
-          onMessageMenuPress={onMessageMenuPress}
-        />,
-      );
+    it.each([
+      ['up at touch time', false, true],
+      ['down at touch time', true, false],
+    ])(
+      'checks the keyboard when the touch starts (%s)',
+      (_case, visibleAtRender, visibleAtTouch) => {
+        jest.useFakeTimers();
+        const keyboard = jest
+          .spyOn(Keyboard, 'isVisible')
+          .mockReturnValue(visibleAtRender);
+        const onMessageMenuPress = jest.fn();
+        const {UNSAFE_root} = renderWithProviders(
+          <Message
+            {...rowProps}
+            message={derivedTextMessage}
+            onMessageMenuPress={onMessageMenuPress}
+          />,
+        );
+        const spring = jest.spyOn(Animated, 'spring');
+        keyboard.mockReturnValue(visibleAtTouch);
 
-      fireEvent(userRowOf(UNSAFE_root), 'touchStart', {
-        nativeEvent: {pageX: 1, pageY: 2},
-      });
-      act(() => {
-        jest.advanceTimersByTime(500);
-      });
+        fireEvent(userRowOf(UNSAFE_root), 'touchStart', {
+          nativeEvent: {pageX: 1, pageY: 2},
+        });
+        act(() => {
+          jest.advanceTimersByTime(500);
+        });
 
-      expect(onMessageMenuPress).not.toHaveBeenCalled();
-      expect(spring).not.toHaveBeenCalled();
-      keyboard.mockRestore();
-      spring.mockRestore();
-      jest.useRealTimers();
-    });
+        expect(onMessageMenuPress).toHaveBeenCalledTimes(
+          visibleAtTouch ? 0 : 1,
+        );
+        expect(spring).toHaveBeenCalledTimes(visibleAtTouch ? 0 : 1);
+        keyboard.mockRestore();
+        spring.mockRestore();
+        jest.useRealTimers();
+      },
+    );
 
     it('springs the user bubble to 1.01 on touch start and back on release', () => {
       const spring = jest.spyOn(Animated, 'spring');

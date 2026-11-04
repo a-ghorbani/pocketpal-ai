@@ -1,6 +1,6 @@
+import {closesFence, Fence, openingFence} from './codeFence';
 import {normalizeBreakTags} from './normalizeBreakTags';
 
-const FENCE = /^\s*(```|~~~)/;
 const BACKTICK_RUN = /`+/g;
 const LINK_OR_IMAGE = /!?\[([^[\]\n]*)]\([^()\s]*\)/g;
 const PAIRED_MARKERS: [RegExp, string][] = [
@@ -55,15 +55,19 @@ const inlineToPlain = (line: string): string => {
 
 /** Rendered-looking text of a markdown message, for a screen-reader label. */
 export const markdownToPlainText = (markdown: string): string => {
-  let inFence = false;
+  let fence: Fence | undefined;
   return normalizeBreakTags(markdown)
     .split('\n')
     .map(line => {
-      if (FENCE.test(line)) {
-        inFence = !inFence;
-        return '';
+      if (fence) {
+        if (closesFence(line, fence)) {
+          fence = undefined;
+          return '';
+        }
+        return line;
       }
-      return inFence ? line : inlineToPlain(stripBlockMarkers(line));
+      fence = openingFence(line);
+      return fence ? '' : inlineToPlain(stripBlockMarkers(line));
     })
     .join(' ')
     .replace(/\s+/g, ' ')

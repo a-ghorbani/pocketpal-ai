@@ -32,6 +32,26 @@ describe('markdownToPlainText', () => {
     ['star arguments', 'def f(*args, **kwargs):', 'def f(*args, **kwargs):'],
     ['a break tag', 'first<br>second', 'first second'],
     ['an unclosed backtick', 'a ` b', 'a ` b'],
+    [
+      'a code span that looks like a fence',
+      '```npm install``` fails, why?',
+      'npm install fails, why?',
+    ],
+    [
+      'a fence-like code span before a second line',
+      '```foo``` first\nsecond **line**',
+      'foo first second line',
+    ],
+    ['a code span holding a shorter run', '`` a `b` c ``', 'a `b` c'],
+    ['two code spans', '`a` and `b`', 'a and b'],
+    [
+      'markers inside a fenced block',
+      '```\n**x** and _y_\n```',
+      '**x** and _y_',
+    ],
+    ['spaced double stars', '2 ** 3 ** 2', '2 ** 3 ** 2'],
+    ['a star inside a word', '*foo*bar', '*foo*bar'],
+    ['a closer with trailing text', '```\n``` x\n**y**\n```', '``` x **y**'],
   ])('reads %s as rendered text', (_case, markdown, plain) => {
     expect(markdownToPlainText(markdown)).toBe(plain);
   });

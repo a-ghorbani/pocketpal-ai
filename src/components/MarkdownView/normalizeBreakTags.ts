@@ -1,27 +1,6 @@
+import {closesFence, Fence, openingFence} from './codeFence';
+
 const BREAK_TAG = /<br[ \t]*\/?>/gi;
-const CONTAINER_PREFIX = /^[ \t>]*/;
-const OPENING_FENCE = /^(`{3,}|~{3,})/;
-const CLOSING_FENCE = /^(`{3,}|~{3,})\s*$/;
-
-interface Fence {
-  marker: string;
-  length: number;
-}
-
-const readFence = (line: string, pattern: RegExp): Fence | undefined => {
-  const match = line.replace(CONTAINER_PREFIX, '').match(pattern);
-  return match ? {marker: match[1][0], length: match[1].length} : undefined;
-};
-
-const closesFence = (line: string, fence: Fence): boolean => {
-  const closing = readFence(line, CLOSING_FENCE);
-  return (
-    closing !== undefined &&
-    closing.marker === fence.marker &&
-    closing.length >= fence.length
-  );
-};
-
 const endOfBacktickRun = (line: string, start: number): number => {
   let end = start;
   while (line[end] === '`') {
@@ -90,7 +69,7 @@ export const normalizeBreakTags = (text: string): string => {
         }
         return line;
       }
-      fence = readFence(line, OPENING_FENCE);
+      fence = openingFence(line);
       return fence ? line : replaceOutsideCodeSpans(line);
     })
     .join('\n');
