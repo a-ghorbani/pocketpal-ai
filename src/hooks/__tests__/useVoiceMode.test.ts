@@ -41,6 +41,7 @@ jest.mock('../../services/tts/voiceFiles', () => ({
 }));
 
 let mockBlur: (() => void) | undefined;
+let mockFocus: (() => void) | undefined;
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useFocusEffect: (effect: () => (() => void) | undefined) => {
@@ -48,6 +49,9 @@ jest.mock('@react-navigation/native', () => ({
     useEffect(() => {
       const cleanup = effect();
       mockBlur = cleanup;
+      mockFocus = () => {
+        mockBlur = effect();
+      };
       return cleanup;
     }, [effect]);
   },
@@ -183,12 +187,15 @@ describe('useVoiceMode', () => {
     (AudioRecord.init as jest.Mock).mockResolvedValue(undefined);
     (check as jest.Mock).mockResolvedValue('granted');
     (hasVoiceFile as jest.Mock).mockResolvedValue(true);
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
     Platform.OS = 'ios';
     runInAction(() => {
       chatSessionStore.activeSessionId = 'session-1';
       model.models = modelsList;
       model.activeModelId = localModel.id;
       model.isContextLoading = false;
+      model.context = {id: 'ctx-1'};
+      model.appState = 'active';
       model.loadedModelBytes = 1e9;
       model.availableMemoryCeiling = 5e9;
       model.largestSuccessfulLoad = 4e9;
@@ -277,7 +284,7 @@ describe('useVoiceMode', () => {
       const {enter, hook} = renderVoiceMode();
       await enter();
 
-      act(() => hook.result.current.dismissSheet());
+      act(() => hook.result.current.dismissSheet('teaser'));
 
       expect(hook.result.current.sheet).toBeNull();
       expect(focusInput).not.toHaveBeenCalled();
@@ -485,13 +492,6 @@ describe('useVoiceMode', () => {
         },
         1,
       ],
-      [
-        'the model is still loading',
-        () => {
-          model.isContextLoading = true;
-        },
-        0,
-      ],
     ])(
       'does not enter after setup when %s meanwhile',
       async (_case, arrange, pickerOpens) => {
@@ -514,6 +514,329 @@ describe('useVoiceMode', () => {
         expect(voiceModeStore.phase).toBe('closed');
       },
     );
+
+    describe('when the chat model is not settled at setup', () => {
+      const tightBytes =
+        5e9 * ASR_IOS_CEILING_SHARE -
+        ASR_TIERS.base.runtimeBytes -
+        TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      const readMemory = () => DeviceInfo.getTotalMemory as jest.Mock;
+
+      const openSetup = async () => {
+        runInAction(() => {
+          asrStore.downloadStates.base = 'not_installed';
+        });
+        const rendered = renderVoiceMode();
+        await rendered.enter();
+        expect(rendered.hook.result.current.sheet).toEqual({kind: 'setup'});
+        runInAction(() => {
+          asrStore.downloadStates.base = 'ready';
+        });
+        readMemory().mockClear();
+        return rendered;
+      };
+      const startSetupDone = async (
+        hook: ReturnType<typeof renderVoiceMode>['hook'],
+      ) => {
+        let done!: Promise<void>;
+        act(() => {
+          done = hook.result.current.setupDone();
+        });
+        await flush();
+        return {done};
+      };
+      const finishLoad = (bytes: number) =>
+        runInAction(() => {
+          model.loadedModelBytes = bytes;
+          model.context = {id: 'ctx-2'};
+          model.isContextLoading = false;
+        });
+
+      const releaseModel = () =>
+        runInAction(() => {
+          model.context = undefined;
+        });
+      const startLoading = () =>
+        runInAction(() => {
+          model.isContextLoading = true;
+        });
+
+      it('waits for a released model to reload, then shows the memory sheet with its size', async () => {
+        const {hook, engine} = await openSetup();
+        releaseModel();
+
+        const {done} = await startSetupDone(hook);
+        expect(hook.result.current.sheet).toBeNull();
+        startLoading();
+        await flush();
+        expect(readMemory()).not.toHaveBeenCalled();
+
+        finishLoad(tightBytes);
+        await act(async () => {
+          await done;
+        });
+
+        const sheet = hook.result.current.sheet;
+        expect(sheet).toMatchObject({kind: 'memory', fit: {status: 'tight'}});
+        expect(
+          sheet?.kind === 'memory' && sheet.fit.breakdown.rows,
+        ).toContainEqual({kind: 'chat', bytes: tightBytes});
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it('waits for a released model to reload, then enters when memory fits', async () => {
+        const {hook, engine} = await openSetup();
+        releaseModel();
+
+        const {done} = await startSetupDone(hook);
+        startLoading();
+        await flush();
+        expect(engine.prepare).not.toHaveBeenCalled();
+
+        finishLoad(1e9);
+        await act(async () => {
+          await done;
+        });
+
+        expect(engine.prepare).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
+      });
+
+      it('warns when the model never reloads, and a later tap still works', async () => {
+        const {hook, engine, enter} = await openSetup();
+        releaseModel();
+        jest.useFakeTimers();
+
+        const {done} = await startSetupDone(hook);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS);
+        });
+        jest.useRealTimers();
+        await act(async () => {
+          await done;
+        });
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(openModelPicker).not.toHaveBeenCalled();
+        expect(uiStore.setChatWarning).toHaveBeenCalledTimes(1);
+        expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: uiStore.l10n.voiceMode.startFailed,
+          }),
+        );
+
+        finishLoad(1e9);
+        await enter();
+        expect(engine.prepare).toHaveBeenCalledTimes(1);
+      });
+
+      it('opens the model picker once when the model is ejected while loading', async () => {
+        const {hook, engine} = await openSetup();
+        startLoading();
+
+        const {done} = await startSetupDone(hook);
+        runInAction(() => {
+          model.activeModelId = undefined;
+        });
+        await act(async () => {
+          await done;
+        });
+
+        expect(openModelPicker).toHaveBeenCalledTimes(1);
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['the screen is left', () => mockBlur?.()],
+        [
+          'the screen is gone',
+          (hook: ReturnType<typeof renderVoiceMode>['hook']) => hook.unmount(),
+        ],
+      ])(
+        'shows nothing when %s before the model loads',
+        async (_case, leave) => {
+          const {hook, engine} = await openSetup();
+          startLoading();
+
+          const {done} = await startSetupDone(hook);
+          act(() => leave(hook));
+          finishLoad(tightBytes);
+          await act(async () => {
+            await done;
+          });
+
+          expect(hook.result.current.sheet).toBeNull();
+          expect(readMemory()).not.toHaveBeenCalled();
+          expect(engine.prepare).not.toHaveBeenCalled();
+        },
+      );
+
+      it('shows nothing when setup completes after the screen was left', async () => {
+        const {hook, engine} = await openSetup();
+        act(() => mockBlur?.());
+
+        await act(async () => {
+          await hook.result.current.setupDone();
+        });
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(engine.prepare).not.toHaveBeenCalled();
+      });
+
+      it('does not warn when the wait times out after the screen was left', async () => {
+        const {hook} = await openSetup();
+        releaseModel();
+        jest.useFakeTimers();
+
+        const {done} = await startSetupDone(hook);
+        act(() => mockBlur?.());
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS);
+        });
+        jest.useRealTimers();
+        await act(async () => {
+          await done;
+        });
+
+        expect(uiStore.setChatWarning).not.toHaveBeenCalled();
+      });
+
+      it('checks memory only once the app is back in the foreground', async () => {
+        const {hook} = await openSetup();
+        startLoading();
+
+        const {done} = await startSetupDone(hook);
+        runInAction(() => {
+          model.appState = 'background';
+        });
+        finishLoad(tightBytes);
+        await flush();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(hook.result.current.sheet).toBeNull();
+
+        runInAction(() => {
+          model.appState = 'active';
+        });
+        await act(async () => {
+          await done;
+        });
+
+        expect(hook.result.current.sheet).toMatchObject({
+          kind: 'memory',
+          fit: {status: 'tight'},
+        });
+      });
+
+      it('ignores a voice tap while it waits, then shows the memory sheet', async () => {
+        const {hook, engine, enter} = await openSetup();
+        releaseModel();
+
+        const {done} = await startSetupDone(hook);
+        await enter();
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(openModelPicker).not.toHaveBeenCalled();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(readMemory()).not.toHaveBeenCalled();
+
+        finishLoad(tightBytes);
+        await act(async () => {
+          await done;
+        });
+
+        expect(hook.result.current.sheet).toMatchObject({kind: 'memory'});
+        expect(readMemory()).toHaveBeenCalledTimes(1);
+      });
+
+      it('runs only the latest of two setup completions', async () => {
+        const {hook} = await openSetup();
+        startLoading();
+
+        const {done: first} = await startSetupDone(hook);
+        const {done: second} = await startSetupDone(hook);
+        finishLoad(tightBytes);
+        await act(async () => {
+          await Promise.all([first, second]);
+        });
+
+        expect(readMemory()).toHaveBeenCalledTimes(1);
+        expect(hook.result.current.sheet).toMatchObject({kind: 'memory'});
+      });
+
+      it('accepts a voice tap again after a wait that ended on a left screen', async () => {
+        const {hook, enter} = await openSetup();
+        startLoading();
+
+        const {done} = await startSetupDone(hook);
+        act(() => mockBlur?.());
+        finishLoad(tightBytes);
+        await act(async () => {
+          await done;
+        });
+        expect(hook.result.current.sheet).toBeNull();
+
+        act(() => mockFocus?.());
+        await enter();
+
+        expect(hook.result.current.sheet).toMatchObject({
+          kind: 'memory',
+          fit: {status: 'tight'},
+        });
+      });
+
+      it('keeps ignoring voice taps when an older wait times out while a newer one waits', async () => {
+        const {hook, engine, enter} = await openSetup();
+        releaseModel();
+        jest.useFakeTimers();
+
+        const {done: first} = await startSetupDone(hook);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS / 2);
+        });
+        const {done: second} = await startSetupDone(hook);
+        await act(async () => {
+          jest.advanceTimersByTime(VOICE_START_TIMEOUT_MS / 2 + 1);
+        });
+        jest.useRealTimers();
+        await act(async () => {
+          await first;
+        });
+
+        await enter();
+        expect(hook.result.current.sheet).toBeNull();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(engine.prepare).not.toHaveBeenCalled();
+        expect(uiStore.setChatWarning).not.toHaveBeenCalled();
+
+        finishLoad(tightBytes);
+        await act(async () => {
+          await second;
+        });
+        expect(readMemory()).toHaveBeenCalledTimes(1);
+        expect(hook.result.current.sheet).toMatchObject({kind: 'memory'});
+      });
+
+      it('shows no memory sheet over a voice session that is already open', async () => {
+        const {hook, engine, enter} = await openSetup();
+        await enter();
+        expect(voiceModeStore.phase).toBe('listening');
+        runInAction(() => {
+          model.loadedModelBytes = tightBytes;
+        });
+        readMemory().mockClear();
+
+        await act(async () => {
+          await hook.result.current.setupDone();
+        });
+
+        expect(hook.result.current.sheet).toBeNull();
+        expect(readMemory()).not.toHaveBeenCalled();
+        expect(engine.prepare).toHaveBeenCalledTimes(1);
+        expect(voiceModeStore.phase).toBe('listening');
+      });
+    });
 
     it('shows the teaser instead of entering after setup when voice mode locked meanwhile', async () => {
       runInAction(() => {
@@ -682,6 +1005,37 @@ describe('useVoiceMode', () => {
       expect(engine.prepare).toHaveBeenCalledWith('base');
     });
 
+    it("keeps the memory sheet opened by setup when the setup sheet's close lands late", async () => {
+      runInAction(() => {
+        asrStore.downloadStates.base = 'not_installed';
+        model.loadedModelBytes =
+          5e9 * ASR_IOS_CEILING_SHARE -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      await enter();
+      expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+
+      runInAction(() => {
+        asrStore.downloadStates.base = 'ready';
+      });
+      await act(async () => {
+        await hook.result.current.setupDone();
+      });
+      act(() => hook.result.current.dismissSheet('setup'));
+
+      expect(hook.result.current.sheet).toMatchObject({
+        kind: 'memory',
+        fit: {status: 'tight'},
+      });
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+      expect(engine.prepare).toHaveBeenCalledWith('base');
+      expect(voiceModeStore.phase).toBe('listening');
+    });
+
     describe('with Small in use', () => {
       const tightFor = (tier: 'base' | 'small') =>
         5e9 * ASR_IOS_CEILING_SHARE -
@@ -767,6 +1121,24 @@ describe('useVoiceMode', () => {
         expect(engine.prepare).not.toHaveBeenCalled();
       });
 
+      it("keeps the setup sheet Continue anyway reopened when the memory sheet's close lands late", async () => {
+        runInAction(() => {
+          model.loadedModelBytes = tightFor('small');
+        });
+        const {enter, hook} = renderVoiceMode();
+        await enter();
+        runInAction(() => {
+          asrStore.downloadStates.small = 'not_installed';
+        });
+        await act(async () => {
+          await hook.result.current.continueAnyway();
+        });
+
+        act(() => hook.result.current.dismissSheet('memory'));
+
+        expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+      });
+
       it('Continue anyway enters with Small when nothing changed', async () => {
         runInAction(() => {
           model.loadedModelBytes = tightFor('small');
@@ -831,9 +1203,36 @@ describe('useVoiceMode', () => {
       });
     });
 
-    it("won't enter on Continue anyway when whisper won't fit", async () => {
+    it('a failed load after Continue anyway warns and leaves voice mode closed', async () => {
       runInAction(() => {
-        model.loadedModelBytes = 5e9;
+        model.loadedModelBytes =
+          5e9 * ASR_IOS_CEILING_SHARE -
+          ASR_TIERS.base.runtimeBytes -
+          TTS_ENGINE_RUNTIME_BYTES.supertonic / 2;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+      engine.prepare.mockRejectedValueOnce(new Error('load'));
+      jest.spyOn(console, 'warn').mockImplementationOnce(() => {});
+
+      await enter();
+      expect(hook.result.current.sheet).toMatchObject({
+        fit: {status: 'tight'},
+      });
+      await act(async () => {
+        await hook.result.current.continueAnyway();
+      });
+      await flush();
+
+      expect(engine.prepare).toHaveBeenCalledWith('base');
+      expect(voiceModeStore.phase).toBe('closed');
+      expect(uiStore.setChatWarning).toHaveBeenCalledWith(
+        expect.objectContaining({message: uiStore.l10n.voiceMode.startFailed}),
+      );
+    });
+
+    it("won't enter on Continue anyway when the models pass total RAM", async () => {
+      runInAction(() => {
+        model.loadedModelBytes = 8e9;
       });
       const {enter, hook, engine} = renderVoiceMode();
 

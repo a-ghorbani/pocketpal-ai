@@ -161,7 +161,7 @@ describe('ChatView voice-input append seam', () => {
 
     expect(
       getByText(
-        'Not enough memory for voice input with this chat model. Try a smaller model.',
+        'This chat model and voice input need more memory than this phone has. Try a smaller model.',
       ),
     ).toBeTruthy();
   });

@@ -12,6 +12,7 @@ import 'react-native-gesture-handler/jestSetup';
 // adapter renders but no-ops; tests that need the bypass-on path override
 // with `(global as any).__E2E_SKIP_ONBOARDING__ = true`.
 (global as any).__E2E_SKIP_ONBOARDING__ = false;
+(global as any).__PLUS_STORE_GATE__ = true;
 
 jest.mock('react-native-haptic-feedback');
 

@@ -1827,6 +1827,8 @@
     "teaserGetPlus": "獲取 Plus",
     "teaserKeepTyping": "持續輸入，免費使用",
     "sttRowModel": "Whisper {{tier}} · {{size}}",
-    "memorySttRowModel": "語音辨識 · Whisper {{tier}}"
+    "memorySttRowModel": "語音辨識 · Whisper {{tier}}",
+    "voiceRowFileMissing": "{{voice}} 尚未下載。繼續將會下載它。",
+    "voiceRowFileFailed": "無法下載{{voice}}。連接網路並重試。"
   }
 }

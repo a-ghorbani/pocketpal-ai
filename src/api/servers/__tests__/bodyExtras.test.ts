@@ -352,6 +352,26 @@ describe('bodyExtras (sampler forwarding)', () => {
   );
 });
 
+describe.each(SERVER_TYPE_OPTIONS)('the %s token limit', serverType => {
+  it.each([-1, 0])('omits n_predict %d, which means no limit', nPredict => {
+    expect(
+      samplerBody(serverType, {temperature: 0.5, n_predict: nPredict}),
+    ).toEqual({temperature: 0.5});
+  });
+
+  it('keeps a zero temperature beside an omitted limit', () => {
+    expect(samplerBody(serverType, {temperature: 0, n_predict: 0})).toEqual({
+      temperature: 0,
+    });
+  });
+
+  it('sends the smallest positive n_predict', () => {
+    expect(samplerBody(serverType, {n_predict: 1})).toEqual({
+      max_completion_tokens: 1,
+    });
+  });
+});
+
 // ---- Every profile ----
 
 /** A full request, for the checks that hold for every profile alike. */

@@ -1709,7 +1709,18 @@
     "errorMicUnavailable": "Мікрофон не реагує. Спробуйте ще раз або перейдіть до меншої моделі чату.",
     "errorTranscriptPartial": "Частину надиктованого не вдалося транскрибувати.",
     "openSettingsLabel": "Відкрити налаштування",
-    "insufficientStorage": "Недостатньо місця — звільніть {{requiredMb}} МБ для встановлення цієї моделі (доступно {{freeMb}} МБ)."
+    "insufficientStorage": "Недостатньо місця — звільніть {{requiredMb}} МБ для встановлення цієї моделі (доступно {{freeMb}} МБ).",
+    "setupSheetTitle": "Налаштувати голосовий ввід",
+    "setupSheetBody": "Одне швидке завантаження — і ви зможете диктувати в автономному режимі.",
+    "tierNameBase": "Base",
+    "tierNameSmall": "Small",
+    "tierNameLargeTurbo": "Large Turbo",
+    "tierHintBase": "За замовчуванням, швидка",
+    "tierHintSmall": "Точніша, але повільніша. Краще для інших мов",
+    "tierHintLargeTurbo": "Дуже повільна на більшості телефонів",
+    "useCta": "Використати",
+    "inUseLabel": "Використовується",
+    "modelSectionHelper": "Використовується для голосового вводу та голосового режиму без рук."
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1814,6 +1825,10 @@
     "teaserTitle": "Голосова розмова — це функція Plus",
     "teaserBody": "Розмовляйте, не тримаючи трубку. Пристрій відповідає вголос.",
     "teaserGetPlus": "Отримати Plus",
-    "teaserKeepTyping": "Продовжуйте друкувати, це безкоштовно"
+    "teaserKeepTyping": "Продовжуйте друкувати, це безкоштовно",
+    "sttRowModel": "Whisper {{tier}} · {{size}}",
+    "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}",
+    "voiceRowFileMissing": "{{voice}} ще не завантажено. Натисніть «Продовжити» — і ми його завантажимо.",
+    "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз."
   }
 }

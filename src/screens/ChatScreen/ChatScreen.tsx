@@ -97,7 +97,7 @@ export const ChatScreen: React.FC = observer(() => {
       stop: () => handleStopPress(),
     },
   });
-  const {tapCloud, toggleMute, end} = voiceMode;
+  const {tapCloud, toggleMute, end, dismissSheet} = voiceMode;
   React.useEffect(() => {
     if (isVideoPal) {
       end();
@@ -106,6 +106,18 @@ export const ChatScreen: React.FC = observer(() => {
   const voiceControls = useMemo(
     () => ({tapCloud, toggleMute, end}),
     [tapCloud, toggleMute, end],
+  );
+  const handleCloseVoiceTeaser = React.useCallback(
+    () => dismissSheet('teaser'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceSetup = React.useCallback(
+    () => dismissSheet('setup'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceMemory = React.useCallback(
+    () => dismissSheet('memory'),
+    [dismissSheet],
   );
 
   // Handle deep linking for message prefill
@@ -336,19 +348,19 @@ export const ChatScreen: React.FC = observer(() => {
         <VoiceTeaser
           onGetPlus={voiceMode.getPlus}
           onKeepTyping={voiceMode.keepTyping}
-          onClose={voiceMode.dismissSheet}
+          onClose={handleCloseVoiceTeaser}
         />
       )}
       <VoiceSetupSheet
         isVisible={voiceMode.sheet?.kind === 'setup'}
-        onClose={voiceMode.dismissSheet}
+        onClose={handleCloseVoiceSetup}
         onDone={voiceMode.setupDone}
       />
       <VoiceMemorySheet
         fit={voiceMode.sheet?.kind === 'memory' ? voiceMode.sheet.fit : null}
         chatModelName={modelStore.activeModel?.name ?? ''}
         voiceName={ttsStore.currentVoice?.name ?? ''}
-        onClose={voiceMode.dismissSheet}
+        onClose={handleCloseVoiceMemory}
         onContinue={voiceMode.continueAnyway}
         onChooseSmallerModel={voiceMode.chooseSmallerModel}
       />
