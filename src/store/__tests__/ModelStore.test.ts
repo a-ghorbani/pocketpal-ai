@@ -3150,6 +3150,212 @@ describe('ModelStore', () => {
       });
     });
 
+    describe('addHFModel over an existing record', () => {
+      const ios = cases[0];
+      const snapshot = (value: unknown) => JSON.parse(JSON.stringify(value));
+      const projectorIds = () =>
+        modelStore.models
+          .filter(
+            m =>
+              m.modelType === ModelType.PROJECTION &&
+              m.id.startsWith(`${ios.repo}/`),
+          )
+          .map(m => m.id);
+
+      const seedRecord = (record: Model, downloaded = false) => {
+        runInAction(() => {
+          modelStore.models = [record];
+        });
+        if (downloaded) {
+          (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+            path.endsWith(`/${record.filename}`),
+          );
+        }
+        return modelStore.models[0];
+      };
+
+      it('upgrades a preset stub and keeps its identity and settings', async () => {
+        const preset = seedPresets(ios);
+        runInAction(() => {
+          preset.capabilities = ['questionAnswering'];
+          preset.completionSettings = {
+            ...preset.completionSettings,
+            temperature: 0.42,
+          };
+        });
+        const before = snapshot(preset);
+        const hfModel = searchModel(ios.repo);
+        const modelFile = fileOf(hfModel, ios.filename);
+
+        await modelStore.addHFModel(hfModel, modelFile);
+
+        const record = modelStore.models.find(m => m.id === preset.id);
+        expect(record).toMatchObject({
+          id: before.id,
+          name: before.name,
+          origin: before.origin,
+          isRulePreset: true,
+          isDownloaded: false,
+          supportsMultimodal: true,
+          modelType: ModelType.VISION,
+          capabilities: ['questionAnswering', 'vision'],
+          visionEnabled: true,
+          defaultProjectionModel: ios.projector,
+          compatibleProjectionModels: [ios.projector],
+          hfModelFile: expect.objectContaining({oid: modelFile.oid}),
+        });
+        expect(record?.hfModel?.siblings).toEqual(hfModel.siblings);
+        expect(snapshot(record?.completionSettings)).toEqual(
+          before.completionSettings,
+        );
+        expect(snapshot(record?.chatTemplate)).toEqual(before.chatTemplate);
+        expect(projectorIds()).toEqual([ios.projector]);
+      });
+
+      it('leaves the record unchanged when the repo ships no mmproj', async () => {
+        const preset = seedPresets(ios);
+        const before = snapshot(modelStore.models);
+        const searched = searchModel(ios.repo);
+        const hfModel = {
+          ...searched,
+          siblings: searched.siblings.filter(
+            f => !f.rfilename.includes('mmproj'),
+          ),
+        };
+
+        await modelStore.addHFModel(hfModel, fileOf(hfModel, ios.filename));
+
+        expect(snapshot(modelStore.models)).toEqual(before);
+        expect(modelStore.models.find(m => m.id === preset.id)).toBe(preset);
+      });
+
+      it('leaves an onboarding entry (no siblings) text-only', async () => {
+        const preset = seedPresets(ios);
+        const before = snapshot(modelStore.models);
+        const hfModel = {...searchModel(ios.repo), siblings: []};
+
+        await modelStore.addHFModel(hfModel, {rfilename: ios.filename});
+
+        expect(snapshot(modelStore.models)).toEqual(before);
+        expect(preset.supportsMultimodal).toBeFalsy();
+      });
+
+      it('leaves a draft-only file next to an mmproj text-only', async () => {
+        const searched = searchModel(ios.repo);
+        const draftFile = {rfilename: 'mtp-gemma-3-4b-it-Q8_0.gguf'};
+        const hfModel = {
+          ...searched,
+          siblings: [...searched.siblings, draftFile],
+        };
+        const record = seedRecord({
+          ...hfAsModel(hfModel, draftFile),
+          modelType: undefined,
+        });
+        const before = snapshot(record);
+
+        await modelStore.addHFModel(hfModel, draftFile);
+
+        expect(snapshot(record)).toEqual(before);
+        expect(record.compatibleProjectionModels).toBeUndefined();
+        expect(record.defaultProjectionModel).toBeUndefined();
+      });
+
+      it('writes no projector fields onto a draft-only record by its header', async () => {
+        const hfModel = searchModel(ios.repo);
+        const modelFile = fileOf(hfModel, ios.filename);
+        const record = seedRecord(
+          {
+            ...hfAsModel({...hfModel, siblings: []}, modelFile),
+            isDownloaded: true,
+            ggufMetadata: {architecture: 'gemma3-assistant'} as GGUFMetadata,
+          },
+          true,
+        );
+        const before = snapshot(record);
+
+        await modelStore.addHFModel(hfModel, modelFile);
+
+        expect(snapshot(record)).toEqual(before);
+        expect(record.supportsMultimodal).toBe(false);
+        expect(record.compatibleProjectionModels).toBeUndefined();
+        expect(record.defaultProjectionModel).toBeUndefined();
+      });
+
+      it('writes no projector fields onto a DRAFT stub', async () => {
+        const hfModel = searchModel(ios.repo);
+        const modelFile = fileOf(hfModel, ios.filename);
+        const record = seedRecord({
+          ...hfAsModel({...hfModel, siblings: []}, modelFile),
+          modelType: ModelType.DRAFT,
+        });
+        const before = snapshot(record);
+
+        await modelStore.addHFModel(hfModel, modelFile);
+
+        expect(snapshot(record)).toEqual(before);
+        expect(record.modelType).toBe(ModelType.DRAFT);
+      });
+
+      it('refreshes the projector list of a vision record and keeps the user pick', async () => {
+        const android = cases[1];
+        const hfModel = searchModel(android.repo);
+        const modelFile = fileOf(hfModel, android.filename);
+        const userPick = `${android.repo}/mmproj-F32.gguf`;
+        const record = seedRecord({
+          ...hfAsModel(hfModel, modelFile),
+          compatibleProjectionModels: [userPick],
+          defaultProjectionModel: userPick,
+        });
+
+        await modelStore.addHFModel(hfModel, modelFile);
+
+        expect(record.compatibleProjectionModels).toEqual([
+          `${android.repo}/mmproj-BF16.gguf`,
+          `${android.repo}/mmproj-F16.gguf`,
+          userPick,
+        ]);
+        expect(record.defaultProjectionModel).toBe(userPick);
+      });
+
+      it('takes projector ids only from mmproj .gguf siblings', async () => {
+        const preset = seedPresets(ios);
+        const searched = searchModel(ios.repo);
+        const hfModel = {
+          ...searched,
+          siblings: [
+            ...searched.siblings,
+            {rfilename: 'mmproj-evil.bin'},
+            {rfilename: 'notes-mmproj.txt'},
+            {rfilename: 'mmproj-model-f16.gguf.part'},
+            {rfilename: 'mmproj.gguf'},
+          ],
+        };
+
+        await modelStore.addHFModel(hfModel, fileOf(hfModel, ios.filename));
+
+        expect(preset.compatibleProjectionModels).toEqual([ios.projector]);
+        expect(projectorIds()).toEqual([ios.projector]);
+      });
+
+      it('a Vision-off download over a preset stub keeps Vision off and fetches only the LLM', async () => {
+        const preset = seedPresets(ios);
+        const hfModel = searchModel(ios.repo);
+
+        await modelStore.downloadHFModel(
+          hfModel,
+          fileOf(hfModel, ios.filename),
+          {enableVision: false},
+        );
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(preset).toMatchObject({
+          supportsMultimodal: true,
+          visionEnabled: false,
+        });
+        expect(downloadedIds()).toEqual([preset.id]);
+      });
+    });
+
     describe('search download over a downloaded record', () => {
       const repo: Repo = 'ggml-org/gemma-3-4b-it-GGUF';
       const filename = 'gemma-3-4b-it-Q4_K_M.gguf';
