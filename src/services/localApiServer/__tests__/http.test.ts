@@ -101,6 +101,21 @@ describe('createRequestReader', () => {
     expect(feed(`${head}ab`, 'cd')).toMatchObject({request: {body: 'abcd'}});
   });
 
+  it('ends the body at its Content-Length', () => {
+    expect(feed(`${post('{}')}GET / HTTP/1.1\r\n\r\n`)).toMatchObject({
+      request: {body: '{}'},
+    });
+  });
+
+  it('reads only the bytes a chunk view covers', () => {
+    const request = 'GET /v1/models HTTP/1.1\r\n\r\n';
+    const backing = bytes(`junk${request}junk`);
+    expect(feed(backing.subarray(4, 4 + request.length))).toMatchObject({
+      kind: 'request',
+      request: {method: 'GET', path: '/v1/models'},
+    });
+  });
+
   it.each([
     [
       'a POST without Content-Length',
@@ -109,6 +124,10 @@ describe('createRequestReader', () => {
     [
       'a chunked body',
       'POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nabcd',
+    ],
+    [
+      'a chunked body that also has a Content-Length',
+      'POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\nabcd',
     ],
   ])('answers 411 for %s', (_, raw) => {
     expect(feed(raw)).toEqual({kind: 'error', status: 411});

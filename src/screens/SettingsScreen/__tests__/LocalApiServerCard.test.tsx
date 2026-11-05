@@ -194,6 +194,22 @@ describe('LocalApiServerCard', () => {
     expect(queryByText('Use a port from 1024 to 65535')).toBeNull();
   });
 
+  it('follows the stored port and drops the port hint once the server starts', () => {
+    const {getByTestId, getByText, queryByText} = render(
+      <LocalApiServerCard />,
+    );
+    act(() => setState({port: 9090}));
+    expect(getByTestId('local-api-server-port-input').props.value).toBe('9090');
+
+    const input = getByTestId('local-api-server-port-input');
+    fireEvent.changeText(input, '80');
+    fireEvent(input, 'blur');
+    expect(getByText('Use a port from 1024 to 65535')).toBeTruthy();
+
+    act(() => setState({enabled: true, status: 'starting'}));
+    expect(queryByText('Use a port from 1024 to 65535')).toBeNull();
+  });
+
   describe('a typed port that was never blurred', () => {
     const HINT = 'Use a port from 1024 to 65535';
 

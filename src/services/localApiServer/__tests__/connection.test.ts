@@ -457,6 +457,23 @@ describe('routing', () => {
       expect(text).not.toContain('Access-Control-');
     });
 
+    it('answers a browser preflight without the key with 401, no CORS', async () => {
+      const {status, text} = await send(
+        raw({
+          method: 'OPTIONS',
+          body: '',
+          headers: {
+            host: 'localhost',
+            origin: 'https://app.example',
+            'access-control-request-method': 'POST',
+          },
+        }),
+        keyed(),
+      );
+      expect(status).toBe(401);
+      expect(text).not.toContain('Access-Control-');
+    });
+
     it('guards /v1/models too', async () => {
       const {status} = await send(MODELS, keyed());
       expect(status).toBe(401);
