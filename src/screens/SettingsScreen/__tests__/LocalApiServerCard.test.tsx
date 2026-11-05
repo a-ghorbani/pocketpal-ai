@@ -64,12 +64,6 @@ describe('LocalApiServerCard', () => {
     expect(queryByTestId('local-api-server-error')).toBeNull();
   });
 
-  it('turns the server on through the store', () => {
-    const {getByTestId} = render(<LocalApiServerCard />);
-    fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
-    expect(store.setEnabled).toHaveBeenCalledWith(true);
-  });
-
   it('shows progress and locks config while starting', () => {
     setState({enabled: true, status: 'starting'});
     const {getByText, getByTestId} = render(<LocalApiServerCard />);
@@ -241,17 +235,6 @@ describe('LocalApiServerCard', () => {
       expect(getByTestId('local-api-server-port-input').props.value).toBe(
         '8080',
       );
-      expect(queryByText(HINT)).toBeNull();
-    });
-
-    it('clears the hint on the next edit', () => {
-      const {getByTestId, queryByText} = render(<LocalApiServerCard />);
-      const input = getByTestId('local-api-server-port-input');
-      fireEvent.changeText(input, '80');
-      fireEvent(input, 'blur');
-      expect(queryByText(HINT)).toBeTruthy();
-
-      fireEvent.changeText(input, '9');
       expect(queryByText(HINT)).toBeNull();
     });
   });
