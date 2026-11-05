@@ -448,6 +448,11 @@
         "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
         "draftOnlyReason": "Draft-only model. Pick it under Settings → Speculative decoding."
       },
+      "projectorOffer": {
+        "rowTitle": "Vision needs its projection model",
+        "download": "Download",
+        "a11yWithSize": "Download projection model, {{size}}"
+      },
       "accessibility": {
         "expandDetails": "Expand details",
         "collapseDetails": "Collapse details",

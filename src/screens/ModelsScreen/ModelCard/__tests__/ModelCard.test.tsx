@@ -1,5 +1,5 @@
 import React from 'react';
-import {Linking, Alert} from 'react-native';
+import {Linking, Alert, StyleSheet} from 'react-native';
 
 import {runInAction} from 'mobx';
 
@@ -458,12 +458,58 @@ describe('ModelCard', () => {
         supportsMultimodal: true,
         defaultProjectionModel: 'missing/projection-model',
       };
+      const missingProjector = {
+        ...downloadedModel,
+        id: 'missing/projection-model',
+        modelType: ModelType.PROJECTION,
+        isDownloaded: false,
+        size: 851_234_567,
+        progress: 0,
+      };
 
       beforeEach(() => {
         modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
           isAvailable: false,
           state: 'missing',
         });
+      });
+
+      it('offers the projector as one button with its size', async () => {
+        modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+          isAvailable: false,
+          state: 'missing',
+          projectionModel: missingProjector,
+        });
+        const {getByTestId, getByText} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        const offer = getByTestId('projection-warning-badge');
+        expect(
+          getByText(l10n.en.models.modelCard.projectorOffer.rowTitle),
+        ).toBeTruthy();
+        expect(getByText('851 MB')).toBeTruthy();
+        expect(offer.props.accessibilityRole).toBe('button');
+        expect(offer.props.accessibilityLabel).toBe(
+          'Download projection model, 851 MB',
+        );
+        expect(
+          StyleSheet.flatten(offer.props.style).minHeight,
+        ).toBeGreaterThanOrEqual(44);
+      });
+
+      it('falls back to Download without a projector size', async () => {
+        const {getByTestId, getByText, queryByText} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        expect(
+          getByText(l10n.en.models.modelCard.projectorOffer.download),
+        ).toBeTruthy();
+        expect(queryByText(/MB$/)).toBeNull();
+        expect(
+          getByTestId('projection-warning-badge').props.accessibilityLabel,
+        ).toBe(l10n.en.models.modelCard.labels.downloadProjectionModel);
       });
 
       it('shows on the collapsed card and downloads the selected projector', async () => {
