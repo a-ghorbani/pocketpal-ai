@@ -51,13 +51,21 @@ describe('markdownToPlainText', () => {
     ],
     ['spaced double stars', '2 ** 3 ** 2', '2 ** 3 ** 2'],
     ['a star inside a word', '*foo*bar', '*foo*bar'],
+    [
+      'a fenced block with CRLF line ends',
+      '```js\r\nlet a=1;<br>\r\n```\r\nafter',
+      'let a=1;<br> after',
+    ],
     ['a closer with trailing text', '```\n``` x\n**y**\n```', '``` x **y**'],
   ])('reads %s as rendered text', (_case, markdown, plain) => {
     expect(markdownToPlainText(markdown)).toBe(plain);
   });
 
-  it('stays linear on a 100 KB run of unclosed links', () => {
-    const run = '[x]('.repeat(25_000);
+  it.each([
+    ['unclosed links', '[x]('.repeat(25_000)],
+    ['backticks ending in a carriage return', '`'.repeat(100_000) + '\r'],
+    ['tildes ending in a carriage return', '~'.repeat(100_000) + '\r'],
+  ])('stays linear on 100 KB of %s', (_case, run) => {
     const start = Date.now();
 
     markdownToPlainText(run);

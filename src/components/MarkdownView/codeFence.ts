@@ -1,6 +1,6 @@
 const CONTAINER_PREFIX = /^[ \t>]*/;
-const OPENING_FENCE = /^(`{3,}|~{3,})(.*)$/;
-const CLOSING_FENCE = /^(`{3,}|~{3,})[ \t]*$/;
+const OPENING_FENCE = /^(`{3,}|~{3,})(.*)/;
+const CLOSING_FENCE = /^(`{3,}|~{3,})\s*$/;
 
 export interface Fence {
   marker: string;

@@ -77,6 +77,25 @@ describe('normalizeBreakTags', () => {
     expect(normalizeBreakTags(text)).toBe('```\n``` x\n<br>\n```\n ');
   });
 
+  it('keeps a fence with CRLF line ends literal', () => {
+    const text = '```js\r\nlet a=1;<br>\r\n```\r\nafter<br>';
+    expect(normalizeBreakTags(text)).toBe(
+      '```js\r\nlet a=1;<br>\r\n```\r\nafter ',
+    );
+  });
+
+  it('opens a tilde fence whose info string holds a backtick', () => {
+    expect(normalizeBreakTags('~~~ a`b\n<br>\n~~~\n<br>')).toBe(
+      '~~~ a`b\n<br>\n~~~\n ',
+    );
+  });
+
+  it('closes a fence on a longer run of its marker', () => {
+    expect(normalizeBreakTags('```\n<br>\n`````\n<br>')).toBe(
+      '```\n<br>\n`````\n ',
+    );
+  });
+
   it('keeps everything after an unclosed fence literal', () => {
     const text = 'a<br>\n```py\nx = 1<br>\n<br>';
     expect(normalizeBreakTags(text)).toBe('a \n```py\nx = 1<br>\n<br>');
