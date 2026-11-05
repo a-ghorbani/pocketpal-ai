@@ -13,7 +13,6 @@ import {
 } from '../../../__mocks__/external/react-native-tcp-socket';
 import {mockModelStore} from '../../../__mocks__/stores/modelStore';
 import {LocalCompletionEngine} from '../../api/completionEngines';
-import {MAX_OPEN_CONNECTIONS} from '../../services/localApiServer/connection';
 
 jest.mock('../ModelStore', () => ({
   modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
@@ -726,32 +725,6 @@ describe('LocalApiServerStore races and requests', () => {
     await flush();
     expect(open.output).toMatch(/^HTTP\/1\.1 200 /);
     expect(store.hasApiKey).toBe(false);
-  });
-
-  it('frees the slot of an accepted socket whose peer left before any address was known', async () => {
-    getPassword.mockResolvedValueOnce({username: 'apiKey', password: 'k1'});
-    const server = await startRunning();
-    const gone = Array.from({length: MAX_OPEN_CONNECTIONS}, () =>
-      server.connect(
-        Object.assign(new FakeSocket(), {
-          localAddress: '',
-          remoteAddress: '',
-          remotePort: 0,
-        }),
-      ),
-    );
-    gone.forEach(socket => socket.peerClose());
-    await flush();
-    expect(gone.every(socket => socket.writes.length === 0)).toBe(true);
-    expect(store.activeRequests).toBe(0);
-
-    const next = server.connect();
-    next.receive(
-      MODELS.replace('\r\n\r\n', '\r\nAuthorization: Bearer k1\r\n\r\n'),
-    );
-    await flush();
-    expect(next.destroyed).toBe(false);
-    expect(next.output).toMatch(/^HTTP\/1\.1 200 /);
   });
 
   it('fails without listening when the Keychain read fails', async () => {

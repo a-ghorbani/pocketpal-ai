@@ -1,17 +1,54 @@
 diff --git a/node_modules/react-native-tcp-socket/ios/TcpSockets.m b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
-index a5553c6..3527607 100644
+index a5553c6..47437a5 100644
 --- a/node_modules/react-native-tcp-socket/ios/TcpSockets.m
 +++ b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
-@@ -293,10 +293,10 @@ RCT_EXPORT_METHOD(getCertificate:(nonnull NSNumber *)cId
+@@ -252,11 +252,20 @@ - (void)onConnect:(TcpSocketClient *)client {
+ 
+ - (void)onListen:(TcpSocketClient *)server {
+     GCDAsyncSocket *socket = [server getSocket];
++    NSString *localAddress = [socket localHost];
++    if (localAddress == nil) {
++        [self sendEventWithName:@"error"
++                           body:@{
++                               @"id" : server.id,
++                               @"error" : @"Server socket closed before listening could be reported"
++                           }];
++        return;
++    }
+     [self sendEventWithName:@"listening"
+                        body:@{
+                            @"id" : server.id,
+                            @"connection" : @{
+-                               @"localAddress" : [socket localHost],
++                               @"localAddress" : localAddress,
+                                @"localPort" :
+                                    [NSNumber numberWithInt:[socket localPort]],
+                                @"localFamily" : [socket isIPv4] ? @"IPv4"
+@@ -286,6 +295,14 @@ - (void)onSocketConnection:(TcpSocketClient *)client
+                   toClient:(NSNumber *)clientID
+             connectionType:(NSString *)connectionType {
+     GCDAsyncSocket *socket = [client getSocket];
++    NSString *localAddress = [socket localHost];
++    NSString *remoteAddress = [socket connectedHost];
++    if (localAddress == nil || remoteAddress == nil) {
++        RCTLogWarn(@"Dropping incoming connection %@: peer disconnected before it was accepted",
++                   client.id);
++        [self destroyClient:client.id];
++        return;
++    }
+ 
+     [self sendEventWithName:connectionType
+                        body:@{
+@@ -293,10 +310,10 @@ - (void)onSocketConnection:(TcpSocketClient *)client
                             @"info" : @{
                                 @"id" : client.id,
                                 @"connection" : @{
 -                                   @"localAddress" : [socket localHost],
-+                                   @"localAddress" : [socket localHost] ?: @"",
++                                   @"localAddress" : localAddress,
                                     @"localPort" : [NSNumber
                                         numberWithInt:[socket localPort]],
 -                                   @"remoteAddress" : [socket connectedHost],
-+                                   @"remoteAddress" : [socket connectedHost] ?: @"",
++                                   @"remoteAddress" : remoteAddress,
                                     @"remotePort" : [NSNumber
                                         numberWithInt:[socket connectedPort]],
                                     @"remoteFamily" : [socket isIPv4] ? @"IPv4"
