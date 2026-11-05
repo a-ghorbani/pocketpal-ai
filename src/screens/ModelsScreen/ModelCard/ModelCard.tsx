@@ -815,6 +815,17 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             {/* Action Buttons Section */}
             <View style={styles.actionButtonsContainer}>
               {renderActionButtons()}
+              {hasProjectionModelWarning && (
+                <TouchableOpacity
+                  testID="projection-warning-badge"
+                  onPress={handleProjectionWarningPress}
+                  style={styles.warningButton}
+                  activeOpacity={0.7}>
+                  <Text style={styles.warningButtonText}>
+                    {l10n.models.modelCard.labels.downloadProjectionModel}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {isExpanded && (
@@ -986,19 +997,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     </View>
                   )}
                 </View>
-
-                {/* Projection model warning */}
-                {hasProjectionModelWarning && (
-                  <TouchableOpacity
-                    testID="projection-warning-badge"
-                    onPress={handleProjectionWarningPress}
-                    style={styles.warningButton}
-                    activeOpacity={0.7}>
-                    <Text style={styles.warningButtonText}>
-                      {l10n.models.modelCard.labels.downloadProjectionModel}
-                    </Text>
-                  </TouchableOpacity>
-                )}
 
                 {/* HuggingFace Link */}
                 {model.hfUrl && (
