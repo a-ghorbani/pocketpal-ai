@@ -76,7 +76,7 @@ export function constantTimeEquals(a: string, b: string): boolean {
 }
 
 function isAuthorized(header: string | undefined, apiKey: string): boolean {
-  const match = /^Bearer\s+(.+)$/i.exec(header ?? '');
+  const match = /^Bearer\s+(\S.*)$/i.exec(header ?? '');
   return constantTimeEquals(match?.[1] ?? '', apiKey);
 }
 

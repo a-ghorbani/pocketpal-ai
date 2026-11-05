@@ -9,6 +9,7 @@ import {
   OpenConnection,
   READ_DEADLINE_MS,
 } from '../connection';
+import {MAX_HEAD_BYTES} from '../http';
 
 jest.mock('buffer', () => jest.requireActual('buffer/'));
 jest.mock('../chatCompletion', () => ({serveChatCompletion: jest.fn()}));
@@ -477,6 +478,43 @@ describe('routing', () => {
     it('guards /v1/models too', async () => {
       const {status} = await send(MODELS, keyed());
       expect(status).toBe(401);
+    });
+
+    it('serves a key with an inner space', async () => {
+      const {status} = await send(
+        raw({
+          method: 'GET',
+          path: '/v1/models',
+          body: '',
+          headers: {host: 'localhost', authorization: 'Bearer my secret'},
+        }),
+        makeContext('my secret'),
+      );
+      expect(status).toBe(200);
+    });
+
+    it('refuses a backtracking-bait Authorization header in under 50 ms', async () => {
+      const bait = raw({
+        method: 'GET',
+        path: '/v1/models',
+        body: '',
+        headers: {
+          host: 'localhost',
+          authorization: `Bearer${' '.repeat(16_000)}a\nb`,
+        },
+      });
+      expect(Buffer.byteLength(bait)).toBeLessThanOrEqual(MAX_HEAD_BYTES);
+      const elapsed: number[] = [];
+      for (let i = 0; i < 3; i++) {
+        const socket = connect(keyed());
+        const start = Date.now();
+        socket.receive(bait);
+        elapsed.push(Date.now() - start);
+        await flush();
+        expect(socket.output).toMatch(/^HTTP\/1\.1 401 /);
+        expect(socket.output).toContain('"code":"invalid_api_key"');
+      }
+      expect(Math.min(...elapsed)).toBeLessThan(50);
     });
   });
 
