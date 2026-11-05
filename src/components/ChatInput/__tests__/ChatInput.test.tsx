@@ -1179,3 +1179,67 @@ describe('voice mode button', () => {
     expect(queryByTestId('voice-mode-button')).toBeNull();
   });
 });
+
+describe('native text clear', () => {
+  const clear = TextInput.prototype.clear as jest.Mock;
+
+  const renderInput = (props = {}) =>
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{
+            onSendPress: jest.fn(),
+            renderScrollable,
+            sendButtonVisibilityMode: 'editing',
+            ...props,
+          }}
+        />
+      </UserContext.Provider>,
+    );
+
+  const typeAndSend = ({getByPlaceholderText, getByLabelText}: any) => {
+    fireEvent.changeText(
+      getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder),
+      'line one\nline two\nline three',
+    );
+    fireEvent.press(
+      getByLabelText(l10n.en.components.sendButton.accessibilityLabel),
+    );
+  };
+
+  beforeEach(() => {
+    clear.mockClear();
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      chatSessionStore.isEditMode = false;
+    });
+  });
+
+  it('clears the native text when a message is sent', () => {
+    const onSendPress = jest.fn();
+    typeAndSend(renderInput({onSendPress}));
+    expect(onSendPress).toHaveBeenCalledTimes(1);
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the native text when the send is blocked without a model', () => {
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+    });
+    const onSendPress = jest.fn();
+    typeAndSend(renderInput({onSendPress}));
+    expect(onSendPress).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('clears the native text when an edit is cancelled', () => {
+    runInAction(() => {
+      chatSessionStore.isEditMode = true;
+    });
+    const onCancelEdit = jest.fn();
+    const {getByTestId} = renderInput({onCancelEdit});
+    fireEvent.press(getByTestId('icon-button'));
+    expect(onCancelEdit).toHaveBeenCalledTimes(1);
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+});
