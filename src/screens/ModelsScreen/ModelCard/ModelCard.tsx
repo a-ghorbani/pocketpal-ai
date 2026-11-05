@@ -141,11 +141,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);
-    const hasProjectionModelWarning =
+    const usesProjector =
       isDownloaded &&
       model.supportsMultimodal &&
-      modelStore.getModelVisionPreference(model) && // Only show warning when vision is enabled
-      projectionModelStatus.state === 'missing';
+      modelStore.getModelVisionPreference(model);
+    const hasProjectionModelWarning =
+      usesProjector && projectionModelStatus.state === 'missing';
+    const isProjectorDownloading =
+      usesProjector && projectionModelStatus.state === 'downloading';
 
     // Check integrity when model is downloaded (skip remote models — no local file)
     useEffect(() => {
@@ -687,10 +690,27 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     };
 
     const renderProjectorOffer = () => {
+      const projectorOffer = l10n.models.modelCard.projectorOffer;
+      if (isProjectorDownloading) {
+        const progress = projectionModelStatus.projectionModel?.progress ?? 0;
+        return (
+          <View
+            testID="projector-download-progress"
+            style={styles.projectorProgress}>
+            <Text style={styles.projectorProgressText}>
+              {t(projectorOffer.downloading, {progress: Math.round(progress)})}
+            </Text>
+            <ProgressBar
+              progress={progress / 100}
+              color={theme.colors.tertiary}
+              style={styles.projectorProgressBar}
+            />
+          </View>
+        );
+      }
       if (!hasProjectionModelWarning) {
         return null;
       }
-      const projectorOffer = l10n.models.modelCard.projectorOffer;
       const projectorSize = projectionModelStatus.projectionModel?.size
         ? formatBytes(
             projectionModelStatus.projectionModel.size,

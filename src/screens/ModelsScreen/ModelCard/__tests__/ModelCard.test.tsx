@@ -1,9 +1,15 @@
 import React from 'react';
 import {Linking, Alert, StyleSheet} from 'react-native';
 
-import {runInAction} from 'mobx';
+import {observable, runInAction} from 'mobx';
 
-import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
+import {
+  render,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from '../../../../../jest/test-utils';
 import {
   basicModel,
   createModel,
@@ -539,11 +545,100 @@ describe('ModelCard', () => {
         });
       });
 
+      it('shows download progress in place of the offer while the projector downloads', async () => {
+        modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+          isAvailable: true,
+          state: 'downloading',
+          projectionModel: {...missingProjector, progress: 34.4},
+        });
+        const {getByTestId, queryByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        const row = getByTestId('projector-download-progress');
+        expect(
+          within(row).getByText('Downloading projection model · 34%'),
+        ).toBeTruthy();
+        expect(
+          within(row).getByRole('progressbar').props.accessibilityValue.now,
+        ).toBe(34);
+        expect(queryByTestId('projection-warning-badge')).toBeNull();
+      });
+
+      it('follows the projector download and offers it again after a failure or cancel', async () => {
+        const projector = observable({...missingProjector, progress: 10});
+        const download = observable({active: true});
+        modelStore.getProjectionModelStatus = jest.fn(() =>
+          download.active
+            ? {
+                isAvailable: true,
+                state: 'downloading',
+                projectionModel: projector,
+              }
+            : {
+                isAvailable: false,
+                state: 'missing',
+                projectionModel: projector,
+              },
+        );
+        const {getByTestId, getByText, queryByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+        expect(getByText('Downloading projection model · 10%')).toBeTruthy();
+
+        act(() => {
+          runInAction(() => {
+            projector.progress = 60;
+          });
+        });
+        expect(getByText('Downloading projection model · 60%')).toBeTruthy();
+
+        act(() => {
+          runInAction(() => {
+            download.active = false;
+          });
+        });
+        expect(queryByTestId('projector-download-progress')).toBeNull();
+        expect(getByTestId('projection-warning-badge')).toBeTruthy();
+      });
+
+      it.each([
+        ['vision is off', {}, false],
+        ['the model is not downloaded', {isDownloaded: false}, true],
+      ])(
+        'shows no projector progress when %s',
+        async (_label, overrides, visionOn) => {
+          modelStore.getModelVisionPreference = jest
+            .fn()
+            .mockReturnValue(visionOn);
+          modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+            isAvailable: true,
+            state: 'downloading',
+            projectionModel: {...missingProjector, progress: 50},
+          });
+
+          const {queryByTestId} = customRender(
+            <ModelCard
+              model={{...visionModelWithMissingProjection, ...overrides}}
+            />,
+          );
+
+          expect(queryByTestId('projector-download-progress')).toBeNull();
+          expect(queryByTestId('projection-warning-badge')).toBeNull();
+        },
+      );
+
       it.each([
         ['vision is off', {}, false, 'missing'],
         ['the projector is downloaded', {}, true, 'downloaded'],
         ['the projector is downloading', {}, true, 'downloading'],
         ['the model is not downloaded', {isDownloaded: false}, true, 'missing'],
+        [
+          'no projector is selected',
+          {defaultProjectionModel: undefined},
+          true,
+          'not_needed',
+        ],
       ])(
         'is absent when %s',
         async (_label, overrides, visionOn, projectorState) => {

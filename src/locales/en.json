@@ -451,6 +451,7 @@
       "projectorOffer": {
         "rowTitle": "Vision needs its projection model",
         "download": "Download",
+        "downloading": "Downloading projection model · {{progress}}%",
         "a11yWithSize": "Download projection model, {{size}}"
       },
       "accessibility": {

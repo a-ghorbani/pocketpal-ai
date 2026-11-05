@@ -252,6 +252,18 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '600',
       color: theme.colors.primary,
     },
+    projectorProgress: {
+      marginTop: 8,
+      gap: 6,
+    },
+    projectorProgressText: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+    },
+    projectorProgressBar: {
+      height: 6,
+      borderRadius: 3,
+    },
     storageErrorText: {
       marginHorizontal: 20,
     },
