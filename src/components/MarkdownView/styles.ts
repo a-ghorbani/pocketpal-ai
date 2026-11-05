@@ -50,7 +50,7 @@ export const createMarkdownStyle = (
       borderColor: colors.outline,
       backgroundColor: colors.surfaceContainerHigh,
     },
-    codeBlock: blockSpacing,
+    codeBlock: {...blockSpacing, padding: 8},
     link: {color: colors.secondary, underline: true},
     code: {
       color: colors.onSurface,

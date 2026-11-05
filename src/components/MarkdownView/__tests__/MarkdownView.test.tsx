@@ -254,6 +254,7 @@ describe('MarkdownView', () => {
       expect(Object.keys(style.codeBlock).sort()).toEqual([
         'marginBottom',
         'marginTop',
+        'padding',
       ]);
     });
 
@@ -313,7 +314,7 @@ describe('MarkdownView', () => {
           cellPaddingVertical: 6,
         }),
       );
-      expect(style.codeBlock).toEqual(gap);
+      expect(style.codeBlock).toEqual({...gap, padding: 8});
     });
 
     it('draws quotes, list markers, strikethrough and task items in the body colour', () => {
