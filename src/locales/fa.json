@@ -1723,7 +1723,7 @@
     "modelSectionHelper": "ورودی صوتی و گفتگوی صوتی هندزفری از آن استفاده می‌کنند.",
     "memoryAlertTitle": "حافظه محدود است",
     "memoryAlertBody": "ورودی صوتی در کنار این مدل چت به حافظه بیشتری نیاز دارد. ممکن است خیلی کند شود یا برنامه بسته شود.",
-    "memoryAlertTryAnyway": "باز هم تلاش کنید"
+    "memoryAlertTryAnyway": "باز هم ادامه"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1832,6 +1832,6 @@
     "teaserKeepTyping": "ادامه با تایپ، رایگان",
     "voiceRowFileMissing": "{{voice}} هنوز دانلود نشده. روی «ادامه» بزنید تا دانلود شود.",
     "voiceRowFileFailed": "دانلود {{voice}} ممکن نشد. به اینترنت وصل شوید و دوباره تلاش کنید.",
-    "memoryNeededOfTotal": "{{needed}} از {{total}} این گوشی"
+    "memoryNeededOfTotal": "{{needed}} از {{total}} حافظه این گوشی"
   }
 }
