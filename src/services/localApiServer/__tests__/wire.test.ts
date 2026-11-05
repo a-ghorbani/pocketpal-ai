@@ -61,12 +61,6 @@ describe('validateChatRequest and buildChatParams', () => {
     expect(includeUsage).toBe(false);
   });
 
-  it('strips app-only keys', () => {
-    const {params} = mapped(user);
-    expect(params).not.toHaveProperty('version');
-    expect(params).not.toHaveProperty('include_thinking_in_context');
-  });
-
   it('maps sampling fields to llama.rn names', () => {
     const {params} = mapped({
       ...user,

@@ -101,17 +101,17 @@ describe('createRequestReader', () => {
     expect(feed(`${head}ab`, 'cd')).toMatchObject({request: {body: 'abcd'}});
   });
 
-  it('answers 411 for a POST without Content-Length', () => {
-    expect(feed('POST / HTTP/1.1\r\nHost: localhost\r\n\r\n')).toEqual({
-      kind: 'error',
-      status: 411,
-    });
-  });
-
-  it('answers 411 for a chunked request body', () => {
-    expect(
-      feed('POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nabcd'),
-    ).toEqual({kind: 'error', status: 411});
+  it.each([
+    [
+      'a POST without Content-Length',
+      'POST / HTTP/1.1\r\nHost: localhost\r\n\r\n',
+    ],
+    [
+      'a chunked body',
+      'POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nabcd',
+    ],
+  ])('answers 411 for %s', (_, raw) => {
+    expect(feed(raw)).toEqual({kind: 'error', status: 411});
   });
 
   it.each([
@@ -211,13 +211,6 @@ describe('createRequestReader', () => {
         new Uint8Array(MAX_BODY_BYTES).fill(0x61),
       );
       expect(result.kind).toBe('request');
-    });
-
-    it('caps the body at 1 MiB', () => {
-      expect(
-        feed(declared(1048576), new Uint8Array(1048576).fill(0x61)).kind,
-      ).toBe('request');
-      expect(feed(declared(1048577))).toEqual({kind: 'error', status: 413});
     });
 
     it('answers 413 for a declared body over the limit', () => {
