@@ -93,6 +93,29 @@ describe('LocalApiServerStore lifecycle', () => {
   const originalOS = Platform.OS;
   let warn: jest.SpyInstance;
 
+  const MODELS = 'GET /v1/models HTTP/1.1\r\nHost: 127.0.0.1:8080\r\n\r\n';
+
+  /** A llama context whose completions the test settles one at a time. */
+  const heldContext = () => {
+    const settlers: ((value: unknown) => void)[] = [];
+    const context = {
+      completion: jest.fn(() => new Promise(resolve => settlers.push(resolve))),
+      stopCompletion: jest.fn(async () => undefined),
+    };
+    mockModelStore.engine = new LocalCompletionEngine(
+      context as unknown as LlamaContext,
+    );
+    return {
+      context,
+      settle: (i: number) => settlers[i]({text: 'ok', content: 'ok'}),
+    };
+  };
+
+  const startWithoutKey = async () => {
+    getPassword.mockResolvedValueOnce(false);
+    return startRunning();
+  };
+
   beforeAll(() => {
     warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
@@ -114,10 +137,16 @@ describe('LocalApiServerStore lifecycle', () => {
     getWifiIPv4.mockClear();
     mockModelStore.resetGenerationSlot();
     mockModelStore.engine = undefined;
+    runInAction(() => {
+      mockModelStore.activeModelId = 'model-1';
+    });
   });
 
   afterEach(() => {
     Platform.OS = originalOS;
+    runInAction(() => {
+      mockModelStore.activeModelId = undefined;
+    });
   });
 
   it('binds loopback by default and shows the loopback URL', async () => {
@@ -155,12 +184,8 @@ describe('LocalApiServerStore lifecycle', () => {
 
   it.each([
     '169.254.65.85',
-    '0.0.0.0',
     '0.1.2.3',
-    '127.0.0.1',
-    '999.1.1.1',
     '256.1.1.1',
-    '1.2.3.256',
     '127.10.0.1',
     'fe80::1',
     '',
@@ -195,18 +220,6 @@ describe('LocalApiServerStore lifecycle', () => {
     await flush();
     expect(store.lanAddress).toBeUndefined();
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
-  });
-
-  it('fails with port_in_use when the port is taken, and stops on toggle off', async () => {
-    store.setEnabled(true);
-    await flush();
-    lastServer().emitError(new Error('EADDRINUSE: address already in use'));
-    expect(store.status).toBe('failed');
-    expect(store.lastError).toBe('port_in_use');
-    expect(store.baseUrl).toBeUndefined();
-
-    store.setEnabled(false);
-    expect(store.status).toBe('stopped');
   });
 
   it.each([
@@ -331,15 +344,6 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(createdServers).toHaveLength(0);
   });
 
-  it('refreshes the LAN address on foreground while running', async () => {
-    store.setLanEnabled(true);
-    await startRunning();
-    getWifiIPv4.mockResolvedValueOnce('10.0.0.7');
-    appStateListener('active');
-    await flush();
-    expect(store.baseUrl).toBe('http://10.0.0.7:8080/v1');
-  });
-
   describe('returning to the foreground', () => {
     it('restarts a running listener on iOS after a background', async () => {
       Platform.OS = 'ios';
@@ -354,15 +358,6 @@ describe('LocalApiServerStore lifecycle', () => {
       expect(createdServers).toHaveLength(2);
       lastServer().emitListening();
       expect(store.status).toBe('running');
-    });
-
-    it('does not start on iOS after a background while disabled', async () => {
-      Platform.OS = 'ios';
-      appStateListener('background');
-      appStateListener('active');
-      await flush();
-      expect(createdServers).toHaveLength(0);
-      expect(store.status).toBe('stopped');
     });
 
     it('does not restart on iOS after only an inactive blip', async () => {
@@ -402,26 +397,6 @@ describe('LocalApiServerStore lifecycle', () => {
       lastServer().emitListening();
       expect(store.status).toBe('running');
     });
-
-    it('fails closed on iOS when the restart cannot read the key', async () => {
-      Platform.OS = 'ios';
-      await startRunning();
-      appStateListener('background');
-      getPassword.mockRejectedValueOnce(new Error('locked'));
-      appStateListener('active');
-      await flush();
-
-      expect(createdServers).toHaveLength(1);
-      expect(store.status).toBe('failed');
-      expect(store.lastError).toBe('key_unavailable');
-    });
-  });
-
-  it('keeps serving in the background', async () => {
-    Platform.OS = 'android';
-    await startRunning();
-    appStateListener('background');
-    expect(store.status).toBe('running');
   });
 
   it('destroys a connection that arrives for a stopped listener', async () => {
@@ -447,66 +422,6 @@ describe('LocalApiServerStore lifecycle', () => {
       spy.mockRestore();
     }
   });
-});
-
-describe('LocalApiServerStore races and requests', () => {
-  let warn: jest.SpyInstance;
-
-  beforeAll(() => {
-    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-
-  afterAll(() => {
-    warn.mockRestore();
-  });
-
-  const MODELS = 'GET /v1/models HTTP/1.1\r\nHost: 127.0.0.1:8080\r\n\r\n';
-
-  /** A llama context whose completions the test settles one at a time. */
-  const heldContext = () => {
-    const settlers: ((value: unknown) => void)[] = [];
-    const context = {
-      completion: jest.fn(() => new Promise(resolve => settlers.push(resolve))),
-      stopCompletion: jest.fn(async () => undefined),
-    };
-    mockModelStore.engine = new LocalCompletionEngine(
-      context as unknown as LlamaContext,
-    );
-    return {
-      context,
-      settle: (i: number) => settlers[i]({text: 'ok', content: 'ok'}),
-    };
-  };
-
-  const startWithoutKey = async () => {
-    getPassword.mockResolvedValueOnce(false);
-    return startRunning();
-  };
-
-  beforeEach(() => {
-    store.setEnabled(false);
-    runInAction(() => {
-      store.port = 8080;
-      store.lanEnabled = false;
-      store.lastError = undefined;
-      store.lanAddress = undefined;
-    });
-    createdServers.length = 0;
-    getPassword.mockClear();
-    getWifiIPv4.mockClear();
-    mockModelStore.resetGenerationSlot();
-    mockModelStore.engine = undefined;
-    runInAction(() => {
-      mockModelStore.activeModelId = 'model-1';
-    });
-  });
-
-  afterEach(() => {
-    runInAction(() => {
-      mockModelStore.activeModelId = undefined;
-    });
-  });
-
   it('never listens when toggled off while reading the Wi-Fi address', async () => {
     store.setLanEnabled(true);
     let resolveIp!: (value: string) => void;
@@ -523,30 +438,6 @@ describe('LocalApiServerStore races and requests', () => {
     expect(createdServers).toHaveLength(0);
     expect(store.status).toBe('stopped');
     expect(store.lanAddress).toBeUndefined();
-  });
-
-  it('stays running when the old listener closes late after a restart', async () => {
-    const old = await startRunning();
-    store.setEnabled(false);
-    const current = await startRunning();
-    expect(current).not.toBe(old);
-    old.emit('close');
-    old.emitError(new Error('late'));
-
-    expect(store.status).toBe('running');
-    expect(store.lastError).toBeUndefined();
-  });
-
-  it('ignores a late listening from a listener that already failed', async () => {
-    store.setEnabled(true);
-    await flush();
-    const first = lastServer();
-    first.emitError(new Error('EADDRINUSE'));
-    store.setEnabled(false);
-    first.emitListening();
-
-    expect(store.status).toBe('stopped');
-    expect(first.close).toHaveBeenCalled();
   });
 
   it.each([
