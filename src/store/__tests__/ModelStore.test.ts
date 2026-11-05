@@ -3474,6 +3474,26 @@ describe('ModelStore', () => {
         expect(record.defaultProjectionModel).toBe(userPick);
       });
 
+      it('keeps the user pick on a vision record that has no modelType', async () => {
+        const android = cases[1];
+        const hfModel = searchModel(android.repo);
+        const modelFile = fileOf(hfModel, android.filename);
+        const userPick = `${android.repo}/mmproj-F32.gguf`;
+        const record = seedRecord({
+          ...hfAsModel(hfModel, modelFile),
+          modelType: undefined,
+          visionEnabled: false,
+          compatibleProjectionModels: [userPick],
+          defaultProjectionModel: userPick,
+        });
+
+        await modelStore.addHFModel(hfModel, modelFile, {enableVision: true});
+
+        expect(record.defaultProjectionModel).toBe(userPick);
+        expect(record.modelType).toBeUndefined();
+        expect(record.visionEnabled).toBe(false);
+      });
+
       it('takes projector ids only from mmproj .gguf siblings', async () => {
         const preset = seedPresets(ios);
         const searched = searchModel(ios.repo);
