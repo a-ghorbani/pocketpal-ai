@@ -97,11 +97,7 @@ function writeModels(channel: ResponseChannel, ctx: ConnectionContext) {
   });
 }
 
-/**
- * Answers one fully read request: Origin, auth, route and method first, then
- * the models list, or the body, decoded only now, served as a chat completion
- * when a slot is free.
- */
+/** Origin, auth, route and method are all checked before the body is decoded. */
 async function route(
   request: HttpRequest,
   channel: ResponseChannel,
