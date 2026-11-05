@@ -730,6 +730,36 @@ class ModelStore {
     });
   };
 
+  // A text-only record sharing its id with a search file from a repo that
+  // ships an mmproj (a rule preset). Waits for the header backfill like the
+  // draft heal, so a metadata draft is never marked vision.
+  private isUpgradeableToVision = (model: Model): boolean =>
+    !model.supportsMultimodal &&
+    model.modelType === undefined &&
+    !isDraftOnlyModel(model) &&
+    !(model.isDownloaded && !model.ggufMetadata);
+
+  private markAsVision = (
+    model: Model,
+    searchFields?: Pick<
+      Model,
+      | 'compatibleProjectionModels'
+      | 'defaultProjectionModel'
+      | 'hfModel'
+      | 'hfModelFile'
+    >,
+  ) => {
+    runInAction(() => {
+      Object.assign(model, searchFields);
+      model.supportsMultimodal = true;
+      model.modelType = ModelType.VISION;
+      model.capabilities = [
+        ...new Set([...(model.capabilities ?? []), 'vision' as const]),
+      ];
+      model.visionEnabled = model.visionEnabled ?? true;
+    });
+  };
+
   /**
    * Delete projection models the heal orphaned. Runs every launch: an id
    * stays queued while its download is still in flight or its deletion
@@ -2888,9 +2918,15 @@ class ModelStore {
         }
       }
 
-      // If we're working with an existing model, update its projection model references
-      // to ensure they're current with what's now in the store
-      if (storeModel) {
+      if (storeModel && this.isUpgradeableToVision(storeModel)) {
+        this.markAsVision(storeModel, {
+          compatibleProjectionModels: newModel.compatibleProjectionModels,
+          defaultProjectionModel: newModel.defaultProjectionModel,
+          hfModel: newModel.hfModel,
+          hfModelFile: newModel.hfModelFile,
+        });
+      } else if (storeModel?.supportsMultimodal) {
+        // Refresh projection model references; keep the user's pick.
         const updatedCompatibleModels = mmprojFiles.map(
           file => `${hfModel.id}/${file.rfilename}`,
         );
