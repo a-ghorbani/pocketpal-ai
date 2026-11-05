@@ -3119,6 +3119,92 @@ describe('ModelStore', () => {
         expect(initContextSpy).not.toHaveBeenCalled();
         expect(downloadedIds()).toEqual([]);
       });
+
+      it('a search download over a preset downloaded from the recommended list queues only the projector', async () => {
+        const preset = seedPresets(c);
+        markDownloaded(preset);
+        const before = {
+          settings: preset.defaultCompletionSettings,
+          template: preset.chatTemplate,
+          ggufMetadata: preset.ggufMetadata,
+        };
+        const hfModel = searchModel(c.repo);
+        const modelFile = fileOf(hfModel, c.filename);
+
+        await modelStore.downloadHFModel(hfModel, modelFile, {
+          enableVision: true,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const record = modelStore.models.find(m => m.id === preset.id);
+        expect(record).toMatchObject({
+          isDownloaded: true,
+          supportsMultimodal: true,
+          defaultProjectionModel: c.projector,
+          hfModelFile: expect.objectContaining({oid: modelFile.oid}),
+        });
+        expect(record?.defaultCompletionSettings).toEqual(before.settings);
+        expect(record?.chatTemplate).toEqual(before.template);
+        expect(record?.ggufMetadata).toEqual(before.ggufMetadata);
+        expect(downloadedIds()).toEqual([c.projector]);
+      });
+    });
+
+    describe('search download over a downloaded record', () => {
+      const repo: Repo = 'ggml-org/gemma-3-4b-it-GGUF';
+      const filename = 'gemma-3-4b-it-Q4_K_M.gguf';
+      const projector = `${repo}/mmproj-model-f16.gguf`;
+
+      const seedDownloaded = (overrides: Partial<Model>) => {
+        const hfModel = searchModel(repo);
+        const record = {
+          ...hfAsModel(hfModel, fileOf(hfModel, filename)),
+          isDownloaded: true,
+          ggufMetadata: {architecture: 'gemma3'} as GGUFMetadata,
+          ...overrides,
+        };
+        runInAction(() => {
+          modelStore.models = [record];
+        });
+        (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+          path.endsWith(`/${filename}`),
+        );
+        return hfModel;
+      };
+
+      it('queues only the missing projector of an already-vision record with Vision on', async () => {
+        const hfModel = seedDownloaded({});
+
+        await modelStore.downloadHFModel(hfModel, fileOf(hfModel, filename), {
+          enableVision: true,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(downloadedIds()).toEqual([projector]);
+      });
+
+      it('queues nothing for a text-only record still waiting for its header', async () => {
+        const hfModel = seedDownloaded({
+          supportsMultimodal: false,
+          modelType: undefined,
+          capabilities: undefined,
+          compatibleProjectionModels: undefined,
+          defaultProjectionModel: undefined,
+          visionEnabled: undefined,
+          ggufMetadata: undefined,
+        });
+
+        await modelStore.downloadHFModel(hfModel, fileOf(hfModel, filename), {
+          enableVision: true,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(modelStore.models[0]).toMatchObject({
+          supportsMultimodal: false,
+          defaultProjectionModel: undefined,
+        });
+        expect(downloadedIds()).toEqual([]);
+      });
     });
   });
 

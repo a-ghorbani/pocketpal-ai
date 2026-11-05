@@ -2858,8 +2858,12 @@ class ModelStore {
       // This is needed because addHFModel adds mmproj models asynchronously
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Use the centralized download method which handles mmproj automatically
-      this.checkSpaceAndDownload(newModel.id);
+      if (newModel.isDownloaded) {
+        this._downloadProjectionModelIfNeeded(newModel);
+      } else {
+        // Use the centralized download method which handles mmproj automatically
+        this.checkSpaceAndDownload(newModel.id);
+      }
 
       // The error handling is now done in the downloadManager callbacks
     } catch (error) {
