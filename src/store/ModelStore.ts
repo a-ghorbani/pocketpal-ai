@@ -761,6 +761,27 @@ class ModelStore {
     });
   };
 
+  // Older builds wrote the projector pick onto a shadowed record without
+  // marking it vision. The projector is not fetched here; the model card
+  // offers it.
+  healShadowedVisionClassification = () => {
+    runInAction(() => {
+      this.models
+        .filter(
+          model =>
+            model.defaultProjectionModel && this.isUpgradeableToVision(model),
+        )
+        .forEach(model => {
+          const projector = this.models.find(
+            m => m.id === model.defaultProjectionModel,
+          );
+          if (projector?.modelType === ModelType.PROJECTION) {
+            this.markAsVision(model);
+          }
+        });
+    });
+  };
+
   /**
    * Delete projection models the heal orphaned. Runs every launch: an id
    * stays queued while its download is still in flight or its deletion
@@ -808,6 +829,7 @@ class ModelStore {
     console.log('models: ', this.models);
 
     this.healDraftVisionClassification();
+    this.healShadowedVisionClassification();
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);

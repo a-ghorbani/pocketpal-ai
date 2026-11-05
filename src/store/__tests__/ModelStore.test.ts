@@ -580,6 +580,163 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('healShadowedVisionClassification', () => {
+    const projectorId = 'ggml-org/gemma-3-4b-it-GGUF/mmproj-model-f16.gguf';
+    const projector = (): Model => ({
+      ...presetModelFixture,
+      id: projectorId,
+      filename: 'mmproj-model-f16.gguf',
+      origin: ModelOrigin.HF,
+      modelType: ModelType.PROJECTION,
+      isDownloaded: false,
+    });
+    const bugShape = (overrides: Partial<Model> = {}): Model => ({
+      ...presetModelFixture,
+      id: 'ggml-org/gemma-3-4b-it-GGUF/gemma-3-4b-it-Q4_K_M.gguf',
+      filename: 'gemma-3-4b-it-Q4_K_M.gguf',
+      origin: ModelOrigin.HF,
+      isRulePreset: true,
+      isDownloaded: true,
+      hfModel: mockHFModel1,
+      ggufMetadata: {architecture: 'gemma3'} as GGUFMetadata,
+      capabilities: ['questionAnswering'],
+      completionSettings: {
+        ...presetModelFixture.completionSettings,
+        temperature: 0.42,
+      },
+      supportsMultimodal: false,
+      modelType: undefined,
+      visionEnabled: undefined,
+      compatibleProjectionModels: [projectorId],
+      defaultProjectionModel: projectorId,
+      ...overrides,
+    });
+    const snapshot = (value: unknown) => JSON.parse(JSON.stringify(value));
+
+    it('marks a bug-shaped record vision and keeps everything else', () => {
+      const record = bugShape();
+      modelStore.models = [record, projector()];
+      const before = snapshot(modelStore.models[0]);
+
+      modelStore.healShadowedVisionClassification();
+
+      const healed = modelStore.models[0];
+      expect(snapshot(healed)).toEqual({
+        ...before,
+        supportsMultimodal: true,
+        modelType: ModelType.VISION,
+        capabilities: ['questionAnswering', 'vision'],
+        visionEnabled: true,
+      });
+      expect(downloadManager.startDownload).not.toHaveBeenCalled();
+    });
+
+    it('keeps a persisted Vision-off choice', () => {
+      modelStore.models = [bugShape({visionEnabled: false}), projector()];
+
+      modelStore.healShadowedVisionClassification();
+
+      expect(modelStore.models[0]).toMatchObject({
+        supportsMultimodal: true,
+        visionEnabled: false,
+      });
+    });
+
+    it('is idempotent across launches', () => {
+      modelStore.models = [bugShape(), projector()];
+
+      modelStore.healShadowedVisionClassification();
+      const once = snapshot(modelStore.models);
+      modelStore.healShadowedVisionClassification();
+
+      expect(snapshot(modelStore.models)).toEqual(once);
+    });
+
+    it.each([
+      [
+        'a draft-only record by its header',
+        {ggufMetadata: {architecture: 'gemma4-assistant'} as GGUFMetadata},
+      ],
+      [
+        'a draft-only record by its filename',
+        {filename: 'mtp-gemma-3-4b-it-Q8_0.gguf', ggufMetadata: undefined},
+      ],
+      ['a DRAFT stub', {modelType: ModelType.DRAFT}],
+      [
+        'an untouched preset',
+        {
+          compatibleProjectionModels: undefined,
+          defaultProjectionModel: undefined,
+        },
+      ],
+      [
+        'an already-vision record',
+        {
+          supportsMultimodal: true,
+          modelType: ModelType.VISION,
+          visionEnabled: false,
+        },
+      ],
+      [
+        'a record whose default projector record is missing',
+        {defaultProjectionModel: 'ggml-org/gemma-3-4b-it-GGUF/gone.gguf'},
+      ],
+    ])('leaves %s alone', (_label, overrides) => {
+      modelStore.models = [
+        bugShape({isDownloaded: false, ...overrides}),
+        projector(),
+      ];
+      const before = snapshot(modelStore.models);
+
+      modelStore.healShadowedVisionClassification();
+
+      expect(snapshot(modelStore.models)).toEqual(before);
+    });
+
+    it('leaves a projection record alone', () => {
+      modelStore.models = [projector()];
+      const before = snapshot(modelStore.models);
+
+      modelStore.healShadowedVisionClassification();
+
+      expect(snapshot(modelStore.models)).toEqual(before);
+    });
+
+    it('waits for the header of a downloaded record, then repairs it', () => {
+      modelStore.models = [bugShape({ggufMetadata: undefined}), projector()];
+
+      modelStore.healShadowedVisionClassification();
+      expect(modelStore.models[0].supportsMultimodal).toBe(false);
+
+      runInAction(() => {
+        modelStore.models[0].ggufMetadata = {
+          architecture: 'gemma3',
+        } as GGUFMetadata;
+      });
+      modelStore.healShadowedVisionClassification();
+      expect(modelStore.models[0].supportsMultimodal).toBe(true);
+    });
+
+    it('repairs at launch before the download sync', async () => {
+      runInAction(() => {
+        modelStore.models = [bugShape(), projector()];
+        modelStore.version = MODEL_LIST_VERSION;
+        modelStore.availableMemoryCeiling = 1;
+      });
+      let visionAtSync: boolean | undefined;
+      (downloadManager.syncWithActiveDownloads as jest.Mock).mockImplementation(
+        async (models: Model[]) => {
+          visionAtSync = models[0].supportsMultimodal;
+        },
+      );
+
+      await modelStore.initializeStore();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(visionAtSync).toBe(true);
+    });
+  });
+
   describe('resolvePresetModels', () => {
     let savedOS: typeof Platform.OS;
     beforeAll(() => {
