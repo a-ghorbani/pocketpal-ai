@@ -263,7 +263,7 @@
       "notOnWifi": "Not on Wi-Fi, so no network URL is shown.",
       "apiKey": "API key",
       "apiKeySet": "Requests must send this key",
-      "apiKeyNotSet": "No key: any app that can reach the server can use it. Browser pages are refused until you set a key.",
+      "apiKeyNotSet": "No key: any app that can reach the server can use it, except browser pages.",
       "setApiKey": "Set key",
       "clearApiKey": "Clear key",
       "apiKeyPlaceholder": "Enter an API key",

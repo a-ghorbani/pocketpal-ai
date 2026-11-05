@@ -150,11 +150,11 @@ describe('LocalApiServerCard', () => {
     expect(queryByText('Not on Wi-Fi, so no network URL is shown.')).toBeNull();
   });
 
-  it('says browser pages are refused without a key', () => {
+  it('says any app but a browser page can use a server without a key', () => {
     const {getByText} = render(<LocalApiServerCard />);
     expect(
       getByText(
-        'No key: any app that can reach the server can use it. Browser pages are refused until you set a key.',
+        'No key: any app that can reach the server can use it, except browser pages.',
       ),
     ).toBeTruthy();
   });

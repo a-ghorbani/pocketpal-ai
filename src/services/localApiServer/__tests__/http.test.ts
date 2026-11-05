@@ -8,16 +8,14 @@ import {
   SSE_DONE,
   utf8ByteLength,
   writeJson,
-  writePreflight,
   writeSseData,
   writeSseHead,
 } from '../http';
 
 const bytes = (text: string) => new Uint8Array(Buffer.from(text));
-const neverAnswered = () => false;
 
 const feed = (...chunks: (string | Uint8Array)[]): ReadResult => {
-  const reader = createRequestReader(neverAnswered);
+  const reader = createRequestReader();
   let result: ReadResult = {kind: 'pending'};
   for (const chunk of chunks) {
     result = reader.push(typeof chunk === 'string' ? bytes(chunk) : chunk);
@@ -28,10 +26,9 @@ const feed = (...chunks: (string | Uint8Array)[]): ReadResult => {
 const post = (body: string, extra = '') =>
   `POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nContent-Length: ${Buffer.byteLength(body)}\r\n${extra}\r\n${body}`;
 
-const recordingSink = (cors = true) => {
+const recordingSink = () => {
   const writes: string[] = [];
   const sink: ResponseSink = {
-    cors,
     write: d => writes.push(d),
     end: jest.fn(),
   };
@@ -90,7 +87,7 @@ describe('createRequestReader', () => {
   });
 
   it('stays pending until the whole body has arrived', () => {
-    const reader = createRequestReader(neverAnswered);
+    const reader = createRequestReader();
     expect(
       reader.push(bytes('POST / HTTP/1.1\r\nContent-Length: 4\r\n\r\nab')),
     ).toEqual({kind: 'pending'});
@@ -147,7 +144,7 @@ describe('createRequestReader', () => {
     it('parses a head sent one byte per chunk in linear time', () => {
       const raw = bytes(headOf(MAX_HEAD_BYTES));
       const chunks = Array.from(raw, byte => new Uint8Array([byte]));
-      const reader = createRequestReader(neverAnswered);
+      const reader = createRequestReader();
       const originalSet = Uint8Array.prototype.set;
       let copied = 0;
       const set = jest
@@ -213,67 +210,8 @@ describe('createRequestReader', () => {
     });
   });
 
-  describe('head hook', () => {
-    const declared = (length: number) =>
-      `POST / HTTP/1.1\r\nContent-Length: ${length}\r\n\r\n`;
-
-    it('sees the framed head before any body byte', () => {
-      const onHead = jest.fn(() => false);
-      const reader = createRequestReader(onHead);
-      reader.push(bytes(`${declared(4)}ab`));
-      expect(onHead).toHaveBeenCalledWith({
-        method: 'POST',
-        path: '/',
-        headers: {'content-length': '4'},
-      });
-    });
-
-    it('is not called when framing fails', () => {
-      const onHead = jest.fn(() => true);
-      const reader = createRequestReader(onHead);
-      expect(reader.push(bytes('POST / HTTP/1.1\r\n\r\n'))).toEqual({
-        kind: 'error',
-        status: 411,
-      });
-      expect(onHead).not.toHaveBeenCalled();
-    });
-
-    it('drains an answered body without decoding it', () => {
-      const reader = createRequestReader(() => true);
-      const head = bytes(declared(4));
-      const sameChunk = new Uint8Array([...head, 0xc3]);
-      expect(reader.push(sameChunk)).toEqual({
-        kind: 'answered',
-        drained: false,
-      });
-      expect(reader.push(new Uint8Array([0x28, 0xff]))).toEqual({
-        kind: 'answered',
-        drained: false,
-      });
-      const last = reader.push(new Uint8Array([0xfe]));
-      expect(last).toEqual({kind: 'answered', drained: true});
-      expect(reader.push(bytes('more'))).toBe(last);
-    });
-
-    it('is drained at once when the head carries no body', () => {
-      const reader = createRequestReader(() => true);
-      expect(reader.push(bytes('GET / HTTP/1.1\r\n\r\n'))).toEqual({
-        kind: 'answered',
-        drained: true,
-      });
-    });
-
-    it('is drained at once when the body arrived with the head', () => {
-      const reader = createRequestReader(() => true);
-      expect(reader.push(bytes(`${declared(2)}{}`))).toEqual({
-        kind: 'answered',
-        drained: true,
-      });
-    });
-  });
-
   it('keeps its first answer for any later bytes', () => {
-    const reader = createRequestReader(neverAnswered);
+    const reader = createRequestReader();
     const first = reader.push(bytes('GET / HTTP/1.1\r\n\r\n'));
     expect(reader.push(bytes('GET /other HTTP/1.1\r\n\r\n'))).toBe(first);
   });
@@ -289,34 +227,12 @@ describe('utf8 helpers', () => {
 });
 
 describe('writers', () => {
-  it('writes JSON with close, CORS and a byte-exact length', () => {
+  it('writes JSON with close and a byte-exact length', () => {
     const {sink, text} = recordingSink();
     writeJson(sink, 404, {error: 'é'});
     expect(text()).toBe(
-      'HTTP/1.1 404 Not Found\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n' +
+      'HTTP/1.1 404 Not Found\r\nConnection: close\r\n' +
         'Content-Type: application/json\r\nContent-Length: 14\r\n\r\n{"error":"é"}',
-    );
-  });
-
-  it('sends no CORS headers on a sink without CORS', () => {
-    const {sink, text} = recordingSink(false);
-    writeJson(sink, 404, {error: 'é'});
-    writePreflight(sink);
-    writeSseHead(sink);
-    expect(text()).toContain('HTTP/1.1 404 Not Found\r\nConnection: close\r\n');
-    expect(text()).toContain('HTTP/1.1 204 No Content\r\n');
-    expect(text()).not.toContain('Access-Control-');
-  });
-
-  it('writes the preflight answer', () => {
-    const {sink, text} = recordingSink();
-    writePreflight(sink);
-    expect(text()).toContain('HTTP/1.1 204 No Content\r\n');
-    expect(text()).toContain(
-      'Access-Control-Allow-Headers: Authorization, Content-Type\r\n',
-    );
-    expect(text()).toContain(
-      'Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n',
     );
   });
 
@@ -327,6 +243,7 @@ describe('writers', () => {
     writeSseData(sink, SSE_DONE);
     expect(text()).toContain('Content-Type: text/event-stream\r\n');
     expect(text()).toContain('Connection: close\r\n');
+    expect(text()).not.toContain('Access-Control-');
     expect(text().endsWith('data: {"a":1}\n\ndata: [DONE]\n\n')).toBe(true);
   });
 });

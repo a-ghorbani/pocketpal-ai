@@ -1,10 +1,4 @@
-import {
-  HttpRequest,
-  RequestHead,
-  ResponseSink,
-  writeJson,
-  writePreflight,
-} from './http';
+import {HttpRequest, ResponseSink, writeJson} from './http';
 import {errorBody} from './wire';
 
 export interface RouterDeps {
@@ -19,13 +13,6 @@ const ROUTES: Record<string, string> = {
   '/v1/models': 'GET',
   '/v1/chat/completions': 'POST',
 };
-
-const HOST_PATTERN =
-  /^(localhost|\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])(:\d{1,5})?$/i;
-
-export function isAllowedHost(host: string | undefined): boolean {
-  return host !== undefined && HOST_PATTERN.test(host);
-}
 
 /** Walks the longer string whatever the inputs, so timing reveals no prefix. */
 export function constantTimeEquals(a: string, b: string): boolean {
@@ -55,9 +42,7 @@ function writeError(
   writeJson(sink, status, errorBody({message, type, code}), headers);
 }
 
-export type HeadDeps = Omit<RouterDeps, 'handleChat'>;
-
-function writeModels(sink: ResponseSink, deps: HeadDeps) {
+function writeModels(sink: ResponseSink, deps: RouterDeps) {
   const id = deps.getServedModelId();
   writeJson(sink, 200, {
     object: 'list',
@@ -75,16 +60,16 @@ function writeModels(sink: ResponseSink, deps: HeadDeps) {
 }
 
 /**
- * Runs every guard that needs only the head, and answers the routes that need
- * no body. True when it wrote the answer; the body is then never read.
+ * Answers one fully read request: Origin, auth, route and method first, then
+ * the models list, or the JSON body handed to `handleChat`.
  */
-export function answerHead(
-  head: RequestHead,
+export async function routeRequest(
+  request: HttpRequest,
   sink: ResponseSink,
-  deps: HeadDeps,
-): boolean {
+  deps: RouterDeps,
+): Promise<void> {
   const apiKey = deps.getApiKey();
-  if (apiKey === undefined && head.headers.origin !== undefined) {
+  if (apiKey === undefined && request.headers.origin !== undefined) {
     writeError(
       sink,
       403,
@@ -92,23 +77,9 @@ export function answerHead(
       'invalid_request_error',
       'forbidden_origin',
     );
-    return true;
+    return;
   }
-  if (head.method === 'OPTIONS') {
-    writePreflight(sink);
-    return true;
-  }
-  if (!isAllowedHost(head.headers.host)) {
-    writeError(
-      sink,
-      403,
-      'Host must be an IP address or localhost',
-      'invalid_request_error',
-      'forbidden_host',
-    );
-    return true;
-  }
-  if (apiKey && !isAuthorized(head.headers.authorization, apiKey)) {
+  if (apiKey && !isAuthorized(request.headers.authorization, apiKey)) {
     writeError(
       sink,
       401,
@@ -116,14 +87,14 @@ export function answerHead(
       'authentication_error',
       'invalid_api_key',
     );
-    return true;
+    return;
   }
-  const allowedMethod = ROUTES[head.path];
+  const allowedMethod = ROUTES[request.path];
   if (!allowedMethod) {
     writeError(sink, 404, 'Not found', 'invalid_request_error', 'not_found');
-    return true;
+    return;
   }
-  if (head.method !== allowedMethod) {
+  if (request.method !== allowedMethod) {
     writeError(
       sink,
       405,
@@ -132,24 +103,12 @@ export function answerHead(
       'method_not_allowed',
       {Allow: allowedMethod},
     );
-    return true;
+    return;
   }
-  if (head.path === '/v1/models') {
+  if (request.path === '/v1/models') {
     writeModels(sink, deps);
-    return true;
+    return;
   }
-  return false;
-}
-
-/**
- * Serves a chat request whose head passed `answerHead`. A body that is not
- * JSON is answered here, so it never waits for the model.
- */
-export async function routeBody(
-  request: HttpRequest,
-  sink: ResponseSink,
-  deps: RouterDeps,
-): Promise<void> {
   let body: unknown;
   try {
     body = JSON.parse(request.body);

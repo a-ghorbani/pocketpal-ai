@@ -294,99 +294,56 @@ describe('handleConnection', () => {
     expect(ctx.admitted()).toBe(0);
   });
 
-  describe('a request answered from its head', () => {
-    const rejectedUpload = (length: number) =>
+  it('reads a refused upload to its end, then answers once', async () => {
+    const ctx = makeContext(undefined, 'secret');
+    const socket = connect(ctx);
+    socket.receive(
       'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\n' +
-      `Authorization: Bearer wrong\r\nContent-Length: ${length}\r\n\r\n`;
-    const statusLines = (output: string) =>
-      output.match(/HTTP\/1\.1 \d{3}/g) ?? [];
+        'Authorization: Bearer wrong\r\nContent-Length: 900000\r\n\r\n',
+    );
+    const chunk = new Uint8Array(100000).fill(0x61);
+    for (let i = 0; i < 8; i++) {
+      socket.receive(chunk);
+    }
+    socket.receive(chunk.subarray(0, 99999));
+    await flush();
+    expect(socket.writes).toEqual([]);
 
-    it('answers at once and ends after the whole body is drained', async () => {
-      jest.useFakeTimers();
-      const ctx = makeContext(undefined, 'secret');
-      const socket = connect(ctx);
-      socket.receive(rejectedUpload(900000));
-      await flush();
-
-      expect(socket.output).toMatch(/^HTTP\/1\.1 401 /);
-      const chunk = new Uint8Array(100000).fill(0xff);
-      for (let i = 0; i < 8; i++) {
-        socket.receive(chunk);
-      }
-      socket.receive(chunk.subarray(0, 99999));
-      await flush();
-      expect(socket.ended).toBe(false);
-
-      socket.receive(new Uint8Array([0xff]));
-      await flush();
-      expect(socket.ended).toBe(true);
-      expect(statusLines(socket.output)).toEqual(['HTTP/1.1 401']);
-      expect(ctx.handleChat).not.toHaveBeenCalled();
-    });
-
-    it('ends without a second answer when the drain stalls', async () => {
-      jest.useFakeTimers();
-      const ctx = makeContext(undefined, 'secret');
-      const socket = connect(ctx);
-      socket.receive(rejectedUpload(900000));
-      socket.receive(new Uint8Array(1000));
-      await flush();
-      jest.advanceTimersByTime(READ_DEADLINE_MS - 1);
-      await flush();
-      expect(socket.ended).toBe(false);
-
-      jest.advanceTimersByTime(1);
-      await flush();
-      expect(socket.ended).toBe(true);
-      expect(statusLines(socket.output)).toEqual(['HTTP/1.1 401']);
-    });
-
-    it('ends at once when there is no body', async () => {
-      const ctx = makeContext();
-      const socket = connect(ctx);
-      socket.receive(
-        'GET /v1/models HTTP/1.1\r\nHost: localhost\r\nOrigin: https://x.example\r\n\r\n',
-      );
-      await flush();
-
-      expect(socket.output).toMatch(/^HTTP\/1\.1 403 /);
-      expect(socket.output).toContain('"code":"forbidden_origin"');
-      expect(socket.ended).toBe(true);
-    });
+    socket.receive(new Uint8Array([0x61]));
+    await flush();
+    expect(socket.output.match(/HTTP\/1\.1 \d{3}/g)).toEqual(['HTTP/1.1 401']);
+    expect(socket.ended).toBe(true);
+    expect(ctx.handleChat).not.toHaveBeenCalled();
   });
 
-  describe('CORS', () => {
-    it('sends none on reader or busy errors without a key', async () => {
-      const held = heldChat();
-      const ctx = makeContext(held.handleChat);
-      const tooLarge = connect(ctx);
-      tooLarge.receive(
-        'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2000000\r\n\r\n',
-      );
-      connect(ctx).receive(CHAT);
-      connect(ctx).receive(CHAT);
-      const busy = connect(ctx);
-      busy.receive(CHAT);
-      await flush();
+  it('refuses Origin without a key, with no CORS headers', async () => {
+    const ctx = makeContext();
+    const socket = connect(ctx);
+    socket.receive(
+      'GET /v1/models HTTP/1.1\r\nHost: localhost\r\nOrigin: https://x.example\r\n\r\n',
+    );
+    await flush();
 
-      expect(tooLarge.output).toMatch(/^HTTP\/1\.1 413 /);
-      expect(busy.output).toMatch(/^HTTP\/1\.1 503 /);
-      expect(tooLarge.output).not.toContain('Access-Control-');
-      expect(busy.output).not.toContain('Access-Control-');
-      held.finish(0);
-      held.finish(1);
-    });
+    expect(socket.output).toMatch(/^HTTP\/1\.1 403 /);
+    expect(socket.output).toContain('"code":"forbidden_origin"');
+    expect(socket.output).not.toContain('Access-Control-');
+    expect(socket.ended).toBe(true);
+  });
 
-    it('sends it on a reader error with a key', async () => {
-      jest.useFakeTimers();
-      const ctx = makeContext(undefined, 'secret');
-      const socket = connect(ctx);
-      jest.advanceTimersByTime(READ_DEADLINE_MS);
-      await flush();
+  it('sends no CORS headers on read errors with a key', async () => {
+    jest.useFakeTimers();
+    const ctx = makeContext(undefined, 'secret');
+    const late = connect(ctx);
+    const tooLarge = connect(ctx);
+    tooLarge.receive(
+      'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2000000\r\n\r\n',
+    );
+    jest.advanceTimersByTime(READ_DEADLINE_MS);
+    await flush();
 
-      expect(socket.output).toMatch(/^HTTP\/1\.1 408 /);
-      expect(socket.output).toContain('Access-Control-Allow-Origin: *\r\n');
-    });
+    expect(late.output).toMatch(/^HTTP\/1\.1 408 /);
+    expect(tooLarge.output).toMatch(/^HTTP\/1\.1 413 /);
+    expect(late.output + tooLarge.output).not.toContain('Access-Control-');
   });
 
   it('ends the socket even when the handler throws', async () => {

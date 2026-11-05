@@ -1,11 +1,5 @@
 import type {HttpRequest, ResponseSink} from '../http';
-import {
-  answerHead,
-  constantTimeEquals,
-  isAllowedHost,
-  routeBody,
-  RouterDeps,
-} from '../router';
+import {constantTimeEquals, routeRequest, RouterDeps} from '../router';
 
 const request = (overrides: Partial<HttpRequest> = {}): HttpRequest => ({
   method: 'POST',
@@ -28,13 +22,10 @@ const route = async (
     ...depsOverrides,
   };
   const sink: ResponseSink = {
-    cors: deps.getApiKey() !== undefined,
     write: d => writes.push(d),
     end: jest.fn(),
   };
-  if (!answerHead(req, sink, deps)) {
-    await routeBody(req, sink, deps);
-  }
+  await routeRequest(req, sink, deps);
   const text = writes.join('');
   const status = Number(text.split(' ')[1]);
   const json = text.includes('\r\n\r\n{')
@@ -43,7 +34,7 @@ const route = async (
   return {deps, text, status, json};
 };
 
-describe('answerHead and routeBody', () => {
+describe('routeRequest', () => {
   it('dispatches a valid chat request with its parsed body', async () => {
     const {deps, text} = await route(request());
     expect(deps.handleChat).toHaveBeenCalledWith(
@@ -51,16 +42,6 @@ describe('answerHead and routeBody', () => {
       expect.anything(),
     );
     expect(text).toBe('');
-  });
-
-  it('answers a preflight without auth or Host checks', async () => {
-    const {status, text, deps} = await route(
-      request({method: 'OPTIONS', headers: {host: 'evil.example'}}),
-      {getApiKey: () => 'secret'},
-    );
-    expect(status).toBe(204);
-    expect(text).toContain('Access-Control-Allow-Methods');
-    expect(deps.handleChat).not.toHaveBeenCalled();
   });
 
   describe('without an API key', () => {
@@ -91,32 +72,28 @@ describe('answerHead and routeBody', () => {
       expect(deps.handleChat).not.toHaveBeenCalled();
     });
 
-    it('serves a request without Origin and sends no CORS headers', async () => {
-      const {status, text} = await route(
-        request({method: 'GET', path: '/v1/models', body: ''}),
-      );
-      expect(status).toBe(200);
-      expect(text).not.toContain('Access-Control-');
-    });
+    it.each(['phone.local:8080', 'pocketpal.lan', undefined])(
+      'serves Host %s',
+      async host => {
+        const {status} = await route(
+          request({
+            method: 'GET',
+            path: '/v1/models',
+            body: '',
+            headers: host ? {host} : {},
+          }),
+        );
+        expect(status).toBe(200);
+      },
+    );
 
-    it('answers a preflight without Origin with no CORS headers', async () => {
+    it('answers OPTIONS by its route, with no CORS headers', async () => {
       const {status, text} = await route(request({method: 'OPTIONS'}));
-      expect(status).toBe(204);
+      expect(status).toBe(405);
+      expect(text).toContain('Allow: POST\r\n');
       expect(text).not.toContain('Access-Control-');
     });
   });
-
-  it.each(['evil.example', 'evil.example:8080', undefined])(
-    'rejects Host %s with 403',
-    async host => {
-      const {status, json, deps} = await route(
-        request({headers: host ? {host} : {}}),
-      );
-      expect(status).toBe(403);
-      expect(json.error.code).toBe('forbidden_host');
-      expect(deps.handleChat).not.toHaveBeenCalled();
-    },
-  );
 
   describe('with an API key', () => {
     const withKey = {getApiKey: () => 'secret'};
@@ -149,7 +126,7 @@ describe('answerHead and routeBody', () => {
       expect(deps.handleChat).toHaveBeenCalled();
     });
 
-    it('answers a browser preflight with CORS headers', async () => {
+    it('refuses a preflight without the key', async () => {
       const {status, text} = await route(
         request({
           method: 'OPTIONS',
@@ -157,12 +134,11 @@ describe('answerHead and routeBody', () => {
         }),
         withKey,
       );
-      expect(status).toBe(204);
-      expect(text).toContain('Access-Control-Allow-Origin: *\r\n');
-      expect(text).toContain('Access-Control-Allow-Methods');
+      expect(status).toBe(401);
+      expect(text).not.toContain('Access-Control-');
     });
 
-    it('serves a browser request that has the key, with CORS', async () => {
+    it('serves a browser request that has the key, without CORS', async () => {
       const {status, text} = await route(
         request({
           method: 'GET',
@@ -177,7 +153,7 @@ describe('answerHead and routeBody', () => {
         withKey,
       );
       expect(status).toBe(200);
-      expect(text).toContain('Access-Control-Allow-Origin: *\r\n');
+      expect(text).not.toContain('Access-Control-');
     });
 
     it('guards /v1/models too', async () => {
@@ -210,22 +186,10 @@ describe('answerHead and routeBody', () => {
 
   it.each([
     [
-      'Origin without a key, before preflight and Host',
+      'Origin without a key, before route and method',
       request({method: 'OPTIONS', headers: {origin: 'https://x.example'}}),
       undefined,
       'forbidden_origin',
-    ],
-    [
-      'preflight with a key, before Host and auth',
-      request({method: 'OPTIONS', headers: {host: 'evil.example'}}),
-      'secret',
-      204,
-    ],
-    [
-      'Host before auth and route',
-      request({path: '/nope', headers: {host: 'evil.example'}}),
-      'secret',
-      'forbidden_host',
     ],
     [
       'auth before route',
@@ -246,24 +210,8 @@ describe('answerHead and routeBody', () => {
       'method_not_allowed',
     ],
   ])('checks %s', async (_name, req, key, expected) => {
-    const {status, json} = await route(req, {getApiKey: () => key});
-    if (typeof expected === 'number') {
-      expect(status).toBe(expected);
-    } else {
-      expect(json.error.code).toBe(expected);
-    }
-  });
-
-  it('leaves a valid chat head to the body stage', () => {
-    const sink: ResponseSink = {cors: false, write: jest.fn(), end: jest.fn()};
-    expect(
-      answerHead(request(), sink, {
-        getApiKey: () => undefined,
-        getServedModelId: () => undefined,
-        listenerStartedAt: 0,
-      }),
-    ).toBe(false);
-    expect(sink.write).not.toHaveBeenCalled();
+    const {json} = await route(req, {getApiKey: () => key});
+    expect(json.error.code).toBe(expected);
   });
 
   it('lists the served model', async () => {
@@ -291,22 +239,6 @@ describe('answerHead and routeBody', () => {
     );
     expect(json).toEqual({object: 'list', data: []});
   });
-});
-
-describe('isAllowedHost', () => {
-  it.each([
-    'localhost',
-    'LOCALHOST:8080',
-    '127.0.0.1',
-    '192.168.1.23:8080',
-    '[::1]',
-    '[fe80::1]:8080',
-  ])('allows %s', host => expect(isAllowedHost(host)).toBe(true));
-
-  it.each(['example.com', '127.0.0.1.nip.io', '::1', 'localhost.evil', ''])(
-    'refuses %s',
-    host => expect(isAllowedHost(host)).toBe(false),
-  );
 });
 
 describe('constantTimeEquals', () => {
