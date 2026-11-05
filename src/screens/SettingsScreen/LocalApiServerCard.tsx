@@ -49,11 +49,7 @@ export const LocalApiServerCard: React.FC = observer(() => {
 
   useEffect(() => {
     setPortDraft(String(store.port));
-  }, [store.port]);
-
-  useEffect(() => {
     if (store.status !== 'stopped') {
-      setPortDraft(String(store.port));
       setPortInvalid(false);
     }
   }, [store.status, store.port]);
