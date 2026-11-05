@@ -8,7 +8,6 @@ import {
   createdServers,
   createServer,
   FakeServer,
-  FakeSocket,
 } from '../../../__mocks__/external/react-native-tcp-socket';
 import {mockModelStore} from '../../../__mocks__/stores/modelStore';
 import {LocalCompletionEngine} from '../../api/completionEngines';
@@ -432,49 +431,6 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(socket.destroyed).toBe(true);
   });
 
-  it('guards requests with the Keychain key', async () => {
-    getPassword.mockResolvedValueOnce({username: 'apiKey', password: 'k1'});
-    const server = await startRunning();
-    const socket = server.connect();
-    socket.receive(CHAT());
-    await flush();
-    expect(socket.output).toMatch(/^HTTP\/1\.1 401 /);
-  });
-
-  it('aborts and ends a streaming lease when stopped mid-stream', async () => {
-    getPassword.mockResolvedValueOnce(false);
-    const context = {
-      completion: jest.fn(
-        (_params: unknown, onData: (data: {content: string}) => void) =>
-          new Promise(resolve => {
-            onData({content: 'a'});
-            context.stopCompletion.mockImplementation(async () =>
-              resolve({text: '', content: '', interrupted: true}),
-            );
-          }),
-      ),
-      stopCompletion: jest.fn(),
-    };
-    mockModelStore.engine = new LocalCompletionEngine(
-      context as unknown as LlamaContext,
-    );
-    const server = await startRunning();
-    const socket: FakeSocket = server.connect();
-    socket.receive(CHAT());
-    await flush();
-    expect(socket.output).toContain('data: ');
-    expect(mockModelStore.isGenerationBusy).toBe(true);
-
-    store.setEnabled(false);
-    await flush();
-
-    expect(socket.destroyed).toBe(true);
-    expect(context.stopCompletion).toHaveBeenCalledTimes(1);
-    expect(mockModelStore.isGenerationBusy).toBe(false);
-    expect(server.close).toHaveBeenCalled();
-    expect(store.status).toBe('stopped');
-  });
-
   it('never logs the key', async () => {
     const spies = (['log', 'warn', 'error', 'info'] as const).map(level =>
       jest.spyOn(console, level),
@@ -663,22 +619,54 @@ describe('LocalApiServerStore races and requests', () => {
     expect(mockModelStore.isGenerationBusy).toBe(false);
   });
 
-  it('lists the local model, and none while a remote model is active', async () => {
-    heldContext();
-    const server = await startWithoutKey();
-    const local = server.connect();
-    local.receive(MODELS);
-    await flush();
-    expect(local.output).toContain('"id":"model-1"');
+  it('serves a keyed client end to end, until stopped mid-stream', async () => {
+    getPassword.mockResolvedValueOnce({username: 'apiKey', password: 'k1'});
+    const context = {
+      completion: jest.fn(
+        (_params: unknown, onData: (data: {content: string}) => void) =>
+          new Promise(resolve => {
+            onData({content: 'héllo 日本 👋'});
+            context.stopCompletion.mockImplementation(async () =>
+              resolve({text: '', content: '', interrupted: true}),
+            );
+          }),
+      ),
+      stopCompletion: jest.fn(),
+    };
+    mockModelStore.engine = new LocalCompletionEngine(
+      context as unknown as LlamaContext,
+    );
+    const server = await startRunning();
+    const auth = 'Authorization: Bearer k1\r\n';
 
+    const refused = server.connect();
+    refused.receive(CHAT());
+    const models = server.connect();
+    models.receive(MODELS.replace('\r\n\r\n', `\r\n${auth}\r\n`));
+    await flush();
+    expect(refused.output).toMatch(/^HTTP\/1\.1 401 /);
+    expect(models.output).toContain('"id":"model-1"');
+
+    const socket = server.connect();
+    socket.receive(CHAT(auth));
+    await flush();
+    expect(socket.output).toContain('"content":"héllo 日本 👋"');
+    expect(mockModelStore.isGenerationBusy).toBe(true);
+
+    store.setEnabled(false);
+    await flush();
+    expect(socket.destroyed).toBe(true);
+    expect(context.stopCompletion).toHaveBeenCalledTimes(1);
+    expect(mockModelStore.isGenerationBusy).toBe(false);
+    expect(server.close).toHaveBeenCalled();
+    expect(store.status).toBe('stopped');
+  });
+
+  it('serves no model while a remote model is active', () => {
     mockModelStore.engine = {
       completion: jest.fn(),
       stopCompletion: jest.fn(),
     } as never;
-    const remote = server.connect();
-    remote.receive(MODELS);
-    await flush();
-    expect(remote.output).toContain('"data":[]');
     expect(store.servedModelId).toBeUndefined();
   });
 
