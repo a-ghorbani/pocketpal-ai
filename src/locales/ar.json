@@ -1689,10 +1689,10 @@
     "settingTitle": "الإدخال الصوتي",
     "settingDescription": "اضغط على الميكروفون في الدردشة لتُملي كلامك؛ ويتم تحويله إلى نص على جهازك.",
     "unsupportedDeviceHelper": "مواصفات هذا الجهاز أقل من الموصى به. قد يكون الإدخال الصوتي بطيئًا أو قد يفشل.",
-    "spokenLanguageLabel": "لغة الكلام",
+    "spokenLanguageLabel": "اللغة المنطوقة",
     "spokenLanguageAuto": "اكتشاف تلقائي",
     "spokenLanguageDetected": "تم اكتشافها تلقائيًا: {{language}}",
-    "resetLanguageCta": "إعادة ضبط",
+    "resetLanguageCta": "إعادة الضبط",
     "recordingLanguageAuto": "اللغة: تلقائي",
     "recordingLanguage": "اللغة: {{code}} (اضغط لإعادة الضبط)",
     "waitingForChatLabel": "سيتم التحويل إلى نص بعد انتهاء الرد…",
@@ -1705,7 +1705,7 @@
     "errorPermissionBlocked": "الوصول إلى الميكروفون محظور. فعّله من الإعدادات.",
     "errorTranscribeFailed": "تعذّر تحويل الكلام إلى نص — حاول مرة أخرى.",
     "errorNotInstalled": "نزّل نموذجًا صوتيًا لاستخدام الإدخال الصوتي.",
-    "errorInsufficientMemory": "لا تتوفر ذاكرة كافية للإدخال الصوتي مع نموذج الدردشة هذا. جرّب نموذجًا أصغر.",
+    "errorInsufficientMemory": "يحتاج نموذج الدردشة هذا والإدخال الصوت إلى ذاكرة أكبر مما يمتلكه هذا الهاتف. جرّب نموذجًا أصغر.",
     "errorMicUnavailable": "الميكروفون لا يستجيب. حاول مرة أخرى، أو انتقل إلى نموذج دردشة أصغر.",
     "errorTranscriptPartial": "تعذّر تحويل جزء من كلامك إلى نص.",
     "openSettingsLabel": "فتح الإعدادات",
@@ -1715,12 +1715,15 @@
     "tierNameBase": "Base",
     "tierNameSmall": "Small",
     "tierNameLargeTurbo": "Large Turbo",
-    "tierHintBase": "افتراضي وسريع",
+    "tierHintBase": "افتراضي، سريع",
     "tierHintSmall": "أدق وأبطأ. أفضل مع اللغات الأخرى",
     "tierHintLargeTurbo": "بطيء جدًا على معظم الهواتف",
     "useCta": "استخدام",
     "inUseLabel": "قيد الاستخدام",
-    "modelSectionHelper": "يُستخدم في الإدخال الصوتي والصوت بدون استخدام اليدين."
+    "modelSectionHelper": "يُستخدم للإدخال الصوتي والتحكم الصوتي دون استخدام اليدين.",
+    "memoryAlertTitle": "مساحة الذاكرة محدودة",
+    "memoryAlertBody": "يتطلب الإدخال الصوتي ذاكرة إضافية إلي جانب نموذج الدردشة هذا. وقد يصبح التطبيق بطيئًا جدًا، أو قد يُغلق.",
+    "memoryAlertTryAnyway": "حاول على أي حال"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "التعرّف على الكلام · Whisper {{tier}}",
     "memoryVoiceRow": "الصوت · {{name}}",
     "memoryNeeded": "المطلوب",
-    "memoryNeededValue": "{{needed}} من {{available}} متاحة",
     "continueAnywayCta": "متابعة رغم ذلك",
     "chooseSmallerModelCta": "اختيار نموذج أصغر",
     "startLabel": "بدء الوضع الصوتي",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "احصل على Plus",
     "teaserKeepTyping": "تابع الكتابة مجانًا",
     "voiceRowFileMissing": "{{voice}} لم يُنزَّل بعد. اضغط «متابعة» لتنزيله.",
-    "voiceRowFileFailed": "تعذّر تنزيل {{voice}}. اتصل بالإنترنت وحاول مرة أخرى."
+    "voiceRowFileFailed": "تعذّر تنزيل {{voice}}. اتصل بالإنترنت وحاول مرة أخرى.",
+    "memoryNeededOfTotal": "{{needed}} من {{total}} على هذا الهاتف"
   }
 }

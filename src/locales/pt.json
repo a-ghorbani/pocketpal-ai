@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Muito lento na maioria dos telemóveis",
     "useCta": "Usar",
     "inUseLabel": "Em uso",
-    "modelSectionHelper": "Usado pela entrada de voz e pela voz mãos-livres."
+    "modelSectionHelper": "Usado pela entrada de voz e pela voz mãos-livres.",
+    "memoryAlertTitle": "Memória limitada",
+    "memoryAlertBody": "A entrada de voz precisa de memória extra para além deste modelo de chat. Pode ficar tudo muito lento ou a app pode fechar-se.",
+    "memoryAlertTryAnyway": "Tentar mesmo assim"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Reconhecimento de fala · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
     "memoryNeeded": "Necessária",
-    "memoryNeededValue": "{{needed}} de {{available}} disponíveis",
     "continueAnywayCta": "Continuar mesmo assim",
     "chooseSmallerModelCta": "Escolher um modelo mais pequeno",
     "startLabel": "Iniciar o modo de voz",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Obter o Plus",
     "teaserKeepTyping": "Continuar a escrever, grátis",
     "voiceRowFileMissing": "{{voice}} ainda não está descarregada. Toque em Continuar para a obter.",
-    "voiceRowFileFailed": "Não foi possível descarregar {{voice}}. Ligue-se à internet e tente novamente."
+    "voiceRowFileFailed": "Não foi possível descarregar {{voice}}. Ligue-se à internet e tente novamente.",
+    "memoryNeededOfTotal": "{{needed}} de {{total}} neste telemóvel"
   }
 }

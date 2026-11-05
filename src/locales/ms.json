@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Sangat perlahan pada kebanyakan telefon",
     "useCta": "Guna",
     "inUseLabel": "Sedang digunakan",
-    "modelSectionHelper": "Digunakan oleh input suara dan suara bebas tangan."
+    "modelSectionHelper": "Digunakan oleh input suara dan suara bebas tangan.",
+    "memoryAlertTitle": "Memori terhad",
+    "memoryAlertBody": "Input suara memerlukan memori tambahan selain model sembang ini. Ia mungkin menjadi sangat perlahan, atau aplikasi mungkin ditutup.",
+    "memoryAlertTryAnyway": "Tetap cuba"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Pengecaman pertuturan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
     "memoryNeeded": "Diperlukan",
-    "memoryNeededValue": "{{needed}} daripada {{available}} tersedia",
     "continueAnywayCta": "Tetap teruskan",
     "chooseSmallerModelCta": "Pilih model yang lebih kecil",
     "startLabel": "Mulakan mod suara",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Dapatkan Plus",
     "teaserKeepTyping": "Terus menaip, percuma",
     "voiceRowFileMissing": "{{voice}} belum dimuat turun. Ketik Teruskan untuk memuat turunnya.",
-    "voiceRowFileFailed": "Tidak dapat memuat turun {{voice}}. Sambung ke internet dan cuba lagi."
+    "voiceRowFileFailed": "Tidak dapat memuat turun {{voice}}. Sambung ke internet dan cuba lagi.",
+    "memoryNeededOfTotal": "{{needed}} daripada {{total}} pada telefon ini"
   }
 }
