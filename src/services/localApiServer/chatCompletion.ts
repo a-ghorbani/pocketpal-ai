@@ -16,6 +16,7 @@ import {stopQuietly} from '../../utils/stopQuietly';
 import {
   ResponseSink,
   SSE_DONE,
+  writeError,
   writeJson,
   writeSseData,
   writeSseHead,
@@ -60,10 +61,6 @@ const internalError = (error: unknown): WireError => ({
   code: 'internal_error',
 });
 
-function writeError(sink: ResponseSink, error: WireError) {
-  writeJson(sink, error.status, errorBody(error));
-}
-
 /** The global user layer of the chat settings, without tools. */
 export function serverBaseParams(): CompletionParams {
   const base: CompletionParams = {
@@ -86,12 +83,13 @@ async function completeOnce({lease, params, ids, channel}: Run) {
   try {
     const result = await lease.engine.completion(params);
     if (lease.signal.aborted) {
-      writeError(channel, ABORTED);
+      writeError(channel, ABORTED.status, ABORTED);
       return;
     }
     writeJson(channel, 200, toCompletion(result, ids));
   } catch (error) {
-    writeError(channel, lease.signal.aborted ? ABORTED : internalError(error));
+    const failure = lease.signal.aborted ? ABORTED : internalError(error);
+    writeError(channel, failure.status, failure);
   }
 }
 
@@ -151,7 +149,7 @@ async function completeStreaming(
   if (headSent) {
     writeSseData(channel, errorBody(failure));
   } else {
-    writeError(channel, failure);
+    writeError(channel, failure.status, failure);
   }
 }
 
@@ -166,14 +164,14 @@ export async function serveChatCompletion(
   const startedAt = Date.now();
   const validated = validateChatRequest(body);
   if (!validated.ok) {
-    writeError(channel, validated.error);
+    writeError(channel, validated.error.status, validated.error);
     return;
   }
   const request = validated.request;
 
   const lease = await modelStore.acquireGeneration();
   if (!lease) {
-    writeError(channel, NO_MODEL);
+    writeError(channel, NO_MODEL.status, NO_MODEL);
     return;
   }
   if (channel.closed) {
@@ -182,12 +180,12 @@ export async function serveChatCompletion(
   }
   if (lease.signal.aborted) {
     lease.end();
-    writeError(channel, ABORTED);
+    writeError(channel, ABORTED.status, ABORTED);
     return;
   }
   if (!(lease.engine instanceof LocalCompletionEngine)) {
     lease.end();
-    writeError(channel, NO_MODEL);
+    writeError(channel, NO_MODEL.status, NO_MODEL);
     return;
   }
 

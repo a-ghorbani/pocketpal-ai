@@ -1,3 +1,5 @@
+import {errorBody, WireError} from './wire';
+
 export const MAX_HEAD_BYTES = 16 * 1024;
 export const MAX_BODY_BYTES = 1024 * 1024;
 
@@ -230,6 +232,15 @@ export function writeJson(
       ...headers,
     }) + text,
   );
+}
+
+export function writeError(
+  sink: ResponseSink,
+  status: number,
+  error: Omit<WireError, 'status'>,
+  headers?: Record<string, string>,
+): void {
+  writeJson(sink, status, errorBody(error), headers);
 }
 
 export function writeSseHead(sink: ResponseSink): void {

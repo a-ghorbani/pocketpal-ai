@@ -1,5 +1,3 @@
-export {serveChatCompletion} from './chatCompletion';
-export type {ResponseChannel} from './chatCompletion';
 export {
   handleConnection,
   MAX_ADMITTED_REQUESTS,

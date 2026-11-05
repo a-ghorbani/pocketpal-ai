@@ -12,7 +12,6 @@ import {
   handleConnection,
   MAX_ADMITTED_REQUESTS,
   OpenConnection,
-  serveChatCompletion,
 } from '../services/localApiServer';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {modelStore} from './ModelStore';
@@ -82,24 +81,30 @@ class LocalApiServerStore {
   lanEnabled = false;
   hasApiKey = false;
   lanAddress: string | undefined = undefined;
-  activeRequests = 0;
 
   private apiKey: string | undefined = undefined;
   private epoch = 0;
   private wentToBackground = false;
   private listener: Listener | undefined = undefined;
   private readonly openConnections = new Set<OpenConnection>();
+  private activeRequests = 0;
 
   constructor() {
     makeAutoObservable<
       LocalApiServerStore,
-      'apiKey' | 'epoch' | 'wentToBackground' | 'listener' | 'openConnections'
+      | 'apiKey'
+      | 'epoch'
+      | 'wentToBackground'
+      | 'listener'
+      | 'openConnections'
+      | 'activeRequests'
     >(this, {
       apiKey: false,
       epoch: false,
       wentToBackground: false,
       listener: false,
       openConnections: false,
+      activeRequests: false,
     });
     makePersistable(this, {
       name: 'LocalApiServerStore',
@@ -292,14 +297,11 @@ class LocalApiServerStore {
   private connectionContext(): ConnectionContext {
     return {
       openConnections: this.openConnections,
+      getApiKey: () => this.apiKey,
+      getServedModelId: () => this.servedModelId,
+      listenerStartedAt: Math.floor(Date.now() / 1000),
       admit: this.admitRequest,
       release: this.releaseRequest,
-      routerDeps: {
-        getApiKey: () => this.apiKey,
-        getServedModelId: () => this.servedModelId,
-        listenerStartedAt: Math.floor(Date.now() / 1000),
-      },
-      handleChat: serveChatCompletion,
     };
   }
 

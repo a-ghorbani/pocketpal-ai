@@ -1,7 +1,8 @@
 import {FakeSocket} from '../../../../__mocks__/external/react-native-tcp-socket';
-import type {ResponseChannel} from '../chatCompletion';
+import {ResponseChannel, serveChatCompletion} from '../chatCompletion';
 import {
   ConnectionContext,
+  constantTimeEquals,
   handleConnection,
   MAX_ADMITTED_REQUESTS,
   MAX_OPEN_CONNECTIONS,
@@ -9,8 +10,30 @@ import {
   READ_DEADLINE_MS,
 } from '../connection';
 
-const CHAT =
-  'POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}';
+jest.mock('../chatCompletion', () => ({serveChatCompletion: jest.fn()}));
+
+const serveChat = serveChatCompletion as jest.Mock;
+
+const raw = ({
+  method = 'POST',
+  path = '/v1/chat/completions',
+  headers = {host: '127.0.0.1:8080'},
+  body = '{"messages":[{"role":"user","content":"hi"}]}',
+}: {
+  method?: string;
+  path?: string;
+  headers?: Record<string, string>;
+  body?: string;
+} = {}) => {
+  const lines = Object.entries({
+    ...headers,
+    'content-length': String(Buffer.byteLength(body)),
+  }).map(([name, value]) => `${name}: ${value}\r\n`);
+  return `${method} ${path} HTTP/1.1\r\n${lines.join('')}\r\n${body}`;
+};
+
+const CHAT = raw();
+const MODELS = raw({method: 'GET', path: '/v1/models', body: ''});
 
 const flush = async () => {
   for (let i = 0; i < 5; i++) {
@@ -20,15 +43,13 @@ const flush = async () => {
 
 const contexts: ConnectionContext[] = [];
 
-const makeContext = (
-  handleChat: ConnectionContext['handleChat'] = async (_body, channel) => {
-    channel.write('served');
-  },
-  apiKey?: string,
-) => {
+const makeContext = (apiKey?: string) => {
   let admitted = 0;
   const ctx: ConnectionContext & {admitted(): number} = {
     openConnections: new Set<OpenConnection>(),
+    getApiKey: () => apiKey,
+    getServedModelId: () => 'org/model.gguf',
+    listenerStartedAt: 1700000000,
     admit: jest.fn(() => {
       if (admitted >= MAX_ADMITTED_REQUESTS) {
         return false;
@@ -39,12 +60,6 @@ const makeContext = (
     release: jest.fn(() => {
       admitted -= 1;
     }),
-    routerDeps: {
-      getApiKey: () => apiKey,
-      getServedModelId: () => 'm',
-      listenerStartedAt: 0,
-    },
-    handleChat: jest.fn(handleChat),
     admitted: () => admitted,
   };
   contexts.push(ctx);
@@ -57,17 +72,39 @@ const connect = (ctx: ConnectionContext) => {
   return socket;
 };
 
-/** A chat handler held open until the test resolves it. */
+const send = async (request: string, ctx = makeContext()) => {
+  const socket = connect(ctx);
+  socket.receive(request);
+  await flush();
+  const text = socket.output;
+  const json = text.includes('\r\n\r\n{')
+    ? JSON.parse(text.slice(text.indexOf('\r\n\r\n') + 4))
+    : undefined;
+  return {text, status: Number(text.split(' ')[1]), json};
+};
+
+/** Chat requests held open until the test finishes them. */
 const heldChat = () => {
   const channels: ResponseChannel[] = [];
   const finishers: (() => void)[] = [];
-  const handleChat = (_body: unknown, channel: ResponseChannel) =>
-    new Promise<void>(resolve => {
-      channels.push(channel);
-      finishers.push(resolve);
-    });
-  return {handleChat, channels, finish: (i: number) => finishers[i]()};
+  serveChat.mockImplementation(
+    (_body: unknown, channel: ResponseChannel) =>
+      new Promise<void>(resolve => {
+        channels.push(channel);
+        finishers.push(resolve);
+      }),
+  );
+  return {channels, finish: (i: number) => finishers[i]()};
 };
+
+beforeEach(() => {
+  serveChat.mockReset();
+  serveChat.mockImplementation(
+    async (_body: unknown, channel: ResponseChannel) => {
+      channel.write('served');
+    },
+  );
+});
 
 afterEach(() => {
   contexts.forEach(ctx => ctx.openConnections.forEach(c => c.destroy()));
@@ -76,13 +113,16 @@ afterEach(() => {
 });
 
 describe('handleConnection', () => {
-  it('routes a request, then ends the socket after the last write', async () => {
+  it('serves a chat request, then ends the socket after the last write', async () => {
     const ctx = makeContext();
     const socket = connect(ctx);
     socket.receive(CHAT);
     await flush();
 
-    expect(ctx.handleChat).toHaveBeenCalledWith({}, expect.anything());
+    expect(serveChat).toHaveBeenCalledWith(
+      {messages: [{role: 'user', content: 'hi'}]},
+      expect.anything(),
+    );
     expect(socket.output).toBe('served');
     expect(socket.ended).toBe(true);
     expect(ctx.openConnections.size).toBe(0);
@@ -90,7 +130,6 @@ describe('handleConnection', () => {
   });
 
   it('does not end the socket before pending writes are flushed', async () => {
-    const ctx = makeContext();
     const socket = new FakeSocket();
     const callbacks: (() => void)[] = [];
     socket.write = jest.fn((data: string, _enc, cb) => {
@@ -98,7 +137,7 @@ describe('handleConnection', () => {
       callbacks.push(() => cb?.());
       return true;
     });
-    handleConnection(socket, ctx);
+    handleConnection(socket, makeContext());
     socket.receive(CHAT);
     await flush();
 
@@ -108,13 +147,12 @@ describe('handleConnection', () => {
   });
 
   it('answers read errors without routing', async () => {
-    const ctx = makeContext();
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive('POST / HTTP/1.1\r\nHost: localhost\r\n\r\n');
     await flush();
 
     expect(socket.output).toMatch(/^HTTP\/1\.1 411 /);
-    expect(ctx.handleChat).not.toHaveBeenCalled();
+    expect(serveChat).not.toHaveBeenCalled();
     expect(socket.ended).toBe(true);
   });
 
@@ -133,8 +171,7 @@ describe('handleConnection', () => {
 
   it('answers 408 when the request does not arrive in time', async () => {
     jest.useFakeTimers();
-    const ctx = makeContext();
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive('POST / HTTP/1.1\r\n');
     jest.advanceTimersByTime(READ_DEADLINE_MS - 1);
     expect(socket.writes).toEqual([]);
@@ -148,8 +185,7 @@ describe('handleConnection', () => {
   it('clears the deadline once the request is read', async () => {
     jest.useFakeTimers();
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive(CHAT);
     await flush();
     jest.advanceTimersByTime(READ_DEADLINE_MS * 2);
@@ -160,7 +196,7 @@ describe('handleConnection', () => {
 
   it('answers 503 server_busy to a third concurrent chat request', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
+    const ctx = makeContext();
     connect(ctx).receive(CHAT);
     connect(ctx).receive(CHAT);
     const third = connect(ctx);
@@ -169,7 +205,7 @@ describe('handleConnection', () => {
 
     expect(third.output).toMatch(/^HTTP\/1\.1 503 /);
     expect(third.output).toContain('"code":"server_busy"');
-    expect(ctx.handleChat).toHaveBeenCalledTimes(2);
+    expect(serveChat).toHaveBeenCalledTimes(2);
 
     held.finish(0);
     held.finish(1);
@@ -179,7 +215,7 @@ describe('handleConnection', () => {
 
   it('tells the handler when the client disconnects, and releases once', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
+    const ctx = makeContext();
     const socket = connect(ctx);
     socket.receive(CHAT);
     await flush();
@@ -202,8 +238,7 @@ describe('handleConnection', () => {
 
   it('treats a socket error as a close', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive(CHAT);
     await flush();
     socket.emit('error', new Error('reset'));
@@ -214,7 +249,7 @@ describe('handleConnection', () => {
 
   it('closes at once when its open connection is destroyed', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
+    const ctx = makeContext();
     const socket = connect(ctx);
     socket.receive(CHAT);
     await flush();
@@ -229,18 +264,16 @@ describe('handleConnection', () => {
   });
 
   it('ignores bytes after the request', async () => {
-    const ctx = makeContext();
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive(CHAT);
     socket.receive(CHAT);
     await flush();
-    expect(ctx.handleChat).toHaveBeenCalledTimes(1);
+    expect(serveChat).toHaveBeenCalledTimes(1);
   });
 
   it('still answers a client that half-closes after sending', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
-    const socket = connect(ctx);
+    const socket = connect(makeContext());
     socket.receive(CHAT);
     socket.emit('end');
     await flush();
@@ -267,7 +300,7 @@ describe('handleConnection', () => {
     expect(ctx.openConnections.size).toBe(0);
 
     const next = connect(ctx);
-    next.receive('GET /v1/models HTTP/1.1\r\nHost: localhost\r\n\r\n');
+    next.receive(MODELS);
     await flush();
     expect(next.destroyed).toBe(false);
     expect(next.output).toMatch(/^HTTP\/1\.1 200 /);
@@ -275,7 +308,7 @@ describe('handleConnection', () => {
 
   it('closes the connection when a write hits a closed socket', async () => {
     const held = heldChat();
-    const ctx = makeContext(held.handleChat);
+    const ctx = makeContext();
     const socket = connect(ctx);
     socket.receive(CHAT);
     await flush();
@@ -295,8 +328,7 @@ describe('handleConnection', () => {
   });
 
   it('reads a refused upload to its end, then answers once', async () => {
-    const ctx = makeContext(undefined, 'secret');
-    const socket = connect(ctx);
+    const socket = connect(makeContext('secret'));
     socket.receive(
       'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\n' +
         'Authorization: Bearer wrong\r\nContent-Length: 900000\r\n\r\n',
@@ -313,26 +345,12 @@ describe('handleConnection', () => {
     await flush();
     expect(socket.output.match(/HTTP\/1\.1 \d{3}/g)).toEqual(['HTTP/1.1 401']);
     expect(socket.ended).toBe(true);
-    expect(ctx.handleChat).not.toHaveBeenCalled();
-  });
-
-  it('refuses Origin without a key, with no CORS headers', async () => {
-    const ctx = makeContext();
-    const socket = connect(ctx);
-    socket.receive(
-      'GET /v1/models HTTP/1.1\r\nHost: localhost\r\nOrigin: https://x.example\r\n\r\n',
-    );
-    await flush();
-
-    expect(socket.output).toMatch(/^HTTP\/1\.1 403 /);
-    expect(socket.output).toContain('"code":"forbidden_origin"');
-    expect(socket.output).not.toContain('Access-Control-');
-    expect(socket.ended).toBe(true);
+    expect(serveChat).not.toHaveBeenCalled();
   });
 
   it('sends no CORS headers on read errors with a key', async () => {
     jest.useFakeTimers();
-    const ctx = makeContext(undefined, 'secret');
+    const ctx = makeContext('secret');
     const late = connect(ctx);
     const tooLarge = connect(ctx);
     tooLarge.receive(
@@ -348,9 +366,8 @@ describe('handleConnection', () => {
 
   it('ends the socket even when the handler throws', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    const ctx = makeContext(async () => {
-      throw new Error('boom');
-    });
+    serveChat.mockRejectedValue(new Error('boom'));
+    const ctx = makeContext();
     const socket = connect(ctx);
     socket.receive(CHAT);
     await flush();
@@ -359,5 +376,204 @@ describe('handleConnection', () => {
     expect(socket.ended).toBe(true);
     expect(ctx.admitted()).toBe(0);
     warn.mockRestore();
+  });
+});
+
+describe('routing', () => {
+  describe('without an API key', () => {
+    it.each([
+      ['POST', '/v1/chat/completions', 'https://evil.example'],
+      ['GET', '/v1/models', 'https://evil.example'],
+      ['OPTIONS', '/v1/chat/completions', 'https://evil.example'],
+      ['POST', '/v1/chat/completions', 'null'],
+    ])('refuses %s %s with Origin %s', async (method, path, origin) => {
+      const {status, json, text} = await send(
+        raw({
+          method,
+          path,
+          headers: {host: '127.0.0.1', origin, 'content-type': 'text/plain'},
+        }),
+      );
+      expect(status).toBe(403);
+      expect(json.error).toEqual({
+        message: 'Browser requests need an API key',
+        type: 'invalid_request_error',
+        code: 'forbidden_origin',
+      });
+      expect(text).not.toContain('Access-Control-');
+      expect(serveChat).not.toHaveBeenCalled();
+    });
+
+    it.each(['phone.local:8080', 'pocketpal.lan', undefined])(
+      'serves Host %s',
+      async host => {
+        const {status} = await send(
+          raw({
+            method: 'GET',
+            path: '/v1/models',
+            body: '',
+            headers: host ? {host} : {},
+          }),
+        );
+        expect(status).toBe(200);
+      },
+    );
+
+    it('answers OPTIONS by its route, with no CORS headers', async () => {
+      const {status, text} = await send(raw({method: 'OPTIONS'}));
+      expect(status).toBe(405);
+      expect(text).toContain('Allow: POST\r\n');
+      expect(text).not.toContain('Access-Control-');
+    });
+  });
+
+  describe('with an API key', () => {
+    const keyed = () => makeContext('secret');
+
+    it.each([undefined, 'Bearer wrong', 'Bearer secre', 'Basic secret'])(
+      'rejects Authorization %s with 401',
+      async authorization => {
+        const headers: Record<string, string> = {host: 'localhost'};
+        if (authorization) {
+          headers.authorization = authorization;
+        }
+        const {status, json} = await send(raw({headers}), keyed());
+        expect(status).toBe(401);
+        expect(json.error).toEqual({
+          message: 'Missing or wrong API key',
+          type: 'authentication_error',
+          code: 'invalid_api_key',
+        });
+        expect(serveChat).not.toHaveBeenCalled();
+      },
+    );
+
+    it('serves the right Bearer key', async () => {
+      await send(
+        raw({headers: {host: 'localhost', authorization: 'Bearer secret'}}),
+        keyed(),
+      );
+      expect(serveChat).toHaveBeenCalled();
+    });
+
+    it('refuses a preflight without the key', async () => {
+      const {status, text} = await send(
+        raw({
+          method: 'OPTIONS',
+          headers: {host: 'localhost', origin: 'https://app.example'},
+        }),
+        keyed(),
+      );
+      expect(status).toBe(401);
+      expect(text).not.toContain('Access-Control-');
+    });
+
+    it('serves a browser request that has the key, without CORS', async () => {
+      const {status, text} = await send(
+        raw({
+          method: 'GET',
+          path: '/v1/models',
+          body: '',
+          headers: {
+            host: 'localhost',
+            origin: 'https://app.example',
+            authorization: 'Bearer secret',
+          },
+        }),
+        keyed(),
+      );
+      expect(status).toBe(200);
+      expect(text).not.toContain('Access-Control-');
+    });
+
+    it('guards /v1/models too', async () => {
+      const {status} = await send(MODELS, keyed());
+      expect(status).toBe(401);
+    });
+  });
+
+  it('answers 404 for an unknown path', async () => {
+    const {status, json} = await send(raw({path: '/api/chat'}));
+    expect(status).toBe(404);
+    expect(json.error.code).toBe('not_found');
+  });
+
+  it('answers 405 with Allow for a wrong method', async () => {
+    const {status, text} = await send(raw({method: 'GET'}));
+    expect(status).toBe(405);
+    expect(text).toContain('Allow: POST\r\n');
+  });
+
+  it('answers 400 for a body that is not JSON', async () => {
+    const {status, json} = await send(raw({body: '{oops'}));
+    expect(status).toBe(400);
+    expect(json.error.code).toBe('invalid_json');
+    expect(serveChat).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'Origin without a key, before route and method',
+      raw({method: 'OPTIONS', headers: {origin: 'https://x.example'}}),
+      undefined,
+      'forbidden_origin',
+    ],
+    [
+      'auth before route',
+      raw({path: '/nope', headers: {host: 'localhost'}}),
+      'secret',
+      'invalid_api_key',
+    ],
+    [
+      'route before method',
+      raw({method: 'PUT', path: '/nope'}),
+      undefined,
+      'not_found',
+    ],
+    [
+      'method before the body',
+      raw({method: 'GET', body: '{oops'}),
+      undefined,
+      'method_not_allowed',
+    ],
+  ])('checks %s', async (_name, request, key, expected) => {
+    const {json} = await send(request, makeContext(key));
+    expect(json.error.code).toBe(expected);
+  });
+
+  it('lists the served model', async () => {
+    const {status, json} = await send(MODELS);
+    expect(status).toBe(200);
+    expect(json).toEqual({
+      object: 'list',
+      data: [
+        {
+          id: 'org/model.gguf',
+          object: 'model',
+          created: 1700000000,
+          owned_by: 'pocketpal',
+        },
+      ],
+    });
+  });
+
+  it('lists no model when none is served', async () => {
+    const ctx = makeContext();
+    ctx.getServedModelId = () => undefined;
+    const {json} = await send(MODELS, ctx);
+    expect(json).toEqual({object: 'list', data: []});
+  });
+});
+
+describe('constantTimeEquals', () => {
+  it.each([
+    ['abc', 'abc', true],
+    ['abc', 'abd', false],
+    ['abc', 'ab', false],
+    ['ab', 'abc', false],
+    ['abc\0', 'abc', false],
+    ['', '', true],
+  ])('%j vs %j → %s', (a, b, expected) => {
+    expect(constantTimeEquals(a, b)).toBe(expected);
   });
 });

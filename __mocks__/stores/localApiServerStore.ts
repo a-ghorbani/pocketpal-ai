@@ -16,7 +16,6 @@ class MockLocalApiServerStore {
   lanEnabled = false;
   hasApiKey = false;
   lanAddress: string | undefined = undefined;
-  activeRequests = 0;
   baseUrl: string | undefined = undefined;
   servedModelId: string | undefined = undefined;
 

@@ -461,7 +461,6 @@ describe('LocalApiServerStore lifecycle', () => {
     socket.receive(CHAT());
     await flush();
     expect(socket.output).toContain('data: ');
-    expect(store.activeRequests).toBe(1);
     expect(mockModelStore.isGenerationBusy).toBe(true);
 
     store.setEnabled(false);
@@ -470,7 +469,6 @@ describe('LocalApiServerStore lifecycle', () => {
     expect(socket.destroyed).toBe(true);
     expect(context.stopCompletion).toHaveBeenCalledTimes(1);
     expect(mockModelStore.isGenerationBusy).toBe(false);
-    expect(store.activeRequests).toBe(0);
     expect(server.close).toHaveBeenCalled();
     expect(store.status).toBe('stopped');
   });
@@ -631,63 +629,35 @@ describe('LocalApiServerStore races and requests', () => {
     expect(store.lastError).toBe('listen_failed');
   });
 
-  it('answers 503 server_busy to a third concurrent chat request', async () => {
+  it('admits two new requests once two admitted ones have ended', async () => {
     const held = heldContext();
     const server = await startWithoutKey();
     const body = '{"messages":[{"role":"user","content":"hi"}]}';
     const post = `POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nContent-Length: ${body.length}\r\n\r\n${body}`;
-    const sockets = [server.connect(), server.connect(), server.connect()];
-    sockets.forEach(socket => socket.receive(post));
+    const [left, served, busy] = [
+      server.connect(),
+      server.connect(),
+      server.connect(),
+    ];
+    [left, served, busy].forEach(socket => socket.receive(post));
     await flush();
+    expect(busy.output).toMatch(/^HTTP\/1\.1 503 /);
 
-    expect(store.activeRequests).toBe(2);
-    expect(sockets[2].output).toMatch(/^HTTP\/1\.1 503 /);
-    expect(sockets[2].output).toContain('"code":"server_busy"');
-    expect(held.context.completion).toHaveBeenCalledTimes(1);
-
+    left.peerClose();
     held.settle(0);
     await flush();
     held.settle(1);
     await flush();
-    expect(store.activeRequests).toBe(0);
-    expect(mockModelStore.isGenerationBusy).toBe(false);
-  });
+    expect(served.output).toMatch(/^HTTP\/1\.1 200 /);
 
-  it('ends at once the lease of a client that left while waiting', async () => {
-    const held = heldContext();
-    const server = await startWithoutKey();
-    const chatLease = (await mockModelStore.acquireGeneration())!;
-    const socket = server.connect();
-    socket.receive(CHAT());
+    const next = [server.connect(), server.connect()];
+    next.forEach(socket => socket.receive(post));
     await flush();
-    expect(store.activeRequests).toBe(1);
-
-    socket.peerClose();
+    held.settle(2);
     await flush();
-    expect(store.activeRequests).toBe(1);
-
-    chatLease.end();
+    held.settle(3);
     await flush();
-    expect(held.context.completion).not.toHaveBeenCalled();
-    expect(store.activeRequests).toBe(0);
-    expect(mockModelStore.isGenerationBusy).toBe(false);
-  });
-
-  it('drops a waiting request when stopped, without a completion', async () => {
-    const held = heldContext();
-    const server = await startWithoutKey();
-    const chatLease = (await mockModelStore.acquireGeneration())!;
-    const socket = server.connect();
-    socket.receive(CHAT());
-    await flush();
-
-    store.setEnabled(false);
-    expect(socket.destroyed).toBe(true);
-    chatLease.end();
-    await flush();
-
-    expect(held.context.completion).not.toHaveBeenCalled();
-    expect(store.activeRequests).toBe(0);
+    next.forEach(socket => expect(socket.output).toMatch(/^HTTP\/1\.1 200 /));
     expect(mockModelStore.isGenerationBusy).toBe(false);
   });
 

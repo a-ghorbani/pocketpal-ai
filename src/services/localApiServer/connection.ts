@@ -1,7 +1,5 @@
-import type {ResponseChannel} from './chatCompletion';
-import {createRequestReader, writeJson} from './http';
-import {routeRequest, RouterDeps} from './router';
-import {errorBody} from './wire';
+import {ResponseChannel, serveChatCompletion} from './chatCompletion';
+import {createRequestReader, HttpRequest, writeError, writeJson} from './http';
 
 export const MAX_OPEN_CONNECTIONS = 8;
 export const MAX_ADMITTED_REQUESTS = 2;
@@ -26,12 +24,19 @@ export interface OpenConnection {
 
 export interface ConnectionContext {
   openConnections: Set<OpenConnection>;
+  getApiKey(): string | undefined;
+  getServedModelId(): string | undefined;
+  /** Unix seconds. */
+  listenerStartedAt: number;
   /** False when the chat requests in flight are at their cap. */
   admit(): boolean;
   release(): void;
-  routerDeps: Omit<RouterDeps, 'handleChat'>;
-  handleChat(body: unknown, channel: ResponseChannel): Promise<void>;
 }
+
+const ROUTES: Record<string, string> = {
+  '/v1/models': 'GET',
+  '/v1/chat/completions': 'POST',
+};
 
 const READ_ERRORS: Record<number, string> = {
   400: 'Malformed request',
@@ -39,6 +44,123 @@ const READ_ERRORS: Record<number, string> = {
   411: 'Content-Length is required',
   413: 'Request too large',
 };
+
+const readError = (status: number) => ({
+  message: READ_ERRORS[status],
+  type: 'invalid_request_error',
+  code: 'bad_request',
+});
+
+const invalidRequest = (message: string, code: string) => ({
+  message,
+  type: 'invalid_request_error',
+  code,
+});
+
+/** Walks the longer string whatever the inputs, so timing reveals no prefix. */
+export function constantTimeEquals(a: string, b: string): boolean {
+  const length = Math.max(a.length, b.length);
+  const left = a.padEnd(length, '\0');
+  const right = b.padEnd(length, '\0');
+  let difference = a.length === b.length ? 0 : 1;
+  for (let i = 0; i < length; i++) {
+    difference += Math.abs(left.charCodeAt(i) - right.charCodeAt(i));
+  }
+  return difference === 0;
+}
+
+function isAuthorized(header: string | undefined, apiKey: string): boolean {
+  const match = /^Bearer\s+(.+)$/i.exec(header ?? '');
+  return constantTimeEquals(match?.[1] ?? '', apiKey);
+}
+
+function writeModels(channel: ResponseChannel, ctx: ConnectionContext) {
+  const id = ctx.getServedModelId();
+  writeJson(channel, 200, {
+    object: 'list',
+    data: id
+      ? [
+          {
+            id,
+            object: 'model',
+            created: ctx.listenerStartedAt,
+            owned_by: 'pocketpal',
+          },
+        ]
+      : [],
+  });
+}
+
+/**
+ * Answers one fully read request: Origin, auth, route and method first, then
+ * the models list, or the JSON body served as a chat completion when a slot
+ * is free.
+ */
+async function route(
+  request: HttpRequest,
+  channel: ResponseChannel,
+  ctx: ConnectionContext,
+): Promise<void> {
+  const apiKey = ctx.getApiKey();
+  if (apiKey === undefined && request.headers.origin !== undefined) {
+    writeError(
+      channel,
+      403,
+      invalidRequest('Browser requests need an API key', 'forbidden_origin'),
+    );
+    return;
+  }
+  if (apiKey && !isAuthorized(request.headers.authorization, apiKey)) {
+    writeError(channel, 401, {
+      message: 'Missing or wrong API key',
+      type: 'authentication_error',
+      code: 'invalid_api_key',
+    });
+    return;
+  }
+  const allowedMethod = ROUTES[request.path];
+  if (!allowedMethod) {
+    writeError(channel, 404, invalidRequest('Not found', 'not_found'));
+    return;
+  }
+  if (request.method !== allowedMethod) {
+    writeError(
+      channel,
+      405,
+      invalidRequest('Method not allowed', 'method_not_allowed'),
+      {Allow: allowedMethod},
+    );
+    return;
+  }
+  if (request.path === '/v1/models') {
+    writeModels(channel, ctx);
+    return;
+  }
+  let body: unknown;
+  try {
+    body = JSON.parse(request.body);
+  } catch {
+    writeError(
+      channel,
+      400,
+      invalidRequest('Request body is not valid JSON', 'invalid_json'),
+    );
+    return;
+  }
+  if (!ctx.admit()) {
+    writeError(channel, 503, {
+      message: 'The server is busy with other requests',
+      type: 'server_error',
+      code: 'server_busy',
+    });
+    return;
+  }
+  try {
+    await serveChatCompletion(body, channel);
+  } finally {
+    ctx.release();
+  }
+}
 
 /** Serves the one request a connection carries, then closes it. */
 export function handleConnection(
@@ -50,7 +172,7 @@ export function handleConnection(
     return;
   }
 
-  const closeListeners = new Set<() => void>();
+  let closeListener: (() => void) | undefined;
   let closed = false;
   let settled = false;
   let receivedAny = false;
@@ -64,9 +186,9 @@ export function handleConnection(
     closed = true;
     clearTimeout(deadline);
     ctx.openConnections.delete(connection);
-    const listeners = [...closeListeners];
-    closeListeners.clear();
-    listeners.forEach(listener => listener());
+    const listener = closeListener;
+    closeListener = undefined;
+    listener?.();
   };
 
   const connection: OpenConnection = {
@@ -105,8 +227,10 @@ export function handleConnection(
       endWhenFlushed();
     },
     onClose(listener) {
-      closeListeners.add(listener);
-      return () => closeListeners.delete(listener);
+      closeListener = listener;
+      return () => {
+        closeListener = undefined;
+      };
     },
   };
 
@@ -115,36 +239,8 @@ export function handleConnection(
   const answerReadError = (status: number) => {
     settled = true;
     clearTimeout(deadline);
-    writeJson(
-      channel,
-      status,
-      errorBody({
-        message: READ_ERRORS[status],
-        type: 'invalid_request_error',
-        code: 'bad_request',
-      }),
-    );
+    writeError(channel, status, readError(status));
     channel.end();
-  };
-
-  const serveAdmitted = async (body: unknown) => {
-    if (!ctx.admit()) {
-      writeJson(
-        channel,
-        503,
-        errorBody({
-          message: 'The server is busy with other requests',
-          type: 'server_error',
-          code: 'server_busy',
-        }),
-      );
-      return;
-    }
-    try {
-      await ctx.handleChat(body, channel);
-    } finally {
-      ctx.release();
-    }
   };
 
   const deadline = setTimeout(() => answerReadError(408), READ_DEADLINE_MS);
@@ -172,10 +268,7 @@ export function handleConnection(
     }
     settled = true;
     clearTimeout(deadline);
-    routeRequest(result.request, channel, {
-      ...ctx.routerDeps,
-      handleChat: serveAdmitted,
-    })
+    route(result.request, channel, ctx)
       .catch(error => console.warn('[localApiServer] request failed:', error))
       .finally(() => channel.end());
   });
