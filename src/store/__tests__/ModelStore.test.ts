@@ -3009,6 +3009,17 @@ describe('ModelStore', () => {
         ([m]) => m.id,
       );
 
+    // A preset already downloaded from the recommended list, header read.
+    const markDownloaded = (preset: Model) => {
+      runInAction(() => {
+        preset.isDownloaded = true;
+        preset.ggufMetadata = {architecture: 'gemma3'} as GGUFMetadata;
+      });
+      (RNFS.exists as jest.Mock).mockImplementation(async (path: string) =>
+        path.endsWith(`/${preset.filename}`),
+      );
+    };
+
     describe.each(cases)('$platform: $repo/$filename', c => {
       it('baseline: with no preset, a search download is vision and fetches the projector', async () => {
         Platform.OS = c.platform;
@@ -3081,6 +3092,32 @@ describe('ModelStore', () => {
           modelStore.models.find(m => m.id === preset.id)?.supportsMultimodal,
         ).toBeFalsy();
         expect(downloadedIds()).toEqual([preset.id]);
+      });
+
+      it('a Vision-off search download over the loaded preset keeps Vision off without a reload', async () => {
+        const preset = seedPresets(c);
+        markDownloaded(preset);
+        runInAction(() => {
+          modelStore.activeModelId = preset.id;
+          modelStore.context = new LlamaContext(mockLlamaContextParams);
+        });
+        const originalInitContext = modelStore.initContext;
+        const initContextSpy = jest.fn().mockResolvedValue(undefined);
+        modelStore.initContext = initContextSpy;
+        const hfModel = searchModel(c.repo);
+
+        await modelStore.downloadHFModel(hfModel, fileOf(hfModel, c.filename), {
+          enableVision: false,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+        modelStore.initContext = originalInitContext;
+
+        expect(modelStore.models.find(m => m.id === preset.id)).toMatchObject({
+          supportsMultimodal: true,
+          visionEnabled: false,
+        });
+        expect(initContextSpy).not.toHaveBeenCalled();
+        expect(downloadedIds()).toEqual([]);
       });
     });
   });

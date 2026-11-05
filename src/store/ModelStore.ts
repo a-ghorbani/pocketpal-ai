@@ -748,6 +748,7 @@ class ModelStore {
       | 'hfModel'
       | 'hfModelFile'
     >,
+    enableVision?: boolean,
   ) => {
     runInAction(() => {
       Object.assign(model, searchFields);
@@ -756,7 +757,7 @@ class ModelStore {
       model.capabilities = [
         ...new Set([...(model.capabilities ?? []), 'vision' as const]),
       ];
-      model.visionEnabled = model.visionEnabled ?? true;
+      model.visionEnabled = model.visionEnabled ?? enableVision ?? true;
     });
   };
 
@@ -2818,7 +2819,9 @@ class ModelStore {
     },
   ) => {
     try {
-      const newModel = await this.addHFModel(hfModel, modelFile);
+      const newModel = await this.addHFModel(hfModel, modelFile, {
+        enableVision: options?.enableVision,
+      });
       if (!newModel) {
         throw new Error('Failed to add model to store');
       }
@@ -2876,9 +2879,15 @@ class ModelStore {
    * For multimodal models, ensures all required projection models are also added.
    * @param hfModel - The Hugging Face model to add.
    * @param modelFile - The model file to add.
+   * @param options.enableVision - The caller's vision choice, applied when an
+   * existing text-only record is upgraded to vision.
    * @returns The new model that was added.
    */
-  addHFModel = async (hfModel: HuggingFaceModel, modelFile: ModelFile) => {
+  addHFModel = async (
+    hfModel: HuggingFaceModel,
+    modelFile: ModelFile,
+    options?: {enableVision?: boolean},
+  ) => {
     const newModel = hfAsModel(hfModel, modelFile);
     const storeModel = this.models.find(m => m.id === newModel.id);
 
@@ -2919,12 +2928,16 @@ class ModelStore {
       }
 
       if (storeModel && this.isUpgradeableToVision(storeModel)) {
-        this.markAsVision(storeModel, {
-          compatibleProjectionModels: newModel.compatibleProjectionModels,
-          defaultProjectionModel: newModel.defaultProjectionModel,
-          hfModel: newModel.hfModel,
-          hfModelFile: newModel.hfModelFile,
-        });
+        this.markAsVision(
+          storeModel,
+          {
+            compatibleProjectionModels: newModel.compatibleProjectionModels,
+            defaultProjectionModel: newModel.defaultProjectionModel,
+            hfModel: newModel.hfModel,
+            hfModelFile: newModel.hfModelFile,
+          },
+          options?.enableVision,
+        );
       } else if (storeModel?.supportsMultimodal) {
         // Refresh projection model references; keep the user's pick.
         const updatedCompatibleModels = mmprojFiles.map(
