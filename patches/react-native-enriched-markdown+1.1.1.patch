@@ -36,3 +36,19 @@ diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/c
    }
  
    private fun multiplyAlpha(
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
+@@ -105,9 +105,11 @@ object ContextMenuPopup {
+     val screenW = context.resources.displayMetrics.widthPixels
+     val margin = 8f.dp
+ 
++    // Not coerceIn: it throws when the popup is wider than the screen.
+     val x =
+       (centerX - container.measuredWidth / 2)
+-        .coerceIn(margin, screenW - container.measuredWidth - margin)
++        .coerceAtMost(screenW - container.measuredWidth - margin)
++        .coerceAtLeast(margin)
+     val y =
+       (topY - container.measuredHeight - margin)
+         .coerceAtLeast(margin)
