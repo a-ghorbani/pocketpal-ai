@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
+@@ -252,7 +252,7 @@ class TableContainerView(
+         isClickable = false
+         isLongClickable = false
+         isFocusable = true
+-        isScreenReaderFocusable = true
++        ViewCompat.setScreenReaderFocusable(this, true)
+         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+         contentDescription = description
+         if (isHeaderRow) ViewCompat.setAccessibilityHeading(this, true)
