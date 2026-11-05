@@ -3,7 +3,6 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
-import DeviceInfo from 'react-native-device-info';
 import TcpSocket from 'react-native-tcp-socket';
 
 import {LocalCompletionEngine} from '../api/completionEngines';
@@ -15,6 +14,7 @@ import {
   OpenConnection,
   serveChatCompletion,
 } from '../services/localApiServer';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {modelStore} from './ModelStore';
 
 const KEYCHAIN_SERVICE = 'local_api_server_key';
@@ -54,8 +54,8 @@ const toListenError = (error: unknown): LocalApiServerError => {
     : 'listen_failed';
 };
 
-const usableAddress = (address: string) => {
-  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(address)) {
+const usableAddress = (address: string | null) => {
+  if (address === null || !/^\d{1,3}(\.\d{1,3}){3}$/.test(address)) {
     return undefined;
   }
   const octets = address.split('.').map(Number);
@@ -331,7 +331,7 @@ class LocalApiServerStore {
 
   private async readLanAddress(): Promise<string | undefined> {
     try {
-      return usableAddress(await DeviceInfo.getIpAddress());
+      return usableAddress(await NativeHardwareInfo.getWifiIPv4());
     } catch {
       return undefined;
     }

@@ -109,6 +109,7 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     purgeNativeAllocator: jest.fn(() =>
       Promise.resolve({purged: true, rss_kb_before: 0, rss_kb_after: 0}),
     ),
+    getWifiIPv4: jest.fn(() => Promise.resolve('192.168.1.23')),
   },
 }));
 

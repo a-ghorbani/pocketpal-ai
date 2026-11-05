@@ -1,7 +1,6 @@
 import {AppState, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import * as Keychain from 'react-native-keychain';
-import DeviceInfo from 'react-native-device-info';
 import {makePersistable} from 'mobx-persist-store';
 import {LlamaContext} from 'llama.rn';
 
@@ -13,6 +12,7 @@ import {
 } from '../../../__mocks__/external/react-native-tcp-socket';
 import {mockModelStore} from '../../../__mocks__/stores/modelStore';
 import {LocalCompletionEngine} from '../../api/completionEngines';
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 
 jest.mock('../ModelStore', () => ({
   modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
@@ -33,7 +33,7 @@ const persistOptions = (makePersistable as jest.Mock).mock.calls.find(
 )?.[1];
 
 const getPassword = Keychain.getGenericPassword as jest.Mock;
-const getIpAddress = DeviceInfo.getIpAddress as jest.Mock;
+const getWifiIPv4 = NativeHardwareInfo.getWifiIPv4 as jest.Mock;
 
 const flush = async () => {
   for (let i = 0; i < 10; i++) {
@@ -110,7 +110,7 @@ describe('LocalApiServerStore lifecycle', () => {
     });
     createdServers.length = 0;
     getPassword.mockClear();
-    getIpAddress.mockClear();
+    getWifiIPv4.mockClear();
     mockModelStore.resetGenerationSlot();
     mockModelStore.engine = undefined;
   });
@@ -128,7 +128,7 @@ describe('LocalApiServerStore lifecycle', () => {
       port: 8080,
       host: '127.0.0.1',
     });
-    expect(getIpAddress).not.toHaveBeenCalled();
+    expect(getWifiIPv4).not.toHaveBeenCalled();
 
     server.emitListening();
     expect(store.status).toBe('running');
@@ -146,7 +146,7 @@ describe('LocalApiServerStore lifecycle', () => {
 
   it('falls back to the loopback URL when not on Wi-Fi', async () => {
     store.setLanEnabled(true);
-    getIpAddress.mockResolvedValueOnce('0.0.0.0');
+    getWifiIPv4.mockResolvedValueOnce(null);
     await startRunning();
     expect(store.lanAddress).toBeUndefined();
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
@@ -165,7 +165,7 @@ describe('LocalApiServerStore lifecycle', () => {
     '',
   ])('shows the loopback URL for the unusable address %p', async address => {
     store.setLanEnabled(true);
-    getIpAddress.mockResolvedValueOnce(address);
+    getWifiIPv4.mockResolvedValueOnce(address);
     await startRunning();
     expect(store.lanAddress).toBeUndefined();
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
@@ -180,7 +180,7 @@ describe('LocalApiServerStore lifecycle', () => {
     '1.2.3.255',
   ])('shows the network URL for %p', async address => {
     store.setLanEnabled(true);
-    getIpAddress.mockResolvedValueOnce(address);
+    getWifiIPv4.mockResolvedValueOnce(address);
     await startRunning();
     expect(store.baseUrl).toBe(`http://${address}:8080/v1`);
   });
@@ -189,7 +189,7 @@ describe('LocalApiServerStore lifecycle', () => {
     store.setLanEnabled(true);
     await startRunning();
     expect(store.lanAddress).toBe('192.168.1.23');
-    getIpAddress.mockResolvedValueOnce('169.254.1.1');
+    getWifiIPv4.mockResolvedValueOnce('169.254.1.1');
     appStateListener('active');
     await flush();
     expect(store.lanAddress).toBeUndefined();
@@ -333,7 +333,7 @@ describe('LocalApiServerStore lifecycle', () => {
   it('refreshes the LAN address on foreground while running', async () => {
     store.setLanEnabled(true);
     await startRunning();
-    getIpAddress.mockResolvedValueOnce('10.0.0.7');
+    getWifiIPv4.mockResolvedValueOnce('10.0.0.7');
     appStateListener('active');
     await flush();
     expect(store.baseUrl).toBe('http://10.0.0.7:8080/v1');
@@ -537,7 +537,7 @@ describe('LocalApiServerStore races and requests', () => {
     });
     createdServers.length = 0;
     getPassword.mockClear();
-    getIpAddress.mockClear();
+    getWifiIPv4.mockClear();
     mockModelStore.resetGenerationSlot();
     mockModelStore.engine = undefined;
     runInAction(() => {
@@ -554,12 +554,12 @@ describe('LocalApiServerStore races and requests', () => {
   it('never listens when toggled off while reading the Wi-Fi address', async () => {
     store.setLanEnabled(true);
     let resolveIp!: (value: string) => void;
-    getIpAddress.mockImplementationOnce(
+    getWifiIPv4.mockImplementationOnce(
       () => new Promise(resolve => (resolveIp = resolve)),
     );
     store.setEnabled(true);
     await flush();
-    expect(getIpAddress).toHaveBeenCalled();
+    expect(getWifiIPv4).toHaveBeenCalled();
     store.setEnabled(false);
     resolveIp('192.168.1.23');
     await flush();
@@ -738,7 +738,7 @@ describe('LocalApiServerStore races and requests', () => {
     expect(store.status).toBe('failed');
     expect(store.lastError).toBe('key_unavailable');
     expect(createdServers).toHaveLength(0);
-    expect(getIpAddress).not.toHaveBeenCalled();
+    expect(getWifiIPv4).not.toHaveBeenCalled();
     expect(store.hasApiKey).toBe(true);
   });
 
@@ -782,7 +782,7 @@ describe('LocalApiServerStore races and requests', () => {
 
   it('shows the loopback URL when the Wi-Fi address cannot be read', async () => {
     store.setLanEnabled(true);
-    getIpAddress.mockRejectedValueOnce(new Error('no wifi'));
+    getWifiIPv4.mockRejectedValueOnce(new Error('no wifi'));
     await startRunning();
     expect(store.lanAddress).toBeUndefined();
     expect(store.baseUrl).toBe('http://127.0.0.1:8080/v1');
