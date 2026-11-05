@@ -47,6 +47,10 @@ import {fetchRules} from '../../services/deviceRules/rules';
 import {readDeviceSignals} from '../../services/deviceRules/signals';
 import androidBundledRules from '../bundledDeviceRules/rules.android.json';
 import iosBundledRules from '../bundledDeviceRules/rules.ios.json';
+import hfGemma3VisionRepos from '../../../jest/fixtures/hfGemma3VisionRepos.json';
+import {hfAsModel} from '../../utils';
+import {processHFSearchResults} from '../../utils/hf';
+import type {HuggingFaceModel, ModelFile} from '../../utils/types';
 import {t} from '../../locales';
 import {
   getCpuCoreCount,
@@ -2913,6 +2917,171 @@ describe('ModelStore', () => {
       consoleErrorSpy.mockRestore();
       alertSpy.mockRestore();
       modelStore.addHFModel = originalAddHFModel;
+    });
+  });
+
+  describe('HF search add of a file that is also a text-only rule preset', () => {
+    type Repo = keyof typeof hfGemma3VisionRepos;
+
+    // Verbatim HF captures (/api/models/<repo>, /tree/main) put through the
+    // normalization and file-detail merge the search screen applies.
+    const searchModel = (repo: Repo): HuggingFaceModel => {
+      const {model, tree} = hfGemma3VisionRepos[repo];
+      const [processed] = processHFSearchResults([
+        model as unknown as HuggingFaceModel,
+      ]);
+      return {
+        ...processed,
+        specs: {gguf: model.gguf},
+        siblings: processed.siblings.map(file => {
+          const details = tree.find(d => d.path === file.rfilename);
+          return details
+            ? {...file, size: details.size, oid: details.oid, lfs: details.lfs}
+            : file;
+        }),
+      } as unknown as HuggingFaceModel;
+    };
+
+    const fileOf = (hfModel: HuggingFaceModel, rfilename: string): ModelFile =>
+      hfModel.siblings.find(s => s.rfilename === rfilename)!;
+
+    const cases = [
+      {
+        platform: 'ios' as const,
+        rules: iosBundledRules,
+        signals: {ramBytes: 8 * 1024 ** 3, machine: 'iPhone16,1'},
+        repo: 'ggml-org/gemma-3-4b-it-GGUF' as Repo,
+        filename: 'gemma-3-4b-it-Q4_K_M.gguf',
+        projector: 'ggml-org/gemma-3-4b-it-GGUF/mmproj-model-f16.gguf',
+      },
+      {
+        platform: 'android' as const,
+        rules: androidBundledRules,
+        signals: {ramBytes: 16 * 1e9, socModel: 'SM8850'},
+        repo: 'unsloth/gemma-3-4b-it-GGUF' as Repo,
+        filename: 'gemma-3-4b-it-Q4_0.gguf',
+        projector: 'unsloth/gemma-3-4b-it-GGUF/mmproj-BF16.gguf',
+      },
+    ];
+
+    let savedOS: typeof Platform.OS;
+    let originalExists: any;
+
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      originalExists = (RNFS.exists as jest.Mock).getMockImplementation();
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+    });
+
+    afterEach(async () => {
+      // downloadHFModel leaves an unawaited checkSpaceAndDownload chain.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      runInAction(() => {
+        modelStore.models = [];
+      });
+      Platform.OS = savedOS;
+      if (originalExists) {
+        (RNFS.exists as jest.Mock).mockImplementation(originalExists);
+      }
+    });
+
+    const seedPresets = (c: (typeof cases)[number]) => {
+      Platform.OS = c.platform;
+      const rules = parseDeviceRules(c.rules, '1.22.1');
+      expect(['high', 'flagship']).toContain(
+        classify(c.signals as any, rules.classifier, c.platform),
+      );
+      const presets = modelStore.resolvePresetModels(rules, c.signals as any);
+      runInAction(() => {
+        modelStore.models = presets;
+      });
+      const preset = modelStore.models.find(
+        m => m.id === `${c.repo}/${c.filename}`,
+      );
+      expect(preset).toMatchObject({isRulePreset: true});
+      expect(preset?.supportsMultimodal).toBeFalsy();
+      expect(preset?.compatibleProjectionModels).toBeUndefined();
+      return preset!;
+    };
+
+    const downloadedIds = () =>
+      (downloadManager.startDownload as jest.Mock).mock.calls.map(
+        ([m]) => m.id,
+      );
+
+    describe.each(cases)('$platform: $repo/$filename', c => {
+      it('baseline: with no preset, a search download is vision and fetches the projector', async () => {
+        Platform.OS = c.platform;
+        const hfModel = searchModel(c.repo);
+        await modelStore.downloadHFModel(hfModel, fileOf(hfModel, c.filename), {
+          enableVision: true,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const record = modelStore.models.find(
+          m => m.id === `${c.repo}/${c.filename}`,
+        );
+        expect(record).toMatchObject({
+          supportsMultimodal: true,
+          modelType: ModelType.VISION,
+          defaultProjectionModel: c.projector,
+        });
+        expect(downloadedIds()).toEqual([
+          `${c.repo}/${c.filename}`,
+          c.projector,
+        ]);
+      });
+
+      it('a search download over the text-only preset is vision and fetches the projector', async () => {
+        const preset = seedPresets(c);
+        const hfModel = searchModel(c.repo);
+        const modelFile = fileOf(hfModel, c.filename);
+        const fresh = hfAsModel(hfModel, modelFile);
+
+        await modelStore.downloadHFModel(hfModel, modelFile, {
+          enableVision: true,
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const record = modelStore.models.find(m => m.id === preset.id);
+        expect(record).toMatchObject({
+          supportsMultimodal: true,
+          modelType: ModelType.VISION,
+          capabilities: ['vision'],
+          compatibleProjectionModels: fresh.compatibleProjectionModels,
+          defaultProjectionModel: c.projector,
+        });
+        expect(fresh.defaultProjectionModel).toBe(c.projector);
+        expect(downloadedIds()).toEqual([preset.id, c.projector]);
+      });
+
+      it('a bookmark (addHFModel) over the text-only preset is vision', async () => {
+        const preset = seedPresets(c);
+        const hfModel = searchModel(c.repo);
+
+        await modelStore.addHFModel(hfModel, fileOf(hfModel, c.filename));
+
+        const record = modelStore.models.find(m => m.id === preset.id);
+        expect(record).toMatchObject({
+          supportsMultimodal: true,
+          modelType: ModelType.VISION,
+          defaultProjectionModel: c.projector,
+        });
+        expect(
+          modelStore.models.find(m => m.id === c.projector)?.modelType,
+        ).toBe(ModelType.PROJECTION);
+      });
+
+      it('tapping the preset in the recommended list stays text-only', async () => {
+        const preset = seedPresets(c);
+
+        await modelStore.checkSpaceAndDownload(preset.id);
+
+        expect(
+          modelStore.models.find(m => m.id === preset.id)?.supportsMultimodal,
+        ).toBeFalsy();
+        expect(downloadedIds()).toEqual([preset.id]);
+      });
     });
   });
 
