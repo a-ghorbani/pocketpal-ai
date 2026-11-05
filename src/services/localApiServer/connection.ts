@@ -1,5 +1,11 @@
 import {ResponseChannel, serveChatCompletion} from './chatCompletion';
-import {createRequestReader, HttpRequest, writeError, writeJson} from './http';
+import {
+  createRequestReader,
+  decodeUtf8,
+  HttpRequest,
+  writeError,
+  writeJson,
+} from './http';
 
 export const MAX_OPEN_CONNECTIONS = 8;
 export const MAX_ADMITTED_REQUESTS = 2;
@@ -93,8 +99,8 @@ function writeModels(channel: ResponseChannel, ctx: ConnectionContext) {
 
 /**
  * Answers one fully read request: Origin, auth, route and method first, then
- * the models list, or the JSON body served as a chat completion when a slot
- * is free.
+ * the models list, or the body, decoded only now, served as a chat completion
+ * when a slot is free.
  */
 async function route(
   request: HttpRequest,
@@ -136,9 +142,14 @@ async function route(
     writeModels(channel, ctx);
     return;
   }
+  const text = decodeUtf8(request.body);
+  if (text === undefined) {
+    writeError(channel, 400, readError(400));
+    return;
+  }
   let body: unknown;
   try {
-    body = JSON.parse(request.body);
+    body = JSON.parse(text);
   } catch {
     writeError(
       channel,

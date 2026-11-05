@@ -14,6 +14,8 @@ import {mockModelStore} from '../../../__mocks__/stores/modelStore';
 import {LocalCompletionEngine} from '../../api/completionEngines';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 
+jest.mock('buffer', () => jest.requireActual('buffer/'));
+
 jest.mock('../ModelStore', () => ({
   modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
 }));

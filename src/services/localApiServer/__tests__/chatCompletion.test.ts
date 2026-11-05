@@ -16,6 +16,8 @@ import {
   serverBaseParams,
 } from '../chatCompletion';
 
+jest.mock('buffer', () => jest.requireActual('buffer/'));
+
 const mockStore = modelStore as unknown as typeof modelStore & {
   acquireGeneration: jest.Mock;
   resetGenerationSlot(): void;

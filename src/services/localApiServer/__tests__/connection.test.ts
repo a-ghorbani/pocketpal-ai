@@ -10,6 +10,7 @@ import {
   READ_DEADLINE_MS,
 } from '../connection';
 
+jest.mock('buffer', () => jest.requireActual('buffer/'));
 jest.mock('../chatCompletion', () => ({serveChatCompletion: jest.fn()}));
 
 const serveChat = serveChatCompletion as jest.Mock;
@@ -327,13 +328,13 @@ describe('handleConnection', () => {
     expect(ctx.admitted()).toBe(0);
   });
 
-  it('reads a refused upload to its end, then answers once', async () => {
+  it('reads a refused upload to its end, then answers once, undecoded', async () => {
     const socket = connect(makeContext('secret'));
     socket.receive(
       'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\n' +
         'Authorization: Bearer wrong\r\nContent-Length: 900000\r\n\r\n',
     );
-    const chunk = new Uint8Array(100000).fill(0x61);
+    const chunk = new Uint8Array(100000).fill(0xff);
     for (let i = 0; i < 8; i++) {
       socket.receive(chunk);
     }
@@ -341,7 +342,7 @@ describe('handleConnection', () => {
     await flush();
     expect(socket.writes).toEqual([]);
 
-    socket.receive(new Uint8Array([0x61]));
+    socket.receive(new Uint8Array([0xff]));
     await flush();
     expect(socket.output.match(/HTTP\/1\.1 \d{3}/g)).toEqual(['HTTP/1.1 401']);
     expect(socket.ended).toBe(true);
@@ -502,6 +503,43 @@ describe('routing', () => {
     const {status, text} = await send(raw({method: 'GET'}));
     expect(status).toBe(405);
     expect(text).toContain('Allow: POST\r\n');
+  });
+
+  it('answers 400 bad_request for an authorized body that is not UTF-8', async () => {
+    const head =
+      'POST /v1/chat/completions HTTP/1.1\r\nAuthorization: Bearer secret\r\n' +
+      'Content-Length: 2\r\n\r\n';
+    const socket = connect(makeContext('secret'));
+    socket.receive(head);
+    socket.receive(new Uint8Array([0xc3, 0x28]));
+    await flush();
+
+    expect(socket.output).toMatch(/^HTTP\/1\.1 400 /);
+    expect(
+      JSON.parse(socket.output.slice(socket.output.indexOf('\r\n\r\n') + 4)),
+    ).toEqual({
+      error: {
+        message: 'Malformed request',
+        type: 'invalid_request_error',
+        code: 'bad_request',
+      },
+    });
+    expect(serveChat).not.toHaveBeenCalled();
+  });
+
+  it('serves a multi-byte prompt split across chunks', async () => {
+    const request = Buffer.from(
+      raw({body: '{"messages":[{"role":"user","content":"héllo 日本 👋"}]}'}),
+    );
+    const socket = connect(makeContext());
+    socket.receive(new Uint8Array(request.subarray(0, request.length - 6)));
+    socket.receive(new Uint8Array(request.subarray(request.length - 6)));
+    await flush();
+
+    expect(serveChat).toHaveBeenCalledWith(
+      {messages: [{role: 'user', content: 'héllo 日本 👋'}]},
+      expect.anything(),
+    );
   });
 
   it('answers 400 for a body that is not JSON', async () => {

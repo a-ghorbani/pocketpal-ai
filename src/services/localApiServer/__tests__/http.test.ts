@@ -1,3 +1,5 @@
+import {Buffer as PackageBuffer} from 'buffer';
+
 import {
   createRequestReader,
   decodeUtf8,
@@ -6,21 +8,28 @@ import {
   ReadResult,
   ResponseSink,
   SSE_DONE,
-  utf8ByteLength,
   writeJson,
   writeSseData,
   writeSseHead,
 } from '../http';
 
+jest.mock('buffer', () => jest.requireActual('buffer/'));
+
 const bytes = (text: string) => new Uint8Array(Buffer.from(text));
 
-const feed = (...chunks: (string | Uint8Array)[]): ReadResult => {
+/** The reader's result, with a request body shown as its decoded text. */
+const feed = (...chunks: (string | Uint8Array)[]) => {
   const reader = createRequestReader();
   let result: ReadResult = {kind: 'pending'};
   for (const chunk of chunks) {
     result = reader.push(typeof chunk === 'string' ? bytes(chunk) : chunk);
   }
-  return result;
+  return result.kind === 'request'
+    ? {
+        ...result,
+        request: {...result.request, body: decodeUtf8(result.request.body)},
+      }
+    : result;
 };
 
 const post = (body: string, extra = '') =>
@@ -87,11 +96,9 @@ describe('createRequestReader', () => {
   });
 
   it('stays pending until the whole body has arrived', () => {
-    const reader = createRequestReader();
-    expect(
-      reader.push(bytes('POST / HTTP/1.1\r\nContent-Length: 4\r\n\r\nab')),
-    ).toEqual({kind: 'pending'});
-    expect(reader.push(bytes('cd'))).toMatchObject({request: {body: 'abcd'}});
+    const head = 'POST / HTTP/1.1\r\nContent-Length: 4\r\n\r\n';
+    expect(feed(`${head}ab`)).toEqual({kind: 'pending'});
+    expect(feed(`${head}ab`, 'cd')).toMatchObject({request: {body: 'abcd'}});
   });
 
   it('answers 411 for a POST without Content-Length', () => {
@@ -116,11 +123,21 @@ describe('createRequestReader', () => {
     expect(feed(raw)).toEqual({kind: 'error', status: 400});
   });
 
-  it('answers 400 for a body that is not UTF-8', () => {
+  it('answers 400 for a head that is not UTF-8', () => {
+    expect(
+      feed(
+        bytes('GET / HTTP/1.1\r\nX-A: '),
+        new Uint8Array([0xc3, 0x28]),
+        '\r\n\r\n',
+      ),
+    ).toEqual({kind: 'error', status: 400});
+  });
+
+  it('keeps the body as bytes, undecoded', () => {
     const head = bytes('POST / HTTP/1.1\r\nContent-Length: 2\r\n\r\n');
-    expect(feed(head, new Uint8Array([0xc3, 0x28]))).toEqual({
-      kind: 'error',
-      status: 400,
+    expect(feed(head, new Uint8Array([0xc3, 0x28]))).toMatchObject({
+      kind: 'request',
+      request: {body: undefined},
     });
   });
 
@@ -157,6 +174,7 @@ describe('createRequestReader', () => {
       try {
         for (const chunk of chunks) {
           result = reader.push(chunk);
+          set.mockClear();
         }
       } finally {
         set.mockRestore();
@@ -217,12 +235,23 @@ describe('createRequestReader', () => {
   });
 });
 
-describe('utf8 helpers', () => {
-  it('round-trips through decodeUtf8 and counts bytes', () => {
-    for (const text of ['', 'a%b', 'é', '中文', '😀']) {
-      expect(decodeUtf8(bytes(text))).toBe(text);
-      expect(utf8ByteLength(text)).toBe(Buffer.byteLength(text));
-    }
+describe('decodeUtf8', () => {
+  it("runs on the buffer package, not Node's Buffer", () => {
+    expect(PackageBuffer).not.toBe(global.Buffer);
+  });
+
+  it.each(['', 'a%b', 'é', '中文', '😀', '\uFFFD'])('round-trips %j', text => {
+    expect(decodeUtf8(PackageBuffer.from(text))).toBe(text);
+  });
+
+  it.each([
+    [[0xc3, 0x28]],
+    [[0xff]],
+    [[0xc0, 0xaf]],
+    [[0xed, 0xa0, 0x80]],
+    [[0xe6, 0x97]],
+  ])('refuses the invalid sequence %j', sequence => {
+    expect(decodeUtf8(PackageBuffer.from(sequence))).toBeUndefined();
   });
 });
 

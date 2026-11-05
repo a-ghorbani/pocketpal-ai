@@ -1,3 +1,5 @@
+import {Buffer} from 'buffer';
+
 import {errorBody, WireError} from './wire';
 
 export const MAX_HEAD_BYTES = 16 * 1024;
@@ -8,7 +10,7 @@ export interface HttpRequest {
   path: string;
   /** Names lowercased; repeated headers joined with ", ". */
   headers: Record<string, string>;
-  body: string;
+  body: Buffer;
 }
 
 type RequestHead = Omit<HttpRequest, 'body'>;
@@ -23,50 +25,19 @@ export interface RequestReader {
 }
 
 const PENDING: ReadResult = {kind: 'pending'};
-const HEAD_TERMINATOR = [13, 10, 13, 10];
+const HEAD_END = '\r\n\r\n';
+const SEAM = HEAD_END.length - 1;
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
 
-const PERCENT_ENCODED = Array.from(
-  {length: 256},
-  (_, byte) => `%${byte.toString(16).padStart(2, '0')}`,
-);
-
 /** Undefined when the bytes are not valid UTF-8. */
-export function decodeUtf8(bytes: Uint8Array): string | undefined {
-  let encoded = '';
-  for (const byte of bytes) {
-    encoded +=
-      byte < 0x80 && byte !== 0x25
-        ? String.fromCharCode(byte)
-        : PERCENT_ENCODED[byte];
-  }
-  try {
-    return decodeURIComponent(encoded);
-  } catch {
-    return undefined;
-  }
+export function decodeUtf8(bytes: Buffer): string | undefined {
+  const text = bytes.toString('utf8');
+  return text.includes('\uFFFD') && !Buffer.from(text, 'utf8').equals(bytes)
+    ? undefined
+    : text;
 }
 
-export function utf8ByteLength(text: string): number {
-  let length = 0;
-  for (const char of text) {
-    const code = char.codePointAt(0)!;
-    length += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
-  }
-  return length;
-}
-
-function concat(chunks: Uint8Array[], length: number): Uint8Array {
-  const joined = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    joined.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return joined;
-}
-
-function parseHead(bytes: Uint8Array): RequestHead | undefined {
+function parseHead(bytes: Buffer): RequestHead | undefined {
   const text = decodeUtf8(bytes);
   if (text === undefined) {
     return undefined;
@@ -92,16 +63,17 @@ function parseHead(bytes: Uint8Array): RequestHead | undefined {
 
 /**
  * Reads one request from a connection's bytes, holding at most one head and
- * one body within the size limits. Everything after the first result is
- * ignored: a connection carries one request.
+ * one body within the size limits. The head is copied once, when its end
+ * arrives. Everything after the first result is ignored: a connection carries
+ * one request.
  */
 export function createRequestReader(): RequestReader {
-  let headChunks: Uint8Array[] = [];
+  let headChunks: Buffer[] = [];
   let headLength = 0;
-  let terminatorMatched = 0;
+  let headTail = '';
   let head: RequestHead | undefined;
   let bodyLength = 0;
-  const bodyChunks: Uint8Array[] = [];
+  const bodyChunks: Buffer[] = [];
   let bodyReceived = 0;
   let settled: ReadResult | undefined;
 
@@ -110,39 +82,29 @@ export function createRequestReader(): RequestReader {
     return result;
   };
 
-  const pushBody = (chunk: Uint8Array): ReadResult => {
+  const pushBody = (chunk: Buffer): ReadResult => {
     bodyChunks.push(chunk);
     bodyReceived += chunk.length;
     if (bodyReceived < bodyLength) {
       return PENDING;
     }
-    const body = decodeUtf8(
-      concat(bodyChunks, bodyReceived).subarray(0, bodyLength),
-    );
-    if (body === undefined) {
-      return settle({kind: 'error', status: 400});
-    }
+    const body = Buffer.concat(bodyChunks, bodyReceived).slice(0, bodyLength);
     return settle({kind: 'request', request: {...head!, body}});
   };
 
-  const offsetAfterHeadEnd = (chunk: Uint8Array): number => {
-    for (let i = 0; i < chunk.length; i++) {
-      const byte = chunk[i];
-      if (byte === HEAD_TERMINATOR[terminatorMatched]) {
-        terminatorMatched += 1;
-      } else {
-        terminatorMatched = byte === HEAD_TERMINATOR[0] ? 1 : 0;
-      }
-      if (terminatorMatched === HEAD_TERMINATOR.length) {
-        return i + 1;
-      }
+  const offsetAfterHeadEnd = (chunk: Buffer): number => {
+    const seam = headTail + chunk.toString('latin1', 0, SEAM);
+    const atSeam = seam.indexOf(HEAD_END);
+    if (atSeam >= 0 && atSeam < headTail.length) {
+      return atSeam + HEAD_END.length - headTail.length;
     }
-    return -1;
+    const inChunk = chunk.indexOf(HEAD_END);
+    return inChunk < 0 ? -1 : inChunk + HEAD_END.length;
   };
 
-  const pushHead = (chunk: Uint8Array): ReadResult => {
+  const pushHead = (chunk: Buffer): ReadResult => {
     const end = offsetAfterHeadEnd(chunk);
-    const headPart = end < 0 ? chunk : chunk.subarray(0, end);
+    const headPart = end < 0 ? chunk : chunk.slice(0, end);
     headLength += headPart.length;
     if (headLength > MAX_HEAD_BYTES) {
       headChunks = [];
@@ -150,13 +112,13 @@ export function createRequestReader(): RequestReader {
     }
     headChunks.push(headPart);
     if (end < 0) {
+      const last = chunk.toString('latin1', Math.max(0, chunk.length - SEAM));
+      headTail = (headTail + last).slice(-SEAM);
       return PENDING;
     }
-    const headBytes = concat(headChunks, headLength);
+    const headBytes = Buffer.concat(headChunks, headLength);
     headChunks = [];
-    head = parseHead(
-      headBytes.subarray(0, headLength - HEAD_TERMINATOR.length),
-    );
+    head = parseHead(headBytes.slice(0, headLength - HEAD_END.length));
     if (!head) {
       return settle({kind: 'error', status: 400});
     }
@@ -176,18 +138,16 @@ export function createRequestReader(): RequestReader {
     if (bodyLength > MAX_BODY_BYTES) {
       return settle({kind: 'error', status: 413});
     }
-    return pushBody(chunk.subarray(end));
+    return pushBody(chunk.slice(end));
   };
 
   return {
-    push(chunk) {
+    push(data) {
       if (settled) {
         return settled;
       }
-      if (!head) {
-        return pushHead(chunk);
-      }
-      return pushBody(chunk);
+      const chunk = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+      return head ? pushBody(chunk) : pushHead(chunk);
     },
   };
 }
@@ -228,7 +188,7 @@ export function writeJson(
   sink.write(
     responseHead(status, {
       'Content-Type': 'application/json',
-      'Content-Length': String(utf8ByteLength(text)),
+      'Content-Length': String(Buffer.byteLength(text)),
       ...headers,
     }) + text,
   );
