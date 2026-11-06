@@ -386,26 +386,13 @@ describe('MarkdownView', () => {
     });
   });
 
+  it('never turns on the streaming fade-in', () => {
+    render(<MarkdownView markdownText="a" maxMessageWidth={300} />);
+
+    expect(lastProps()).not.toHaveProperty('streamingAnimation');
+  });
+
   describe('memo', () => {
-    it('re-renders when only streamingAnimation changes', () => {
-      const {rerender} = render(
-        <MarkdownView
-          markdownText="a"
-          maxMessageWidth={300}
-          streamingAnimation
-        />,
-      );
-      rerender(
-        <MarkdownView
-          markdownText="a"
-          maxMessageWidth={300}
-          streamingAnimation={false}
-        />,
-      );
-
-      expect(lastProps().streamingAnimation).toBe(false);
-    });
-
     it('re-renders when only selectable changes', () => {
       const {rerender} = render(
         <MarkdownView markdownText="a" maxMessageWidth={300} selectable />,

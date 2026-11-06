@@ -61,7 +61,6 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
    * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
-  isActiveRun?: boolean;
 }
 
 const keepTouchOnThumbnail = (event: GestureResponderEvent) =>
@@ -69,7 +68,6 @@ const keepTouchOnThumbnail = (event: GestureResponderEvent) =>
 
 export const TextMessage = ({
   enableAnimation,
-  isActiveRun,
   message,
   messageWidth,
   onPreviewDataFetched,
@@ -286,7 +284,6 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={!isUserRow}
             blockContextMenu={!isUserRow}
-            streamingAnimation={isActiveRun === true && step?.partial === true}
           />
         </View>
       )}

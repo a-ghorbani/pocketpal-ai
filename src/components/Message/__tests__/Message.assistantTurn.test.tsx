@@ -910,7 +910,7 @@ describe('Message — AssistantTurn renderer', () => {
   });
 });
 
-describe('Message — streaming animation on step content', () => {
+describe('Message — step content markdown', () => {
   const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
   const {TextMessage} = require('../../TextMessage/TextMessage');
   const markdownSpy = EnrichedMarkdownText as jest.Mock;
@@ -929,65 +929,24 @@ describe('Message — streaming animation on step content', () => {
     (TextMessage as jest.Mock).mockImplementation(recordingTextMessage);
   });
 
-  const step = (partial: boolean): AgentStep => ({content: 'Hi', partial});
-
-  const renderRow = (steps: AgentStep[], isActiveRun: boolean) => (
-    <Message
-      message={makeDerivedTurn(steps)}
-      messageWidth={440}
-      isActiveRun={isActiveRun}
-      roundBorder
-      showAvatar
-      showName
-      showStatus
-    />
-  );
-
-  const animationFlags = () =>
-    markdownSpy.mock.calls.map(([props]) => props.streamingAnimation);
-
-  it('animates the live step of the active row', () => {
-    render(renderRow([step(true)], true));
-
-    expect(animationFlags()).toEqual([true]);
-  });
-
-  it('animates only the partial step of a multi-step active row', () => {
-    render(renderRow([step(false), step(true)], true));
-
-    expect(animationFlags()).toEqual([false, true]);
-  });
-
-  it('does not animate a finished step on the active row', () => {
-    render(renderRow([step(false)], true));
-
-    expect(animationFlags()).toEqual([false]);
-  });
-
-  it('does not animate a stale partial step once the row is no longer active', () => {
-    render(renderRow([step(true)], false));
-
-    expect(animationFlags()).toEqual([false]);
-  });
-
-  it('drops the flag in place when the run ends with unchanged text', () => {
-    const {rerender} = render(renderRow([step(true)], true));
-    rerender(renderRow([step(true)], false));
-
-    expect(animationFlags()[animationFlags().length - 1]).toBe(false);
-  });
-
   it('marks step content selectable', () => {
-    render(renderRow([step(false)], false));
+    render(
+      <Message
+        message={makeDerivedTurn([{content: 'Hi', partial: false}])}
+        messageWidth={440}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
 
     expect(markdownSpy.mock.calls[0][0].selectable).toBe(true);
   });
 });
 
-describe('Message — streaming animation on reasoning', () => {
-  const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+describe('Message — reasoning card', () => {
   const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
-  const markdownSpy = EnrichedMarkdownText as jest.Mock;
   const recordingReasoningBlock = (
     ReasoningBlock as jest.Mock
   ).getMockImplementation();
@@ -1000,93 +959,36 @@ describe('Message — streaming animation on reasoning', () => {
         props,
       ),
     );
-    markdownSpy.mockClear();
   });
 
   afterEach(() => {
     (ReasoningBlock as jest.Mock).mockImplementation(recordingReasoningBlock);
   });
 
-  const openFence = 'Plan\n```py\nx=1';
-  const reasoningStep = (overrides: Partial<AgentStep> = {}): AgentStep => ({
-    content: '',
-    reasoningContent: openFence,
-    partial: true,
-    ...overrides,
-  });
-
-  const renderRow = (
-    turn: MessageType.DerivedAssistantTurn,
-    isActiveRun: boolean,
-  ) => (
-    <Message
-      message={turn}
-      messageWidth={440}
-      isActiveRun={isActiveRun}
-      roundBorder
-      showAvatar
-      showName
-      showStatus
-    />
-  );
-
-  const animationFlags = () =>
-    markdownSpy.mock.calls.map(([props]) => props.streamingAnimation);
-
-  it('animates reasoning that streams before any content on the active row', () => {
-    render(renderRow(makeDerivedTurn([reasoningStep()]), true));
-
-    expect(animationFlags()).toEqual([true]);
-  });
-
-  it('stops animating once content starts on the same partial step, as the card collapses', () => {
+  it('collapses once content starts on the same partial step', () => {
     const {getByTestId} = render(
-      renderRow(makeDerivedTurn([reasoningStep({content: 'Answer'})]), true),
+      <Message
+        message={makeDerivedTurn([
+          {
+            content: 'Answer',
+            reasoningContent: 'Plan\n```py\nx=1',
+            partial: true,
+          },
+        ])}
+        messageWidth={440}
+        isActiveRun
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
     );
 
-    expect(animationFlags().length).toBeGreaterThan(0);
-    expect(animationFlags()).not.toContain(true);
     expect(getByTestId('thinking-bubble-collapsed')).toBeTruthy();
-  });
-
-  it('does not animate a stale partial step once the row is no longer active', () => {
-    render(renderRow(makeDerivedTurn([reasoningStep()]), false));
-
-    expect(animationFlags()).toEqual([false]);
-  });
-
-  it('does not animate the reasoning of a finished earlier step', () => {
-    render(
-      renderRow(
-        makeDerivedTurn([
-          reasoningStep({partial: false}),
-          reasoningStep({reasoningContent: 'Next'}),
-        ]),
-        true,
-      ),
-    );
-
-    expect(markdownSpy.mock.calls[0][0]).toEqual(
-      expect.objectContaining({markdown: openFence, streamingAnimation: false}),
-    );
-    expect(
-      markdownSpy.mock.calls.find(([props]) => props.markdown === 'Next')?.[0]
-        .streamingAnimation,
-    ).toBe(true);
-  });
-
-  it('drops the flag in place when the run stops mid-reasoning', () => {
-    const turn = makeDerivedTurn([reasoningStep()]);
-    const {rerender} = render(renderRow(turn, true));
-    rerender(renderRow(turn, false));
-
-    const flags = animationFlags();
-    expect(flags[0]).toBe(true);
-    expect(flags[flags.length - 1]).toBe(false);
   });
 });
 
-describe('Message — reasoning flag and collapse trigger agree', () => {
+describe('Message — reasoning collapse trigger', () => {
   const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
   const reasoningBlock = ReasoningBlock as jest.Mock;
 
@@ -1104,7 +1006,7 @@ describe('Message — reasoning flag and collapse trigger agree', () => {
   }
 
   it.each(cases)(
-    'never animates a collapsing card (active %s, partial %s, content %j)',
+    'collapses once content starts or the step ends (active %s, partial %s, content %j)',
     (isActiveRun, partial, content) => {
       render(
         <Message
@@ -1122,12 +1024,7 @@ describe('Message — reasoning flag and collapse trigger agree', () => {
 
       expect(reasoningBlock).toHaveBeenCalled();
       for (const [props] of reasoningBlock.mock.calls) {
-        if (props.streamingAnimation) {
-          expect(props.autoCollapse).toBe(false);
-        }
-        if (isActiveRun && partial !== undefined) {
-          expect(props.streamingAnimation).toBe(!props.autoCollapse);
-        }
+        expect(props.autoCollapse).toBe(content !== '' || partial === false);
       }
     },
   );

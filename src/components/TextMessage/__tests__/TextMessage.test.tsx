@@ -122,14 +122,13 @@ describe('text message', () => {
       (EnrichedMarkdownText as jest.Mock).mockClear();
     });
 
-    it('renders an assistant message without a step selectable and never animated', () => {
+    it('renders an assistant message without a step selectable', () => {
       renderWithProviders(
         <TextMessage
           message={{...derivedTextMessage, author: assistant, text: 'Hi'}}
           messageWidth={440}
           showName={false}
           usePreviewData={false}
-          isActiveRun
         />,
       );
 
@@ -137,7 +136,6 @@ describe('text message', () => {
         expect.objectContaining({
           selectable: true,
           enableBlockContextMenu: true,
-          streamingAnimation: false,
         }),
       );
     });
