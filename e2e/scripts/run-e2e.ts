@@ -804,7 +804,7 @@ export function parseJunitSuites(content: string): {
   counts: JunitCounts;
 } {
   const counts: JunitCounts = {tests: 0, failures: 0, errors: 0, skipped: 0};
-  const suites = content.match(/<testsuite[\s\S]*?<\/testsuite>/g) ?? [];
+  const suites = content.match(/<testsuite[\s>][\s\S]*?<\/testsuite>/g) ?? [];
 
   for (const suite of suites) {
     const testsMatch = suite.match(/tests="(\d+)"/);
