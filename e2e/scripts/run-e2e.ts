@@ -833,7 +833,7 @@ export function parseJunitSuites(content: string): {
 
 /**
  * Sums the JUnit reports wdio wrote directly into one run's report directory.
- * Returns null when there are none (e.g. device-farm runs).
+ * Returns null when there are none, as when a worker wrote no report.
  */
 export function readRunJunitCounts(runReportDir: string): JunitCounts | null {
   let files: string[];
