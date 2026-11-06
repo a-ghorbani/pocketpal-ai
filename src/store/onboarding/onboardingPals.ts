@@ -120,11 +120,11 @@ const PAL_PIP: OnboardingPalDef = {
     palEntry({
       tier: 'quick',
       recommended: false,
-      repo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
-      filename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
-      params: 1170340608,
-      displayName: 'LFM2.5 1.2B',
-      sizeBytes: 730895168,
+      repo: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
+      filename: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      params: 494032768,
+      displayName: 'Qwen2.5 0.5B (NJIT Fast)',
+      sizeBytes: 397742080,
     }),
     palEntry({
       tier: 'balanced',
@@ -215,11 +215,11 @@ const PAL_SAGE: OnboardingPalDef = {
     palEntry({
       tier: 'quick',
       recommended: false,
-      repo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
-      filename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
-      params: 1170340608,
-      displayName: 'LFM2.5 1.2B',
-      sizeBytes: 730895168,
+      repo: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
+      filename: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      params: 494032768,
+      displayName: 'Qwen2.5 0.5B (NJIT Fast)',
+      sizeBytes: 397742080,
     }),
     palEntry({
       tier: 'balanced',
