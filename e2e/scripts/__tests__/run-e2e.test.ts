@@ -11,9 +11,16 @@
  */
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {test} from 'node:test';
 
-import {classifyCleanRun, parseJunitSuites} from '../run-e2e';
+import {
+  classifyCleanRun,
+  parseJunitSuites,
+  readRunJunitCounts,
+} from '../run-e2e';
 
 interface SuiteCounts {
   tests: number;
@@ -148,4 +155,23 @@ test('a run with an empty report is passed', () => {
     '<testsuites tests="0" failures="0" errors="0" skipped="0"/>',
   );
   assert.equal(classifyCleanRun(counts), 'passed');
+});
+
+test('a run ignores a merged junit-results.xml left in its report dir', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-test-'));
+  try {
+    fs.writeFileSync(
+      path.join(dir, 'junit-results.xml'),
+      report({tests: 3, skipped: 0}),
+    );
+    fs.writeFileSync(
+      path.join(dir, 'junit-model.xml'),
+      report({tests: 2, skipped: 2}),
+    );
+    const counts = readRunJunitCounts(dir);
+    assert.deepEqual(counts, {tests: 2, failures: 0, errors: 0, skipped: 2});
+    assert.equal(classifyCleanRun(counts), 'skipped');
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
 });

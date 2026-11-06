@@ -791,6 +791,8 @@ function runSingleTest(opts: {
 // JUnit Merging
 // ---------------------------------------------------------------------------
 
+const MERGED_JUNIT_FILE = 'junit-results.xml';
+
 interface JunitCounts {
   tests: number;
   failures: number;
@@ -833,12 +835,17 @@ export function parseJunitSuites(content: string): {
  * Sums the JUnit reports wdio wrote directly into one run's report directory.
  * Returns null when there are none (e.g. device-farm runs).
  */
-function readRunJunitCounts(runReportDir: string): JunitCounts | null {
+export function readRunJunitCounts(runReportDir: string): JunitCounts | null {
   let files: string[];
   try {
     files = fs
       .readdirSync(runReportDir)
-      .filter(name => name.startsWith('junit-') && name.endsWith('.xml'));
+      .filter(
+        name =>
+          name.startsWith('junit-') &&
+          name.endsWith('.xml') &&
+          name !== MERGED_JUNIT_FILE,
+      );
   } catch {
     return null;
   }
@@ -901,7 +908,7 @@ function mergeJUnitReports(reportDir: string): void {
 ${testSuites.join('\n')}
 </testsuites>`;
 
-  const mergedPath = path.join(reportDir, 'junit-results.xml');
+  const mergedPath = path.join(reportDir, MERGED_JUNIT_FILE);
   fs.writeFileSync(mergedPath, mergedXml);
   console.log(
     `\nMerged ${junitFiles.length} JUnit reports into: ${mergedPath}`,
