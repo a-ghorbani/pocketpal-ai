@@ -48,6 +48,7 @@ import {
   formatNumber,
   isMTPCapable,
   isDraftOnlyModel,
+  formatBytes,
 } from '../../../utils';
 
 import {
@@ -60,6 +61,8 @@ import {
   XIcon,
   ChevronSelectorVerticalIcon,
   ChevronSelectorExpandedVerticalIcon,
+  DownloadIcon,
+  EyeOffIcon,
 } from '../../../assets/icons';
 
 type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
@@ -138,11 +141,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);
-    const hasProjectionModelWarning =
+    const usesProjector =
       isDownloaded &&
       model.supportsMultimodal &&
-      modelStore.getModelVisionPreference(model) && // Only show warning when vision is enabled
-      projectionModelStatus.state === 'missing';
+      modelStore.getModelVisionPreference(model);
+    const hasProjectionModelWarning =
+      usesProjector && projectionModelStatus.state === 'missing';
+    const isProjectorDownloading =
+      usesProjector && projectionModelStatus.state === 'downloading';
 
     // Check integrity when model is downloaded (skip remote models — no local file)
     useEffect(() => {
@@ -683,6 +689,70 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     };
 
+    const renderProjectorOffer = () => {
+      const projectorOffer = l10n.models.modelCard.projectorOffer;
+      if (isProjectorDownloading) {
+        const progress = projectionModelStatus.projectionModel?.progress ?? 0;
+        return (
+          <View
+            testID="projector-download-progress"
+            style={styles.projectorProgress}>
+            <Text style={styles.projectorProgressText}>
+              {t(projectorOffer.downloading, {progress: Math.round(progress)})}
+            </Text>
+            <ProgressBar
+              progress={progress / 100}
+              color={theme.colors.tertiary}
+              style={styles.projectorProgressBar}
+            />
+          </View>
+        );
+      }
+      if (!hasProjectionModelWarning) {
+        return null;
+      }
+      const projectorSize = projectionModelStatus.projectionModel?.size
+        ? formatBytes(
+            projectionModelStatus.projectionModel.size,
+            0,
+            false,
+            true,
+          )
+        : undefined;
+      return (
+        <TouchableOpacity
+          testID="projection-warning-badge"
+          onPress={handleProjectionWarningPress}
+          style={styles.projectorOffer}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={
+            projectorSize
+              ? t(projectorOffer.a11yWithSize, {size: projectorSize})
+              : l10n.models.modelCard.labels.downloadProjectionModel
+          }>
+          <EyeOffIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.iconModelTypeVision}
+          />
+          <Text style={styles.projectorOfferTitle}>
+            {projectorOffer.rowTitle}
+          </Text>
+          <View style={styles.projectorOfferAction}>
+            <DownloadIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.primary}
+            />
+            <Text style={styles.projectorOfferActionText}>
+              {projectorSize ?? projectorOffer.download}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    };
+
     return (
       <>
         <Card elevation={0} style={styles.card} testID={`model-card-${cardId}`}>
@@ -815,6 +885,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             {/* Action Buttons Section */}
             <View style={styles.actionButtonsContainer}>
               {renderActionButtons()}
+              {renderProjectorOffer()}
             </View>
 
             {isExpanded && (
@@ -986,19 +1057,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     </View>
                   )}
                 </View>
-
-                {/* Projection model warning */}
-                {hasProjectionModelWarning && (
-                  <TouchableOpacity
-                    testID="projection-warning-badge"
-                    onPress={handleProjectionWarningPress}
-                    style={styles.warningButton}
-                    activeOpacity={0.7}>
-                    <Text style={styles.warningButtonText}>
-                      {l10n.models.modelCard.labels.downloadProjectionModel}
-                    </Text>
-                  </TouchableOpacity>
-                )}
 
                 {/* HuggingFace Link */}
                 {model.hfUrl && (
