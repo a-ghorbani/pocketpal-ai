@@ -139,6 +139,24 @@ export const createStyles = (theme: Theme) =>
       padding: 16,
       paddingBottom: 32,
     },
+    titleWithBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    plusBadge: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    teaserBody: {
+      color: theme.colors.onSurfaceVariant,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
     keySheetActions: {
       width: '100%',
       flexDirection: 'row',

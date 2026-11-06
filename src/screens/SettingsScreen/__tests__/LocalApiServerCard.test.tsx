@@ -7,8 +7,15 @@ import {Keyboard} from 'react-native';
 import {render, fireEvent, act} from '../../../../jest/test-utils';
 import {mockLocalApiServerStore as store} from '../../../../__mocks__/stores/localApiServerStore';
 import {mockModelStore} from '../../../../__mocks__/stores/modelStore';
+import {mockPurchaseStore} from '../../../../__mocks__/stores/purchaseStore';
+import {openPlus} from '../../../services/plus/gate';
 
 import {LocalApiServerCard} from '../LocalApiServerCard';
+
+jest.mock('../../../services/plus/gate', () => ({
+  ...jest.requireActual('../../../services/plus/gate'),
+  openPlus: jest.fn(),
+}));
 
 const mockSheetProps: any[] = [];
 
@@ -29,12 +36,20 @@ jest.mock('../../../components/Sheet/Sheet', () => {
     );
   };
   MockSheet.ScrollView = ({children}: any) => <View>{children}</View>;
+  MockSheet.View = ({children, testID}: any) => (
+    <View testID={testID}>{children}</View>
+  );
   MockSheet.Actions = ({children}: any) => <View>{children}</View>;
   return {Sheet: MockSheet};
 });
 
 const setState = (state: Partial<typeof store>) =>
   runInAction(() => Object.assign(store, state));
+
+const setPlusUnlocked = (unlocked: boolean) =>
+  runInAction(() => {
+    mockPurchaseStore.plusUnlocked = unlocked;
+  });
 
 describe('LocalApiServerCard', () => {
   beforeEach(() => {
@@ -50,6 +65,11 @@ describe('LocalApiServerCard', () => {
       baseUrl: undefined,
       servedModelId: undefined,
     });
+    setPlusUnlocked(true);
+  });
+
+  afterEach(() => {
+    setPlusUnlocked(false);
   });
 
   it('renders the stopped state with editable config', () => {
@@ -363,8 +383,113 @@ describe('LocalApiServerCard', () => {
   it('opens the key sheet at one of its own snap points', () => {
     const {getByTestId} = render(<LocalApiServerCard />);
     fireEvent.press(getByTestId('local-api-server-key-button'));
-    const props = mockSheetProps[mockSheetProps.length - 1];
+    const props = mockSheetProps.filter(({title}) => title === 'API key').pop();
     expect(props.isVisible).toBe(true);
     expect(props.index ?? 0).toBeLessThan(props.snapPoints.length);
+  });
+
+  describe('behind Plus', () => {
+    const teaserTitle = 'Local API server is a Plus feature';
+
+    beforeEach(() => {
+      setPlusUnlocked(false);
+    });
+
+    it('shows the Plus badge and hint only while locked', () => {
+      const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+      expect(getByTestId('local-api-server-lock')).toBeTruthy();
+      expect(
+        getByTestId('local-api-server-switch').props.accessibilityHint,
+      ).toBe('Plus feature. Opens details.');
+
+      act(() => setPlusUnlocked(true));
+      expect(queryByTestId('local-api-server-lock')).toBeNull();
+      expect(
+        getByTestId('local-api-server-switch').props.accessibilityHint,
+      ).toBeUndefined();
+    });
+
+    it('commits a typed port, then opens the teaser instead of enabling', () => {
+      const {getByTestId, getByText} = render(<LocalApiServerCard />);
+      fireEvent.changeText(getByTestId('local-api-server-port-input'), '9090');
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+
+      expect(store.setPort).toHaveBeenCalledWith(9090);
+      expect(store.setEnabled).not.toHaveBeenCalled();
+      expect(getByTestId('local-api-server-switch').props.value).toBe(false);
+      expect(getByTestId('local-api-server-teaser')).toBeTruthy();
+      expect(getByTestId('sheet-title').props.children).toBe(teaserTitle);
+      expect(
+        getByText('Let other apps use the model loaded on this phone.'),
+      ).toBeTruthy();
+    });
+
+    it('keeps the port hint and no teaser for an out-of-range port', () => {
+      const {getByTestId, getByText, queryByTestId} = render(
+        <LocalApiServerCard />,
+      );
+      fireEvent.changeText(getByTestId('local-api-server-port-input'), '80');
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+
+      expect(getByText('Use a port from 1024 to 65535')).toBeTruthy();
+      expect(queryByTestId('local-api-server-teaser')).toBeNull();
+      expect(store.setEnabled).not.toHaveBeenCalled();
+    });
+
+    it('opens Plus from the teaser and enables once Plus unlocks', () => {
+      const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+      fireEvent.press(getByTestId('local-api-server-teaser-get-plus'));
+
+      expect(queryByTestId('local-api-server-teaser')).toBeNull();
+      expect(openPlus).toHaveBeenCalledTimes(1);
+      expect(store.setEnabled).not.toHaveBeenCalled();
+
+      const {onUnlocked} = (openPlus as jest.Mock).mock.calls[0][0];
+      onUnlocked();
+      expect(store.setEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it('closes the teaser on Not now without enabling', () => {
+      const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', true);
+      fireEvent.press(getByTestId('local-api-server-teaser-not-now'));
+
+      expect(queryByTestId('local-api-server-teaser')).toBeNull();
+      expect(openPlus).not.toHaveBeenCalled();
+      expect(store.setEnabled).not.toHaveBeenCalled();
+    });
+
+    it('turns a running server off without the teaser', () => {
+      setState({enabled: true, status: 'running'});
+      const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+      fireEvent(getByTestId('local-api-server-switch'), 'onValueChange', false);
+
+      expect(store.setEnabled).toHaveBeenCalledWith(false);
+      expect(queryByTestId('local-api-server-teaser')).toBeNull();
+    });
+
+    describe('in a build without the store gate', () => {
+      beforeEach(() => {
+        (global as any).__PLUS_STORE_GATE__ = false;
+      });
+
+      afterEach(() => {
+        (global as any).__PLUS_STORE_GATE__ = true;
+      });
+
+      it('shows no badge or teaser and enables directly', () => {
+        const {getByTestId, queryByTestId} = render(<LocalApiServerCard />);
+        expect(queryByTestId('local-api-server-lock')).toBeNull();
+
+        fireEvent(
+          getByTestId('local-api-server-switch'),
+          'onValueChange',
+          true,
+        );
+        expect(queryByTestId('local-api-server-teaser')).toBeNull();
+        expect(store.setEnabled).toHaveBeenCalledWith(true);
+      });
+    });
   });
 });
