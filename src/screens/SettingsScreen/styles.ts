@@ -152,6 +152,9 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    teaserSheetContent: {
+      paddingTop: 44,
+    },
     teaserBody: {
       color: theme.colors.onSurfaceVariant,
       paddingHorizontal: 16,

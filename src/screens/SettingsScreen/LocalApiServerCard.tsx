@@ -311,7 +311,9 @@ export const LocalApiServerCard: React.FC = observer(() => {
         isVisible={teaserVisible}
         onClose={closeTeaser}
         title={copy.teaserTitle}>
-        <Sheet.View testID="local-api-server-teaser">
+        <Sheet.View
+          testID="local-api-server-teaser"
+          style={styles.teaserSheetContent}>
           <Text variant="bodyMedium" style={styles.teaserBody}>
             {copy.teaserBody}
           </Text>
