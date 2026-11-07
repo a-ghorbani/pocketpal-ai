@@ -1069,3 +1069,16 @@ index 451f652..54fb9ff 100644
  
      NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"GGML_METAL_PATH_RESOURCES"];
      if (path_resource) {
+diff --git a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
+index 6724826..9dc1388 100644
+--- a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
++++ b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
+@@ -4301,7 +4301,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_q3_k_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_q3_k_q8_1_dp4a.cl.h"
