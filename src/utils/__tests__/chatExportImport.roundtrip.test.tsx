@@ -536,6 +536,136 @@ describe('chat export -> import round trip', () => {
       }
     });
 
+    const call = (id: string, name: string, extra: Row = {}) => ({
+      id,
+      type: 'function',
+      function: {name, arguments: '{}'},
+      ...extra,
+    });
+    const outcome = (callId: string, toolName: string, result: Row) => ({
+      callId,
+      toolName,
+      result: {summary: 's', ...result},
+      responseContent: 's',
+    });
+    const hit = {url: 'https://a.example/', title: 'A', snippet: 'a'};
+    const wellFormedStep = {
+      content: 'Used every tool',
+      toolCalls: [
+        call('c1', 'web_search', {metrics: {tokens: 3, durationMs: 10}}),
+        call('c2', 'render_html'),
+        {id: 'c3', function: {name: 'read_url', arguments: {url: hit.url}}},
+        call('c4', 'speak'),
+        call('c5', 'render_html'),
+        call('c6', 'read_url'),
+        call('c7', 'render_html'),
+      ],
+      toolOutcomes: [
+        outcome('c1', 'web_search', {
+          type: 'search',
+          query: 'q',
+          results: [hit],
+        }),
+        outcome('c2', 'render_html', {type: 'html', html: '<p/>', title: 'T'}),
+        outcome('c3', 'read_url', {type: 'text', links: [hit.url]}),
+        outcome('c4', 'speak', {type: 'audio', audioUri: 'file:///a.wav'}),
+        outcome('c5', 'render_html', {type: 'error', errorMessage: 'boom'}),
+        outcome('c6', 'read_url', {type: 'text'}),
+        outcome('c7', 'render_html', {type: 'html', html: '<p/>'}),
+      ],
+    };
+
+    it('keeps a step whose tool calls and results of every type are well formed', async () => {
+      registerDefaultTalentUIs();
+      const {steps} = await importReply({
+        text: 'Exported answer',
+        metadata: {steps: [wellFormedStep]},
+      });
+      expect(steps).toEqual([wellFormedStep]);
+      expect(() =>
+        render(<TalentSurface step={steps[0]} />, {withNavigation: true}),
+      ).not.toThrow();
+    });
+
+    const withCall = (index: number, value: unknown) => ({
+      ...wellFormedStep,
+      toolCalls: wellFormedStep.toolCalls.map((c, i) =>
+        i === index ? value : c,
+      ),
+    });
+    const withOutcome = (index: number, change: (o: Row) => unknown) => ({
+      ...wellFormedStep,
+      toolOutcomes: wellFormedStep.toolOutcomes.map((o, i) =>
+        i === index ? change(o) : o,
+      ),
+    });
+    const withResult = (index: number, result: Row) =>
+      withOutcome(index, o => ({...o, result: {...o.result, ...result}}));
+    const withHit = (value: unknown) => withResult(0, {results: [hit, value]});
+
+    it.each([
+      ['a call id is not a string', withCall(1, call(7 as any, 'render_html'))],
+      ['a call has no function', withCall(1, {id: 'c2'})],
+      [
+        'a call function name is not a string',
+        withCall(1, {id: 'c2', function: {name: 1, arguments: '{}'}}),
+      ],
+      [
+        'a call function has no arguments',
+        withCall(1, {id: 'c2', function: {name: 'render_html'}}),
+      ],
+      [
+        'call metrics are not numbers',
+        withCall(
+          0,
+          call('c1', 'web_search', {metrics: {tokens: '3', durationMs: 10}}),
+        ),
+      ],
+      [
+        'call metrics have no duration',
+        withCall(0, call('c1', 'web_search', {metrics: {tokens: 3}})),
+      ],
+      ['an outcome is not an object', withOutcome(1, () => 'x')],
+      [
+        'an outcome callId is not a string',
+        withOutcome(1, o => ({...o, callId: 2})),
+      ],
+      [
+        'an outcome has no toolName',
+        withOutcome(1, o => ({...o, toolName: undefined})),
+      ],
+      [
+        'an outcome has no responseContent',
+        withOutcome(1, o => ({...o, responseContent: undefined})),
+      ],
+      ['a result has no summary', withResult(1, {summary: undefined})],
+      ['a result type is unknown', withResult(1, {type: 'video'})],
+      [
+        'a result type is an Object.prototype key',
+        withResult(1, {type: 'toString'}),
+      ],
+      ['an html result has no html', withResult(1, {html: undefined})],
+      ['an html result title is not a string', withResult(1, {title: {}})],
+      ['a text result links is not an array', withResult(2, {links: 'x'})],
+      ['a text result link is not a string', withResult(2, {links: [null]})],
+      ['an audio result has no audioUri', withResult(3, {audioUri: undefined})],
+      [
+        'an error result has no errorMessage',
+        withResult(4, {errorMessage: undefined}),
+      ],
+      ['a search result query is not a string', withResult(0, {query: 5})],
+      ['a search hit url is not a string', withHit({...hit, url: undefined})],
+      ['a search hit title is not a string', withHit({...hit, title: {}})],
+      ['a search hit snippet is not a string', withHit({...hit, snippet: []})],
+    ])('restores the exported text as one step when %s', async (_, step) => {
+      expect(
+        await importReply({text: 'Exported answer', metadata: {steps: [step]}}),
+      ).toEqual({
+        steps: [{content: 'Exported answer'}],
+        text: 'Exported answer',
+      });
+    });
+
     it('imports an empty reply when there are no steps and the text is empty', async () => {
       expect(await importReply({text: '', metadata: {}})).toEqual({
         steps: [],

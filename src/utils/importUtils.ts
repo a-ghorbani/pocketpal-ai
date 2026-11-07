@@ -10,11 +10,21 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
-import {AgentStep, MessageType} from './types';
+import {
+  AgentStep,
+  AgentToolCall,
+  AgentToolCallMetrics,
+  AgentToolOutcome,
+  MessageType,
+} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
 import type {Pal, ParameterDefinition} from '../types/pal';
+import type {
+  TalentResult,
+  WebSearchResultItem,
+} from '../services/talents/types';
 
 /**
  * Interface for imported chat session data
@@ -211,16 +221,71 @@ export const importChatSessions = async (): Promise<number> => {
 const isPlainObject = (value: unknown): value is Record<string, any> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isNumber = (value: unknown): value is number => typeof value === 'number';
+
+const arrayOf =
+  <T>(isItem: (item: unknown) => item is T) =>
+  (value: unknown): value is T[] =>
+    Array.isArray(value) && value.every(isItem);
+
+const isAbsentOr = <T>(
+  value: unknown,
+  isPresent: (item: unknown) => item is T,
+): value is T | null | undefined => value == null || isPresent(value);
+
+const isToolCallMetrics = (value: unknown): value is AgentToolCallMetrics =>
+  isPlainObject(value) && isNumber(value.tokens) && isNumber(value.durationMs);
+
+const isToolCall = (value: unknown): value is AgentToolCall =>
+  isPlainObject(value) &&
+  isString(value.id) &&
+  isPlainObject(value.function) &&
+  isString(value.function.name) &&
+  (isString(value.function.arguments) ||
+    isPlainObject(value.function.arguments)) &&
+  isAbsentOr(value.metrics, isToolCallMetrics);
+
+const isSearchHit = (value: unknown): value is WebSearchResultItem =>
+  isPlainObject(value) &&
+  isString(value.url) &&
+  isString(value.title) &&
+  isString(value.snippet);
+
+const hasResultFields = (result: Record<string, any>): boolean => {
+  switch (result.type) {
+    case 'html':
+      return isString(result.html) && isAbsentOr(result.title, isString);
+    case 'text':
+      return isAbsentOr(result.links, arrayOf(isString));
+    case 'search':
+      return isString(result.query) && arrayOf(isSearchHit)(result.results);
+    case 'audio':
+      return isString(result.audioUri);
+    case 'error':
+      return isString(result.errorMessage);
+    default:
+      return false;
+  }
+};
+
+const isTalentResult = (value: unknown): value is TalentResult =>
+  isPlainObject(value) && isString(value.summary) && hasResultFields(value);
+
+const isToolOutcome = (value: unknown): value is AgentToolOutcome =>
+  isPlainObject(value) &&
+  isString(value.callId) &&
+  isString(value.toolName) &&
+  isString(value.responseContent) &&
+  isTalentResult(value.result);
+
 const isAgentStep = (step: unknown): step is AgentStep =>
   isPlainObject(step) &&
-  (step.content == null || typeof step.content === 'string') &&
-  (step.reasoningContent == null ||
-    typeof step.reasoningContent === 'string') &&
-  (step.toolCalls == null ||
-    (Array.isArray(step.toolCalls) && step.toolCalls.every(isPlainObject))) &&
-  (step.toolOutcomes == null ||
-    (Array.isArray(step.toolOutcomes) &&
-      step.toolOutcomes.every(isPlainObject)));
+  isAbsentOr(step.content, isString) &&
+  isAbsentOr(step.reasoningContent, isString) &&
+  isAbsentOr(step.toolCalls, arrayOf(isToolCall)) &&
+  isAbsentOr(step.toolOutcomes, arrayOf(isToolOutcome));
 
 const importedSteps = (steps: unknown, text?: string): AgentStep[] => {
   const valid = Array.isArray(steps) ? steps.filter(isAgentStep) : [];
