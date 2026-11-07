@@ -1,8 +1,13 @@
+import * as React from 'react';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
 import {Q} from '@nozbe/watermelondb';
 
+import {render} from '../../../jest/test-utils';
 import toolCallEchoSteps from '../../../jest/fixtures/toolCallEchoSteps.json';
+import chatExportV1_22_1 from '../../../jest/fixtures/chatExportV1_22_1.json';
+import {TalentSurface} from '../../components/TalentSurface/TalentSurface';
+import {registerDefaultTalentUIs} from '../../services/talents/registerTalentUIs';
 import Message from '../../database/models/Message';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {exportAllChatSessions, exportChatSession} from '../exportUtils';
@@ -72,6 +77,11 @@ jest.unmock('../../repositories/ChatSessionRepository');
 jest.mock('react-native-share', () => ({
   open: jest.fn().mockResolvedValue({success: true}),
 }));
+
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const {Text} = require('react-native-paper');
+  return (props: {name: string}) => <Text>{props.name}</Text>;
+});
 
 const deviceSteps = toolCallEchoSteps as unknown as Record<string, AgentStep[]>;
 
@@ -330,6 +340,69 @@ describe('chat export -> import round trip', () => {
     expect(allowedUrls(imported)).toEqual(allowedUrls(original));
   });
 
+  describe('a file exported by a released build (v1.22.1)', () => {
+    // Produced by v1.22.1's exportChatSession from the verbatim device steps
+    // in toolCallEchoSteps.json.
+    const exportedReplies = chatExportV1_22_1.messages.filter(
+      m => m.type === 'assistant_turn',
+    );
+
+    const renderSteps = (steps: AgentStep[]) =>
+      JSON.stringify(
+        steps.map(step => render(<TalentSurface step={step} />).toJSON()),
+      );
+
+    it('restores every reply with the steps and text it was exported with', async () => {
+      const {count, created} = await importJson(
+        JSON.stringify(chatExportV1_22_1),
+      );
+      expect(count).toBe(1);
+      const imported = await openSession(created[0].id);
+      const importedReplies = imported.filter(
+        (m): m is MessageType.AssistantTurn => m.type === 'assistant_turn',
+      );
+
+      expect(importedReplies).toHaveLength(7);
+      expect(
+        importedReplies.map(m => ({
+          createdAt: m.createdAt,
+          steps: m.steps,
+          text: derivedText(m),
+        })),
+      ).toEqual(
+        expect.arrayContaining(
+          exportedReplies.map(m => ({
+            createdAt: m.createdAt,
+            steps: deviceSteps[m.id],
+            text: m.text,
+          })),
+        ),
+      );
+    });
+
+    it('renders the imported tool calls and results as the original rows do', async () => {
+      registerDefaultTalentUIs();
+      const {created} = await importJson(JSON.stringify(chatExportV1_22_1));
+      const imported = await openSession(created[0].id);
+      const byCreatedAt = new Map(
+        imported.map(m => [m.createdAt, m as MessageType.AssistantTurn]),
+      );
+
+      for (const reply of exportedReplies) {
+        expect(renderSteps(byCreatedAt.get(reply.createdAt)!.steps)).toEqual(
+          renderSteps(deviceSteps[reply.id]),
+        );
+      }
+      const toolTurn = byCreatedAt.get(
+        exportedReplies.find(m => m.id === 'h6NgzLwcSoKHidpC')!.createdAt,
+      )!;
+      const {getByTestId} = render(<TalentSurface step={toolTurn.steps[0]} />);
+      expect(
+        getByTestId('web-search-result-trigger').props.accessibilityLabel,
+      ).toContain('Firecrawl');
+    });
+  });
+
   describe('malformed or missing steps in the imported file', () => {
     const importReply = async (reply: Row) => {
       const file = {
@@ -366,6 +439,8 @@ describe('chat export -> import round trip', () => {
         'steps have fields of the wrong type',
         {steps: [{content: 5}, {toolCalls: 'x'}, {toolOutcomes: [null]}]},
       ],
+      ['a step has non-string reasoning', {steps: [{reasoningContent: 5}]}],
+      ['a step has a non-object tool call', {steps: [{toolCalls: [null]}]}],
       ['steps is absent', {}],
     ])(
       'restores the exported text as one step when %s',
@@ -399,12 +474,23 @@ describe('chat export -> import round trip', () => {
       });
     });
 
+    it('imports an empty reply when there are no steps and the text is empty', async () => {
+      expect(await importReply({text: '', metadata: {}})).toEqual({
+        steps: [],
+        text: '',
+      });
+    });
+
     it('imports a reply whose metadata is not an object', async () => {
       expect(
         await importReply({text: 'Exported answer', metadata: 'oops'}),
       ).toEqual({
         steps: [{content: 'Exported answer'}],
         text: 'Exported answer',
+      });
+      const stored = mockTables.messages.find(r => r.author === ASSISTANT)!;
+      expect(JSON.parse(stored.metadata)).toEqual({
+        steps: [{content: 'Exported answer'}],
       });
     });
   });
