@@ -474,6 +474,68 @@ describe('chat export -> import round trip', () => {
       });
     });
 
+    const searchCall = {
+      id: 'c1',
+      function: {name: 'web_search', arguments: '{"query":"q"}'},
+    };
+    it.each([
+      [
+        'a tool call and its outcome are empty objects',
+        [{content: 'x', toolCalls: [{}], toolOutcomes: [{}]}],
+      ],
+      [
+        'an outcome has no result',
+        [
+          {
+            content: 'x',
+            toolCalls: [searchCall],
+            toolOutcomes: [{callId: 'c1'}],
+          },
+        ],
+      ],
+      [
+        'a search result has no results list',
+        [
+          {
+            toolCalls: [searchCall],
+            toolOutcomes: [
+              {
+                callId: 'c1',
+                toolName: 'web_search',
+                result: {type: 'search', query: 'q'},
+                responseContent: '',
+              },
+            ],
+          },
+        ],
+      ],
+      [
+        'a search result has a null hit',
+        [
+          {
+            toolCalls: [searchCall],
+            toolOutcomes: [
+              {
+                callId: 'c1',
+                toolName: 'web_search',
+                result: {type: 'search', query: 'q', results: [null]},
+                responseContent: '',
+              },
+            ],
+          },
+        ],
+      ],
+    ])('opens and continues the chat when %s', async (_, steps) => {
+      registerDefaultTalentUIs();
+      const {steps: imported} = await importReply({
+        text: 'Exported answer',
+        metadata: {steps},
+      });
+      for (const step of imported) {
+        expect(() => render(<TalentSurface step={step} />)).not.toThrow();
+      }
+    });
+
     it('imports an empty reply when there are no steps and the text is empty', async () => {
       expect(await importReply({text: '', metadata: {}})).toEqual({
         steps: [],
