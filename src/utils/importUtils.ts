@@ -10,7 +10,7 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
-import {MessageType} from './types';
+import {AgentStep, MessageType} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
@@ -208,6 +208,53 @@ export const importChatSessions = async (): Promise<number> => {
   }
 };
 
+const isPlainObject = (value: unknown): value is Record<string, any> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isAgentStep = (step: unknown): step is AgentStep =>
+  isPlainObject(step) &&
+  (step.content == null || typeof step.content === 'string') &&
+  (step.reasoningContent == null ||
+    typeof step.reasoningContent === 'string') &&
+  (step.toolCalls == null ||
+    (Array.isArray(step.toolCalls) && step.toolCalls.every(isPlainObject))) &&
+  (step.toolOutcomes == null ||
+    (Array.isArray(step.toolOutcomes) &&
+      step.toolOutcomes.every(isPlainObject)));
+
+const importedSteps = (steps: unknown, text?: string): AgentStep[] => {
+  const valid = Array.isArray(steps) ? steps.filter(isAgentStep) : [];
+  if (valid.length > 0) {
+    return valid;
+  }
+  return typeof text === 'string' && text.length > 0 ? [{content: text}] : [];
+};
+
+const toMessage = (msg: ImportedMessage): MessageType.Any => {
+  const base = {
+    id: msg.id,
+    author: {id: msg.author},
+    createdAt: msg.createdAt || Date.now(),
+  };
+  if (msg.type === 'assistant_turn') {
+    const {steps, ...metadata} = isPlainObject(msg.metadata)
+      ? msg.metadata
+      : {};
+    return {
+      ...base,
+      type: 'assistant_turn',
+      steps: importedSteps(steps, msg.text),
+      metadata,
+    };
+  }
+  return {
+    ...base,
+    text: msg.text || '',
+    type: msg.type as any,
+    metadata: msg.metadata || {},
+  } as MessageType.Any;
+};
+
 /**
  * Import a single chat session
  */
@@ -215,18 +262,7 @@ const importSingleSession = async (
   session: ImportedChatSession,
 ): Promise<void> => {
   try {
-    // Map messages to the correct format
-    const messages = session.messages.map(
-      msg =>
-        ({
-          id: msg.id,
-          author: {id: msg.author},
-          text: msg.text || '',
-          type: msg.type as any,
-          metadata: msg.metadata || {},
-          createdAt: msg.createdAt || Date.now(),
-        }) as MessageType.Any,
-    );
+    const messages = session.messages.map(toMessage);
 
     // Create a new session in the database
     await chatSessionRepository.createSession(

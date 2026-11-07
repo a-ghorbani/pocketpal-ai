@@ -7,7 +7,12 @@ import Message from '../../database/models/Message';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 import {exportAllChatSessions, exportChatSession} from '../exportUtils';
 import {importChatSessions} from '../importUtils';
-import {derivedText} from '../chat';
+import {convertToChatMessages, derivedText} from '../chat';
+import {
+  extractUrls,
+  isReadUrlAllowed,
+  seedReadUrlAllowlist,
+} from '../../services/talents/readUrlAllowlist';
 import type {AgentStep, MessageType} from '../types';
 
 type Row = Record<string, any>;
@@ -299,5 +304,108 @@ describe('chat export -> import round trip', () => {
         steps: undefined,
       },
     ]);
+  });
+
+  it('seeds the read_url allowlist from imported replies as the original chat did', async () => {
+    const originalId = seedSession('allowlist', [
+      ['user', 'What is Firecrawl? Search the web, then answer.'],
+      ['assistant', toolTurnSteps],
+    ]);
+    const original = await openSession(originalId);
+    await exportChatSession(originalId);
+    const json = lastWrittenJson();
+    const {created} = await importJson(json);
+    const imported = await openSession(created[0].id);
+
+    const allowedUrls = (messages: MessageType.Any[]) => {
+      seedReadUrlAllowlist(convertToChatMessages(messages), messages);
+      return extractUrls(json).filter(isReadUrlAllowed);
+    };
+    const searchHits = toolTurnSteps[0].toolOutcomes!.flatMap(o =>
+      o.result.type === 'search' ? o.result.results.map(r => r.url) : [],
+    );
+
+    expect(searchHits.length).toBeGreaterThan(0);
+    expect(allowedUrls(original)).toEqual(expect.arrayContaining(searchHits));
+    expect(allowedUrls(imported)).toEqual(allowedUrls(original));
+  });
+
+  describe('malformed or missing steps in the imported file', () => {
+    const importReply = async (reply: Row) => {
+      const file = {
+        id: 'hand-edited',
+        title: 'Hand edited',
+        date: '2026-10-10T21:33:32.388Z',
+        messages: [
+          {id: 'u', author: USER, text: 'Hi', type: 'text', createdAt: 1},
+          {
+            id: 'a',
+            author: ASSISTANT,
+            type: 'assistant_turn',
+            createdAt: 2,
+            ...reply,
+          },
+        ],
+        completionSettings: {},
+      };
+      const {count, created} = await importJson(JSON.stringify(file));
+      expect(count).toBe(1);
+      const messages = await openSession(created[0].id);
+      expect(() => convertToChatMessages(messages)).not.toThrow();
+      expect(() => seedReadUrlAllowlist([], messages)).not.toThrow();
+      const turn = messages[1] as MessageType.AssistantTurn;
+      expect(turn.type).toBe('assistant_turn');
+      return {steps: turn.steps, text: derivedText(turn)};
+    };
+
+    it.each([
+      ['steps is not an array', {steps: 'oops'}],
+      ['steps is null', {steps: null}],
+      ['steps has only non-object elements', {steps: [null, 3, 'x', [{}]]}],
+      [
+        'steps have fields of the wrong type',
+        {steps: [{content: 5}, {toolCalls: 'x'}, {toolOutcomes: [null]}]},
+      ],
+      ['steps is absent', {}],
+    ])(
+      'restores the exported text as one step when %s',
+      async (_, metadata) => {
+        expect(
+          await importReply({
+            text: 'Exported answer',
+            metadata: {copyable: true, ...metadata},
+          }),
+        ).toEqual({
+          steps: [{content: 'Exported answer'}],
+          text: 'Exported answer',
+        });
+      },
+    );
+
+    it('keeps the valid steps and drops malformed ones', async () => {
+      const valid = {content: 'Kept', reasoningContent: null, toolCalls: null};
+      expect(
+        await importReply({
+          text: 'Exported answer',
+          metadata: {steps: [null, valid, 'x', {content: ['no']}]},
+        }),
+      ).toEqual({steps: [valid], text: 'Kept'});
+    });
+
+    it('imports an empty reply when there are no steps and no text', async () => {
+      expect(await importReply({metadata: {steps: 'oops'}})).toEqual({
+        steps: [],
+        text: '',
+      });
+    });
+
+    it('imports a reply whose metadata is not an object', async () => {
+      expect(
+        await importReply({text: 'Exported answer', metadata: 'oops'}),
+      ).toEqual({
+        steps: [{content: 'Exported answer'}],
+        text: 'Exported answer',
+      });
+    });
   });
 });
