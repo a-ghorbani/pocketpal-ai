@@ -69,6 +69,7 @@ import {
 } from '../__mocks__/stores/voiceModeStore';
 import {mockSearchProviderStore} from '../__mocks__/stores/searchProviderStore';
 import {mockPurchaseStore} from '../__mocks__/stores/purchaseStore';
+import {mockLocalApiServerStore} from '../__mocks__/stores/localApiServerStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
@@ -108,6 +109,7 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     purgeNativeAllocator: jest.fn(() =>
       Promise.resolve({purged: true, rss_kb_before: 0, rss_kb_after: 0}),
     ),
+    getWifiIPv4: jest.fn(() => Promise.resolve('192.168.1.23')),
   },
 }));
 
@@ -124,6 +126,9 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('../src/store', () => {
   const {UIStore} = require('../__mocks__/stores/uiStore');
+  const {
+    isValidLocalApiPort,
+  } = require('../__mocks__/stores/localApiServerStore');
   return {
     modelStore: mockModelStore,
     UIStore,
@@ -142,6 +147,8 @@ jest.mock('../src/store', () => {
     voiceEntitlement: mockVoiceEntitlement,
     searchProviderStore: mockSearchProviderStore,
     purchaseStore: mockPurchaseStore,
+    localApiServerStore: mockLocalApiServerStore,
+    isValidLocalApiPort,
     defaultCompletionSettings: mockDefaultCompletionSettings,
     NEW_SESSION_TITLE: 'New Session',
   };
