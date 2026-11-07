@@ -183,6 +183,9 @@ const transformExportPal = async (pal: Pal) => {
     try {
       // Convert local image to base64 for export
       const absolutePath = getAbsoluteThumbnailPath(pal.thumbnail_url);
+      if (!absolutePath) {
+        throw new Error(`Invalid thumbnail filename: ${pal.thumbnail_url}`);
+      }
       const base64Content = await RNFS.readFile(absolutePath, 'base64');
 
       // Get file extension from original file (fallback to jpg)
