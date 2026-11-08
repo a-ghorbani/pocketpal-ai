@@ -16,8 +16,20 @@ import {convertToChatMessages, derivedText} from '../chat';
 import {
   extractUrls,
   isReadUrlAllowed,
+  resetReadUrlAllowlist,
   seedReadUrlAllowlist,
 } from '../../services/talents/readUrlAllowlist';
+import {runAgent} from '../../services/agent/AgentRunner';
+import {CalculateEngine} from '../../services/talents/CalculateEngine';
+import {DatetimeEngine} from '../../services/talents/DatetimeEngine';
+import {RenderHtmlEngine} from '../../services/talents/RenderHtmlEngine';
+import {WebSearchEngine} from '../../services/talents/WebSearchEngine';
+import {ReadUrlEngine} from '../../services/talents/ReadUrlEngine';
+import {resetSearchCache} from '../../services/search/searchBudget';
+import type {SearchAccess} from '../../services/talents/searchAccess';
+import type {SearchProvider} from '../../services/search/types';
+import type {TalentEngine} from '../../services/talents/types';
+import type {CompletionEngine} from '../completionTypes';
 import type {AgentStep, MessageType} from '../types';
 
 type Row = Record<string, any>;
@@ -654,6 +666,8 @@ describe('chat export -> import round trip', () => {
         withResult(4, {errorMessage: undefined}),
       ],
       ['a search result query is not a string', withResult(0, {query: 5})],
+      ['a search result has no results', withResult(0, {results: undefined})],
+      ['a search hit is null', withHit(null)],
       ['a search hit url is not a string', withHit({...hit, url: undefined})],
       ['a search hit title is not a string', withHit({...hit, title: {}})],
       ['a search hit snippet is not a string', withHit({...hit, snippet: []})],
@@ -684,6 +698,228 @@ describe('chat export -> import round trip', () => {
       expect(JSON.parse(stored.metadata)).toEqual({
         steps: [{content: 'Exported answer'}],
       });
+    });
+  });
+
+  describe('replies written by the agent runner', () => {
+    const pageUrl = 'https://mars.example/news';
+    const linkedUrl = 'https://mars.example/rover';
+
+    const searchAccess = (): SearchAccess => {
+      const provider: SearchProvider = {
+        id: 'tavily',
+        search: async () => [
+          {title: 'Mars news', url: pageUrl, snippet: 'Rover lands.'},
+          {title: '', url: 'https://mars.example/empty', snippet: ''},
+        ],
+        read: async url => ({
+          url,
+          title: 'Mars news',
+          text: `The rover landed. More at ${linkedUrl}`,
+        }),
+      };
+      return {
+        getActiveProvider: () => provider,
+        canSearch: () => true,
+        getResultCount: () => 5,
+        readWithDefaultReader: async url => ({url, text: ''}),
+      };
+    };
+
+    const throwing = (name: string): TalentEngine => ({
+      name,
+      execute: async () => {
+        throw new Error('engine crashed');
+      },
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name, description: name, parameters: {}},
+      }),
+    });
+
+    const rawCall = (id: string | null, name: string, args: unknown) => ({
+      id,
+      type: 'function',
+      function: {name, arguments: args},
+    });
+
+    const scriptedEngine = (
+      turns: Array<{calls?: any[]; content?: string; reasoning?: string}>,
+    ): CompletionEngine => {
+      let index = 0;
+      return {
+        completion: async (_params, onData) => {
+          const turn = turns[index++] ?? {};
+          if (turn.reasoning) {
+            onData?.({reasoning_content: turn.reasoning} as any);
+          }
+          if (turn.calls) {
+            onData?.({tool_calls: turn.calls} as any);
+          }
+          if (turn.content) {
+            onData?.({content: turn.content} as any);
+          }
+          return {
+            text: turn.content ?? '',
+            content: turn.content ?? '',
+            reasoning_content: turn.reasoning,
+            tool_calls: turn.calls,
+          } as any;
+        },
+        stopCompletion: async () => {},
+      };
+    };
+
+    /** Steps as the chat hook persists them from the runner's events. */
+    const runAndPersist = async (
+      engine: CompletionEngine,
+      talents: Record<string, TalentEngine>,
+      signal?: AbortSignal,
+    ): Promise<AgentStep[]> => {
+      const steps: AgentStep[] = [];
+      const last = () => steps[steps.length - 1];
+      for await (const event of runAgent({
+        engine,
+        initialParams: {messages: []} as any,
+        allowedTalentNames: Object.keys(talents).filter(n => n !== 'missing'),
+        talentLookup: name => (name === 'missing' ? undefined : talents[name]),
+        triggerMarkers: [],
+        messageId: 'm',
+        signal,
+      })) {
+        if (event.type === 'step_started') {
+          steps.push({partial: true});
+        } else if (event.type === 'token') {
+          const step = last();
+          if (event.delta.content) {
+            step.content = (step.content ?? '') + event.delta.content;
+          }
+          if (event.delta.reasoningContent) {
+            step.reasoningContent =
+              (step.reasoningContent ?? '') + event.delta.reasoningContent;
+          }
+        } else if (event.type === 'step_finished') {
+          if (event.toolCalls?.length) {
+            last().toolCalls = event.toolCalls;
+          }
+          last().partial = false;
+        } else if (event.type === 'tool_call_finished') {
+          last().toolOutcomes = [...(last().toolOutcomes ?? []), event.outcome];
+        }
+      }
+      return steps;
+    };
+
+    const exportAndImport = async (steps: AgentStep[]) => {
+      const originalId = seedSession('agent', [
+        ['user', 'Use every tool'],
+        ['assistant', steps],
+      ]);
+      await exportChatSession(originalId);
+      const {created} = await importJson(lastWrittenJson());
+      const imported = await openSession(created[0].id);
+      const reply = imported.find(m => m.type === 'assistant_turn');
+      return (reply as MessageType.AssistantTurn).steps;
+    };
+
+    beforeEach(() => {
+      resetReadUrlAllowlist();
+      resetSearchCache();
+    });
+
+    it('keeps the steps of a run that produced every result the talents return', async () => {
+      const access = searchAccess();
+      const talents: Record<string, TalentEngine> = {
+        calculate: new CalculateEngine(),
+        datetime: new DatetimeEngine(),
+        render_html: new RenderHtmlEngine(),
+        web_search: new WebSearchEngine(access),
+        read_url: new ReadUrlEngine(access),
+        crashing: throwing('crashing'),
+        missing: throwing('missing'),
+      };
+      const steps = await runAndPersist(
+        scriptedEngine([
+          {
+            reasoning: 'Use the tools.',
+            content: 'Looking it up.',
+            calls: [
+              rawCall(null, 'calculate', '{"expression":"2*3"}'),
+              rawCall(null, 'datetime', '{}'),
+              rawCall('h1', 'render_html', '{"html":"<p>x</p>","title":"T"}'),
+              rawCall('h2', 'render_html', '{"html":""}'),
+            ],
+          },
+          {
+            calls: [
+              rawCall('s1', 'web_search', '{"query":"mars"}'),
+              rawCall('s2', 'web_search', '{}'),
+              rawCall('x1', 'calculate', '{bad json'),
+              rawCall('x2', 'not_enabled', '{}'),
+              rawCall('x3', 'missing', '{}'),
+              rawCall('x4', 'crashing', '{}'),
+              rawCall('x5', '', '{}'),
+            ],
+          },
+          {calls: [rawCall('r1', 'read_url', `{"url":"${pageUrl}"}`)]},
+          {content: 'The rover landed.'},
+        ]),
+        talents,
+      );
+      const results = steps.flatMap(s =>
+        (s.toolOutcomes ?? []).map(o => o.result.type),
+      );
+      expect(new Set(results)).toEqual(
+        new Set(['text', 'html', 'error', 'search']),
+      );
+      expect(steps[2].toolOutcomes![0].result).toMatchObject({
+        type: 'text',
+        links: [linkedUrl],
+      });
+      expect(steps.every(s => !s.toolCalls?.some(c => !c.metrics))).toBe(true);
+
+      expect(await exportAndImport(steps)).toEqual(
+        JSON.parse(JSON.stringify(steps)),
+      );
+    });
+
+    it('keeps tool calls whose arguments arrive parsed and a cancelled call', async () => {
+      const controller = new AbortController();
+      const aborting: TalentEngine = {
+        ...throwing('aborting'),
+        execute: async () => {
+          controller.abort();
+          return {type: 'text', summary: 'stopped'};
+        },
+      };
+      const steps = await runAndPersist(
+        scriptedEngine([
+          {
+            calls: [
+              rawCall('p1', 'aborting', '{}'),
+              rawCall('p2', 'calculate', {expression: '1+1'}),
+              rawCall('p3', 'calculate', '{"expression":"2+2"}'),
+              rawCall('p4', 'calculate', '{"expression":"3+3"}'),
+              rawCall('p5', 'calculate', '{"expression":"4+4"}'),
+            ],
+          },
+        ]),
+        {aborting, calculate: new CalculateEngine()},
+        controller.signal,
+      );
+      const outcomes = steps[0].toolOutcomes!;
+      expect(outcomes[4].result).toEqual({
+        type: 'error',
+        summary: 'calculate: cancelled',
+        errorMessage: 'cancelled',
+      });
+      expect(steps[0].toolCalls![1].function.arguments).toEqual({
+        expression: '1+1',
+      });
+
+      expect(await exportAndImport(steps)).toEqual(
+        JSON.parse(JSON.stringify(steps)),
+      );
     });
   });
 });
