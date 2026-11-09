@@ -266,6 +266,37 @@ describe('splitListsAroundBlocks', () => {
     ]);
   });
 
+  it('keeps text after a moved block from becoming a heading', () => {
+    const {textAboveNextBullet, textAboveRule} = nestedListReplies;
+    const bare = textAboveNextBullet.slice(0, textAboveNextBullet.length - 7);
+    const types = (markdown: string) =>
+      rootBlockTypes(parseMarkdown(splitListsAroundBlocks(markdown)));
+
+    expect(bare.endsWith('deps.\n-')).toBe(true);
+    expect(splitListsAroundBlocks(bare)).toBe(
+      '- Install:\n\n```sh\nnpm i\n```\n\nThis installs deps.\n\n-',
+    );
+    expect(splitListsAroundBlocks(`${bare} `)).toBe(
+      '- Install:\n\n```sh\nnpm i\n```\n\nThis installs deps.\n\n- ',
+    );
+    expect(types(bare)).toEqual([
+      'UnorderedList',
+      'CodeBlock',
+      'Paragraph',
+      'UnorderedList',
+    ]);
+    expect(splitListsAroundBlocks(textAboveRule)).toBe(
+      '1. Step:\n\n```sh\nrun\n```\n\nThen check it.\n\n---\n\nNext section',
+    );
+    expect(types(textAboveRule)).toEqual([
+      'OrderedList',
+      'CodeBlock',
+      'Paragraph',
+      'ThematicBreak',
+      'Paragraph',
+    ]);
+  });
+
   it('leaves a fence that opens on the list marker line in its item', () => {
     const reply = '1. ```sh\n   make\n   ```\n2. Next';
 

@@ -27,6 +27,7 @@ const BARE_MARKER = /^[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]*$/;
 const MAX_EMIT_ROUNDS = 4;
 const QUOTE_PREFIX = /^[ \t]*(?:>[ \t]*)+/;
 const MARKER_PREFIX = /^[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+/;
+const SETEXT_LIKE = /^ {0,3}(?:-+|=+)[ \t]*\r?$/;
 
 // A tab's width depends on its column, so a line that moves keeps its
 // container prefix as spaces.
@@ -137,9 +138,7 @@ const rootBlockLines = (lines: ScannedLine[], block: NestedBlock): string[] => {
   );
 };
 
-// md4c reads a fence opener that ends a nested fence by leaving its item as
-// text; once that fence is closed at the root, the line would open a new one.
-const escapeFence = (text: string): string =>
+const escapeFirst = (text: string): string =>
   text.replace(/^[ \t]*/, ws => ws + '\\');
 
 const withDelimiter = (text: string, delimiter: string): string =>
@@ -224,6 +223,8 @@ const emit = (
   };
   // The list items md4c holds open in the output, with their text column there.
   let open: {item: ListItem; contentCol: number}[] = [];
+  // How many of `open` hold the paragraph text just above, if there is one.
+  let textDepth: number | null = null;
   const dedentOfList = new Map<number, number>();
   const listDedent = (items: ListItem[]) =>
     items.reduce((sum, item) => sum + (dedentOfList.get(item.listId) ?? 0), 0);
@@ -241,6 +242,7 @@ const emit = (
       segmentLists = new Set();
       broken = block.items;
       open = [];
+      textDepth = null;
       i = block.end + 1;
       if (i < lines.length && !lines[i].blank) {
         push('');
@@ -250,6 +252,7 @@ const emit = (
     i++;
     if (line.blank) {
       push(line.raw);
+      textDepth = null;
       continue;
     }
     const opened = line.opens;
@@ -261,6 +264,13 @@ const emit = (
     const prefix = opened ? MARKER_PREFIX : line.code ? null : QUOTE_PREFIX;
     const tabsExpanded = (raw: string) =>
       prefix ? prefixTabsExpanded(raw, prefix) : raw;
+    let keptOpen = 0;
+    while (keptOpen < open.length && own.includes(open[keptOpen].item)) {
+      keptOpen++;
+    }
+    // md4c reads the line as continuing the paragraph above, so it may not
+    // start an ordered list there and can underline it.
+    const continuesText = textDepth !== null && keptOpen >= textDepth;
     const lineShift = shiftFor(line, keptDepth);
     const moves = keptDepth > 0 || lineShift > 0 || listDedent(own) > 0;
     let text = moves ? tabsExpanded(line.raw) : line.raw;
@@ -284,12 +294,13 @@ const emit = (
         text = renumbered.text;
         broken = keptDepth > 0 ? broken.slice(0, keptDepth) : null;
       }
-      const cannotInterrupt =
-        resumes ||
-        (opened?.ordered === true &&
+      const cannotInterrupt = resumes
+        ? !endsWithBlank() && !BARE_MARKER.test(last())
+        : continuesText &&
+          opened?.ordered === true &&
           opened.number !== 1 &&
-          !seenLists.has(opened.listId));
-      if (cannotInterrupt && !endsWithBlank() && !BARE_MARKER.test(last())) {
+          !seenLists.has(opened.listId);
+      if (cannotInterrupt) {
         push('');
       }
     }
@@ -300,42 +311,53 @@ const emit = (
       mayMerge ||= (segmentLists?.size ?? 0) > 1;
     }
     text = dedent(shift(text, lineShift), listDedent(own));
-    if (!line.lazy) {
-      let kept = 0;
-      while (kept < open.length && own.includes(open[kept].item)) {
-        kept++;
+    const leaves = open[keptOpen]?.contentCol;
+    open = open.slice(0, keptOpen);
+    const indent = indentOf(text);
+    if (leaves !== undefined && indent >= leaves) {
+      const root = line.rootCode;
+      if (root?.start === i - 1) {
+        rootBlockLines(lines, root).forEach(code => push(code));
+        i = root.end + 1;
+        textDepth = null;
+        continue;
       }
-      const leaves = open[kept]?.contentCol;
-      open = open.slice(0, kept);
-      const indent = indentOf(text);
-      if (leaves !== undefined && indent >= leaves) {
-        const root = line.rootCode;
-        if (root?.start === i - 1) {
-          rootBlockLines(lines, root).forEach(code => push(code));
-          i = root.end + 1;
-          continue;
-        }
-        const excess = indent - leaves + 1;
-        text = dedent(moves ? text : tabsExpanded(text), excess);
-        if (opened) {
-          dedentOfList.set(
-            opened.listId,
-            (dedentOfList.get(opened.listId) ?? 0) + excess,
-          );
-        }
-      }
+      const excess = indent - leaves + 1;
+      text = dedent(moves ? text : tabsExpanded(text), excess);
       if (opened) {
-        open.push({
-          item: opened,
-          contentCol:
-            opened.contentCol + indentOf(text) - line.indent + markerShift,
-        });
+        dedentOfList.set(
+          opened.listId,
+          (dedentOfList.get(opened.listId) ?? 0) + excess,
+        );
       }
     }
+    if (opened) {
+      open.push({
+        item: opened,
+        contentCol: opened.contentCol + indentOf(text) - line.indent,
+      });
+    }
+    // Text that left its item can sit right above a line md4c read as a
+    // rule, a marker or lazy text, and that line would now underline it.
+    if (
+      continuesText &&
+      !line.setext &&
+      !endsWithBlank() &&
+      SETEXT_LIKE.test(text)
+    ) {
+      if (line.lazy) {
+        text = escapeFirst(text);
+      } else {
+        push('');
+      }
+    }
+    // md4c reads a fence opener that ends a nested fence by leaving its item as
+    // text; once that fence is closed at the root, the line would open a new one.
     push(
-      line.fenceLikeText ? escapeFence(text) : text,
+      line.fenceLikeText ? escapeFirst(text) : text,
       opened && fragmentOf(opened),
     );
+    textDepth = line.text ? open.length : null;
   }
   return {lines: out, fragments, mayMerge};
 };

@@ -28,6 +28,8 @@ export interface ScannedLine {
   block?: NestedBlock;
   rootCode?: NestedBlock;
   lazy?: boolean;
+  text?: boolean;
+  setext?: boolean;
   code?: boolean;
   fenceLikeText?: boolean;
 }
@@ -262,6 +264,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       !marker.rest.startsWith('>')
     ) {
       paragraph = {start: i, lines: 1, depth: stack.length};
+      lines[i].text = true;
     }
   };
 
@@ -322,10 +325,8 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       const relIndent = indent - contentColAt(kept);
       const marker =
         relIndent < INDENTED_CODE ? parseMarker(content, indent) : null;
-      const isSetext = paragraph !== null && SETEXT_UNDERLINE.test(content);
       if (
         marker &&
-        !isSetext &&
         marker.ordered === stack[kept].ordered &&
         marker.delimiter === stack[kept].delimiter
       ) {
@@ -342,6 +343,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       if (lazy) {
         paragraph!.lines++;
         lines[i].lazy = true;
+        lines[i].text = true;
         continue;
       }
       stack = stack.slice(0, kept);
@@ -368,6 +370,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       continue;
     }
     if (canOpenBlock && inParagraph && SETEXT_UNDERLINE.test(content)) {
+      lines[i].setext = true;
       paragraph = null;
       continue;
     }
@@ -493,6 +496,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
     } else {
       paragraph = {start: i, lines: 1, depth};
     }
+    lines[i].text = true;
   }
   return {
     lines,

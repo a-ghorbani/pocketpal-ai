@@ -116,6 +116,8 @@ const randomReply = (random: (n: number) => number): string => {
         ? `${allSame ? start : start + k}${delimiter}`
         : bullet;
       const content = ' '.repeat(textColumn(indent, marker, gap));
+      const underItemText = () =>
+        chance(2) ? [pick(['---', '===', '--', `${content}---`])] : [];
       lines.push(`${' '.repeat(indent)}${marker}${gap}item${++id} words here`);
       if (chance(3)) {
         lines.push(`${random(2) ? content : ''}lazy${id} continuation`);
@@ -130,7 +132,11 @@ const randomReply = (random: (n: number) => number): string => {
         } else if (kind === 3 && depth < 3) {
           list(depth + 1, content.length + pick([0, 0, 1]));
         } else {
-          lines.push('', `${content}para${++id} after block`);
+          lines.push(
+            ...(chance(2) ? [''] : []),
+            `${content}para${++id} after block`,
+            ...underItemText(),
+          );
         }
       }
       if (chance(3)) {
