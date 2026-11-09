@@ -32,7 +32,7 @@ export const loadMd4c = async () => {
   ]);
 };
 
-/** Parses with the app's flags: every md4c extension off, as in MarkdownView. */
+/** Parses as MarkdownView does: GitHub flavor, the optional flags off. */
 export const parseMarkdown = (markdown: string): MdNode => {
   if (!parseFn) {
     throw new Error('call loadMd4c() in beforeAll first');

@@ -3,7 +3,6 @@ import {closesFence, Fence, openingFence} from './codeFence';
 export interface ListItem {
   id: number;
   listId: number;
-  depth: number;
   contentCol: number;
   ordered: boolean;
   delimiter: string;
@@ -166,7 +165,7 @@ const contentOf = (text: string, offset: number): string =>
 /**
  * Follows md4c's per-line block analysis for list items, paragraphs, tables,
  * fences and quotes, and reports every table, fence, indented code block or
- * table-holding quote that sits inside a list item.
+ * quote that holds a table or code block and sits inside a list item.
  */
 export const scanListBlocks = (markdown: string): Scan => {
   const lines: ScannedLine[] = [];
@@ -211,7 +210,6 @@ export const scanListBlocks = (markdown: string): Scan => {
     const item: ListItem = {
       id: nextItemId++,
       listId: sibling ? sibling.listId : nextListId++,
-      depth: stack.length + 1,
       contentCol: marker.contentCol,
       ordered: marker.ordered,
       delimiter: marker.delimiter,

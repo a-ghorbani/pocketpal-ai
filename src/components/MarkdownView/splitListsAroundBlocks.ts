@@ -284,7 +284,6 @@ const emit = (
         text = renumbered.text;
         broken = keptDepth > 0 ? broken.slice(0, keptDepth) : null;
       }
-      // An ordered list that starts at a number other than 1 cannot interrupt a paragraph.
       const cannotInterrupt =
         resumes ||
         (opened?.ordered === true &&
@@ -365,10 +364,10 @@ const mergedLists = ({lines, fragments}: Emitted): Map<string, string> => {
 };
 
 /**
- * Moves each table, code block or table-holding quote that sits in a list
- * item to the document root: the list closes before the block and resumes
- * after it with the number the item had. The renderer only gives root blocks
- * their own view, and drops or flattens nested ones.
+ * Moves each table, code block or quote that holds a table or code block and
+ * sits in a list item to the document root: the list closes before the block
+ * and resumes after it with the number the item had. The renderer only gives
+ * root blocks their own view, and drops or flattens nested ones.
  */
 export const splitListsAroundBlocks = (markdown: string): string => {
   if (!mayHaveNestedBlock(markdown)) {
