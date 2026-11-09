@@ -35,7 +35,7 @@ only_known_metallibs() {
   for lib in "$app"/*.metallib; do
     [ -e "$lib" ] || continue
     case $(basename "$lib") in
-      rnllama.metallib | ggml-tensor.metallib | default.metallib) ;;
+      rnllama.metallib | ggml-tensor.metallib | rnwhisper.metallib) ;;
       *)
         echo "  unexpected $(basename "$lib")" >&2
         extra=1
@@ -63,7 +63,7 @@ check "app bundle $app" test -d "$app"
 check "executable $exe" test -f "$exe"
 check "rnllama.metallib at the .app root" test -f "$app/rnllama.metallib"
 check "ggml-tensor.metallib at the .app root" test -f "$app/ggml-tensor.metallib"
-check "default.metallib at the .app root" test -f "$app/default.metallib"
+check "rnwhisper.metallib at the .app root" test -f "$app/rnwhisper.metallib"
 check "no .metallib other than those three at the .app root" only_known_metallibs
 check "no Frameworks/rnwhisper.framework in the .app" test ! -e "$app/Frameworks/rnwhisper.framework"
 check "no __ggml_metallib section in the executable" no_embedded_library

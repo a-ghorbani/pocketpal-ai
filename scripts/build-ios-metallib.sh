@@ -12,7 +12,7 @@ if [ "${1:-}" = --whisper ]; then
   mode=whisper
   macro_prefix=WSP_GGML
   air_name=whisper-metal
-  library=default.metallib
+  library=rnwhisper.metallib
 fi
 
 if [ "$#" -lt 2 ]; then

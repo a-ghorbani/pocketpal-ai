@@ -5,8 +5,9 @@
 # Both archives link into one executable, where hidden visibility does not keep
 # two definitions apart: the linker keeps one of each pair, with at most a
 # warning.
-# --self-test first checks that a planted shared symbol of each binding is
-# denied on this machine's toolchain, or a clean comparison proves nothing.
+# --self-test first checks that a planted shared symbol of each binding, and a
+# C++ one under its demangled name, is denied on this machine's toolchain, or a
+# clean comparison proves nothing.
 set -uo pipefail
 
 self_test=false
@@ -24,21 +25,23 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 plant() {
-  local name=$1 dir="$tmp/planted-$1" side out status
-  shift
+  local name=$1 expected=$2 dir="$tmp/planted-$1" side out status
+  shift 2
   mkdir -p "$dir"
   for side in a b; do
     printf '%s\n' .text "$@" "_$name:" ret |
       xcrun clang -arch arm64 -x assembler -c - -o "$dir/$side.o" &&
       xcrun libtool -static -o "$dir/lib$side.a" "$dir/$side.o" || {
-      echo "FAIL self-test could not build a planted $name" >&2
+      echo "FAIL self-test could not build a planted $expected" >&2
       return 1
     }
   done
   out=$(bash "$0" "$dir/liba.a" "$dir/libb.a" 2>&1) && status=0 || status=$?
-  if [ "$status" -ne 1 ] || ! grep "^DENY .* $name\$" <<<"$out"; then
+  if [ "$status" -ne 1 ] || ! awk -v want=" $expected" '
+    index($0, "DENY ") == 1 && substr($0, length($0) - length(want) + 1) == want { print; found = 1 }
+    END { exit !found }' <<<"$out"; then
     printf '%s\n' "$out" >&2
-    echo "FAIL self-test: a planted $name was not denied" >&2
+    echo "FAIL self-test: a planted $expected was not denied" >&2
     return 1
   fi
 }
@@ -48,12 +51,13 @@ if $self_test; then
     echo "FAIL self-test: c++filt -n left a std:: name mangled" >&2
     exit 1
   fi
-  plant ggml_planted_strong '.globl _ggml_planted_strong' &&
-    plant ggml_planted_weak '.globl _ggml_planted_weak' '.weak_definition _ggml_planted_weak' &&
-    plant ggml_planted_weak_hidden '.globl _ggml_planted_weak_hidden' \
+  plant ggml_planted_strong ggml_planted_strong '.globl _ggml_planted_strong' &&
+    plant ggml_planted_weak ggml_planted_weak '.globl _ggml_planted_weak' '.weak_definition _ggml_planted_weak' &&
+    plant ggml_planted_weak_hidden ggml_planted_weak_hidden '.globl _ggml_planted_weak_hidden' \
       '.private_extern _ggml_planted_weak_hidden' '.weak_definition _ggml_planted_weak_hidden' &&
-    plant ggml_planted_autohidden '.globl _ggml_planted_autohidden' \
-      '.weak_definition _ggml_planted_autohidden' '.weak_def_can_be_hidden _ggml_planted_autohidden' ||
+    plant ggml_planted_autohidden ggml_planted_autohidden '.globl _ggml_planted_autohidden' \
+      '.weak_definition _ggml_planted_autohidden' '.weak_def_can_be_hidden _ggml_planted_autohidden' &&
+    plant _ZN10ThreadPoolC2Em 'ThreadPool::ThreadPool(unsigned long)' '.globl __ZN10ThreadPoolC2Em' ||
     exit 1
 fi
 
