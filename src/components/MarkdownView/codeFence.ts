@@ -16,6 +16,18 @@ export const openingFence = (line: string): Fence | undefined => {
   return {marker: match[1][0], length: match[1].length};
 };
 
+/**
+ * md4c skips the fence characters of a line it tried as a closer; a bare run
+ * shorter than the opener leaves nothing, so it reads the line as blank.
+ */
+export const emptiedByFence = (content: string, fence: Fence): boolean => {
+  let run = 0;
+  while (content[run] === fence.marker) {
+    run++;
+  }
+  return run > 0 && run < fence.length && run === content.length;
+};
+
 export const closesFence = (line: string, fence: Fence): boolean => {
   const match = line.replace(CONTAINER_PREFIX, '').match(CLOSING_FENCE);
   return (

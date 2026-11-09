@@ -1,4 +1,4 @@
-import {closesFence, Fence, openingFence} from './codeFence';
+import {closesFence, emptiedByFence, Fence, openingFence} from './codeFence';
 
 export interface ListItem {
   id: number;
@@ -36,6 +36,8 @@ interface Scan {
   lines: ScannedLine[];
   blocks: NestedBlock[];
   hasTableOrFence: boolean;
+  openFence?: Fence;
+  openParagraph: boolean;
 }
 
 interface Marker {
@@ -159,6 +161,14 @@ const interruptsParagraph = (content: string, relIndent: number): boolean =>
     content.startsWith('>') ||
     fenceOpenedBy(content) !== undefined);
 
+const LAZY_TEXT = 'lazy';
+
+// The space after `>` belongs to the mark, and a tab there counts from its column.
+const quotedContent = (content: string, col: number): string => {
+  const {indent, offset} = leadingWhitespace(content.slice(1), col + 1);
+  return ' '.repeat(Math.max(0, indent - 1)) + content.slice(1 + offset);
+};
+
 const contentOf = (text: string, offset: number): string =>
   text.slice(offset).replace(/\r$/, '');
 
@@ -167,7 +177,8 @@ const contentOf = (text: string, offset: number): string =>
  * fences and quotes, and reports every table, fence, indented code block or
  * quote that holds a table or code block and sits inside a list item.
  */
-export const scanListBlocks = (markdown: string): Scan => {
+export const scanListBlocks = (markdown: string, nested = false): Scan => {
+  const raw = markdown.split('\n');
   const lines: ScannedLine[] = [];
   const blocks: NestedBlock[] = [];
   let stack: ListItem[] = [];
@@ -175,9 +186,11 @@ export const scanListBlocks = (markdown: string): Scan => {
   let nextListId = 1;
   let paragraph: {start: number; lines: number; depth: number} | null = null;
   let table: {depth: number; block?: NestedBlock} | null = null;
-  let fence: {fence: Fence; depth: number; block: NestedBlock} | null = null;
+  // A fence on a list marker line stays in its item, so it has no block.
+  let fence: {fence: Fence; depth: number; block?: NestedBlock} | null = null;
   let indentedCode: NestedBlock | null = null;
   let hasTableOrFence = false;
+  let quoteAtEnd: Scan | null = null;
 
   const contentColAt = (depth: number) =>
     depth > 0 ? stack[depth - 1].contentCol : 0;
@@ -206,6 +219,24 @@ export const scanListBlocks = (markdown: string): Scan => {
     }
     return count;
   };
+  const canOpenBlockAt = (indent: number) =>
+    indent - contentColAt(itemsHolding(indent)) < INDENTED_CODE;
+  // md4c takes a closing fence as the closer even when it leaves a container.
+  const closesLeaving = (indent: number, content: string, open: Fence) =>
+    canOpenBlockAt(indent) &&
+    !content.startsWith('>') &&
+    closesFence(content, open);
+  const readAsBlank = (i: number, indent: number) => {
+    stack = stack.slice(0, itemsHolding(indent));
+    lines[i] = {
+      raw: raw[i].endsWith('\r') ? '\r' : '',
+      indent: 0,
+      blank: true,
+      items: stack.slice(),
+    };
+    paragraph = null;
+    table = null;
+  };
   const openItem = (marker: Marker, i: number, sibling?: ListItem) => {
     const item: ListItem = {
       id: nextItemId++,
@@ -224,11 +255,7 @@ export const scanListBlocks = (markdown: string): Scan => {
       ? undefined
       : fenceOpenedBy(marker.rest);
     if (markerLineFence) {
-      fence = {
-        fence: markerLineFence,
-        depth: stack.length,
-        block: {kind: 'fence', start: i, end: i, items: []},
-      };
+      fence = {fence: markerLineFence, depth: stack.length};
     } else if (
       !marker.empty &&
       !ATX_HEADING.test(marker.rest) &&
@@ -238,7 +265,6 @@ export const scanListBlocks = (markdown: string): Scan => {
     }
   };
 
-  const raw = markdown.split('\n');
   for (let i = 0; i < raw.length; i++) {
     const text = raw[i];
     const {indent, offset} = leadingWhitespace(text);
@@ -248,31 +274,40 @@ export const scanListBlocks = (markdown: string): Scan => {
 
     let fenceLikeText = false;
     if (fence) {
-      const depth = fence.depth;
-      const closes =
-        !blank && !content.startsWith('>') && closesFence(content, fence.fence);
-      if (blank || depth === 0 || indent >= contentColAt(depth)) {
-        extend(fence.block, i);
+      const {depth, block} = fence;
+      const inside = blank || depth === 0 || indent >= contentColAt(depth);
+      const closes = inside
+        ? !blank &&
+          !content.startsWith('>') &&
+          closesFence(content, fence.fence) &&
+          indent - contentColAt(depth) < INDENTED_CODE
+        : closesLeaving(indent, content, fence.fence);
+      if (inside || closes) {
         lines[i].code = true;
-        if (closes && indent - contentColAt(depth) < INDENTED_CODE) {
-          fence.block.closed = true;
+        if (block) {
+          extend(block, i);
+          block.closed = closes;
+        }
+        if (closes) {
           fence = null;
+        }
+        if (!inside) {
+          stack = stack.slice(0, itemsHolding(indent));
+          lines[i].items = stack.slice();
         }
         continue;
       }
-      // md4c takes a closing fence as the closer even when it leaves the item.
-      if (closes) {
-        extend(fence.block, i);
-        lines[i].code = true;
-        fence.block.closed = true;
-        fence = null;
-        stack = stack.slice(0, itemsHolding(indent));
-        lines[i].items = stack.slice();
-        continue;
-      }
-      fenceLikeText = fenceOpenedBy(content)?.marker === fence.fence.marker;
+      const emptied =
+        canOpenBlockAt(indent) && emptiedByFence(content, fence.fence);
+      fenceLikeText =
+        canOpenBlockAt(indent) &&
+        fenceOpenedBy(content)?.marker === fence.fence.marker;
       lines[i].fenceLikeText = fenceLikeText;
       fence = null;
+      if (emptied) {
+        readAsBlank(i, indent);
+        continue;
+      }
     }
     if (blank) {
       paragraph = null;
@@ -353,20 +388,48 @@ export const scanListBlocks = (markdown: string): Scan => {
       continue;
     }
     if (canOpenBlock && content.startsWith('>')) {
+      const quoted = [quotedContent(content, indent)];
+      let inner: Scan | null = null;
+      let itemsLeft = depth;
+      let closed = false;
+      let emptied = false;
       let end = i;
-      const quoted = [content];
-      while (end + 1 < raw.length) {
+      while (end + 1 < raw.length && !closed) {
         const next = raw[end + 1];
         const ws = leadingWhitespace(next);
         const nextContent = contentOf(next, ws.offset);
-        if (nextContent === '' || ws.indent < contentColAt(depth)) {
+        if (nextContent === '') {
           break;
         }
+        const holding = itemsHolding(ws.indent);
+        const nextRelIndent = ws.indent - contentColAt(holding);
         if (
-          !nextContent.startsWith('>') &&
-          interruptsParagraph(nextContent, ws.indent - contentColAt(depth))
+          holding === depth &&
+          nextRelIndent < INDENTED_CODE &&
+          nextContent.startsWith('>')
         ) {
-          break;
+          quoted.push(quotedContent(nextContent, ws.indent));
+          inner = null;
+        } else {
+          inner ??= scanListBlocks(quoted.join('\n'), true);
+          if (inner.openFence) {
+            if (!closesLeaving(ws.indent, nextContent, inner.openFence)) {
+              emptied =
+                canOpenBlockAt(ws.indent) &&
+                emptiedByFence(nextContent, inner.openFence);
+              break;
+            }
+            closed = true;
+            itemsLeft = holding;
+          } else if (
+            !inner.openParagraph ||
+            interruptsParagraph(nextContent, nextRelIndent)
+          ) {
+            break;
+          }
+          // A lazy line only continues the quoted paragraph: it never makes a
+          // table underline there.
+          quoted.push(closed ? nextContent : LAZY_TEXT);
         }
         end++;
         lines.push({
@@ -375,15 +438,23 @@ export const scanListBlocks = (markdown: string): Scan => {
           blank: false,
           items: stack.slice(),
         });
-        quoted.push(nextContent);
       }
-      const inner = quoted.map(l => l.replace(/^>[ ]?/, '')).join('\n');
-      if (depth > 0 && scanListBlocks(inner).hasTableOrFence) {
-        addBlock('quote', i, end);
+      if (depth > 0 || (nested && end === raw.length - 1)) {
+        inner = scanListBlocks(quoted.join('\n'), true);
+        if (depth > 0 && inner.hasTableOrFence) {
+          addBlock('quote', i, end);
+        }
+        quoteAtEnd = end === raw.length - 1 ? inner : null;
       }
-      i = end;
+      stack = stack.slice(0, itemsLeft);
       paragraph = null;
       table = null;
+      i = end;
+      if (emptied) {
+        i++;
+        lines.push({raw: raw[i], indent: 0, blank: true, items: []});
+        readAsBlank(i, leadingWhitespace(raw[i]).indent);
+      }
       continue;
     }
     if (table && table.depth === depth) {
@@ -423,5 +494,13 @@ export const scanListBlocks = (markdown: string): Scan => {
       paragraph = {start: i, lines: 1, depth};
     }
   }
-  return {lines, blocks, hasTableOrFence};
+  return {
+    lines,
+    blocks,
+    hasTableOrFence,
+    openFence: quoteAtEnd ? quoteAtEnd.openFence : fence?.fence,
+    openParagraph: quoteAtEnd
+      ? quoteAtEnd.openParagraph
+      : paragraph !== null && table === null,
+  };
 };

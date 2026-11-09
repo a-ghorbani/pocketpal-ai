@@ -291,6 +291,59 @@ export const nestedListReplies: Record<string, string> = {
   spaceThenTabIndentedCode: ['- Run:', '', '    \tmake all', '- Ship'].join(
     '\n',
   ),
+  quotedFenceClosedAtRoot: [
+    '1. Note:',
+    '',
+    '   > ```sh',
+    '   > run',
+    '```',
+    '',
+    '2. Next',
+    '3. Last',
+  ].join('\n'),
+  quotedFenceClosedInItem: [
+    '1. Note:',
+    '',
+    '   > ```sh',
+    '   > run',
+    '   ```',
+    '',
+    '   More text here.',
+    '2. Next',
+  ].join('\n'),
+  quotedFenceClosedPastTextColumn: [
+    '1. Note:',
+    '   > ```py',
+    '   > print(1)',
+    '    ```',
+    '2. Next',
+  ].join('\n'),
+  closerAtCodeIndent: [
+    '100. Run:',
+    '',
+    '     ```sh',
+    '     make',
+    '    ```',
+    '101. Next',
+  ].join('\n'),
+  shorterBareFenceLeavingItem: [
+    '- Example:',
+    '',
+    '  ````',
+    '  code',
+    '```',
+    'more',
+  ].join('\n'),
+  lazyLineInMovedQuote: [
+    '1. Note:',
+    '',
+    '   > | a | b |',
+    '   > |---|---|',
+    '   >',
+    '   > para',
+    'lazy line',
+    '2. Next',
+  ].join('\n'),
 };
 
 /** Replies the split must leave as they are: md4c puts no block inside a list item. */
@@ -300,6 +353,12 @@ export const unaffectedReplies: Record<string, string> = {
   ),
   rootTable: ['Intro', '', table(''), '', '- a', '- b'].join('\n'),
   plainList: '1. One\n2. Two\n   - nested\n\n   More text.\n3. Three',
+  lazyDelimiterRowInQuote: [
+    '1. Note:',
+    '   > | a | b |',
+    '   ---|---',
+    '2. Next',
+  ].join('\n'),
 };
 
 /** Known limitation: a list inside a root blockquote keeps its table nested. */

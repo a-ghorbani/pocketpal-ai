@@ -53,8 +53,29 @@ const randomReply = (random: (n: number) => number): string => {
       indent + fence,
     ];
   };
-  const quote = (indent: string) =>
-    (chance(2) ? table('') : code('')).map(line => `${indent}> ${line}`);
+  const quote = (indent: string) => {
+    const kind = random(3);
+    if (kind === 0) {
+      return table('').map(line => `${indent}> ${line}`);
+    }
+    if (kind === 1) {
+      const body = code('');
+      const quoted = body.map(line => `${indent}> ${line}`);
+      if (chance(2)) {
+        quoted[quoted.length - 1] =
+          pick(['', indent, `${indent} `, `${indent}    `]) +
+          body[body.length - 1];
+      }
+      return quoted;
+    }
+    return [
+      `${indent}> note${++id} words`,
+      pick(['', indent, `${indent}  `]) +
+        pick([`lazy${id} words`, '---|---', `    lazy${id} code`]),
+      `${indent}> `,
+      ...table('').map(line => `${indent}> ${line}`),
+    ];
+  };
   const block = (indent: string) => {
     const kind = random(6);
     if (kind < 2) {

@@ -10,6 +10,7 @@ import {
   nestedBlockCount,
   parseMarkdown,
   rootBlocks,
+  rootBlockTypes,
   settledRootBlocks,
   wordsOf,
 } from '../../../../jest/md4c';
@@ -238,6 +239,47 @@ describe('splitListsAroundBlocks', () => {
         '2. Run it',
       ].join('\n'),
     );
+  });
+
+  it('moves a quoted fence with the closer md4c took from outside the quote', () => {
+    const atRoot = splitListsAroundBlocks(
+      nestedListReplies.quotedFenceClosedAtRoot,
+    );
+    const inItem = splitListsAroundBlocks(
+      nestedListReplies.quotedFenceClosedInItem,
+    );
+
+    expect(atRoot).toBe('1. Note:\n\n> ```sh\n> run\n```\n\n2. Next\n3. Last');
+    expect(rootBlockTypes(parseMarkdown(atRoot))).toEqual([
+      'OrderedList',
+      'Blockquote',
+      'OrderedList',
+    ]);
+    expect(inItem).toBe(
+      '1. Note:\n\n> ```sh\n> run\n```\n\nMore text here.\n\n2. Next',
+    );
+    expect(rootBlockTypes(parseMarkdown(inItem))).toEqual([
+      'OrderedList',
+      'Blockquote',
+      'Paragraph',
+      'OrderedList',
+    ]);
+  });
+
+  it('leaves a fence that opens on the list marker line in its item', () => {
+    const reply = '1. ```sh\n   make\n   ```\n2. Next';
+
+    expect(splitListsAroundBlocks(reply)).toBe(reply);
+  });
+
+  it('measures a tab after a quote mark from its column', () => {
+    const reply = '- Note:\n\n  > \tcode line\n      more code\n- Next';
+    const output = splitListsAroundBlocks(reply);
+
+    expect(output).toBe(
+      '- Note:\n\n  > \tcode line\n\n```\nmore code\n```\n\n- Next',
+    );
+    expectSameReading(reply, output);
   });
 
   it('leaves the marker of a list before the first block as written', () => {
