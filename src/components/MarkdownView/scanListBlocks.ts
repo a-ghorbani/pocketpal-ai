@@ -34,12 +34,55 @@ export interface ScannedLine {
   fenceLikeText?: boolean;
 }
 
-interface Scan {
+export interface Scan {
   lines: ScannedLine[];
   blocks: NestedBlock[];
   hasTableOrFence: boolean;
   openFence?: Fence;
   openParagraph: boolean;
+}
+
+interface Paragraph {
+  start: number;
+  lines: number;
+  depth: number;
+}
+
+interface EmptyItem {
+  item: ListItem;
+  blankAfter: boolean;
+}
+
+/**
+ * The scan state after a line that no later line can change: one that opens a
+ * list item, or a blank line outside every list and code block. A paragraph
+ * and an empty item keep changing after it, so their counts are copied.
+ */
+export interface ScanCheckpoint {
+  line: number;
+  blockCount: number;
+  stack: ListItem[];
+  nextItemId: number;
+  nextListId: number;
+  paragraph: Paragraph | null;
+  paragraphLines: number;
+  fence: {fence: Fence; depth: number} | null;
+  hasTableOrFence: boolean;
+  emptyItem: EmptyItem | null;
+  blankAfterEmptyItem: boolean;
+}
+
+export interface ScanRun {
+  scan: Scan;
+  checkpoint?: ScanCheckpoint;
+}
+
+interface ScanOptions {
+  nested?: boolean;
+  /** A run of the same lines up to its checkpoint; its arrays are reused. */
+  resume?: {scan: Scan; checkpoint: ScanCheckpoint};
+  /** Checkpoints are taken only on lines before this one. */
+  checkpointBefore?: number;
 }
 
 interface Marker {
@@ -172,33 +215,62 @@ const quotedContent = (content: string, col: number): string => {
 };
 
 const contentOf = (text: string, offset: number): string =>
-  text.slice(offset).replace(/\r$/, '');
+  text.slice(offset, text.endsWith('\r') ? -1 : undefined);
 
 /**
  * Follows md4c's per-line block analysis for list items, paragraphs, tables,
  * fences and quotes, and reports every table, fence, indented code block or
  * quote that holds a table or fenced code and sits inside a list item.
  */
-export const scanListBlocks = (markdown: string, nested = false): Scan => {
-  const raw = markdown.split('\n');
-  const lines: ScannedLine[] = [];
-  const blocks: NestedBlock[] = [];
-  let stack: ListItem[] = [];
-  let nextItemId = 1;
-  let nextListId = 1;
-  let paragraph: {start: number; lines: number; depth: number} | null = null;
+export const scanLines = (
+  raw: string[],
+  {nested = false, resume, checkpointBefore = -1}: ScanOptions = {},
+): ScanRun => {
+  const from = resume?.checkpoint;
+  const lines = resume ? resume.scan.lines : [];
+  const blocks = resume ? resume.scan.blocks : [];
+  lines.length = from ? from.line + 1 : 0;
+  blocks.length = from ? from.blockCount : 0;
+  let stack = from ? from.stack : [];
+  let nextItemId = from ? from.nextItemId : 1;
+  let nextListId = from ? from.nextListId : 1;
+  let paragraph: Paragraph | null = from?.paragraph
+    ? {...from.paragraph, lines: from.paragraphLines}
+    : null;
   let table: {depth: number; block?: NestedBlock} | null = null;
   // A fence on a list marker line stays in its item, so it has no block.
-  let fence: {fence: Fence; depth: number; block?: NestedBlock} | null = null;
+  let fence: {fence: Fence; depth: number; block?: NestedBlock} | null =
+    from?.fence ?? null;
   let indentedCode: NestedBlock | null = null;
-  let hasTableOrFence = false;
+  let hasTableOrFence = from ? from.hasTableOrFence : false;
   let quoteAtEnd: Scan | null = null;
-  let emptyItem = null as {item: ListItem; blankAfter: boolean} | null;
+  let emptyItem: EmptyItem | null = from?.emptyItem
+    ? {...from.emptyItem, blankAfter: from.blankAfterEmptyItem}
+    : null;
+  // Reused across checkpoint lines, so a whole scan allocates one.
+  let latest: ScanCheckpoint | undefined;
+  const keep = (i: number) => {
+    if (i >= checkpointBefore) {
+      return;
+    }
+    latest ??= {} as ScanCheckpoint;
+    latest.line = i;
+    latest.blockCount = blocks.length;
+    latest.stack = stack;
+    latest.nextItemId = nextItemId;
+    latest.nextListId = nextListId;
+    latest.paragraph = paragraph;
+    latest.paragraphLines = paragraph?.lines ?? 0;
+    latest.fence = fence;
+    latest.hasTableOrFence = hasTableOrFence;
+    latest.emptyItem = emptyItem;
+    latest.blankAfterEmptyItem = emptyItem?.blankAfter ?? false;
+  };
 
   const contentColAt = (depth: number) =>
     depth > 0 ? stack[depth - 1].contentCol : 0;
   const addBlock = (kind: NestedBlockKind, start: number, end: number) => {
-    const block: NestedBlock = {kind, start, end, items: stack.slice()};
+    const block: NestedBlock = {kind, start, end, items: stack};
     if (block.items.length === 0) {
       lines[start].rootCode = block;
       return block;
@@ -235,7 +307,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       raw: raw[i].endsWith('\r') ? '\r' : '',
       indent: 0,
       blank: true,
-      items: stack.slice(),
+      items: stack,
     };
     paragraph = null;
     table = null;
@@ -249,10 +321,10 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       delimiter: marker.delimiter,
       number: sibling ? sibling.number + 1 : marker.number,
     };
-    stack.push(item);
+    stack = [...stack, item];
     emptyItem = marker.empty ? {item, blankAfter: false} : null;
     lines[i].opens = item;
-    lines[i].items = stack.slice();
+    lines[i].items = stack;
     table = null;
     paragraph = null;
     const markerLineFence = marker.empty
@@ -268,14 +340,15 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       paragraph = {start: i, lines: 1, depth: stack.length};
       lines[i].text = true;
     }
+    keep(i);
   };
 
-  for (let i = 0; i < raw.length; i++) {
+  for (let i = from ? from.line + 1 : 0; i < raw.length; i++) {
     const text = raw[i];
     const {indent, offset} = leadingWhitespace(text);
     const content = contentOf(text, offset);
     const blank = content === '';
-    lines.push({raw: text, indent, blank, items: stack.slice()});
+    lines.push({raw: text, indent, blank, items: stack});
 
     let fenceLikeText = false;
     if (fence) {
@@ -298,7 +371,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
         }
         if (!inside) {
           stack = stack.slice(0, itemsHolding(indent));
-          lines[i].items = stack.slice();
+          lines[i].items = stack;
         }
         continue;
       }
@@ -320,6 +393,9 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       }
       paragraph = null;
       table = null;
+      if (stack.length === 0 && indentedCode === null) {
+        keep(i);
+      }
       continue;
     }
     const previousIndentedCode = indentedCode as NestedBlock | null;
@@ -329,7 +405,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
     // An item can begin with at most one blank line.
     if (emptyItem?.blankAfter && kept === stack.length) {
       stack = stack.slice(0, -1);
-      lines[i].items = stack.slice();
+      lines[i].items = stack;
       kept = stack.length;
     }
     emptyItem = null;
@@ -361,7 +437,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       stack = stack.slice(0, kept);
       paragraph = null;
       table = null;
-      lines[i].items = stack.slice();
+      lines[i].items = stack;
     }
 
     const depth = stack.length;
@@ -426,7 +502,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
           quoted.push(quotedContent(nextContent, ws.indent));
           inner = null;
         } else {
-          inner ??= scanListBlocks(quoted.join('\n'), true);
+          inner ??= scanLines(quoted, {nested: true}).scan;
           if (inner.openFence) {
             if (!closesLeaving(ws.indent, nextContent, inner.openFence)) {
               emptied =
@@ -447,15 +523,10 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
           quoted.push(closed ? nextContent : LAZY_TEXT);
         }
         end++;
-        lines.push({
-          raw: next,
-          indent: ws.indent,
-          blank: false,
-          items: stack.slice(),
-        });
+        lines.push({raw: next, indent: ws.indent, blank: false, items: stack});
       }
       if (depth > 0 || (nested && end === raw.length - 1)) {
-        inner = scanListBlocks(quoted.join('\n'), true);
+        inner = scanLines(quoted, {nested: true}).scan;
         if (depth > 0 && inner.hasTableOrFence) {
           addBlock('quote', i, end);
         }
@@ -511,12 +582,15 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
     lines[i].text = true;
   }
   return {
-    lines,
-    blocks,
-    hasTableOrFence,
-    openFence: quoteAtEnd ? quoteAtEnd.openFence : fence?.fence,
-    openParagraph: quoteAtEnd
-      ? quoteAtEnd.openParagraph
-      : paragraph !== null && table === null,
+    scan: {
+      lines,
+      blocks,
+      hasTableOrFence,
+      openFence: quoteAtEnd ? quoteAtEnd.openFence : fence?.fence,
+      openParagraph: quoteAtEnd
+        ? quoteAtEnd.openParagraph
+        : paragraph !== null && table === null,
+    },
+    checkpoint: latest ?? from,
   };
 };

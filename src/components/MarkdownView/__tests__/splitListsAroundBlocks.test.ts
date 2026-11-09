@@ -15,7 +15,10 @@ import {
   wordsOf,
 } from '../../../../jest/md4c';
 
-import {splitListsAroundBlocks} from '../splitListsAroundBlocks';
+import {
+  createListSplitter,
+  splitListsAroundBlocks,
+} from '../splitListsAroundBlocks';
 
 beforeAll(loadMd4c);
 
@@ -347,6 +350,46 @@ describe('splitListsAroundBlocks', () => {
 
   describe('while the reply streams', () => {
     const streamed = Object.entries(nestedListReplies);
+    const fresh = (markdown: string) => createListSplitter()(markdown);
+
+    it.each([...streamed, ...Object.entries(unaffectedReplies)])(
+      '%s: reusing the earlier prefixes gives the same split',
+      (_name, reply) => {
+        const split = createListSplitter();
+        for (const prefix of prefixes(reply)) {
+          expect(split(prefix)).toBe(fresh(prefix));
+        }
+      },
+    );
+
+    it('reuses the work after a list marker line that starts a table', () => {
+      const reply =
+        '1. Run:\n\n   ```sh\n   make\n   ```\n- a | b\n  |---|---|\n  | c | d |\n---\n\nEnd';
+      const split = createListSplitter();
+      for (const prefix of prefixes(reply)) {
+        expect(split(prefix)).toBe(fresh(prefix));
+      }
+    });
+
+    it('keeps two replies apart and starts over where a reply changed', () => {
+      const split = createListSplitter();
+      const {deepNesting, numberedStepsWithTableAndCode: steps} =
+        nestedListReplies;
+      const edited = steps.replace('Install', 'Set up');
+      const calls = [
+        ...prefixes(deepNesting).flatMap((prefix, n) => [
+          prefix,
+          steps.slice(0, n + 1),
+        ]),
+        steps,
+        edited,
+        steps.slice(0, steps.length - 9),
+        `${steps}\n\n4. More`,
+      ];
+      for (const markdown of calls) {
+        expect(split(markdown)).toBe(fresh(markdown));
+      }
+    });
 
     it.each(streamed)(
       '%s: every prefix keeps its words and numbers and leaves no block nested',

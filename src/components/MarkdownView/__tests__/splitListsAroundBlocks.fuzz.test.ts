@@ -10,7 +10,10 @@ import {
   wordsOf,
 } from '../../../../jest/md4c';
 
-import {splitListsAroundBlocks} from '../splitListsAroundBlocks';
+import {
+  createListSplitter,
+  splitListsAroundBlocks,
+} from '../splitListsAroundBlocks';
 
 beforeAll(loadMd4c);
 
@@ -210,12 +213,20 @@ const problemsOf = (
 const settledOutput = (input: string) =>
   settledRootBlocks(parseMarkdown(splitListsAroundBlocks(input)));
 
-/** Problems of one streamed prefix, given the settled output before it. */
-const streamingStep = (input: string, settled: string[]) => {
-  const output = splitListsAroundBlocks(input);
+/**
+ * Problems of one streamed prefix, given the settled output before it and
+ * the split that saw the earlier prefixes.
+ */
+const streamingStep = (
+  input: string,
+  settled: string[],
+  split = createListSplitter(),
+) => {
+  const output = split(input);
   const after = parseMarkdown(output);
   const problems = [
     ...problemsOf(input, output, after),
+    output !== createListSplitter()(input) && 'reused work changed the split',
     JSON.stringify(rootBlocks(after).slice(0, settled.length)) !==
       JSON.stringify(settled) && 'earlier root block changed',
   ].filter((problem): problem is string => typeof problem === 'string');
@@ -245,9 +256,10 @@ it('keeps md4c reading of random nested replies on every line prefix', () => {
     let unstable = false;
     let previousPrefix = '';
     let settled: string[] = [];
+    const split = createListSplitter();
     for (let n = 1; n <= lines.length; n++) {
       const prefix = lines.slice(0, n).join(eol);
-      const step = streamingStep(prefix, settled);
+      const step = streamingStep(prefix, settled, split);
       const problems = step.problems;
       const before = previousPrefix;
       previousPrefix = prefix;
