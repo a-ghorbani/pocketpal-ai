@@ -15,3 +15,4 @@ export type {PhononProgressCallback} from './engines/phonon';
 export {PHONON_VOICES} from './engines/phonon/voices';
 export {getEngine, getNeuralEngine, getAllEngines} from './engineRegistry';
 export {ttsRuntime} from './runtime';
+export {hasVoiceFile, ensureVoiceFile} from './voiceFiles';

@@ -41,7 +41,7 @@ mkdir -p "$air_dir/tensor"
 airs=("$@")
 if [ "$mode" = llama ]; then
   # On tensor-API GPUs, ggml loads these from ggml-tensor.metallib over rnllama.metallib's.
-  tensor_airs=(tensor/mul_mm tensor/fa_f16)
+  tensor_airs=(tensor/mul_mm tensor/fa_tensor)
   airs+=("${tensor_airs[@]}")
 fi
 

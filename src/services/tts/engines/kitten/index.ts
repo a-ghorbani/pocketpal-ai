@@ -7,6 +7,7 @@ import {
   KITTEN_MODEL_BASE_URL,
   KITTEN_MODEL_FILES,
   KITTEN_MODEL_SUBDIR,
+  KITTEN_VOICES_BASE_URL,
   TTS_DICT_FILENAME,
   TTS_DICT_URL,
   TTS_PARENT_SUBDIR,
@@ -18,6 +19,7 @@ import type {
   StreamOptions,
   StreamingHandle,
   Voice,
+  VoiceFileSource,
 } from '../../types';
 import {KITTEN_VOICES} from './voices';
 
@@ -53,6 +55,13 @@ export class KittenEngine implements NeuralEngine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`voices/${voiceId}.json`),
+      url: `${KITTEN_VOICES_BASE_URL}/${voiceId}.json`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {

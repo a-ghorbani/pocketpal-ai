@@ -11,6 +11,7 @@ import {
   voiceEntitlement,
   voiceModeStore,
 } from '../../../store';
+import {isPlusUnlocked} from '../../../services/plus/gate';
 
 import {ChatScreen} from '../ChatScreen';
 
@@ -23,8 +24,21 @@ jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
 }));
 
 const mockSheetsShown: string[] = [];
+const mockSheet = {
+  setupVisible: false,
+  closeSetup: () => {},
+  closeMemory: () => {},
+};
 jest.mock('../../../components/VoiceSetupSheet', () => ({
-  VoiceSetupSheet: ({isVisible}: {isVisible: boolean}) => {
+  VoiceSetupSheet: ({
+    isVisible,
+    onClose,
+  }: {
+    isVisible: boolean;
+    onClose: () => void;
+  }) => {
+    mockSheet.setupVisible = isVisible;
+    mockSheet.closeSetup = onClose;
     if (isVisible) {
       mockSheetsShown.push('setup');
     }
@@ -32,7 +46,8 @@ jest.mock('../../../components/VoiceSetupSheet', () => ({
   },
 }));
 jest.mock('../../../components/VoiceMemorySheet', () => ({
-  VoiceMemorySheet: ({fit}: {fit: unknown}) => {
+  VoiceMemorySheet: ({fit, onClose}: {fit: unknown; onClose: () => void}) => {
+    mockSheet.closeMemory = onClose;
     if (fit) {
       mockSheetsShown.push('memory');
     }
@@ -173,6 +188,62 @@ describe('ChatScreen voice mode entry', () => {
     runInAction(() => {
       purchaseStore.plusUnlocked = false;
     });
+  });
+
+  describe('in an ungated build', () => {
+    const defaultSource = (voiceEntitlement as any).defaultSource;
+
+    beforeEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = false;
+      defaultSource.openPaywall.mockClear();
+      voiceEntitlement.register({
+        isUnlocked: () => voiceModeStore.unlockOverride ?? isPlusUnlocked(),
+        openPaywall: defaultSource.openPaywall,
+      });
+    });
+
+    afterEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = true;
+      voiceEntitlement.register(defaultSource);
+    });
+
+    it('shows no lock and a tap opens setup, not the teaser', async () => {
+      runInAction(() => {
+        modelStore.models = modelsList as any;
+        modelStore.activeModelId = modelsList[0].id;
+      });
+      const {getByTestId, queryByTestId} = renderScreen();
+      expect(purchaseStore.plusUnlocked).toBe(false);
+      expect(queryByTestId('voice-mode-lock')).toBeNull();
+
+      await act(async () => {
+        fireEvent.press(getByTestId('voice-mode-button'));
+      });
+
+      expect(queryByTestId('voice-teaser')).toBeNull();
+      expect(defaultSource.openPaywall).not.toHaveBeenCalled();
+      expect(mockSheetsShown).toEqual(['setup']);
+    });
+  });
+
+  it("each sheet's close clears only its own sheet", async () => {
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.models = modelsList as any;
+      modelStore.activeModelId = modelsList[0].id;
+      asrStore.downloadStates.base = 'not_installed';
+    });
+    const {getByTestId} = renderScreen();
+    await act(async () => {
+      fireEvent.press(getByTestId('voice-mode-button'));
+    });
+    expect(mockSheet.setupVisible).toBe(true);
+
+    act(() => mockSheet.closeMemory());
+    expect(mockSheet.setupVisible).toBe(true);
+
+    act(() => mockSheet.closeSetup());
+    expect(mockSheet.setupVisible).toBe(false);
   });
 
   it('shows the voice view over the chat while open in full view', () => {

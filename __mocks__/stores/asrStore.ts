@@ -45,9 +45,11 @@ class MockASRStore {
   inputLevels: number[] = [];
   recordingStartedAt: number | null = null;
   waitingForChat = false;
+  acceptedCaptureBytes: number | null = null;
 
   init: jest.Mock;
-  hasMemoryForCapture: jest.Mock;
+  captureMemoryFit: jest.Mock;
+  acceptCaptureMemory: jest.Mock;
   setUserASROverride: jest.Mock;
   selectTier: jest.Mock;
   setSpokenLanguage: jest.Mock;
@@ -64,7 +66,8 @@ class MockASRStore {
   constructor() {
     makeAutoObservable(this, {
       init: false,
-      hasMemoryForCapture: false,
+      captureMemoryFit: false,
+      acceptCaptureMemory: false,
       setUserASROverride: false,
       selectTier: false,
       setSpokenLanguage: false,
@@ -79,7 +82,14 @@ class MockASRStore {
       pushInputLevel: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
-    this.hasMemoryForCapture = jest.fn().mockResolvedValue(true);
+    this.captureMemoryFit = jest
+      .fn()
+      .mockResolvedValue({status: 'fits', neededBytes: 0});
+    this.acceptCaptureMemory = jest.fn((bytes: number) => {
+      runInAction(() => {
+        this.acceptedCaptureBytes = bytes;
+      });
+    });
     this.setUserASROverride = jest.fn((v: boolean) => {
       runInAction(() => {
         this.userASROverride = v;

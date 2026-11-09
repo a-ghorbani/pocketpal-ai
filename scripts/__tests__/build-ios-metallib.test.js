@@ -158,7 +158,7 @@ describe('the parse itself', () => {
   });
 
   it("finds upstream's tensor API kernels, which the script builds", () => {
-    expect(tensorKernels).toEqual(['mul_mm', 'fa_f16']);
+    expect(tensorKernels).toEqual(['mul_mm', 'fa_tensor']);
   });
 });
 
@@ -358,7 +358,7 @@ describe('failures', () => {
 
   it('fails without writing either library when a compile fails after writing its .air', () => {
     const {status, calls} = run({
-      env: {STUB_FAIL_AFTER_OUTPUT_AIR: 'tensor/fa_f16.air'},
+      env: {STUB_FAIL_AFTER_OUTPUT_AIR: 'tensor/fa_tensor.air'},
     });
     expect(status).not.toBe(0);
     expect(calls.filter(call => call[2] === 'metallib')).toEqual([]);

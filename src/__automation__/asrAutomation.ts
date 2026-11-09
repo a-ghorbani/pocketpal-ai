@@ -27,7 +27,7 @@ import {modelStore} from '../store/ModelStore';
  *   state::waiting-chat   transcribing, waiting for a CPU chat reply
  *   state::error-capture  transcribe failure → composer error snackbar
  *   state::error-blocked  blocked permission → snackbar + open-Settings action
- *   state::error-memory   whisper won't fit next to the chat model → snackbar
+ *   state::error-memory   chat model + whisper exceed total RAM → snackbar
  *   state::error-disk     selected tier disk-blocked → Settings storage line
  *   tiers::none           gate open + no tier installed, default tier selected
  *   tiers::<csv>          gate open + exactly these tiers installed; the first

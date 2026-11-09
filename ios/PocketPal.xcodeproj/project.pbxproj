@@ -540,6 +540,7 @@
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_0.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q5_1.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_q8_0.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_tensor.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_common.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f16.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/fa_vec_f32.metal",
@@ -552,6 +553,7 @@
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/misc.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mm.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal",
+				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv_mma.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/norm.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/pool.metal",
 				"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/kernels/quantize.h",
@@ -576,7 +578,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
+			shellScript = "\"${SRCROOT}/../scripts/build-ios-metallib.sh\" \"${SRCROOT}/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" fa_aux fa_f16 fa_f32 fa_q4_0 fa_q4_1 fa_q5_0 fa_q5_1 fa_q8_0 fa_tensor fa_vec_f16 fa_vec_f32 fa_vec_q4_0 fa_vec_q4_1 fa_vec_q5_0 fa_vec_q5_1 fa_vec_q8_0 mul_mv mul_mv_mma mul_mm quantize softmax norm unary binbcast reduce tri ssm wkv gated_delta_net solve_tri rope conv upscale argsort pool misc";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -630,7 +632,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = PocketPal/Info.plist;
@@ -639,7 +641,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -669,7 +671,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -677,7 +679,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -933,14 +935,14 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
@@ -967,14 +969,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1103,7 +1105,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -1111,7 +1113,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -1145,14 +1147,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 159;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.21.1;
+				MARKETING_VERSION = 1.22.1;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

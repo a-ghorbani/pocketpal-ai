@@ -6,6 +6,7 @@ import {
   isPlusAvailable,
   isPlusUnlocked,
   openPlus,
+  PLUS_STORE_GATE_MARKER,
   plusGate,
   shouldReturnFocusOnClose,
 } from '../gate';
@@ -193,5 +194,39 @@ describe('Plus gate', () => {
     stop();
 
     expect(seen).toEqual([false, true, false]);
+  });
+
+  describe('in an ungated build', () => {
+    beforeEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = false;
+      setShipOverride(['handsFreeVoice']);
+    });
+
+    afterEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = true;
+    });
+
+    it('is unlocked without a purchase', () => {
+      expect(purchaseStore.plusUnlocked).toBe(false);
+      expect(isPlusUnlocked()).toBe(true);
+    });
+
+    it('is unavailable and openPlus does nothing', () => {
+      openPlus({onUnlocked: jest.fn()});
+
+      expect(isPlusAvailable()).toBe(false);
+      expect(plusGate.request).toBeNull();
+      expect(purchaseStore.retryPlusProducts).not.toHaveBeenCalled();
+    });
+
+    it('exports no marker', () => {
+      jest.isolateModules(() => {
+        expect(require('../gate').PLUS_STORE_GATE_MARKER).toBeNull();
+      });
+    });
+  });
+
+  it('exports the marker in a gated build', () => {
+    expect(PLUS_STORE_GATE_MARKER).toBe('PLUS_STORE_GATE_ON');
   });
 });

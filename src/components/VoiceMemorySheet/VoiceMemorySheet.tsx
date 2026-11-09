@@ -7,6 +7,7 @@ import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
 import {L10nContext, formatBytes} from '../../utils';
 import {asrTierLabel} from '../../utils/asrTierLabel';
+import {advertisedRamBytes} from '../../utils/memoryDisplay';
 import {t} from '../../locales';
 import type {VoiceMemoryFit} from '../../services/voice';
 
@@ -19,11 +20,6 @@ interface VoiceMemorySheetProps {
   onChooseSmallerModel: () => void;
 }
 
-/**
- * Shown before entering voice mode when the chat model, whisper and the
- * voice don't comfortably fit together. Continuing is offered only when
- * whisper itself fits.
- */
 export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
   fit,
   chatModelName,
@@ -37,11 +33,14 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
   const strings = l10n.voiceMode;
   const wontFit = fit?.status === 'wont_fit';
   const breakdown = fit?.breakdown;
-  const total = Math.max(
-    breakdown?.availableBytes ?? 0,
-    breakdown?.neededBytes ?? 0,
-    1,
-  );
+  const totalBytes =
+    breakdown && Number.isFinite(breakdown.totalBytes)
+      ? breakdown.totalBytes
+      : 0;
+  const total = Math.max(totalBytes, breakdown?.neededBytes ?? 0, 1);
+  const advertisedTotal = totalBytes ? advertisedRamBytes(totalBytes) : 0;
+  const neededFitsTotal = (breakdown?.neededBytes ?? 0) <= advertisedTotal;
+  const showTotal = advertisedTotal > 0 && wontFit !== neededFitsTotal;
 
   const rowStyle = {
     chat: {
@@ -116,10 +115,12 @@ export const VoiceMemorySheet: React.FC<VoiceMemorySheetProps> = ({
               testID="voice-memory-needed">
               <Text variant="titleSmall">{strings.memoryNeeded}</Text>
               <Text variant="titleSmall">
-                {t(strings.memoryNeededValue, {
-                  needed: formatBytes(breakdown.neededBytes, 1),
-                  available: formatBytes(breakdown.availableBytes, 1),
-                })}
+                {showTotal
+                  ? t(strings.memoryNeededOfTotal, {
+                      needed: formatBytes(breakdown.neededBytes, 1),
+                      total: formatBytes(advertisedTotal, 1),
+                    })
+                  : formatBytes(breakdown.neededBytes, 1)}
               </Text>
             </View>
           )}

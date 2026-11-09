@@ -60,6 +60,11 @@ export interface Spec extends TurboModule {
     rss_kb_before: number;
     rss_kb_after: number;
   }>;
+  /**
+   * The phone's IPv4 address on Wi-Fi, skipping loopback and link-local
+   * addresses; null when it has none.
+   */
+  getWifiIPv4(): Promise<string | null>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('HardwareInfo');

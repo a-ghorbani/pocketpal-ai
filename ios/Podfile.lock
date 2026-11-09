@@ -13,6 +13,7 @@ PODS:
     - ReactNativeDependencies
   - BVLinearGradient (2.8.3):
     - React-Core
+  - CocoaAsyncSocket (7.6.5)
   - DoubleConversion (1.1.6):
     - ReactNativeDependencies
   - fast_float (8.0.0):
@@ -65,7 +66,7 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - llama-rn (0.13.0-rc.7):
+  - llama-rn (0.13.0-rc.9):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1606,6 +1607,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-tcp-socket (6.4.3):
+    - CocoaAsyncSocket
+    - React-Core
   - react-native-webview (13.16.1):
     - hermes-engine
     - RCTRequired
@@ -2699,6 +2703,7 @@ DEPENDENCIES:
   - react-native-render-html (from `../node_modules/react-native-render-html`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - "react-native-slider (from `../node_modules/@react-native-community/slider`)"
+  - react-native-tcp-socket (from `../node_modules/react-native-tcp-socket`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
@@ -2770,6 +2775,7 @@ SPEC REPOS:
   trunk:
     - AppAuth
     - AppCheckCore
+    - CocoaAsyncSocket
     - Firebase
     - FirebaseAppCheck
     - FirebaseAppCheckInterop
@@ -2906,6 +2912,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-slider:
     :path: "../node_modules/@react-native-community/slider"
+  react-native-tcp-socket:
+    :path: "../node_modules/react-native-tcp-socket"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
@@ -3044,6 +3052,7 @@ SPEC CHECKSUMS:
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
   boost: 8502bfdc46e2804408af2e163049ece181009af4
   BVLinearGradient: cb006ba232a1f3e4f341bb62c42d1098c284da70
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4
   FBLazyVector: e08a27053b503eeb756ea4bd75d570d2f2522a1b
@@ -3060,7 +3069,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  llama-rn: c72406f25e74207113a7db45f0f7eff59e22320a
+  llama-rn: 7ee4ba3920d9678a536a059c1e2c156f8a9d96f1
   NitroIap: 9298750287e22c634e0cd7c62a24d88358772f53
   NitroModules: d7b6cfed1591a4f067ccfd834c031945763bebc9
   onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
@@ -3115,6 +3124,7 @@ SPEC CHECKSUMS:
   react-native-render-html: 5afc4751f1a98621b3009432ef84c47019dcb2bd
   react-native-safe-area-context: ffc410c82563bbd543724530896a52bce3a3cbd8
   react-native-slider: f9f52f688ebce839bc93a2e5913b3f9d475d7942
+  react-native-tcp-socket: e502f7c50922acc808015ce3fe54bb96fae75bf8
   react-native-webview: 377db9b0e7cf4c99ab01d9575a3633d8d80a51e1
   React-NativeModulesApple: adb1dd8361dff80e9f6652fb3fdbf033cfbe2a89
   React-networking: cd4507ec02cd4cbc432eed014ef5c49a874d8d43

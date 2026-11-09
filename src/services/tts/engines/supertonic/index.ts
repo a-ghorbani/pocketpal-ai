@@ -18,12 +18,14 @@ import {
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
+import {ensureVoiceFileAt} from '../../voiceFileDownload';
 import type {
   NeuralEngine,
   StreamOptions,
   StreamingHandle,
   SupertonicSteps,
   Voice,
+  VoiceFileSource,
 } from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
@@ -36,6 +38,15 @@ export type SupertonicProgressCallback = (progress: number) => void;
  * language-agnostic "Auto") to avoid two competing defaults.
  */
 const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
+
+const isUsableStyle = (text: string): boolean => {
+  try {
+    const style = JSON.parse(text) as {style_dp?: unknown; style_ttl?: unknown};
+    return Boolean(style?.style_dp && style.style_ttl);
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Supertonic neural TTS engine (v3, 31 languages + trained `na`).
@@ -80,6 +91,13 @@ export class SupertonicEngine implements NeuralEngine {
 
   private getFilePath(filename: string): string {
     return `${this.getModelPath()}/${filename}`;
+  }
+
+  voiceFile(voiceId: string): VoiceFileSource {
+    return {
+      path: this.getFilePath(`${voiceId}.json`),
+      url: `${SUPERTONIC_VOICES_BASE_URL}/${voiceId}.json`,
+    };
   }
 
   async isInstalled(): Promise<boolean> {
@@ -214,33 +232,11 @@ export class SupertonicEngine implements NeuralEngine {
       }
 
       // Phase 2: per-voice style JSON files — best-effort; partial OK.
-      // Without these the StyleLoader would fetch them lazily on first
-      // play, causing a confusing delay after the user picks a voice.
       const voicePhaseBase = corePhaseWeight;
       const voicePhaseWeight = 1 - corePhaseWeight;
       let voicesDone = 0;
       for (const voice of SUPERTONIC_VOICES) {
-        const target = this.getFilePath(`${voice.id}.json`);
-        try {
-          const result = await RNFS.downloadFile({
-            fromUrl: `${SUPERTONIC_VOICES_BASE_URL}/${voice.id}.json`,
-            toFile: target,
-            background: false,
-            discretionary: false,
-            cacheable: false,
-            progressInterval: 1000,
-          }).promise;
-          if (result.statusCode !== 200) {
-            console.warn(
-              `[SupertonicEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
-            );
-          }
-        } catch (voiceErr) {
-          console.warn(
-            `[SupertonicEngine] voice ${voice.id} download failed:`,
-            voiceErr,
-          );
-        }
+        await ensureVoiceFileAt(voice, this.voiceFile(voice.id));
         voicesDone++;
         if (onProgress) {
           onProgress(
@@ -253,17 +249,7 @@ export class SupertonicEngine implements NeuralEngine {
         }
       }
 
-      // Manifest WITH baseUrl — if any voice files failed to download
-      // (flaky network), the fork's StyleLoader can lazy-fetch them from
-      // this URL on first play. Matches Kokoro's pattern.
-      const manifest = {
-        baseUrl: SUPERTONIC_VOICES_BASE_URL,
-        voices: SUPERTONIC_VOICES.map(v => v.id),
-      };
-      await RNFS.writeFile(
-        this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
-        JSON.stringify(manifest, null, 2),
-      );
+      await this.writeVoicesManifest();
 
       // Version sentinel is the FINAL disk write (I-M2): if the process is
       // killed before this, isInstalled() reports false and the download is
@@ -302,8 +288,42 @@ export class SupertonicEngine implements NeuralEngine {
     }
   }
 
+  /**
+   * No `baseUrl`: with one, the library loads every style from the network
+   * and never reads the local file.
+   */
+  private async writeVoicesManifest(): Promise<void> {
+    await RNFS.writeFile(
+      this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
+      this.voicesManifest(),
+    );
+  }
+
+  private voicesManifest(): string {
+    return JSON.stringify({voices: SUPERTONIC_VOICES.map(v => v.id)}, null, 2);
+  }
+
+  private async removeUnusableStyles(): Promise<void> {
+    for (const {id} of SUPERTONIC_VOICES) {
+      const {path} = this.voiceFile(id);
+      if (
+        (await RNFS.exists(path)) &&
+        !isUsableStyle(await RNFS.readFile(path))
+      ) {
+        await RNFS.unlink(path);
+      }
+    }
+  }
+
   async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
+    const manifest = await RNFS.readFile(
+      this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
+    ).catch(() => null);
+    if (manifest !== this.voicesManifest()) {
+      await this.removeUnusableStyles();
+      await this.writeVoicesManifest();
+    }
     await Speech.initialize({
       engine: TTSEngine.SUPERTONIC,
       durationPredictorPath: `file://${modelDir}/duration_predictor.onnx`,

@@ -3,6 +3,8 @@
 #import <Metal/Metal.h>
 #import <os/proc.h>
 #import <mach/mach.h>
+#import <ifaddrs.h>
+#import <arpa/inet.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>
 @end
@@ -141,6 +143,44 @@ RCT_EXPORT_METHOD(purgeNativeAllocator:(RCTPromiseResolveBlock)resolve
     @"rss_kb_before": @0,
     @"rss_kb_after": @0,
   });
+}
+
+RCT_EXPORT_METHOD(getWifiIPv4:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  struct ifaddrs *interfaces = NULL;
+  if (getifaddrs(&interfaces) != 0) {
+    resolve([NSNull null]);
+    return;
+  }
+  NSString *en0Address = nil;
+  NSString *en1Address = nil;
+  for (struct ifaddrs *entry = interfaces; entry != NULL; entry = entry->ifa_next) {
+    if (entry->ifa_addr == NULL || entry->ifa_addr->sa_family != AF_INET) {
+      continue;
+    }
+    const struct sockaddr_in *address = (const struct sockaddr_in *)entry->ifa_addr;
+    if ((ntohl(address->sin_addr.s_addr) >> 16) == 0xA9FE) {
+      continue;
+    }
+    NSString *name = [NSString stringWithUTF8String:entry->ifa_name];
+    BOOL isEn0 = en0Address == nil && [name isEqualToString:@"en0"];
+    BOOL isEn1 = en1Address == nil && [name isEqualToString:@"en1"];
+    if (!isEn0 && !isEn1) {
+      continue;
+    }
+    char text[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &address->sin_addr, text, INET_ADDRSTRLEN) == NULL) {
+      continue;
+    }
+    if (isEn0) {
+      en0Address = [NSString stringWithUTF8String:text];
+    } else {
+      en1Address = [NSString stringWithUTF8String:text];
+    }
+  }
+  freeifaddrs(interfaces);
+  resolve(en0Address ?: en1Address ?: (id)[NSNull null]);
 }
 
 // Don't synthesize default module since we want to use the custom name

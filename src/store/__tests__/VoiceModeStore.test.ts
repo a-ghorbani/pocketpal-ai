@@ -122,6 +122,47 @@ describe('VoiceModeStore', () => {
     });
   });
 
+  describe('in an ungated build', () => {
+    beforeEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = false;
+    });
+
+    afterEach(() => {
+      (global as any).__PLUS_STORE_GATE__ = true;
+    });
+
+    it('is unlocked without a purchase', () => {
+      expect(mockPurchaseStore.plusUnlocked).toBe(false);
+      expect(voiceModeStore.isUnlocked).toBe(true);
+    });
+
+    it('the unlock override still locks', () => {
+      voiceModeStore.setUnlockOverride(false);
+      expect(voiceModeStore.isUnlocked).toBe(false);
+    });
+
+    it.each([
+      ['low', null, false],
+      ['low', true, true],
+      ['high', null, true],
+      ['high', false, false],
+    ] as const)(
+      'keeps the device gate: Android tier %s with the Settings override %s → supported %s',
+      (tier, override, supported) => {
+        const platform = Platform.OS;
+        Platform.OS = 'android';
+        runInAction(() => {
+          mockModelStore.deviceTier = tier;
+        });
+        if (override !== null) {
+          voiceModeStore.setUserVoiceModeOverride(override);
+        }
+        expect(voiceModeStore.supported).toBe(supported);
+        Platform.OS = platform;
+      },
+    );
+  });
+
   it('persists the Settings override, and the unlock override only in E2E builds', () => {
     (global as any).__DEV__ = true;
     (global as any).__E2E__ = false;

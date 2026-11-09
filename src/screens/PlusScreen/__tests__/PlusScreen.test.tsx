@@ -147,7 +147,7 @@ describe('PlusScreen', () => {
         'Hands-free voiceReady',
       );
       expect(getByTestId('plus-feature-localApiServer')).toHaveTextContent(
-        'Local API serverComing soon',
+        'Local API serverReady',
       );
       expect(getByText('Speed depends on your phone and model.')).toBeTruthy();
       expect(getByTestId('plus-free-line')).toHaveTextContent(
@@ -532,8 +532,12 @@ describe('PlusScreen', () => {
     });
 
     it('swaps the speed line for the in-development note on ⓘ', () => {
+      mockFeatures = fakePlusFeatures([
+        {id: 'open', shipped: true},
+        {id: 'later', shipped: false},
+      ]);
       const {getByTestId, getByText, queryByText} = renderScreen();
-      const info = getByTestId('plus-info-localApiServer');
+      const info = getByTestId('plus-info-later');
 
       expect(info.props.accessibilityLabel).toBe(
         'Features in development may change or not ship.',
@@ -834,8 +838,12 @@ describe('PlusScreen', () => {
 
     it('iOS: announces the in-development note only when shown', () => {
       (Platform as any).OS = 'ios';
+      mockFeatures = fakePlusFeatures([
+        {id: 'open', shipped: true},
+        {id: 'later', shipped: false},
+      ]);
       const {getByTestId} = renderScreen();
-      const info = getByTestId('plus-info-localApiServer');
+      const info = getByTestId('plus-info-later');
 
       fireEvent.press(info);
       expect(announceSpy.mock.calls).toEqual([
@@ -848,10 +856,14 @@ describe('PlusScreen', () => {
 
     it('Android: leaves the in-development note to the live region', () => {
       (Platform as any).OS = 'android';
+      mockFeatures = fakePlusFeatures([
+        {id: 'open', shipped: true},
+        {id: 'later', shipped: false},
+      ]);
       const {getByTestId} = renderScreen();
 
-      fireEvent.press(getByTestId('plus-info-localApiServer'));
-      fireEvent.press(getByTestId('plus-info-localApiServer'));
+      fireEvent.press(getByTestId('plus-info-later'));
+      fireEvent.press(getByTestId('plus-info-later'));
 
       expect(announceSpy).not.toHaveBeenCalled();
     });

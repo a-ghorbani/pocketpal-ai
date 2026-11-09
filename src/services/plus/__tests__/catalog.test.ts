@@ -19,11 +19,11 @@ describe('Plus catalog', () => {
     },
   );
 
-  it('ships hands-free voice only', () => {
+  it('ships hands-free voice and the local API server', () => {
     expect(PLUS_FEATURES.map(feature => [feature.id, feature.shipped])).toEqual(
       [
         ['handsFreeVoice', true],
-        ['localApiServer', false],
+        ['localApiServer', true],
       ],
     );
   });

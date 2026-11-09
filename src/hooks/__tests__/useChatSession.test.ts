@@ -258,7 +258,7 @@ describe('useChatSession', () => {
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockRejectedValueOnce(new Error('failed to create MTP draft context'));
+        .mockRejectedValueOnce(new Error('failed to create draft context'));
     }
 
     const {result} = renderHook(() =>
@@ -275,6 +275,34 @@ describe('useChatSession', () => {
         author: assistant,
       }),
     );
+  });
+
+  it('maps a tool-call parse failure before any output to friendly copy', async () => {
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(
+          new Error(
+            'Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error',
+          ),
+        );
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const texts = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.map(call => call[0]?.text);
+    expect(texts).toContain(l10n.en.chat.toolCallTruncated);
+    expect(
+      texts.filter(text => text?.startsWith(l10n.en.chat.completionFailed)),
+    ).toEqual([]);
   });
 
   describe('a router turn that ends before its request', () => {

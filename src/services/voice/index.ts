@@ -9,6 +9,10 @@ export type {
 } from './memoryFit';
 export {VoiceEntitlement} from './entitlement';
 export type {VoiceEntitlementSource} from './entitlement';
-export {isMicGranted, isVoiceModeVoice} from './readiness';
+export {
+  isMicGranted,
+  isVoiceModeVoice,
+  isVoiceModeVoiceReady,
+} from './readiness';
 export type {NeuralVoice} from './readiness';
 export {voiceModeDeviceSupported} from './deviceGate';

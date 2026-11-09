@@ -330,7 +330,7 @@
     );
 
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
-    result[@"prompt"] = [NSString stringWithUTF8String:chatParams.prompt.c_str()];
+    result[@"prompt"] = [NSString stringWithUTF8String:chatParams.prompt.str().c_str()];
 
     // Convert additional stops
     NSMutableArray *stops = [NSMutableArray array];

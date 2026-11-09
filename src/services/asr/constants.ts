@@ -9,16 +9,15 @@ import type {AsrTier, AsrTierManifest} from './types';
 export const ASR_DEVICE_TIERS: Tier[] = ['high', 'flagship'];
 
 /**
- * Android starts a recording only when the loaded chat model plus whisper fit
- * this share of total RAM. The system's free-memory figure is not reliable
- * enough to gate on.
+ * Android warns when the loaded chat model plus whisper pass this share of
+ * total RAM. The system's free-memory figure is not reliable enough to gate on.
  */
 export const ASR_ANDROID_RAM_SHARE = 0.45;
 
 /**
- * iOS starts a recording only when the loaded chat model plus whisper fit this
- * share of the memory free before any load. That reading likely misses the
- * chat model's GPU memory: a pair that fit it once aborted whisper's init.
+ * iOS warns when the loaded chat model plus whisper pass this share of the
+ * memory free before any load. That reading likely misses the chat model's GPU
+ * memory: a pair that fit it once aborted whisper's init.
  */
 export const ASR_IOS_CEILING_SHARE = 0.8;
 
