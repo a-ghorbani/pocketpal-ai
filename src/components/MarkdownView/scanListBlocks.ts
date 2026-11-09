@@ -76,7 +76,7 @@ const leadingWhitespace = (
 export const indentOf = (text: string, startCol = 0): number =>
   leadingWhitespace(text, startCol).indent;
 
-/** Moves a line by `cols` columns, turning its leading tabs into spaces. */
+/** Moves a line by `cols` columns; a non-zero move turns its leading tabs into spaces. */
 export const shift = (text: string, cols: number): string => {
   if (cols === 0) {
     return text;
@@ -177,7 +177,7 @@ const contentOf = (text: string, offset: number): string =>
 /**
  * Follows md4c's per-line block analysis for list items, paragraphs, tables,
  * fences and quotes, and reports every table, fence, indented code block or
- * quote that holds a table or code block and sits inside a list item.
+ * quote that holds a table or fenced code and sits inside a list item.
  */
 export const scanListBlocks = (markdown: string, nested = false): Scan => {
   const raw = markdown.split('\n');

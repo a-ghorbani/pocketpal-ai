@@ -387,7 +387,7 @@ const mergedLists = ({lines, fragments}: Emitted): Map<string, string> => {
 };
 
 /**
- * Moves each table, code block or quote that holds a table or code block and
+ * Moves each table, code block or quote that holds a table or fenced code and
  * sits in a list item to the document root: the list closes before the block
  * and resumes after it with the number the item had. The renderer only gives
  * root blocks their own view, and drops or flattens nested ones.
