@@ -239,6 +239,14 @@ describe('splitListsAroundBlocks', () => {
     );
   });
 
+  it('leaves the marker of a list before the first block as written', () => {
+    const reply = '- a\n\nPara\n\n- b\n\n1. x\n\n   ```\n   c\n   ```\n2. y';
+
+    expect(splitListsAroundBlocks(reply)).toBe(
+      '- a\n\nPara\n\n- b\n\n1. x\n\n```\nc\n```\n\n2. y',
+    );
+  });
+
   describe('while the reply streams', () => {
     const streamed = Object.entries(nestedListReplies);
 

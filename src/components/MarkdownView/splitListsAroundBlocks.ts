@@ -217,7 +217,9 @@ const emit = (
     if (chosen !== item.delimiter) {
       delimiterOf.set(fragment, chosen);
     }
-    lastDelimiterAtCol.set(col, chosen);
+    if (segmentLists) {
+      lastDelimiterAtCol.set(col, chosen);
+    }
     return chosen === item.delimiter ? text : withDelimiter(text, chosen);
   };
   // The list items md4c holds open in the output, with their text column there.
