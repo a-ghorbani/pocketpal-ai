@@ -183,6 +183,10 @@ export const nestedListReplies: Record<string, string> = {
     '   | --- | --- |',
     '   | 1 | 2 |',
   ].join('\n'),
+  crlfIndentedCode: ['1. Run:', '', '       make all', '2. Ship'].join('\r\n'),
+  spaceThenTabIndentedCode: ['- Run:', '', '    \tmake all', '- Ship'].join(
+    '\n',
+  ),
 };
 
 /** Replies the split must leave as they are: md4c puts no block inside a list item. */

@@ -10,7 +10,7 @@ import {
 const NESTED_TABLE_OR_FENCE =
   /^[ \t]+(?:\|[ \t]*:?-|:?-+:?[ \t]*\||`{3,}|~{3,})/m;
 const NESTED_QUOTE = /^[ \t]+>/m;
-const NESTED_INDENTED_CODE = /\n[ \t]*\n(?: {6}|\t)/;
+const NESTED_INDENTED_CODE = /\n[ \t]*\r?\n(?: {6}| {0,5}\t)/;
 
 const mayHaveNestedBlock = (markdown: string): boolean =>
   NESTED_TABLE_OR_FENCE.test(markdown) ||
