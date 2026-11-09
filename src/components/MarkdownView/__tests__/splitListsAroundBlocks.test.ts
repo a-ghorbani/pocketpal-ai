@@ -4,6 +4,7 @@ import {
   unaffectedReplies,
 } from '../../../../jest/fixtures/nestedListReplies';
 import {
+  blockProblems,
   listItemsOf,
   loadMd4c,
   MdNode,
@@ -26,6 +27,7 @@ const expectSameReading = (input: string, output: string) => {
   const after = parseMarkdown(output);
   expect(wordsOf(after)).toEqual(wordsOf(before));
   expect(numbersByItem(output)).toEqual(numbersByItem(input));
+  expect(blockProblems(before, after)).toEqual([]);
 };
 
 const prefixes = (markdown: string) =>
@@ -45,6 +47,11 @@ describe('splitListsAroundBlocks', () => {
 
     it('keeps every word in order and every item number', () => {
       expectSameReading(reply, splitListsAroundBlocks(reply));
+    });
+
+    it('leaves its own output unchanged', () => {
+      const output = splitListsAroundBlocks(reply);
+      expect(splitListsAroundBlocks(output)).toBe(output);
     });
   });
 
@@ -168,6 +175,67 @@ describe('splitListsAroundBlocks', () => {
     expect(nestedBlockCount(parseMarkdown(output))).toBe(0);
     expect(wordsOf(parseMarkdown(output)).join('')).toBe(
       wordsOf(parseMarkdown(reply)).join(''),
+    );
+  });
+
+  it('lengthens a moved fence that a code line would close at the root', () => {
+    expect(
+      splitListsAroundBlocks(nestedListReplies.overIndentedBareFence),
+    ).toBe(
+      [
+        '- Example:',
+        '',
+        '````md',
+        'text',
+        ' ```',
+        'more',
+        '````',
+        '',
+        '- Next',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps a root table out of a sub-list that the split moved to the root', () => {
+    expect(
+      splitListsAroundBlocks(nestedListReplies.rootTableAfterSubList),
+    ).toBe(
+      [
+        '1. Install:',
+        '',
+        '```sh',
+        'npm i',
+        '```',
+        '',
+        '- needs Node 18',
+        '',
+        ' | Option | Speed | Cost |',
+        '  |--------|-------|------|',
+        '  | Alpha | Fast | Low |',
+        '  | Beta | Slow | High |',
+        '',
+        '2. Run it',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps a root list out of a sub-list that the split moved to the root', () => {
+    expect(splitListsAroundBlocks(nestedListReplies.rootListAfterSubList)).toBe(
+      [
+        '1. Install:',
+        '',
+        '```sh',
+        'npm i',
+        '```',
+        '',
+        '- needs Node 18',
+        '',
+        ' * Linux',
+        '   or macOS',
+        ' * Windows',
+        '',
+        '2. Run it',
+      ].join('\n'),
     );
   });
 

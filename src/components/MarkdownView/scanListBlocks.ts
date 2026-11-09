@@ -17,7 +17,7 @@ export interface NestedBlock {
   start: number;
   end: number;
   items: ListItem[];
-  missingFenceClose?: string;
+  closed?: boolean;
 }
 
 export interface ScannedLine {
@@ -27,6 +27,9 @@ export interface ScannedLine {
   items: ListItem[];
   opens?: ListItem;
   block?: NestedBlock;
+  rootCode?: NestedBlock;
+  lazy?: boolean;
+  code?: boolean;
   fenceLikeText?: boolean;
 }
 
@@ -54,24 +57,44 @@ const TABLE_CELL_UNDERLINE = /^:?-+:?/;
 const TAB_STOP = 4;
 export const INDENTED_CODE = 4;
 
-const leadingWhitespace = (text: string): {indent: number; offset: number} => {
-  let indent = 0;
+const leadingWhitespace = (
+  text: string,
+  startCol = 0,
+): {indent: number; offset: number} => {
+  let col = startCol;
   let offset = 0;
   while (text[offset] === ' ' || text[offset] === '\t') {
-    indent += text[offset] === '\t' ? TAB_STOP - (indent % TAB_STOP) : 1;
+    col += text[offset] === '\t' ? TAB_STOP - (col % TAB_STOP) : 1;
     offset++;
   }
-  return {indent, offset};
+  return {indent: col - startCol, offset};
 };
 
-export const dedent = (text: string, cols: number): string => {
-  let col = 0;
-  let i = 0;
-  while (col < cols && (text[i] === ' ' || text[i] === '\t')) {
-    col += text[i] === '\t' ? TAB_STOP - (col % TAB_STOP) : 1;
-    i++;
+export const indentOf = (text: string, startCol = 0): number =>
+  leadingWhitespace(text, startCol).indent;
+
+/** Moves a line by `cols` columns, turning its leading tabs into spaces. */
+export const shift = (text: string, cols: number): string => {
+  if (cols === 0) {
+    return text;
   }
-  return ' '.repeat(Math.max(0, col - cols)) + text.slice(i);
+  const {indent, offset} = leadingWhitespace(text);
+  return ' '.repeat(Math.max(0, indent + cols)) + text.slice(offset);
+};
+
+export const dedent = (text: string, cols: number): string =>
+  shift(text, -cols);
+
+/** Turns tabs in the first `end` characters into spaces at their columns. */
+export const expandTabs = (text: string, end: number): string => {
+  let col = 0;
+  let expanded = '';
+  for (let i = 0; i < end; i++) {
+    const width = text[i] === '\t' ? TAB_STOP - (col % TAB_STOP) : 1;
+    expanded += text[i] === '\t' ? ' '.repeat(width) : text[i];
+    col += width;
+  }
+  return expanded + text.slice(end);
 };
 
 const skipBlanks = (text: string): string => text.replace(/^[ \t]+/, '');
@@ -109,7 +132,10 @@ const parseMarker = (content: string, indent: number): Marker | null => {
     return null;
   }
   const after = content.slice(match[0].length);
-  const {indent: spaces, offset} = leadingWhitespace(after);
+  const {indent: spaces, offset} = leadingWhitespace(
+    after,
+    indent + match[0].length,
+  );
   const rest = after.slice(offset);
   const empty = rest === '';
   const gap = empty || spaces > INDENTED_CODE ? 1 : spaces;
@@ -150,7 +176,7 @@ export const scanListBlocks = (markdown: string): Scan => {
   let nextListId = 1;
   let paragraph: {start: number; lines: number; depth: number} | null = null;
   let table: {depth: number; block?: NestedBlock} | null = null;
-  let fence: {fence: Fence; depth: number; block?: NestedBlock} | null = null;
+  let fence: {fence: Fence; depth: number; block: NestedBlock} | null = null;
   let indentedCode: NestedBlock | null = null;
   let hasTableOrFence = false;
 
@@ -158,15 +184,19 @@ export const scanListBlocks = (markdown: string): Scan => {
     depth > 0 ? stack[depth - 1].contentCol : 0;
   const addBlock = (kind: NestedBlockKind, start: number, end: number) => {
     const block: NestedBlock = {kind, start, end, items: stack.slice()};
+    if (block.items.length === 0) {
+      lines[start].rootCode = block;
+      return block;
+    }
     blocks.push(block);
     for (let j = start; j <= end; j++) {
       lines[j].block = block;
     }
     return block;
   };
-  const extend = (block: NestedBlock | undefined, i: number) => {
-    if (block) {
-      block.end = i;
+  const extend = (block: NestedBlock, i: number) => {
+    block.end = i;
+    if (block.items.length > 0) {
       lines[i].block = block;
     }
   };
@@ -196,7 +226,11 @@ export const scanListBlocks = (markdown: string): Scan => {
       ? undefined
       : fenceOpenedBy(marker.rest);
     if (markerLineFence) {
-      fence = {fence: markerLineFence, depth: stack.length};
+      fence = {
+        fence: markerLineFence,
+        depth: stack.length,
+        block: {kind: 'fence', start: i, end: i, items: []},
+      };
     } else if (
       !marker.empty &&
       !ATX_HEADING.test(marker.rest) &&
@@ -221,7 +255,9 @@ export const scanListBlocks = (markdown: string): Scan => {
         !blank && !content.startsWith('>') && closesFence(content, fence.fence);
       if (blank || depth === 0 || indent >= contentColAt(depth)) {
         extend(fence.block, i);
+        lines[i].code = true;
         if (closes && indent - contentColAt(depth) < INDENTED_CODE) {
+          fence.block.closed = true;
           fence = null;
         }
         continue;
@@ -229,15 +265,12 @@ export const scanListBlocks = (markdown: string): Scan => {
       // md4c takes a closing fence as the closer even when it leaves the item.
       if (closes) {
         extend(fence.block, i);
+        lines[i].code = true;
+        fence.block.closed = true;
         fence = null;
         stack = stack.slice(0, itemsHolding(indent));
         lines[i].items = stack.slice();
         continue;
-      }
-      if (fence.block) {
-        fence.block.missingFenceClose = fence.fence.marker.repeat(
-          fence.fence.length,
-        );
       }
       fenceLikeText = fenceOpenedBy(content)?.marker === fence.fence.marker;
       lines[i].fenceLikeText = fenceLikeText;
@@ -275,6 +308,7 @@ export const scanListBlocks = (markdown: string): Scan => {
         !interruptsParagraph(content, relIndent);
       if (lazy) {
         paragraph!.lines++;
+        lines[i].lazy = true;
         continue;
       }
       stack = stack.slice(0, kept);
@@ -289,15 +323,14 @@ export const scanListBlocks = (markdown: string): Scan => {
     const canOpenBlock = relIndent < INDENTED_CODE;
     if (!canOpenBlock && !inParagraph) {
       table = null;
-      if (depth > 0) {
-        if (previousIndentedCode?.items.length === depth) {
-          for (let j = previousIndentedCode.end + 1; j <= i; j++) {
-            extend(previousIndentedCode, j);
-          }
-          indentedCode = previousIndentedCode;
-        } else {
-          indentedCode = addBlock('indentedCode', i, i);
+      lines[i].code = true;
+      if (previousIndentedCode?.items.length === depth) {
+        for (let j = previousIndentedCode.end + 1; j <= i; j++) {
+          extend(previousIndentedCode, j);
         }
+        indentedCode = previousIndentedCode;
+      } else {
+        indentedCode = addBlock('indentedCode', i, i);
       }
       continue;
     }
@@ -356,7 +389,9 @@ export const scanListBlocks = (markdown: string): Scan => {
       continue;
     }
     if (table && table.depth === depth) {
-      extend(table.block, i);
+      if (table.block) {
+        extend(table.block, i);
+      }
       continue;
     }
     if (canOpenBlock && ATX_HEADING.test(content)) {
@@ -368,11 +403,7 @@ export const scanListBlocks = (markdown: string): Scan => {
     if (opened) {
       paragraph = null;
       hasTableOrFence = true;
-      fence = {
-        fence: opened,
-        depth,
-        block: depth > 0 ? addBlock('fence', i, i) : undefined,
-      };
+      fence = {fence: opened, depth, block: addBlock('fence', i, i)};
       continue;
     }
     if (inParagraph && paragraph!.lines === 1 && isTableUnderline(content)) {

@@ -102,3 +102,69 @@ export const listItemsOf = (root: MdNode): MdListItem[] => {
 /** The root block types, which the renderer turns into separate views. */
 export const rootBlockTypes = (root: MdNode): string[] =>
   (root.children ?? []).map(child => child.type);
+
+const comparable = (node: MdNode): MdNode => {
+  const children: MdNode[] = [];
+  for (const child of (node.children ?? []).map(comparable)) {
+    const previous = children[children.length - 1];
+    if (child.type === 'Text' && previous?.type === 'Text') {
+      children[children.length - 1] = {
+        type: 'Text',
+        content: (previous.content ?? '') + (child.content ?? ''),
+      };
+    } else {
+      children.push(child);
+    }
+  }
+  return {
+    ...node,
+    ...(node.children && {children}),
+  };
+};
+
+const collect = (root: MdNode, type: string, as: (node: MdNode) => unknown) => {
+  const found: string[] = [];
+  walk(root, node => {
+    if (node.type === type) {
+      found.push(JSON.stringify(as(node)));
+    }
+  });
+  return found;
+};
+
+const codeOf = (node: MdNode) => ({
+  language: node.attributes?.language ?? '',
+  text: (node.children ?? []).map(child => child.content ?? '').join(''),
+});
+
+const isSubsequence = (needles: string[], haystack: string[]) => {
+  let at = 0;
+  for (const item of haystack) {
+    if (at < needles.length && item === needles[at]) {
+      at++;
+    }
+  }
+  return at === needles.length;
+};
+
+/**
+ * What the split must keep from md4c's reading of the input: every code
+ * block's text and language, every table, and every root block that holds no
+ * table or code block inside a list item, in order and as md4c read it.
+ */
+export const blockProblems = (before: MdNode, after: MdNode): string[] => {
+  const roots = (root: MdNode, keep: (node: MdNode) => boolean) =>
+    (root.children ?? [])
+      .filter(keep)
+      .map(node => JSON.stringify(comparable(node)));
+  return [
+    JSON.stringify(collect(after, 'CodeBlock', codeOf)) !==
+      JSON.stringify(collect(before, 'CodeBlock', codeOf)) && 'code',
+    JSON.stringify(collect(after, 'Table', comparable)) !==
+      JSON.stringify(collect(before, 'Table', comparable)) && 'tables',
+    !isSubsequence(
+      roots(before, node => nestedBlockCount(node) === 0),
+      roots(after, () => true),
+    ) && 'root blocks',
+  ].filter((problem): problem is string => typeof problem === 'string');
+};
