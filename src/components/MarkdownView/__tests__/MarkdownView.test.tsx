@@ -180,6 +180,16 @@ describe('MarkdownView', () => {
     );
   });
 
+  it('moves a table and a code block out of their list items before rendering', () => {
+    const reply =
+      '1. Install:\n\n   ```bash\n   npm i foo\n   ```\n\n2. Compare:\n\n   | a | b |\n   | --- | --- |\n   | 1 | 2 |\n3. Done';
+    render(<MarkdownView markdownText={reply} maxMessageWidth={300} />);
+
+    expect(lastProps().markdown).toBe(
+      '1. Install:\n\n```bash\nnpm i foo\n```\n\n2. Compare:\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\n3. Done',
+    );
+  });
+
   it.each(['', '   ', '\n\n'])(
     'renders only the container for empty text %j',
     markdownText => {

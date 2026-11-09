@@ -12,6 +12,7 @@ import {
 import {useTheme} from '../../hooks';
 
 import {normalizeBreakTags} from './normalizeBreakTags';
+import {splitListsAroundBlocks} from './splitListsAroundBlocks';
 import {createMarkdownStyle, MarkdownVariant} from './styles';
 
 import {L10nContext} from '../../utils';
@@ -47,7 +48,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const l10n = useContext(L10nContext);
 
     const markdown = useMemo(
-      () => normalizeBreakTags(markdownText),
+      () => splitListsAroundBlocks(normalizeBreakTags(markdownText)),
       [markdownText],
     );
     const markdownStyle = useMemo(

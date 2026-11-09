@@ -943,6 +943,30 @@ describe('Message — step content markdown', () => {
 
     expect(markdownSpy.mock.calls[0][0].selectable).toBe(true);
   });
+
+  it('renders a nested table at the root but copies the reply as written', () => {
+    const reply = '1. Compare:\n\n   | a | b |\n   | --- | --- |\n   | 1 | 2 |';
+    const {getByTestId} = render(
+      <Message
+        message={makeDerivedTurn([{content: reply, partial: false}], {
+          metadata: {copyable: true},
+        })}
+        messageWidth={440}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(markdownSpy.mock.calls[0][0].markdown).toBe(
+      '1. Compare:\n\n| a | b |\n| --- | --- |\n| 1 | 2 |',
+    );
+    fireEvent.press(getByTestId('footer-copy'));
+    expect(
+      require('@react-native-clipboard/clipboard').setString,
+    ).toHaveBeenCalledWith(reply);
+  });
 });
 
 describe('Message — reasoning card', () => {
