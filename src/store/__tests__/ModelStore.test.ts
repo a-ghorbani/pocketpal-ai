@@ -7107,6 +7107,86 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('fetchAndPersistGGUFMetadata vocab size', () => {
+    const readVocab = async (
+      info: Record<string, unknown>,
+    ): Promise<number | undefined> => {
+      const model = {
+        ...presetModelFixture,
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue(info);
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      return (model.ggufMetadata as unknown as GGUFMetadata | undefined)
+        ?.n_vocab;
+    };
+
+    beforeEach(() => {
+      (loadLlamaModelInfo as jest.Mock).mockReset();
+    });
+
+    // Gemma 3 writes no gemma3.vocab_size, so the architecture table is the
+    // only thing standing between the estimate and a vocab that is off by
+    // 134144 tokens.
+    it('uses the architecture default for gemma3', async () => {
+      await expect(
+        readVocab({
+          'general.architecture': 'gemma3',
+          'gemma3.block_count': 26,
+          'gemma3.embedding_length': 1152,
+          'gemma3.attention.head_count': 4,
+        }),
+      ).resolves.toBe(262144);
+    });
+
+    it('uses the architecture default for qwen35', async () => {
+      await expect(
+        readVocab({
+          'general.architecture': 'qwen35',
+          'qwen35.block_count': 25,
+          'qwen35.embedding_length': 1024,
+          'qwen35.attention.head_count': 8,
+        }),
+      ).resolves.toBe(248320);
+    });
+
+    it('prefers the vocab size the file declares over the table', async () => {
+      await expect(
+        readVocab({
+          'general.architecture': 'qwen3',
+          'qwen3.block_count': 28,
+          'qwen3.embedding_length': 1024,
+          'qwen3.attention.head_count': 16,
+          'qwen3.vocab_size': 151669,
+        }),
+      ).resolves.toBe(151669);
+    });
+
+    it('warns when it has to guess the vocab for an unknown architecture', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await expect(
+        readVocab({
+          'general.architecture': 'brand-new-arch',
+          'brand-new-arch.block_count': 32,
+          'brand-new-arch.embedding_length': 4096,
+          'brand-new-arch.attention.head_count': 32,
+        }),
+      ).resolves.toBe(128000);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('brand-new-arch'),
+      );
+
+      warn.mockRestore();
+    });
+  });
+
   describe('reasoning capability writers', () => {
     it('hydrating a model without reasoning does not crash and stays undefined', () => {
       const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
