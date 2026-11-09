@@ -193,6 +193,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
   let indentedCode: NestedBlock | null = null;
   let hasTableOrFence = false;
   let quoteAtEnd: Scan | null = null;
+  let emptyItem = null as {item: ListItem; blankAfter: boolean} | null;
 
   const contentColAt = (depth: number) =>
     depth > 0 ? stack[depth - 1].contentCol : 0;
@@ -249,6 +250,7 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       number: sibling ? sibling.number + 1 : marker.number,
     };
     stack.push(item);
+    emptyItem = marker.empty ? {item, blankAfter: false} : null;
     lines[i].opens = item;
     lines[i].items = stack.slice();
     table = null;
@@ -313,6 +315,9 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
       }
     }
     if (blank) {
+      if (emptyItem && emptyItem.item === stack[stack.length - 1]) {
+        emptyItem.blankAfter = true;
+      }
       paragraph = null;
       table = null;
       continue;
@@ -320,7 +325,14 @@ export const scanListBlocks = (markdown: string, nested = false): Scan => {
     const previousIndentedCode = indentedCode as NestedBlock | null;
     indentedCode = null;
 
-    const kept = itemsHolding(indent);
+    let kept = itemsHolding(indent);
+    // An item can begin with at most one blank line.
+    if (emptyItem?.blankAfter && kept === stack.length) {
+      stack = stack.slice(0, -1);
+      lines[i].items = stack.slice();
+      kept = stack.length;
+    }
+    emptyItem = null;
     if (kept < stack.length) {
       const relIndent = indent - contentColAt(kept);
       const marker =

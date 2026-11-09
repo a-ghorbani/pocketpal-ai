@@ -362,6 +362,7 @@ export const nestedListReplies: Record<string, string> = {
     '   Then check it.',
     '===',
   ].join('\n'),
+  codeAfterEmptyMarker: ['1.', '       make all', '2. Ship'].join('\n'),
   orderedListUnderSubList: [
     '1. Build:',
     '',
@@ -411,6 +412,15 @@ export const unaffectedReplies: Record<string, string> = {
   ),
   rootTable: ['Intro', '', table(''), '', '- a', '- b'].join('\n'),
   plainList: '1. One\n2. Two\n   - nested\n\n   More text.\n3. Three',
+  emptyItemThenBlank: [
+    '- a',
+    '-',
+    '',
+    '  para',
+    '',
+    '    | h | k |',
+    '    |---|---|',
+  ].join('\n'),
   lazyDelimiterRowInQuote: [
     '1. Note:',
     '   > | a | b |',

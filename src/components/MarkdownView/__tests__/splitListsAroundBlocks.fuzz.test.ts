@@ -116,8 +116,23 @@ const randomReply = (random: (n: number) => number): string => {
         ? `${allSame ? start : start + k}${delimiter}`
         : bullet;
       const content = ' '.repeat(textColumn(indent, marker, gap));
+      // md4c measures the line after an empty third-level item and a blank
+      // line from the wrong column (md4c.c, the "at most one blank line" hack),
+      // so empty items stay in the first two levels.
       const underItemText = () =>
-        chance(2) ? [pick(['---', '===', '--', `${content}---`])] : [];
+        chance(2)
+          ? [
+              pick([
+                '---',
+                '-',
+                '- ',
+                '===',
+                '--',
+                `${content}---`,
+                ...(depth < 2 ? [`${' '.repeat(indent)}${marker}`] : []),
+              ]),
+            ]
+          : [];
       lines.push(`${' '.repeat(indent)}${marker}${gap}item${++id} words here`);
       if (chance(3)) {
         lines.push(`${random(2) ? content : ''}lazy${id} continuation`);
