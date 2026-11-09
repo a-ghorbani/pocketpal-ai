@@ -5,6 +5,8 @@ import {
   MdNode,
   nestedBlockCount,
   parseMarkdown,
+  rootBlocks,
+  settledRootBlocks,
   wordsOf,
 } from '../../../../jest/md4c';
 
@@ -163,12 +165,31 @@ const problemsOf = (
   ].filter((problem): problem is string => typeof problem === 'string');
 };
 
-// md4c's reading of a few deep, blank-heavy lists changes when an unrelated
-// paragraph gets longer, so a prefix only counts as failing if it also fails
-// with longer text.
-const failsWithLongerText = (markdown: string) => {
-  const longer = markdown.replace(/ words here/g, ' words here too');
-  return problemsOf(longer, splitListsAroundBlocks(longer)).length > 0;
+const settledOutput = (input: string) =>
+  settledRootBlocks(parseMarkdown(splitListsAroundBlocks(input)));
+
+/** Problems of one streamed prefix, given the settled output before it. */
+const streamingStep = (input: string, settled: string[]) => {
+  const output = splitListsAroundBlocks(input);
+  const after = parseMarkdown(output);
+  const problems = [
+    ...problemsOf(input, output, after),
+    JSON.stringify(rootBlocks(after).slice(0, settled.length)) !==
+      JSON.stringify(settled) && 'earlier root block changed',
+  ].filter((problem): problem is string => typeof problem === 'string');
+  return {problems, settled: settledRootBlocks(after)};
+};
+
+// md4c's reading of a few blank-heavy lists depends on where earlier lines
+// start in the reply (md4c.c reads its block buffer as a block there), so a
+// prefix only counts as failing if it also fails with every line moved.
+const failsWithLinesMoved = (prefix: string, previousPrefix: string) => {
+  const longer = (markdown: string) =>
+    'Intro.\n\n' + markdown.replace(/ words here/g, ' words here too');
+  return (
+    streamingStep(longer(prefix), settledOutput(longer(previousPrefix)))
+      .problems.length > 0
+  );
 };
 
 it('keeps md4c reading of random nested replies on every line prefix', () => {
@@ -180,23 +201,19 @@ it('keeps md4c reading of random nested replies on every line prefix', () => {
     const eol = reply.includes('\r\n') ? '\r\n' : '\n';
     const lines = reply.split(eol);
     let unstable = false;
-    let previous: string[] = [];
+    let previousPrefix = '';
+    let settled: string[] = [];
     for (let n = 1; n <= lines.length; n++) {
       const prefix = lines.slice(0, n).join(eol);
-      const output = splitListsAroundBlocks(prefix);
-      const after = parseMarkdown(output);
-      const blocks = (after.children ?? []).map(node => JSON.stringify(node));
-      const settled = previous.slice(0, -1);
-      const problems = [
-        ...problemsOf(prefix, output, after),
-        JSON.stringify(blocks.slice(0, settled.length)) !==
-          JSON.stringify(settled) && 'earlier root block changed',
-      ].filter((problem): problem is string => typeof problem === 'string');
-      previous = blocks;
+      const step = streamingStep(prefix, settled);
+      const problems = step.problems;
+      const before = previousPrefix;
+      previousPrefix = prefix;
+      settled = step.settled;
       if (problems.length === 0) {
         continue;
       }
-      if (failsWithLongerText(prefix)) {
+      if (failsWithLinesMoved(prefix, before)) {
         failures.push(`${problems.join()}\n${JSON.stringify(prefix)}`);
         break;
       }

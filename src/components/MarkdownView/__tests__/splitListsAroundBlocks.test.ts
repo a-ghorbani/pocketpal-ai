@@ -7,9 +7,10 @@ import {
   blockProblems,
   listItemsOf,
   loadMd4c,
-  MdNode,
   nestedBlockCount,
   parseMarkdown,
+  rootBlocks,
+  settledRootBlocks,
   wordsOf,
 } from '../../../../jest/md4c';
 
@@ -247,6 +248,30 @@ describe('splitListsAroundBlocks', () => {
     );
   });
 
+  describe('the md4c reading check', () => {
+    const problems = (input: string, output: string) =>
+      blockProblems(parseMarkdown(input), parseMarkdown(output));
+
+    it('flags a block the split added', () => {
+      expect(
+        problems(
+          '1. a\n\n   ```\n   x\n   ```\n2. b',
+          '1. a\n\n```\nx\n```\n\n***\n\n2. b',
+        ),
+      ).toContain('leaf blocks');
+    });
+
+    it('flags a list item that got deeper', () => {
+      expect(problems('- a\n- b', '- a\n  - b')).toContain('deeper item');
+    });
+
+    it('leaves out the root block with the last text and what follows it', () => {
+      expect(settledRootBlocks(parseMarkdown('A\n\nB\n\n-'))).toEqual(
+        rootBlocks(parseMarkdown('A')),
+      );
+    });
+  });
+
   describe('while the reply streams', () => {
     const streamed = Object.entries(nestedListReplies);
 
@@ -262,16 +287,13 @@ describe('splitListsAroundBlocks', () => {
     );
 
     it.each(streamed)(
-      '%s: every root block but the last stays as it was',
+      '%s: every root block before the last text stays as it was',
       (_name, reply) => {
-        let previous: MdNode[] = [];
+        let settled: string[] = [];
         for (const prefix of prefixes(reply)) {
-          const blocks =
-            parseMarkdown(splitListsAroundBlocks(prefix)).children ?? [];
-          expect(blocks.slice(0, previous.length - 1)).toEqual(
-            previous.slice(0, -1),
-          );
-          previous = blocks;
+          const after = parseMarkdown(splitListsAroundBlocks(prefix));
+          expect(rootBlocks(after).slice(0, settled.length)).toEqual(settled);
+          settled = settledRootBlocks(after);
         }
       },
     );
