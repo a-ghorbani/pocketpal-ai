@@ -127,6 +127,41 @@ describe('ModelsScreen', () => {
     });
   });
 
+  describe('picked file name', () => {
+    const localDir = `${RNFS.DocumentDirectoryPath}/models/local`;
+
+    const copyTarget = async (name: string, uri = '/mock/file/path') => {
+      (pick as jest.Mock).mockResolvedValue([{uri, name}]);
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      const {getByTestId} = render(<ModelsScreen />);
+      fireEvent.press(getByTestId('fab-group'));
+      await act(async () => {
+        fireEvent.press(
+          getByTestId('local-fab', {includeHiddenElements: true}),
+        );
+      });
+      await waitFor(() => expect(RNFS.copyFile).toHaveBeenCalled());
+      return (RNFS.copyFile as jest.Mock).mock.calls[0][1] as string;
+    };
+
+    it.each([
+      ['..', undefined],
+      ['../x.gguf', undefined],
+      ['/etc/hosts', undefined],
+      ['file:///data/local/tmp/x', undefined],
+      ['', 'file:///mock/dir/'],
+      ['a\u0000b.gguf', undefined],
+    ])('name %j falls back to file_<uuid>', async (name, uri) => {
+      expect(await copyTarget(name, uri)).toMatch(
+        new RegExp(`^${localDir}/file_[^/]+$`),
+      );
+    });
+
+    it.each(['x.gguf', 'a\\b.gguf'])('keeps the name %j', async name => {
+      expect(await copyTarget(name)).toBe(`${localDir}/${name}`);
+    });
+  });
+
   it('shows a confirmation alert if file already exists and replaces it', async () => {
     (RNFS.exists as jest.Mock).mockResolvedValue(true);
     (pick as jest.Mock).mockResolvedValue([

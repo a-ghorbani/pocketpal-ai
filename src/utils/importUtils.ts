@@ -20,6 +20,8 @@ import {
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
+import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
+import {isAllowedChatImageUri} from './chatImageUri';
 import type {Pal, ParameterDefinition} from '../types/pal';
 import type {
   TalentResult,
@@ -158,6 +160,12 @@ const validateSingleSession = (session: any): ImportedChatSession => {
 
     if (!msg.createdAt) {
       msg.createdAt = Date.now();
+    }
+
+    if (msg.metadata?.imageUris !== undefined) {
+      msg.metadata.imageUris = Array.isArray(msg.metadata.imageUris)
+        ? msg.metadata.imageUris.filter(isAllowedChatImageUri)
+        : [];
     }
 
     return msg;
@@ -489,7 +497,10 @@ const saveBase64Image = async (
   // Use same directory and naming convention as imageUtils.ts
   const PAL_IMAGES_DIR = `${RNFS.DocumentDirectoryPath}/pal-images`;
   const fileName = `${palId}_thumbnail.${fileExtension}`;
-  const filePath = `${PAL_IMAGES_DIR}/${fileName}`;
+  const filePath = getAbsoluteThumbnailPath(fileName);
+  if (!filePath) {
+    throw new Error(`Invalid thumbnail filename: ${fileName}`);
+  }
 
   // Ensure directory exists (same as imageUtils.ts)
   const exists = await RNFS.exists(PAL_IMAGES_DIR);
@@ -504,6 +515,9 @@ const saveBase64Image = async (
   return fileName;
 };
 
+const keepRemoteThumbnailUrl = (url: unknown): string | undefined =>
+  typeof url === 'string' && isRemoteThumbnailUrl(url) ? url : undefined;
+
 /**
  * Transform imported pal to the format expected by palStore.createPal
  */
@@ -511,7 +525,7 @@ const transformImportPal = async (
   pal: ImportedPal,
 ): Promise<Omit<Pal, 'id' | 'created_at' | 'updated_at'>> => {
   // Handle thumbnail image - save base64 data as local file if present
-  let thumbnailUrl = pal.thumbnail_url;
+  let thumbnailUrl = keepRemoteThumbnailUrl(pal.thumbnail_url);
 
   if (pal.thumbnail_data) {
     try {
