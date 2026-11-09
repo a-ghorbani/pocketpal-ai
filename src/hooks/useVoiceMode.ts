@@ -2,7 +2,7 @@ import {useCallback, useEffect, useState} from 'react';
 import {AppState, type AppStateStatus} from 'react-native';
 
 import {toByteArray} from 'base64-js';
-import {comparer, reaction} from 'mobx';
+import {comparer, reaction, when} from 'mobx';
 import {useFocusEffect} from '@react-navigation/native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 import {
@@ -15,10 +15,11 @@ import {
   ASR_CHANNELS,
   ASR_CHUNK_BYTES,
   ASR_SAMPLE_RATE,
-  ASR_TIERS,
   readDeviceMemory,
 } from '../services/asr';
+import type {AsrTier} from '../services/asr';
 import {TTS_ENGINE_RUNTIME_BYTES} from '../services/tts';
+import {hasVoiceFile} from '../services/tts/voiceFiles';
 import {
   Endpointer,
   VOICE_CAPTURE_SETTLE_MS,
@@ -26,6 +27,7 @@ import {
   VOICE_START_TIMEOUT_MS,
   isMicGranted,
   isVoiceModeVoice,
+  isVoiceModeVoiceReady,
   voiceMemoryFit,
 } from '../services/voice';
 import type {
@@ -90,10 +92,15 @@ const withStartTimeout = (loading: Promise<void>): Promise<void> => {
   return Promise.race([loading, timeout]).finally(() => clearTimeout(timer));
 };
 
+const chatModelSettled = () =>
+  modelStore.appState === 'active' &&
+  ((!modelStore.isContextLoading && modelStore.contextId !== undefined) ||
+    !modelStore.activeModelId);
+
 async function isSetupComplete(): Promise<boolean> {
   return (
-    asrStore.downloadStates.base === 'ready' &&
-    isVoiceModeVoice(ttsStore.currentVoice) &&
+    asrStore.isSelectedTierReady &&
+    (await isVoiceModeVoiceReady(ttsStore.currentVoice)) &&
     (await isMicGranted())
   );
 }
@@ -106,7 +113,10 @@ async function isSetupComplete(): Promise<boolean> {
  */
 class VoiceModeController {
   port: VoiceTurnPort;
+  focused = false;
   private open = false;
+  private setupWait = 0;
+  private setupPending = false;
   private disposed = false;
   private session = 0;
   private exiting: Promise<void> | null = null;
@@ -148,7 +158,7 @@ class VoiceModeController {
   }
 
   async requestEntry(actions: VoiceEntryActions): Promise<void> {
-    if (this.open || this.disposed) {
+    if (this.open || this.disposed || this.setupPending) {
       return;
     }
     this.actions = actions;
@@ -162,35 +172,70 @@ class VoiceModeController {
     await this.checkMemoryAndEnter();
   }
 
+  async setupDone(): Promise<void> {
+    const wait = ++this.setupWait;
+    this.setupPending = true;
+    this.showSheet(null);
+    let timedOut = false;
+    try {
+      await when(chatModelSettled, {timeout: VOICE_START_TIMEOUT_MS});
+    } catch {
+      timedOut = true;
+    }
+    if (wait === this.setupWait) {
+      this.setupPending = false;
+    }
+    if (
+      wait !== this.setupWait ||
+      !this.focused ||
+      this.disposed ||
+      this.open
+    ) {
+      return;
+    }
+    if (timedOut) {
+      warn(uiStore.l10n.voiceMode.startFailed);
+      return;
+    }
+    await this.checkMemoryAndEnter();
+  }
+
   async checkMemoryAndEnter(): Promise<void> {
     await this.exiting;
     if (this.entryBlocked()) {
       return;
     }
     const voice = ttsStore.currentVoice;
-    if (!isVoiceModeVoice(voice)) {
+    if (!isVoiceModeVoice(voice) || !(await hasVoiceFile(voice))) {
       this.showSheet({kind: 'setup'});
       return;
     }
+    const tier = asrStore.selectedTier;
     const fit = voiceMemoryFit({
       memory: await readDeviceMemory(modelStore),
       chatBytes: modelStore.loadedModelBytes ?? 0,
-      sttBytes: ASR_TIERS.base.runtimeBytes,
+      sttTier: tier,
       ttsBytes: TTS_ENGINE_RUNTIME_BYTES[voice.engine],
     });
     if (fit.status === 'fits') {
-      await this.enter();
+      await this.enter(tier);
     } else {
       this.showSheet({kind: 'memory', fit});
     }
   }
 
-  async continueAnyway(): Promise<void> {
+  /** Enters with the tier the memory sheet counted, or re-runs entry if it changed. */
+  async continueAnyway(tier: AsrTier): Promise<void> {
     await this.exiting;
     this.showSheet(null);
-    if (!this.entryBlocked()) {
-      await this.enter();
+    if (this.entryBlocked()) {
+      return;
     }
+    if (asrStore.selectedTier !== tier || !asrStore.isSelectedTierReady) {
+      await this.requestEntry(this.actions);
+      return;
+    }
+    await this.enter(tier);
   }
 
   private entryBlocked(): boolean {
@@ -232,7 +277,7 @@ class VoiceModeController {
     this.actions.openModelPicker();
   }
 
-  async enter(): Promise<void> {
+  async enter(tier: AsrTier): Promise<void> {
     await this.exiting;
     if (this.open || this.disposed) {
       return;
@@ -249,7 +294,7 @@ class VoiceModeController {
     this.setPhase('starting', 'enter');
     voiceModeStore.setPresentation('full');
     try {
-      await withStartTimeout(this.engine.prepare());
+      await withStartTimeout(this.engine.prepare(tier));
     } catch (err) {
       console.warn('[voiceMode] prepare failed:', err);
       if (session === this.session) {
@@ -634,18 +679,19 @@ export function useVoiceMode({
   }, [controller]);
 
   useFocusEffect(
-    useCallback(
-      () => () => {
+    useCallback(() => {
+      controller.focused = true;
+      return () => {
+        controller.focused = false;
         setSheet(current => (current?.kind === 'teaser' ? null : current));
         controller.exit('blur');
-      },
-      [controller],
-    ),
+      };
+    }, [controller]),
   );
 
   const continueAnyway = useCallback(async () => {
     if (sheet?.kind === 'memory' && sheet.fit.status === 'tight') {
-      await controller.continueAnyway();
+      await controller.continueAnyway(sheet.fit.sttTier);
     }
   }, [controller, sheet]);
 
@@ -657,16 +703,17 @@ export function useVoiceMode({
     getPlus: useCallback(() => controller.getPlus(), [controller]),
     keepTyping: useCallback(() => controller.keepTyping(), [controller]),
     sheet,
-    setupDone: useCallback(() => {
-      setSheet(null);
-      return controller.checkMemoryAndEnter();
-    }, [controller]),
+    setupDone: useCallback(() => controller.setupDone(), [controller]),
     continueAnyway,
     chooseSmallerModel: useCallback(
       () => controller.chooseSmallerModel(),
       [controller],
     ),
-    dismissSheet: useCallback(() => setSheet(null), []),
+    dismissSheet: useCallback(
+      (kind: NonNullable<VoiceModeSheet>['kind']) =>
+        setSheet(current => (current?.kind === kind ? null : current)),
+      [],
+    ),
     tapCloud: useCallback(() => controller.tapCloud(), [controller]),
     toggleMute: useCallback(() => controller.toggleMute(), [controller]),
     end: useCallback(() => controller.exit('end'), [controller]),

@@ -1,5 +1,7 @@
 import {AppState, Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import {runInAction} from 'mobx';
+import {makePersistable} from 'mobx-persist-store';
 
 // Mock persistence BEFORE importing the store.
 jest.mock('mobx-persist-store', () => ({
@@ -21,12 +23,14 @@ jest
   });
 
 import {
+  ASR_DEFAULT_TIER,
   ASR_INSUFFICIENT_STORAGE,
   ASR_LEVEL_HISTORY,
   ASR_TIER_ORDER,
   ASR_TIERS,
   whisperAsrEngine,
 } from '../../services/asr';
+import type {AsrTier} from '../../services/asr';
 import {ASRStore} from '../ASRStore';
 import {modelStore} from '../ModelStore';
 
@@ -39,6 +43,21 @@ const mockReclaim = jest.spyOn(whisperAsrEngine, 'reclaimLegacySpace');
 const mockRelease = jest.spyOn(whisperAsrEngine, 'release');
 
 const GIB = 1024 * 1024 * 1024;
+
+const flush = () => new Promise(resolve => setImmediate(resolve));
+
+const installedOnDisk = (...tiers: AsrTier[]) =>
+  mockIsInstalled.mockImplementation(async (tier: AsrTier) =>
+    tiers.includes(tier),
+  );
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(r => {
+    resolve = r;
+  });
+  return {promise, resolve};
+}
 
 describe('ASRStore', () => {
   let store: ASRStore;
@@ -58,6 +77,11 @@ describe('ASRStore', () => {
     (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(10 * GIB);
     store = new ASRStore();
   });
+
+  const forceSelected = (tier: AsrTier, target: ASRStore = store) =>
+    runInAction(() => {
+      target.selectedTier = tier;
+    });
 
   describe('availability gate', () => {
     it.each([
@@ -96,17 +120,21 @@ describe('ASRStore', () => {
       modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
     });
 
+    const status = async () => (await store.captureMemoryFit()).status;
+
     it.each([
-      [undefined, true],
-      [2.5e9, true],
-      [3.5e9, false],
-    ])(
-      'Android, 8 GB, chat model %s bytes → fits %s',
-      async (chatBytes, fits) => {
+      [undefined, 'fits'],
+      [2.5e9, 'fits'],
+      [3.5e9, 'tight'],
+      [8e9 - ASR_TIERS.base.runtimeBytes, 'tight'],
+      [8e9 - ASR_TIERS.base.runtimeBytes + 1, 'wont_fit'],
+    ] as const)(
+      'Android, 8 GB, chat model %s bytes → %s',
+      async (chatBytes, expected) => {
         Platform.OS = 'android';
         (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
         modelStore.loadedModelBytes = chatBytes;
-        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+        await expect(status()).resolves.toBe(expected);
       },
     );
 
@@ -114,64 +142,110 @@ describe('ASRStore', () => {
       Platform.OS = 'android';
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
       modelStore.loadedModelBytes = 3e9;
-      store.setSelectedTier('base');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
-      store.setSelectedTier('large-turbo');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      forceSelected('base');
+      await expect(store.captureMemoryFit()).resolves.toEqual({
+        status: 'fits',
+        neededBytes: 3e9 + ASR_TIERS.base.runtimeBytes,
+      });
+      forceSelected('large-turbo');
+      await expect(store.captureMemoryFit()).resolves.toEqual({
+        status: 'tight',
+        neededBytes: 3e9 + ASR_TIERS['large-turbo'].runtimeBytes,
+      });
     });
 
     it.each([
-      ['1.7B', 1.9e9, 'small', true],
-      ['4B Q4', 3.2e9, 'base', false],
-      ['4B Q4', 3.2e9, 'small', false],
-      ['4B Q8', 4.3e9, 'base', false],
+      ['1.7B', 1.9e9, 'small', 'fits'],
+      ['4B Q4', 3.2e9, 'base', 'tight'],
+      ['4B Q4', 3.2e9, 'small', 'tight'],
+      ['4B Q8', 4.3e9, 'base', 'tight'],
+      ['8B', 5.9e9, 'base', 'wont_fit'],
     ] as const)(
-      'iOS, 4.2 GB free before any load, chat model %s + %s → fits %s',
-      async (_name, chatBytes, tier, fits) => {
+      'iOS, 4.2 GB free before any load, 6 GB RAM, chat model %s + %s → %s',
+      async (_name, chatBytes, tier, expected) => {
         Platform.OS = 'ios';
+        (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
         modelStore.availableMemoryCeiling = 4.2e9;
         // A past oversized load must not raise the budget.
         modelStore.largestSuccessfulLoad = 5.3e9;
         modelStore.loadedModelBytes = chatBytes;
-        store.setSelectedTier(tier);
-        await expect(store.hasMemoryForCapture()).resolves.toBe(fits);
+        forceSelected(tier);
+        await expect(status()).resolves.toBe(expected);
       },
     );
 
-    it('iOS keeps a fifth of the free memory in reserve', async () => {
+    it('iOS warns above four fifths of the free memory', async () => {
       Platform.OS = 'ios';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
       modelStore.availableMemoryCeiling = 4e9;
-      store.setSelectedTier('base');
+      forceSelected('base');
       modelStore.loadedModelBytes = 3.2e9 - ASR_TIERS.base.runtimeBytes;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
       modelStore.loadedModelBytes += 1;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      await expect(status()).resolves.toBe('tight');
     });
 
     it('iOS budgets the selected whisper model', async () => {
       Platform.OS = 'ios';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6e9);
       modelStore.availableMemoryCeiling = 4.2e9;
       modelStore.loadedModelBytes = 2.5e9;
-      store.setSelectedTier('small');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
-      store.setSelectedTier('large-turbo');
-      await expect(store.hasMemoryForCapture()).resolves.toBe(false);
+      forceSelected('small');
+      await expect(status()).resolves.toBe('fits');
+      forceSelected('large-turbo');
+      await expect(status()).resolves.toBe('tight');
     });
 
-    it('iOS does not block recording before any ceiling is known', async () => {
+    it('iOS does not warn before any ceiling is known', async () => {
       Platform.OS = 'ios';
       modelStore.availableMemoryCeiling = undefined;
       modelStore.largestSuccessfulLoad = undefined;
       modelStore.loadedModelBytes = 4.3e9;
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
     });
 
-    it('does not block recording when memory cannot be read', async () => {
+    it('fits a need no larger than the one accepted, and warns again above it', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      forceSelected('base');
+      modelStore.loadedModelBytes = 5e9;
+      const {neededBytes} = await store.captureMemoryFit();
+      store.acceptCaptureMemory(neededBytes);
+      await expect(status()).resolves.toBe('fits');
+      modelStore.loadedModelBytes = 4e9;
+      await expect(status()).resolves.toBe('fits');
+      modelStore.loadedModelBytes = 5e9 + 1;
+      await expect(status()).resolves.toBe('tight');
+    });
+
+    it('checking a tight need does not accept it', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      modelStore.loadedModelBytes = 5e9;
+      await expect(status()).resolves.toBe('tight');
+      expect(store.acceptedCaptureBytes).toBeNull();
+      await expect(status()).resolves.toBe('tight');
+    });
+
+    it('an accepted need never lets a need above total RAM through', async () => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      store.acceptCaptureMemory(20e9);
+      modelStore.loadedModelBytes = 9e9;
+      await expect(status()).resolves.toBe('wont_fit');
+    });
+
+    it('does not persist the accepted need', () => {
+      const [[, options]] = (makePersistable as jest.Mock).mock.calls;
+      expect(options.properties).not.toContain('acceptedCaptureBytes');
+    });
+
+    it('does not warn when memory cannot be read', async () => {
       Platform.OS = 'android';
       (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
         new Error('unavailable'),
       );
-      await expect(store.hasMemoryForCapture()).resolves.toBe(true);
+      await expect(status()).resolves.toBe('fits');
     });
   });
 
@@ -243,18 +317,10 @@ describe('ASRStore', () => {
 
     it('selects the installed tier on a successful download', async () => {
       await store.init();
-      store.setSelectedTier('small');
+      forceSelected('small');
       await store.downloadModel('base');
       expect(store.downloadStates.base).toBe('ready');
       expect(store.selectedTier).toBe('base');
-    });
-
-    it('keeps the selected tier when asked not to select', async () => {
-      await store.init();
-      store.setSelectedTier('small');
-      await store.downloadModel('base', {select: false});
-      expect(store.downloadStates.base).toBe('ready');
-      expect(store.selectedTier).toBe('small');
     });
 
     it('records an error when the download throws', async () => {
@@ -273,12 +339,195 @@ describe('ASRStore', () => {
     });
   });
 
+  describe('in-use tier', () => {
+    it('fresh install: nothing persisted or installed → the default, base', async () => {
+      await store.init();
+      expect(ASR_DEFAULT_TIER).toBe('base');
+      expect(store.selectedTier).toBe('base');
+      expect(store.isSelectedTierReady).toBe(false);
+    });
+
+    it.each([
+      ['small', ['base'], 'base'],
+      ['small', ['small', 'base'], 'small'],
+      ['small', [], 'base'],
+      ['large-turbo', ['small'], 'small'],
+    ] as const)(
+      'persisted %s with %j on disk → %s',
+      async (persisted, onDisk, expected) => {
+        forceSelected(persisted);
+        installedOnDisk(...onDisk);
+        await store.init();
+        expect(store.selectedTier).toBe(expected);
+      },
+    );
+
+    it('reconciles only after hydration, even when it lands after the disk scan', async () => {
+      const hydration = deferred();
+      (makePersistable as jest.Mock).mockImplementationOnce(
+        () => hydration.promise,
+      );
+      const late = new ASRStore();
+      installedOnDisk('small');
+      const init = late.init();
+      await flush();
+      expect(late.downloadStates.small).toBe('not_installed');
+
+      forceSelected('large-turbo', late);
+      hydration.resolve();
+      await init;
+
+      expect(late.downloadStates.small).toBe('ready');
+      expect(late.selectedTier).toBe('small');
+    });
+
+    it('keeps a download started during the disk scan in progress', async () => {
+      const scan = deferred();
+      mockIsInstalled.mockImplementation(async (tier: AsrTier) => {
+        await scan.promise;
+        return tier === 'small';
+      });
+      const engineDownload = deferred();
+      mockDownloadModel.mockImplementationOnce(() => engineDownload.promise);
+
+      const init = store.init();
+      const download = store.downloadModel('base');
+      await flush();
+      scan.resolve();
+      await init;
+
+      expect(store.downloadStates.base).toBe('downloading');
+      expect(store.selectedTier).toBe('small');
+
+      engineDownload.resolve();
+      await download;
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('decides first-install select against the reconciled tier', async () => {
+      const scan = deferred();
+      mockIsInstalled.mockImplementation(async (tier: AsrTier) => {
+        await scan.promise;
+        return tier === 'small';
+      });
+      forceSelected('small');
+
+      const init = store.init();
+      const download = store.downloadModel('base');
+      await flush();
+      expect(mockDownloadModel).toHaveBeenCalled();
+      expect(store.downloadStates.base).toBe('downloading');
+
+      scan.resolve();
+      await Promise.all([init, download]);
+
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('a download does not switch a ready in-use tier; selectTier does', async () => {
+      installedOnDisk('base');
+      await store.init();
+
+      await store.downloadModel('small');
+      expect(store.downloadStates.small).toBe('ready');
+      expect(store.selectedTier).toBe('base');
+
+      store.selectTier('small');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('selectTier ignores a tier that is not installed', async () => {
+      installedOnDisk('base');
+      await store.init();
+      store.selectTier('large-turbo');
+      expect(store.selectedTier).toBe('base');
+    });
+
+    it('the first install selects its tier', async () => {
+      await store.init();
+      await store.downloadModel('small');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('deleting the in-use tier falls back through the ready tiers', async () => {
+      installedOnDisk('base', 'small');
+      await store.init();
+      expect(store.selectedTier).toBe('base');
+
+      await store.deleteModel('base');
+      expect(store.selectedTier).toBe('small');
+
+      await store.deleteModel('small');
+      expect(store.selectedTier).toBe('base');
+      expect(store.isSelectedTierReady).toBe(false);
+    });
+
+    it('concurrent first installs: the first to finish is in use', async () => {
+      await store.init();
+      const small = deferred();
+      const base = deferred();
+      mockDownloadModel.mockImplementation(async (tier: AsrTier) =>
+        tier === 'small' ? small.promise : base.promise,
+      );
+      const smallDone = store.downloadModel('small');
+      const baseDone = store.downloadModel('base');
+      await flush();
+
+      small.resolve();
+      await smallDone;
+      expect(store.selectedTier).toBe('small');
+
+      base.resolve();
+      await baseDone;
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('a failed download leaves the in-use tier alone', async () => {
+      await store.init();
+      mockDownloadModel.mockRejectedValueOnce(new Error('network'));
+      await store.downloadModel('small');
+      expect(store.downloadStates.small).toBe('error');
+      expect(store.selectedTier).toBe(ASR_DEFAULT_TIER);
+    });
+
+    it('setupTier is the in-use tier once ready, else the default', async () => {
+      installedOnDisk('small');
+      await store.init();
+      expect(store.setupTier).toBe('small');
+
+      await store.deleteModel('small');
+      runInAction(() => {
+        store.downloadStates.small = 'downloading';
+      });
+      expect(store.setupTier).toBe('base');
+    });
+
+    it('setupTier offers the default before reconcile, not a hydrated stale tier', async () => {
+      const hydration = deferred();
+      (makePersistable as jest.Mock).mockImplementationOnce(
+        () => hydration.promise,
+      );
+      const early = new ASRStore();
+      const init = early.init();
+      forceSelected('small', early);
+
+      expect(early.setupTier).toBe('base');
+
+      hydration.resolve();
+      await init;
+      expect(early.selectedTier).toBe('base');
+    });
+  });
+
   describe('deleteModel', () => {
     it('reselects a remaining ready tier when the active tier is deleted', async () => {
       await store.init();
       store.downloadStates.base = 'ready';
       store.downloadStates.small = 'ready';
-      store.setSelectedTier('small');
+      forceSelected('small');
       await store.deleteModel('small');
       expect(store.downloadStates.small).toBe('not_installed');
       expect(store.selectedTier).toBe('base');
@@ -286,10 +535,10 @@ describe('ASRStore', () => {
 
     it('falls back to the default tier when none remain ready', async () => {
       await store.init();
-      store.downloadStates.base = 'ready';
-      store.setSelectedTier('base');
-      await store.deleteModel('base');
-      expect(store.selectedTier).toBe('small');
+      store.downloadStates.small = 'ready';
+      forceSelected('small');
+      await store.deleteModel('small');
+      expect(store.selectedTier).toBe(ASR_DEFAULT_TIER);
       // The fallback tier is not installed, so the mic stays self-gated.
       expect(store.isSelectedTierReady).toBe(false);
     });
@@ -298,7 +547,7 @@ describe('ASRStore', () => {
       await store.init();
       store.downloadStates.small = 'ready';
       store.downloadStates.base = 'ready';
-      store.setSelectedTier('small');
+      forceSelected('small');
       await store.deleteModel('base');
       expect(store.selectedTier).toBe('small');
     });

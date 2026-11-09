@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="168"
+    android:viewportHeight="168">
+    <group
+        android:translateX="28"
+        android:translateY="28">
+        <group>
+            <clip-path
+                android:pathData="M0.643678 112C51.0157 100.937 105.422 48.4766 112 0L115.7994 -28H-28V118.2909Z" />
+            <group
+                android:name="pal">
+                <path
+                    android:name="silhouette"
+                    android:fillColor="#FFFFFF"
+                    android:fillType="evenOdd"
+                    android:pathData="M25.1408 68.3751C16.2327 53.406 21.1461 34.0497 36.1152 25.1416C51.0843 16.2335 70.4406 21.1469 79.3487 36.116L95.4783 63.2199L41.2704 95.479L25.1408 68.3751ZM34.7873 55.7058A2.57471 2.57471 0 0 1 39.2124 53.0724L47.4418 66.9009A2.57471 2.57471 0 0 1 43.0167 69.5343ZM59.6789 40.8931A2.57471 2.57471 0 0 1 64.104 38.2597L72.3334 52.0882A2.57471 2.57471 0 0 1 67.9083 54.7216ZM53.9791 62.7819L61.1699 58.5027L61.9928 59.8855C63.1745 61.8712 62.5228 64.4389 60.5371 65.6206C58.5514 66.8023 55.9837 66.1505 54.802 64.1648L53.9791 62.7819Z" />
+            </group>
+        </group>
+        <group
+            android:name="pocket-gap"
+            android:translateX="5"
+            android:translateY="5">
+            <path
+                android:name="pocket-edge"
+                android:strokeColor="#FFFFFF"
+                android:strokeWidth="5.7931"
+                android:strokeLineCap="round"
+                android:pathData="M-33 119.389L0.643678 112C51.0157 100.937 105.422 48.4766 112 0L116.4779 -33" />
+        </group>
+    </group>
+</vector>

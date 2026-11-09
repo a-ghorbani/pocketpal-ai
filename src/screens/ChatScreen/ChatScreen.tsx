@@ -33,7 +33,10 @@ import {
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
-import {resolveReasoningCapability} from '../../utils/reasoningCapability';
+import {
+  clampEffort,
+  resolveReasoningCapability,
+} from '../../utils/reasoningCapability';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
@@ -97,7 +100,7 @@ export const ChatScreen: React.FC = observer(() => {
       stop: () => handleStopPress(),
     },
   });
-  const {tapCloud, toggleMute, end} = voiceMode;
+  const {tapCloud, toggleMute, end, dismissSheet} = voiceMode;
   React.useEffect(() => {
     if (isVideoPal) {
       end();
@@ -106,6 +109,18 @@ export const ChatScreen: React.FC = observer(() => {
   const voiceControls = useMemo(
     () => ({tapCloud, toggleMute, end}),
     [tapCloud, toggleMute, end],
+  );
+  const handleCloseVoiceTeaser = React.useCallback(
+    () => dismissSheet('teaser'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceSetup = React.useCallback(
+    () => dismissSheet('setup'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceMemory = React.useCallback(
+    () => dismissSheet('memory'),
+    [dismissSheet],
   );
 
   // Handle deep linking for message prefill
@@ -147,8 +162,12 @@ export const ChatScreen: React.FC = observer(() => {
     !!modelStore.activeModel && reasoningCapability.isReasoning !== 'no';
 
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
-  const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(
+  const [storedEffort, setStoredEffort] = useState<string | undefined>(
     undefined,
+  );
+  const reasoningEffort = clampEffort(
+    storedEffort,
+    reasoningCapability.effortValues,
   );
   const activeSession = chatSessionStore.sessions.find(
     s => s.id === chatSessionStore.activeSessionId,
@@ -158,7 +177,7 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       if (!cancelled) {
         setThinkingEnabled(settings.enable_thinking ?? true);
-        setReasoningEffort(settings.reasoning?.effort);
+        setStoredEffort(settings.reasoning?.effort);
       }
     });
     return () => {
@@ -274,7 +293,7 @@ export const ChatScreen: React.FC = observer(() => {
       }
     }
     setThinkingEnabled(nextEnabled);
-    setReasoningEffort(nextEffort);
+    setStoredEffort(nextEffort);
     await persistReasoning(nextEnabled, nextEffort);
   };
 
@@ -332,19 +351,19 @@ export const ChatScreen: React.FC = observer(() => {
         <VoiceTeaser
           onGetPlus={voiceMode.getPlus}
           onKeepTyping={voiceMode.keepTyping}
-          onClose={voiceMode.dismissSheet}
+          onClose={handleCloseVoiceTeaser}
         />
       )}
       <VoiceSetupSheet
         isVisible={voiceMode.sheet?.kind === 'setup'}
-        onClose={voiceMode.dismissSheet}
+        onClose={handleCloseVoiceSetup}
         onDone={voiceMode.setupDone}
       />
       <VoiceMemorySheet
         fit={voiceMode.sheet?.kind === 'memory' ? voiceMode.sheet.fit : null}
         chatModelName={modelStore.activeModel?.name ?? ''}
         voiceName={ttsStore.currentVoice?.name ?? ''}
-        onClose={voiceMode.dismissSheet}
+        onClose={handleCloseVoiceMemory}
         onContinue={voiceMode.continueAnyway}
         onChooseSmallerModel={voiceMode.chooseSmallerModel}
       />

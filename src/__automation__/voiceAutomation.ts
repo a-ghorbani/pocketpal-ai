@@ -30,8 +30,9 @@ import {clearVoiceTrace, dumpVoiceTrace} from '../utils/voiceTrace';
  *   unlock::on|off|plus the dev entitlement override; plus clears it so Plus decides
  *   gate::on|off        device tier inside or below the voice-mode gate
  *   state::listening|muted|thinking|speaking|error|bar|closed
- *   setup::incomplete|complete   whisper base not installed / installed
- *   memory::tight|wont-fit       the chat model's size for that band
+ *   setup::incomplete|complete   in-use whisper tier not installed / installed
+ *   memory::tight|wont-fit       chat size between the budget and total RAM /
+ *                                past total RAM
  *   seed::spoken        a spoken question and answer in the current chat
  *   trace::dump         the voice trace, one event per line, into the
  *                       `voice-trace-result` element's label and
@@ -81,7 +82,7 @@ export async function runVoiceCommand(cmd: string): Promise<void> {
     });
   } else if (verb === 'setup') {
     runInAction(() => {
-      asrStore.downloadStates.base =
+      asrStore.downloadStates[asrStore.selectedTier] =
         arg === 'complete' ? 'ready' : 'not_installed';
     });
   } else if (verb === 'memory') {
@@ -109,11 +110,11 @@ async function dumpTrace(): Promise<void> {
 
 async function forceMemoryBand(wontFit: boolean): Promise<void> {
   const memory = await readDeviceMemory(modelStore);
-  if (!memory) {
+  if (!memory || (wontFit && !Number.isFinite(memory.totalBytes))) {
     return;
   }
   const budget = memoryBudget(memory);
-  const stt = ASR_TIERS.base.runtimeBytes;
+  const stt = ASR_TIERS[asrStore.selectedTier].runtimeBytes;
   const engine = ttsStore.currentVoice?.engine;
   const tts =
     engine && engine !== 'system'
@@ -121,7 +122,7 @@ async function forceMemoryBand(wontFit: boolean): Promise<void> {
       : TTS_ENGINE_RUNTIME_BYTES.supertonic;
   runInAction(() => {
     modelStore.loadedModelBytes = wontFit
-      ? budget - stt + 1
+      ? memory.totalBytes - stt + 1
       : budget - stt - tts / 2;
   });
 }

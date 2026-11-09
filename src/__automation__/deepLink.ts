@@ -11,6 +11,7 @@
  *   pocketpal://asr?cmd=state::<ready|not-installed|unsupported|recording|
  *                              transcribing|waiting-chat|error-capture|
  *                              error-blocked|error-memory|error-disk>
+ *   pocketpal://asr?cmd=tiers::<none|csv of base,small,large-turbo>
  *   pocketpal://voice?cmd=<verb>::<arg>   (voice mode, see voiceAutomation.ts)
  *   pocketpal://iap?cmd=<verb>::<arg>   (FakeStore script, see fakeStore.ts)
  *   pocketpal://e2e/plus-feature   (locked feature behind Plus; Android

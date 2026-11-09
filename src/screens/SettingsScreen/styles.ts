@@ -78,6 +78,14 @@ export const createStyles = (theme: Theme) =>
       minWidth: 100,
       maxWidth: '100%',
     },
+    tierActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    inUseLabel: {
+      color: theme.colors.primary,
+    },
     // A control too wide to share its row (e.g. the draft-model picker, whose
     // values are model filenames) sits under the title/description instead.
     // Also keeps the menu anchor at the row's left edge, on-screen.
@@ -126,5 +134,36 @@ export const createStyles = (theme: Theme) =>
     },
     segmentedButtons: {
       marginVertical: 8,
+    },
+    keySheetContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    titleWithBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    plusBadge: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    teaserSheetContent: {
+      paddingTop: 44,
+    },
+    teaserBody: {
+      color: theme.colors.onSurfaceVariant,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    keySheetActions: {
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
     },
   });

@@ -1,11 +1,11 @@
-import {AppState} from 'react-native';
+import {Alert, AppState, type AlertButton} from 'react-native';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
 import {fromByteArray} from 'base64-js';
 
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import {useVoiceCapture} from '../useVoiceCapture';
-import {asrStore, modelStore} from '../../store';
+import {asrStore, modelStore, uiStore} from '../../store';
 import {
   ASR_MIN_SEGMENT_MS,
   ASR_NO_AUDIO_MS,
@@ -24,6 +24,8 @@ const mockAudioInit = AudioRecord.init as jest.Mock;
 const mockAudioStart = AudioRecord.start as jest.Mock;
 const mockAudioStop = AudioRecord.stop as jest.Mock;
 const mockAudioOn = AudioRecord.on as jest.Mock;
+const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+const mockMemoryFit = asrStore.captureMemoryFit as jest.Mock;
 
 // Base64-encoded 16-bit PCM: `ms` of speech-level signal (passes the energy
 // gate) or of silence.
@@ -60,7 +62,8 @@ describe('useVoiceCapture', () => {
     modelStore.deviceTier = 'flagship';
     modelStore.inferencing = false;
     modelStore.context = undefined;
-    (asrStore.hasMemoryForCapture as jest.Mock).mockResolvedValue(true);
+    asrStore.acceptedCaptureBytes = null;
+    mockMemoryFit.mockResolvedValue({status: 'fits', neededBytes: 0});
     mockEnsureMicPermission.mockResolvedValue('granted');
     mockTranscribe.mockResolvedValue(said('hello world'));
     mockCancelTranscription.mockResolvedValue(undefined);
@@ -111,8 +114,8 @@ describe('useVoiceCapture', () => {
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
-  it('refuses to record when whisper would not fit in memory', async () => {
-    (asrStore.hasMemoryForCapture as jest.Mock).mockResolvedValue(false);
+  it('refuses to record when the models need more than total RAM', async () => {
+    mockMemoryFit.mockResolvedValue({status: 'wont_fit', neededBytes: 9e9});
     const {result} = renderHook(() =>
       useVoiceCapture({onTranscript: jest.fn()}),
     );
@@ -126,6 +129,140 @@ describe('useVoiceCapture', () => {
     );
     expect(mockEnsureMicPermission).not.toHaveBeenCalled();
     expect(mockAudioStart).not.toHaveBeenCalled();
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('records without asking when memory fits', async () => {
+    await startRecording();
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
+  });
+
+  describe('when memory is tight', () => {
+    const need = 5e9;
+
+    beforeEach(() => {
+      mockMemoryFit.mockResolvedValueOnce({status: 'tight', neededBytes: need});
+    });
+
+    async function openAlert() {
+      const hook = renderHook(() => useVoiceCapture({onTranscript: jest.fn()}));
+      await act(async () => {
+        hook.result.current.start();
+      });
+      await waitFor(() => expect(mockAlert).toHaveBeenCalledTimes(1));
+      const buttons = mockAlert.mock.calls[0][2] as AlertButton[];
+      return {...hook, buttons};
+    }
+
+    it('asks first, with the mic back at rest and no permission prompt', async () => {
+      const {buttons} = await openAlert();
+
+      const strings = uiStore.l10n.voiceInput;
+      expect(mockAlert).toHaveBeenCalledWith(
+        strings.memoryAlertTitle,
+        strings.memoryAlertBody,
+        expect.any(Array),
+        {cancelable: true},
+      );
+      expect(buttons.map(b => b.text)).toEqual([
+        uiStore.l10n.common.cancel,
+        strings.memoryAlertTryAnyway,
+      ]);
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+    });
+
+    it('Try anyway accepts the need and records after a fresh check', async () => {
+      const {buttons} = await openAlert();
+
+      await act(async () => {
+        buttons[1].onPress?.();
+      });
+
+      expect(asrStore.acceptCaptureMemory).toHaveBeenCalledWith(need);
+      await waitFor(() => expect(asrStore.captureState).toBe('recording'));
+      expect(mockMemoryFit).toHaveBeenCalledTimes(2);
+      expect(mockAudioStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('Cancel leaves the mic at rest and accepts nothing', async () => {
+      const {buttons} = await openAlert();
+
+      expect(buttons[0].onPress).toBeUndefined();
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
+    });
+
+    it('a tap after an unanswered alert runs a fresh check and records', async () => {
+      const {result} = await openAlert();
+
+      await act(async () => {
+        result.current.start();
+      });
+
+      await waitFor(() => expect(asrStore.captureState).toBe('recording'));
+      expect(mockMemoryFit).toHaveBeenCalledTimes(2);
+    });
+
+    it('asks again when the need grew past the one accepted', async () => {
+      const {buttons} = await openAlert();
+      mockMemoryFit.mockResolvedValueOnce({
+        status: 'tight',
+        neededBytes: need + 1,
+      });
+
+      await act(async () => {
+        buttons[1].onPress?.();
+      });
+
+      await waitFor(() => expect(mockAlert).toHaveBeenCalledTimes(2));
+      expect(asrStore.acceptCaptureMemory).toHaveBeenCalledWith(need);
+      expect(asrStore.captureState).toBe('idle');
+      expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+      expect(mockAudioStart).not.toHaveBeenCalled();
+    });
+
+    it('Try anyway on an alert a newer tap replaced does nothing', async () => {
+      const {result, buttons: stale} = await openAlert();
+      mockMemoryFit.mockResolvedValueOnce({status: 'tight', neededBytes: need});
+      await act(async () => {
+        result.current.start();
+      });
+      await waitFor(() => expect(mockAlert).toHaveBeenCalledTimes(2));
+
+      await act(async () => {
+        stale[1].onPress?.();
+      });
+
+      expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
+      expect(mockMemoryFit).toHaveBeenCalledTimes(2);
+      expect(mockAudioStart).not.toHaveBeenCalled();
+      expect(asrStore.captureState).toBe('idle');
+
+      const current = mockAlert.mock.calls[1][2] as AlertButton[];
+      await act(async () => {
+        current[1].onPress?.();
+      });
+      await waitFor(() => expect(asrStore.captureState).toBe('recording'));
+      expect(asrStore.acceptCaptureMemory).toHaveBeenCalledTimes(1);
+    });
+
+    it('Try anyway after unmount starts nothing', async () => {
+      const {buttons, unmount} = await openAlert();
+
+      unmount();
+      await act(async () => {
+        buttons[1].onPress?.();
+      });
+
+      expect(asrStore.acceptCaptureMemory).not.toHaveBeenCalled();
+      expect(mockMemoryFit).toHaveBeenCalledTimes(1);
+      expect(mockAudioStart).not.toHaveBeenCalled();
+      expect(asrStore.captureState).toBe('idle');
+    });
   });
 
   it('detects the spoken language once and reuses it', async () => {
@@ -640,5 +777,99 @@ describe('useVoiceCapture', () => {
 
     unmount();
     expect(mockAudioStop).toHaveBeenCalled();
+  });
+
+  it('unmount during the permission prompt rests the mic and never records', async () => {
+    let resolvePerm: ((r: 'granted') => void) | null = null;
+    mockEnsureMicPermission.mockImplementation(
+      () =>
+        new Promise<'granted'>(resolve => {
+          resolvePerm = resolve;
+        }),
+    );
+    const {result, unmount} = renderHook(() =>
+      useVoiceCapture({onTranscript: jest.fn()}),
+    );
+    await act(async () => {
+      result.current.start();
+    });
+    expect(asrStore.captureState).toBe('requesting_perm');
+
+    unmount();
+    expect(asrStore.resetCapture).toHaveBeenCalled();
+    await act(async () => {
+      resolvePerm?.('granted');
+    });
+
+    expect(mockAudioStart).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it('unmount during the memory check starts nothing', async () => {
+    let resolveFit:
+      | ((fit: {status: 'tight'; neededBytes: number}) => void)
+      | null = null;
+    mockMemoryFit.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveFit = resolve;
+        }),
+    );
+    const {result, unmount} = renderHook(() =>
+      useVoiceCapture({onTranscript: jest.fn()}),
+    );
+    await act(async () => {
+      result.current.start();
+    });
+
+    unmount();
+    await act(async () => {
+      resolveFit?.({status: 'tight', neededBytes: 5e9});
+    });
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockEnsureMicPermission).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it('unmount while transcribing stops whisper and rests the mic', async () => {
+    mockTranscribe.mockImplementation(() => new Promise(() => {}));
+    const {result, unmount} = await startRecording();
+    act(() => {
+      dataCallback?.(loudPcmChunkBase64());
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(asrStore.captureState).toBe('transcribing');
+
+    unmount();
+
+    expect(mockCancelTranscription).toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it("unmounting another instance leaves this one's capture alone", async () => {
+    const other = renderHook(() => useVoiceCapture({onTranscript: jest.fn()}));
+    await startRecording();
+
+    other.unmount();
+
+    expect(asrStore.resetCapture).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('recording');
+  });
+
+  it('an instance whose capture ended does not cancel a newer one on unmount', async () => {
+    const first = await startRecording();
+    act(() => {
+      first.result.current.cancel();
+    });
+    await startRecording();
+    (asrStore.resetCapture as jest.Mock).mockClear();
+
+    first.unmount();
+
+    expect(asrStore.resetCapture).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('recording');
   });
 });

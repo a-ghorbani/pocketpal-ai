@@ -60,6 +60,7 @@ export const __setDocumentDirectoryPath = path => {
 export const CachesDirectoryPath = '/path/to/caches';
 export const TemporaryDirectoryPath = '/path/to/tmp/';
 export const copyFile = jest.fn().mockResolvedValue(true);
+export const moveFile = jest.fn().mockResolvedValue(undefined);
 
 // Expose method to reset state for tests
 export const __resetMockState = () => {
@@ -83,6 +84,7 @@ const RNFS = {
   LibraryDirectoryPath,
   MainBundlePath,
   copyFile,
+  moveFile,
   __resetMockState,
   __setDocumentDirectoryPath,
 };

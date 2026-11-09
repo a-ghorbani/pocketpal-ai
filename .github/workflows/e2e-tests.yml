@@ -169,6 +169,9 @@ jobs:
             --apk android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk \
             --report payload-report.txt
 
+      - name: Verify the Plus store gate
+        run: scripts/verify-plus-gate.sh android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk --gated
+
       - name: Upload payload report
         if: always()
         uses: actions/upload-artifact@v4
