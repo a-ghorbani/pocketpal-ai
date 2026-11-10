@@ -246,6 +246,39 @@
       "signInAgain": "Sila log masuk semula",
       "creatorSupport": "Akaun pencipta dipadam oleh pasukan sokongan kami: {{contact}}",
       "failed": "Tidak dapat memadam, cuba lagi"
+    },
+    "localApiServer": {
+      "title": "Pelayan API tempatan",
+      "enable": "Sajikan model yang dimuat",
+      "enableDescription": "Biarkan aplikasi lain menggunakan model yang dimuat melalui API serasi OpenAI. Permintaan akan menunggu giliran bersama sembang anda.",
+      "starting": "Memulakan…",
+      "url": "URL Pelayan",
+      "copyUrl": "Salin URL",
+      "servedModel": "Menyajikan {{model}}",
+      "noModel": "Tiada model dimuat. Permintaan akan gagal sehingga anda memuat satu model.",
+      "port": "Port",
+      "portInvalid": "Guna port antara 1024 hingga 65535",
+      "lan": "Benarkan peranti lain dalam rangkaian",
+      "lanWarning": "Pelayan ini boleh dicapai melalui setiap rangkaian yang digunakan telefon ini: Wi-Fi, data mudah alih, hotspot dan VPN. Tetapkan kunci API untuk mengehadkan siapa yang boleh menggunakannya.",
+      "notOnWifi": "Tiada sambungan Wi-Fi, jadi URL rangkaian tidak dipaparkan.",
+      "apiKey": "Kunci API",
+      "apiKeySet": "Permintaan mesti menghantar kunci ini",
+      "apiKeyNotSet": "Tiada kunci: mana-mana aplikasi yang boleh mencapai pelayan boleh menggunakannya, kecuali halaman dalam pelayar web.",
+      "setApiKey": "Tetapkan Kunci",
+      "clearApiKey": "Kosongkan Kunci",
+      "apiKeyPlaceholder": "Masukkan kunci API",
+      "stopToEdit": "Matikan pelayan untuk menukar tetapan ini.",
+      "lockedHint": "Ciri Plus. Buka butiran.",
+      "teaserTitle": "Pelayan API tempatan ialah ciri Plus",
+      "teaserBody": "Biarkan aplikasi lain menggunakan model yang dimuat pada telefon ini.",
+      "teaserGetPlus": "Dapatkan Plus",
+      "teaserNotNow": "Bukan sekarang",
+      "errors": {
+        "portInUse": "Port {{port}} sedang digunakan. Matikan pelayan dan pilih port lain.",
+        "listenFailed": "Pelayan tidak dapat dimulakan. Matikan dan hidupkannya semula, atau pilih port lain.",
+        "stoppedListening": "Pelayan berhenti secara tiba-tiba. Matikan dan hidupkannya semula.",
+        "keyUnavailable": "Tidak dapat membaca kunci API. Buka kunci telefon anda, kemudian matikan pelayan dan hidupkannya semula."
+      }
     }
   },
   "memory": {
@@ -456,6 +489,12 @@
         "memoryWarningButton": "Papar butiran amaran memori",
         "integrityWarningButton": "Papar butiran amaran integriti",
         "memoryWarningSnackbar": "Notifikasi amaran memori"
+      },
+      "projectorOffer": {
+        "rowTitle": "Penglihatan memerlukan model unjuran",
+        "download": "Muat Turun",
+        "downloading": "Memuat turun model unjuran · {{progress}}%",
+        "a11yWithSize": "Muat turun model unjuran, {{size}}"
       }
     },
     "modelSettings": {
