@@ -246,6 +246,39 @@
       "signInAgain": "Silakan masuk kembali",
       "creatorSupport": "Akun pembuat Pal dihapus oleh tim dukungan kami: {{contact}}",
       "failed": "Gagal menghapus, coba lagi"
+    },
+    "localApiServer": {
+      "title": "Server API lokal",
+      "enable": "Bagikan model yang dimuat",
+      "enableDescription": "Aplikasi lain bisa memakai model yang dimuat lewat API yang kompatibel dengan OpenAI. Permintaan mengantre bersama obrolan Anda.",
+      "starting": "Memulai…",
+      "url": "URL server",
+      "copyUrl": "Salin URL",
+      "servedModel": "Membagikan {{model}}",
+      "noModel": "Belum ada model yang dimuat. Permintaan akan gagal sampai Anda memuat model.",
+      "port": "Port",
+      "portInvalid": "Gunakan port antara 1024 dan 65535",
+      "lan": "Izinkan perangkat lain di jaringan",
+      "lanWarning": "Server dapat dijangkau dari semua jaringan yang sedang dipakai ponsel ini: Wi-Fi, data seluler, hotspot, dan VPN. Atur kunci API untuk membatasi siapa yang bisa memakainya.",
+      "notOnWifi": "Tidak terhubung ke Wi-Fi, jadi URL jaringan tidak ditampilkan.",
+      "apiKey": "Kunci API",
+      "apiKeySet": "Permintaan harus menyertakan kunci ini",
+      "apiKeyNotSet": "Tanpa kunci: aplikasi apa pun yang bisa menjangkau server ini dapat memakainya, kecuali halaman web di browser.",
+      "setApiKey": "Atur kunci",
+      "clearApiKey": "Hapus kunci",
+      "apiKeyPlaceholder": "Masukkan kunci API",
+      "stopToEdit": "Matikan server dulu untuk mengubah pengaturan ini.",
+      "lockedHint": "Fitur Plus. Membuka detailnya.",
+      "teaserTitle": "Server API lokal adalah fitur Plus",
+      "teaserBody": "Biarkan aplikasi lain memakai model yang dimuat di ponsel ini.",
+      "teaserGetPlus": "Dapatkan Plus",
+      "teaserNotNow": "Nanti saja",
+      "errors": {
+        "portInUse": "Port {{port}} sudah dipakai. Matikan server lalu pilih port lain.",
+        "listenFailed": "Server tidak dapat dimulai. Matikan lalu nyalakan lagi, atau pilih port lain.",
+        "stoppedListening": "Server berhenti tiba-tiba. Matikan lalu nyalakan lagi.",
+        "keyUnavailable": "Tidak dapat membaca kunci API. Buka kunci ponsel Anda, lalu matikan server dan nyalakan lagi."
+      }
     }
   },
   "memory": {
@@ -456,6 +489,12 @@
         "memoryWarningButton": "Tampilkan detail peringatan memori",
         "integrityWarningButton": "Tampilkan detail peringatan integritas",
         "memoryWarningSnackbar": "Notifikasi peringatan memori"
+      },
+      "projectorOffer": {
+        "rowTitle": "Visi perlu model proyeksinya",
+        "download": "Unduh",
+        "downloading": "Mengunduh model proyeksi · {{progress}}%",
+        "a11yWithSize": "Unduh model proyeksi, {{size}}"
       }
     },
     "modelSettings": {
