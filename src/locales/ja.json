@@ -246,6 +246,39 @@
       "signInAgain": "もう一度サインインしてください",
       "creatorSupport": "クリエイターアカウントの削除はサポートチームが対応します：{{contact}}",
       "failed": "削除できませんでした。もう一度お試しください"
+    },
+    "localApiServer": {
+      "title": "ローカルAPIサーバー",
+      "enable": "読み込み済みのモデルを公開",
+      "enableDescription": "OpenAI互換のAPIを通じて、他のアプリが読み込み済みのモデルを使えるようになります。リクエストはチャットと同じ順番待ちの列に並びます。",
+      "starting": "起動中…",
+      "url": "サーバーURL",
+      "copyUrl": "URLをコピー",
+      "servedModel": "{{model}}を公開中",
+      "noModel": "モデルが読み込まれていません。読み込むまでリクエストは失敗します。",
+      "port": "ポート",
+      "portInvalid": "1024〜65535のポートを指定してください",
+      "lan": "ネットワーク上の他のデバイスからの接続を許可",
+      "lanWarning": "このスマホがつながっているすべてのネットワーク（Wi-Fi、モバイルデータ通信、テザリング、VPN）からサーバーに接続できます。使える相手を制限するには、APIキーを設定してください。",
+      "notOnWifi": "Wi-Fiに接続していないため、ネットワーク用のURLは表示されません。",
+      "apiKey": "APIキー",
+      "apiKeySet": "リクエストにはこのキーが必要です",
+      "apiKeyNotSet": "キーなし：サーバーに接続できるアプリはどれでも利用できます（ブラウザのページを除く）。",
+      "setApiKey": "キーを設定",
+      "clearApiKey": "キーをクリア",
+      "apiKeyPlaceholder": "APIキーを入力",
+      "stopToEdit": "これらの設定を変更するには、サーバーをオフにしてください。",
+      "lockedHint": "Plus機能です。詳細を開きます。",
+      "teaserTitle": "ローカルAPIサーバーはPlus機能です",
+      "teaserBody": "このスマホで読み込んでいるモデルを、他のアプリから使えるようにします。",
+      "teaserGetPlus": "Plusを入手",
+      "teaserNotNow": "今はしない",
+      "errors": {
+        "portInUse": "ポート{{port}}はすでに使用されています。サーバーをオフにして、別のポートを選んでください。",
+        "listenFailed": "サーバーを起動できませんでした。オフにしてからもう一度オンにするか、別のポートを選んでください。",
+        "stoppedListening": "サーバーが予期せず停止しました。オフにしてから、もう一度オンにしてください。",
+        "keyUnavailable": "APIキーを読み取れませんでした。スマホのロックを解除してから、サーバーをオフにしてもう一度オンにしてください。"
+      }
     }
   },
   "memory": {
@@ -456,6 +489,12 @@
         "memoryWarningButton": "メモリ警告詳細を表示",
         "integrityWarningButton": "整合性警告詳細を表示",
         "memoryWarningSnackbar": "メモリ警告通知"
+      },
+      "projectorOffer": {
+        "rowTitle": "ビジョン機能には投影モデルが必要です",
+        "download": "ダウンロード",
+        "downloading": "投影モデルをダウンロード中 · {{progress}}%",
+        "a11yWithSize": "投影モデルをダウンロード、{{size}}"
       }
     },
     "modelSettings": {
