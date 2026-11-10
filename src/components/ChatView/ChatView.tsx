@@ -57,12 +57,14 @@ import {
   chatSessionStore,
   modelStore,
   uiStore,
+  voiceModeStore,
 } from '../../store';
 import type {
   EvaluateSendBudget,
   SendOptions,
   UndoneSend,
 } from '../../hooks/useChatSession';
+import type {VoiceEntryActions} from '../../hooks/useVoiceMode';
 
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
@@ -111,6 +113,7 @@ import {
   DocumentRangeSheet,
   GreetingBubble,
   SuggestedPromptsRow,
+  VoiceBar,
 } from '..';
 import {
   AlertIcon,
@@ -219,6 +222,8 @@ export interface ChatProps extends Omit<ChatTopLevelProps, 'onSendPress'> {
   initialInputText?: string;
   /** Callback when initial text is consumed */
   onInitialTextConsumed?: () => void;
+  /** Opens voice mode with this chat's model picker and composer focus. */
+  onVoiceModePress?: (actions: VoiceEntryActions) => void;
   /**
    * Allows you to customize the time format. IMPORTANT: only for the time,
    * do not return date here. @see {@link ChatProps.dateFormat} to customize the date format.
@@ -307,6 +312,7 @@ export const ChatView = observer(
     showImageUpload = false,
     isVisionEnabled = false,
     initialInputText,
+    onVoiceModePress,
     onInitialTextConsumed,
     textInputProps,
     timeFormat,
@@ -1130,6 +1136,7 @@ export const ChatView = observer(
     } = l10n.components.chatView.menuItems;
 
     const isStopping = chatSessionStore.isStopping;
+    const voiceModeOpen = voiceModeStore.isOpen;
     const menuItems = React.useMemo((): MenuItem[] => {
       if (
         !selectedMessage ||
@@ -1140,7 +1147,8 @@ export const ChatView = observer(
       }
 
       const isAuthor = selectedMessage.author.id === user.id;
-      const hasActiveModel = modelStore.activeModelId !== undefined;
+      const canGenerate =
+        modelStore.activeModelId !== undefined && !isStopping && !voiceModeOpen;
       const models = modelStore.availableModels || [];
 
       const baseItems: MenuItem[] = [
@@ -1163,13 +1171,13 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <RefreshIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel || isStopping,
+          disabled: !canGenerate,
         });
 
         baseItems.push({
           label: regenerateWithLabel,
           icon: () => <GridIcon stroke={theme.colors.primary} />,
-          disabled: isStopping,
+          disabled: isStopping || voiceModeOpen,
           submenu: models.map(model => ({
             label: model.name,
             width: Math.min(300, size.width),
@@ -1189,7 +1197,7 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel || isStopping,
+          disabled: !canGenerate,
         });
       }
 
@@ -1207,6 +1215,7 @@ export const ChatView = observer(
     }, [
       selectedMessage,
       isStopping,
+      voiceModeOpen,
       user.id,
       handleCopy,
       handleTryAgain,
@@ -1606,39 +1615,52 @@ export const ChatView = observer(
                 onNewChat={() => chatSessionStore.resetActiveSession()}
                 onIncreaseContext={() => setIncreaseSheetOpen(true)}
               />
-              <ChatInput
-                {...{
-                  ...unwrap(inputProps),
-                  isStreaming,
-                  onSendPress: sendFromComposer,
-                  onStopPress,
-                  chatInputHeight,
-                  inputBackgroundColor,
-                  onCancelEdit: requestEditExit,
-                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
-                  isStopVisible,
-                  isPickerVisible,
-                  sendButtonVisibilityMode,
-                  showImageUpload,
-                  isVisionEnabled,
-                  defaultImages: inputImages,
-                  onDefaultImagesChange: setInputImages,
-                  appendTranscript: composerShowsPromptText
-                    ? undefined
-                    : appendTranscript,
-                  documents: inputDocuments,
-                  onDocumentsChange: updateComposerDocuments,
-                  onOpenDocumentRange: setRangeKey,
-                  documentModes,
-                  textInputProps: {
-                    ...textInputProps,
-                    ...(!composerShowsPromptText && {
-                      value: inputText,
-                      onChangeText: setInputText,
-                    }),
-                  },
-                }}
-              />
+              {onVoiceModePress && voiceModeStore.isOpen ? (
+                <VoiceBar />
+              ) : (
+                <ChatInput
+                  {...{
+                    ...unwrap(inputProps),
+                    isStreaming,
+                    onSendPress: sendFromComposer,
+                    onStopPress,
+                    chatInputHeight,
+                    inputBackgroundColor,
+                    onCancelEdit: requestEditExit,
+                    onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                    isStopVisible,
+                    isPickerVisible,
+                    sendButtonVisibilityMode,
+                    showImageUpload,
+                    isVisionEnabled,
+                    defaultImages: inputImages,
+                    onDefaultImagesChange: setInputImages,
+                    appendTranscript: composerShowsPromptText
+                      ? undefined
+                      : appendTranscript,
+                    onVoicePress:
+                      onVoiceModePress &&
+                      ((focusInput: () => void) => {
+                        Keyboard.dismiss();
+                        onVoiceModePress({
+                          openModelPicker: () => setIsPickerVisible(true),
+                          focusInput,
+                        });
+                      }),
+                    documents: inputDocuments,
+                    onDocumentsChange: updateComposerDocuments,
+                    onOpenDocumentRange: setRangeKey,
+                    documentModes,
+                    textInputProps: {
+                      ...textInputProps,
+                      ...(!composerShowsPromptText && {
+                        value: inputText,
+                        onChangeText: setInputText,
+                      }),
+                    },
+                  }}
+                />
+              )}
             </Reanimated.View>
 
             {/* Suggested prompts — float above the input container, share
@@ -1646,6 +1668,7 @@ export const ChatView = observer(
                 render as a sibling (no shared background / rounded top). */}
             {messages.length === 0 &&
             !isStreaming &&
+            !voiceModeOpen &&
             modelStore.activeModelId !== undefined &&
             activePal?.greeting?.suggestedPrompts &&
             activePal.greeting.suggestedPrompts.length > 0 ? (

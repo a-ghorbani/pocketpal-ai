@@ -1,6 +1,6 @@
 // Track deleted files for stateful behavior in tests
 const deletedFiles = new Set();
-export const stat = jest.fn();
+export const stat = jest.fn().mockResolvedValue({isFile: () => true});
 export const mkdir = jest.fn();
 export const unlink = jest.fn().mockImplementation(path => {
   deletedFiles.add(path);
@@ -40,11 +40,11 @@ export const writeFile = jest.fn(() => {
   return Promise.resolve();
 });
 export const downloadFile = jest.fn();
+export const hash = jest.fn();
 // Make DocumentDirectoryPath configurable for tests
 let documentDirectoryPath = '/path/to/documents';
 export const DocumentDirectoryPath = documentDirectoryPath;
 export const LibraryDirectoryPath = '/path/to/library';
-export const CachesDirectoryPath = '/path/to/caches';
 export const MainBundlePath = '/path/to/bundle';
 
 // Allow tests to override the path
@@ -57,6 +57,8 @@ export const __setDocumentDirectoryPath = path => {
     configurable: true,
   });
 };
+export const CachesDirectoryPath = '/path/to/caches';
+export const TemporaryDirectoryPath = '/path/to/tmp/';
 export const copyFile = jest.fn().mockResolvedValue(true);
 export const moveFile = jest.fn().mockResolvedValue(undefined);
 export const read = jest.fn().mockResolvedValue('');
@@ -77,9 +79,11 @@ const RNFS = {
   readFile,
   writeFile,
   downloadFile,
+  hash,
   DocumentDirectoryPath,
-  LibraryDirectoryPath,
   CachesDirectoryPath,
+  TemporaryDirectoryPath,
+  LibraryDirectoryPath,
   MainBundlePath,
   copyFile,
   moveFile,

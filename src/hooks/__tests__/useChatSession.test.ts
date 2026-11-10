@@ -14,6 +14,7 @@ import {
 
 import {useChatSession} from '../useChatSession';
 import {isReadUrlAllowed} from '../../services/talents';
+import {bodyExtras} from '../../api/servers';
 
 import {
   chatSessionStore,
@@ -86,6 +87,125 @@ describe('useChatSession', () => {
     expect(modelStore.context?.completion).toHaveBeenCalled();
   });
 
+  describe('a spoken send', () => {
+    const addedRows = () =>
+      (chatSessionStore.addMessageToCurrentSession as jest.Mock).mock.calls.map(
+        ([row]) => row,
+      );
+
+    it('marks the user row and the assistant turn as spoken', async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, {spoken: true});
+      });
+
+      const user = addedRows().find(row => row.type === 'text');
+      const turn = addedRows().find(row => row.type === 'assistant_turn');
+      expect(user.metadata.spoken).toBe(true);
+      expect(turn.metadata.spoken).toBe(true);
+    });
+
+    it("hands back the assistant turn's id once its row exists", async () => {
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async row => {
+        row.id = `${row.type}-id`;
+      });
+      const onTurnCreated = jest.fn();
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, {
+          spoken: true,
+          onTurnCreated,
+        });
+      });
+
+      expect(onTurnCreated).toHaveBeenCalledTimes(1);
+      expect(onTurnCreated).toHaveBeenCalledWith('assistant_turn-id');
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockResolvedValue(undefined);
+    });
+
+    const sendWithThinkingOn = async (opts?: {spoken: boolean}) => {
+      const model = {
+        ...(modelsList as any)[0],
+        reasoning: {
+          isReasoning: 'yes',
+          source: 'user',
+          supportsEffort: true,
+          effortValues: ['low', 'medium', 'high'],
+          effortSource: 'user',
+        },
+      };
+      modelStore.models = [model] as any;
+      modelStore.activeModelId = model.id;
+      const settings = await chatSessionStore.getCurrentCompletionSettings();
+      (
+        chatSessionStore.getCurrentCompletionSettings as jest.Mock
+      ).mockResolvedValueOnce({
+        ...settings,
+        enable_thinking: true,
+        reasoning: {enabled: true, effort: 'high'},
+      });
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage, opts);
+      });
+      return (modelStore.engine!.completion as jest.Mock).mock.calls[0][0];
+    };
+
+    it('runs the reply with thinking off, whatever the chat setting', async () => {
+      const params = await sendWithThinkingOn({spoken: true});
+
+      expect(params.chat_template_kwargs).toEqual(
+        expect.objectContaining({enable_thinking: false}),
+      );
+      expect(params.chat_template_kwargs?.reasoning_effort).toBeUndefined();
+      expect(params.reasoning).toEqual({enabled: false});
+    });
+
+    it('asks a remote server for no thinking too', async () => {
+      const params = await sendWithThinkingOn({spoken: true});
+      const request = {samplers: {}, reasoning: params.reasoning};
+
+      expect(bodyExtras('llama.cpp', request)).toEqual({
+        reasoning_format: 'auto',
+        chat_template_kwargs: {enable_thinking: false},
+      });
+      expect(bodyExtras('Ollama', request)).toEqual({reasoning_effort: 'none'});
+    });
+
+    it('leaves thinking to the chat setting for a typed send', async () => {
+      const params = await sendWithThinkingOn();
+
+      expect(params.chat_template_kwargs?.enable_thinking).not.toBe(false);
+      expect(params.chat_template_kwargs?.reasoning_effort).toBe('high');
+    });
+
+    it('a typed send carries no spoken flag', async () => {
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      for (const row of addedRows()) {
+        expect(row.metadata).not.toHaveProperty('spoken');
+      }
+    });
+  });
+
   it('should handle model not loaded scenario', async () => {
     modelStore.context = undefined;
     modelStore.engine = undefined;
@@ -138,7 +258,7 @@ describe('useChatSession', () => {
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockRejectedValueOnce(new Error('failed to create MTP draft context'));
+        .mockRejectedValueOnce(new Error('failed to create draft context'));
     }
 
     const {result} = renderHook(() =>
@@ -155,6 +275,34 @@ describe('useChatSession', () => {
         author: assistant,
       }),
     );
+  });
+
+  it('maps a tool-call parse failure before any output to friendly copy', async () => {
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(
+          new Error(
+            'Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error',
+          ),
+        );
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const texts = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.map(call => call[0]?.text);
+    expect(texts).toContain(l10n.en.chat.toolCallTruncated);
+    expect(
+      texts.filter(text => text?.startsWith(l10n.en.chat.completionFailed)),
+    ).toEqual([]);
   });
 
   describe('a router turn that ends before its request', () => {
@@ -1041,12 +1189,14 @@ describe('useChatSession', () => {
 
   describe('TTS streaming wiring', () => {
     beforeEach(() => {
-      // Hook is gated on autoSpeakEnabled (default false in the mock);
-      // opt in for tests that assert it fires.
+      // Hook is gated on ttsStore.streamsReplies (false in the mock by
+      // default); open the gate and opt in for tests that assert it fires.
+      (ttsStore as any).userTTSOverride = true;
       (ttsStore as any).autoSpeakEnabled = true;
     });
 
     afterEach(() => {
+      (ttsStore as any).userTTSOverride = null;
       (ttsStore as any).autoSpeakEnabled = false;
     });
 

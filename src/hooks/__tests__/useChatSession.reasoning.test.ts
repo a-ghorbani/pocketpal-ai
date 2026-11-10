@@ -115,16 +115,63 @@ describe('useChatSession reasoning wire (local)', () => {
     ).toBeUndefined();
   });
 
+  const useGradedModel = (effortValues: string[]) => {
+    const model = {
+      ...(modelsList as any)[0],
+      reasoning: {
+        isReasoning: 'yes' as const,
+        source: 'user' as const,
+        supportsEffort: effortValues.length > 0,
+        effortValues,
+        effortSource: 'user' as const,
+      },
+    };
+    modelStore.models = [model] as any;
+    modelStore.activeModelId = model.id;
+  };
+
   it('axis-2 effort emits chat_template_kwargs.reasoning_effort', async () => {
     setSettings({
       enable_thinking: true,
       reasoning: {enabled: true, effort: 'high'},
     });
+    useGradedModel(['low', 'medium', 'high']);
     const captured = captureCompletionParams();
     await send();
     expect(captured.current.chat_template_kwargs?.reasoning_effort).toBe(
       'high',
     );
+  });
+
+  it('sends an unsupported stored effort as the nearest lower supported one', async () => {
+    setSettings({
+      enable_thinking: true,
+      reasoning: {enabled: true, effort: 'xhigh'},
+    });
+    useGradedModel(['low', 'medium', 'high']);
+    const captured = captureCompletionParams();
+    await send();
+    expect(captured.current.chat_template_kwargs?.reasoning_effort).toBe(
+      'high',
+    );
+    expect(captured.current.reasoning).toEqual({
+      enabled: true,
+      effort: 'high',
+    });
+  });
+
+  it('sends no effort to a model that does not grade effort', async () => {
+    setSettings({
+      enable_thinking: true,
+      reasoning: {enabled: true, effort: 'xhigh'},
+    });
+    useGradedModel([]);
+    const captured = captureCompletionParams();
+    await send();
+    expect(
+      captured.current.chat_template_kwargs?.reasoning_effort,
+    ).toBeUndefined();
+    expect(captured.current.reasoning).toEqual({enabled: true});
   });
 
   it('does not strip reasoning: no removeThinkingParts on displayed output (include_thinking unchanged)', async () => {

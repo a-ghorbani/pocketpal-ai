@@ -1,27 +1,41 @@
 import NativeKeepAwake from '../specs/NativeKeepAwake';
 
-/**
- * Activates keep awake functionality to prevent the screen from going to sleep
- * @throws {Error} If the native module fails to activate
- */
-export const activateKeepAwake = (): void => {
+let holders = 0;
+
+const setNativeKeepAwake = (on: boolean) => {
   try {
-    NativeKeepAwake.activate();
+    if (on) {
+      NativeKeepAwake.activate();
+    } else {
+      NativeKeepAwake.deactivate();
+    }
   } catch (error) {
-    console.error('Failed to activate keep awake:', error);
-    throw error;
+    console.error(
+      `Failed to ${on ? 'activate' : 'deactivate'} keep awake:`,
+      error,
+    );
   }
 };
 
 /**
- * Deactivates keep awake functionality allowing the screen to go to sleep
- * @throws {Error} If the native module fails to deactivate
+ * Keeps the screen awake until the returned release is called. Holds are
+ * counted: the screen may sleep only once every holder has released.
+ * The release is idempotent.
  */
-export const deactivateKeepAwake = (): void => {
-  try {
-    NativeKeepAwake.deactivate();
-  } catch (error) {
-    console.error('Failed to deactivate keep awake:', error);
-    throw error;
+export const acquireKeepAwake = (): (() => void) => {
+  holders += 1;
+  if (holders === 1) {
+    setNativeKeepAwake(true);
   }
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    holders -= 1;
+    if (holders === 0) {
+      setNativeKeepAwake(false);
+    }
+  };
 };

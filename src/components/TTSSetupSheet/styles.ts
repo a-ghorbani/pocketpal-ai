@@ -127,6 +127,13 @@ export const createStyles = (theme: Theme) =>
       lineHeight: 16,
       opacity: 0.7,
     },
+    engineGroupCreditText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      lineHeight: 16,
+      opacity: 0.7,
+      marginBottom: 12,
+    },
     engineGroupEmpty: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12.5,

@@ -90,8 +90,8 @@ android {
         applicationId "com.pocketpalai"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 152
-        versionName "1.20.1"
+        versionCode 159
+        versionName "1.22.1"
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
@@ -203,6 +203,12 @@ android {
     }
 }
 
+tasks.withType(com.facebook.react.tasks.BundleHermesCTask).configureEach {
+    inputs.property('plusStoreGate', providers.environmentVariable('PLUS_STORE_GATE').orElse(''))
+    inputs.property('e2eBuild', providers.environmentVariable('E2E_BUILD').orElse(''))
+    inputs.property('e2eSkipOnboarding', providers.environmentVariable('E2E_SKIP_ONBOARDING').orElse(''))
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -260,6 +266,11 @@ configurations.matching {
 }.configureEach {
     exclude group: 'androidx.compose.ui'
     exclude group: 'androidx.compose.runtime'
+}
+
+// react-native-tcp-socket needs BouncyCastle only for TLS servers; the local API server is plain TCP.
+configurations.matching { it.name.endsWith('RuntimeClasspath') }.configureEach {
+    exclude group: 'org.bouncycastle'
 }
 
 project.ext.vectoricons = [

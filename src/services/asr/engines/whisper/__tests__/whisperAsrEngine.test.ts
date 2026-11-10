@@ -364,6 +364,83 @@ describe('WhisperAsrEngine', () => {
 
     await expect(engine.release()).resolves.toBeUndefined();
   });
+
+  describe('residency and release', () => {
+    const markTierInstalled = () => {
+      mockExists.mockResolvedValue(true);
+      mockReadFile.mockResolvedValue(
+        JSON.stringify({version: ASR_MODEL_VERSION}),
+      );
+    };
+
+    it('preload loads the context that a later transcription reuses', async () => {
+      markTierInstalled();
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop: jest.fn(),
+          promise: Promise.resolve({result: 'hi', isAborted: false}),
+        }),
+        release: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await engine.preload('base');
+      await engine.transcribe('pcm', {tier: 'base'});
+      await engine.transcribe('pcm', {tier: 'base'});
+
+      expect(mockInitWhisper).toHaveBeenCalledTimes(1);
+    });
+
+    it('release stops an in-flight decode and frees the context only after it settles', async () => {
+      markTierInstalled();
+      const events: string[] = [];
+      let finish: (r: object) => void = () => {};
+      const stop = jest.fn(async () => {
+        events.push('stop');
+        setTimeout(() => {
+          events.push('decode settled');
+          finish({result: '', isAborted: true});
+        }, 0);
+      });
+      const release = jest.fn(async () => {
+        events.push('context released');
+      });
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop,
+          promise: new Promise(resolve => {
+            finish = resolve;
+          }),
+        }),
+        release,
+      });
+
+      const pending = engine.transcribe('pcm', {tier: 'base'});
+      await new Promise(resolve => setImmediate(resolve));
+      await engine.release();
+
+      expect(events).toEqual(['stop', 'decode settled', 'context released']);
+      await expect(pending).resolves.toEqual({text: '', language: ''});
+    });
+
+    it('release after a finished transcription frees the context without a stop', async () => {
+      markTierInstalled();
+      const stop = jest.fn();
+      const release = jest.fn().mockResolvedValue(undefined);
+      mockInitWhisper.mockResolvedValue({
+        transcribeData: jest.fn().mockReturnValue({
+          stop,
+          promise: Promise.resolve({result: 'hi', isAborted: false}),
+        }),
+        release,
+      });
+
+      await engine.transcribe('pcm', {tier: 'small'});
+      await engine.release();
+
+      expect(stop).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 function installed() {

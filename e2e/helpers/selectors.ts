@@ -184,6 +184,9 @@ export const Selectors = {
     get stopButton(): string {
       return byExactTestId('stop-button');
     },
+    get voiceModeButton(): string {
+      return byExactTestId('voice-mode-button');
+    },
     get attachmentButton(): string {
       return byTestId('attachment-button');
     },

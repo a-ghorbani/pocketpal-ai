@@ -226,17 +226,43 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 16,
       padding: 12,
     },
-    warningButton: {
-      paddingVertical: 6,
-      paddingHorizontal: 8,
-      backgroundColor: theme.colors.errorContainer,
-      borderRadius: 6,
+    projectorOffer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 44,
       marginTop: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surface,
     },
-    warningButtonText: {
+    projectorOfferTitle: {
+      flex: 1,
+      fontSize: 13,
+      color: theme.colors.onSurface,
+    },
+    projectorOfferAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    projectorOfferActionText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    projectorProgress: {
+      marginTop: 8,
+      gap: 6,
+    },
+    projectorProgressText: {
       fontSize: 12,
-      color: theme.colors.onErrorContainer,
-      textAlign: 'center',
+      color: theme.colors.onSurfaceVariant,
+    },
+    projectorProgressBar: {
+      height: 6,
+      borderRadius: 3,
     },
     storageErrorText: {
       marginHorizontal: 20,

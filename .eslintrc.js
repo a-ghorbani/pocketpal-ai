@@ -40,6 +40,7 @@ module.exports = {
     // Declared as a global so ESLint's no-undef rule doesn't trip.
     __E2E__: 'readonly',
     __E2E_SKIP_ONBOARDING__: 'readonly',
+    __PLUS_STORE_GATE__: 'readonly',
   },
   ignorePatterns: [
     'coverage/',

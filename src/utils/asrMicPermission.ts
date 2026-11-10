@@ -25,6 +25,9 @@ const MIC_PERMISSION =
 
 const ANDROID_NO_DIALOG_MS = 1500;
 
+const isGranted = (status: PermissionStatus) =>
+  status === RESULTS.GRANTED || status === RESULTS.LIMITED;
+
 // Android 16 answers a request for a user-fixed permission without showing a
 // dialog, and React Native delivers permission results only on the next
 // onResume, so request() would stay pending until the app is backgrounded.
@@ -62,7 +65,7 @@ function requestAndroid(): Promise<PermissionStatus> {
 export async function ensureMicPermission(): Promise<MicPermissionResult> {
   try {
     const current = await check(MIC_PERMISSION);
-    if (current === RESULTS.GRANTED || current === RESULTS.LIMITED) {
+    if (isGranted(current)) {
       return 'granted';
     }
     if (current === RESULTS.BLOCKED || current === RESULTS.UNAVAILABLE) {
@@ -72,7 +75,7 @@ export async function ensureMicPermission(): Promise<MicPermissionResult> {
       Platform.OS === 'android'
         ? await requestAndroid()
         : await request(MIC_PERMISSION);
-    if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
+    if (isGranted(result)) {
       return 'granted';
     }
     if (result === RESULTS.BLOCKED || result === RESULTS.UNAVAILABLE) {
@@ -82,6 +85,16 @@ export async function ensureMicPermission(): Promise<MicPermissionResult> {
   } catch (err) {
     console.warn('[asrMicPermission] permission request failed:', err);
     return 'denied';
+  }
+}
+
+/** Whether the microphone is already granted, without asking. */
+export async function isMicGranted(): Promise<boolean> {
+  try {
+    return isGranted(await check(MIC_PERMISSION));
+  } catch (err) {
+    console.warn('[asrMicPermission] permission check failed:', err);
+    return false;
   }
 }
 

@@ -13,6 +13,7 @@
     "bench:ios": "npx ts-node scripts/run-bench-ios.ts",
     "analyze:tts-audio": "npx tsx scripts/analyze-tts-audio.ts",
     "test:analyze-tts-audio": "npx tsx scripts/__tests__/analyze-tts-audio.test.ts",
+    "test:run-e2e": "npx tsx scripts/__tests__/run-e2e.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",

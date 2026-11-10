@@ -135,6 +135,8 @@ describe('ChatPalModelPickerSheet', () => {
 
     expect(getByTestId('bottom-sheet')).toBeTruthy();
     expect(getByTestId('bottom-sheet-flatlist')).toBeTruthy();
+    expect(getByTestId('chat-pal-model-picker-tab-models')).toBeTruthy();
+    expect(getByTestId('chat-pal-model-picker-tab-pals')).toBeTruthy();
   });
 
   it('does not render when not visible', () => {

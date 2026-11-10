@@ -39,6 +39,7 @@ const EXPECTED_SECTIONS = [
   'onboarding',
   'downloadBanner',
   'voiceInput',
+  'voiceMode',
   'plus',
 ];
 

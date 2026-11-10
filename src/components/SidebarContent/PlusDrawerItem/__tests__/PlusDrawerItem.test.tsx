@@ -16,10 +16,11 @@ import {PlusDrawerItem} from '../PlusDrawerItem';
 let mockFeatures: PlusFeature[] | undefined;
 
 jest.mock('../../../../services/plus/catalog', () => {
-  const actual = jest.requireActual('../../../../services/plus/catalog');
-  const mocked = {...actual};
+  const unshipped =
+    require('../../../../../jest/fixtures/plus').mockUnshippedCatalog();
+  const mocked = {...unshipped};
   Object.defineProperty(mocked, 'PLUS_FEATURES', {
-    get: () => mockFeatures ?? actual.PLUS_FEATURES,
+    get: () => mockFeatures ?? unshipped.PLUS_FEATURES,
   });
   return mocked;
 });

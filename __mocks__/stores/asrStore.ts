@@ -21,7 +21,7 @@ type AsrErrorKind =
 
 class MockASRStore {
   userASROverride: boolean | null = null;
-  selectedTier: AsrTier = 'small';
+  selectedTier: AsrTier = 'base';
   spokenLanguage: string | null = null;
 
   downloadStates: Record<AsrTier, DownloadState> = {
@@ -45,11 +45,13 @@ class MockASRStore {
   inputLevels: number[] = [];
   recordingStartedAt: number | null = null;
   waitingForChat = false;
+  acceptedCaptureBytes: number | null = null;
 
   init: jest.Mock;
-  hasMemoryForCapture: jest.Mock;
+  captureMemoryFit: jest.Mock;
+  acceptCaptureMemory: jest.Mock;
   setUserASROverride: jest.Mock;
-  setSelectedTier: jest.Mock;
+  selectTier: jest.Mock;
   setSpokenLanguage: jest.Mock;
   setWaitingForChat: jest.Mock;
   refreshFreeDisk: jest.Mock;
@@ -64,9 +66,10 @@ class MockASRStore {
   constructor() {
     makeAutoObservable(this, {
       init: false,
-      hasMemoryForCapture: false,
+      captureMemoryFit: false,
+      acceptCaptureMemory: false,
       setUserASROverride: false,
-      setSelectedTier: false,
+      selectTier: false,
       setSpokenLanguage: false,
       setWaitingForChat: false,
       refreshFreeDisk: false,
@@ -79,16 +82,25 @@ class MockASRStore {
       pushInputLevel: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
-    this.hasMemoryForCapture = jest.fn().mockResolvedValue(true);
+    this.captureMemoryFit = jest
+      .fn()
+      .mockResolvedValue({status: 'fits', neededBytes: 0});
+    this.acceptCaptureMemory = jest.fn((bytes: number) => {
+      runInAction(() => {
+        this.acceptedCaptureBytes = bytes;
+      });
+    });
     this.setUserASROverride = jest.fn((v: boolean) => {
       runInAction(() => {
         this.userASROverride = v;
       });
     });
-    this.setSelectedTier = jest.fn((t: AsrTier) => {
-      runInAction(() => {
-        this.selectedTier = t;
-      });
+    this.selectTier = jest.fn((t: AsrTier) => {
+      if (this.downloadStates[t] === 'ready') {
+        runInAction(() => {
+          this.selectedTier = t;
+        });
+      }
     });
     this.setSpokenLanguage = jest.fn((language: string | null) => {
       runInAction(() => {
@@ -161,6 +173,10 @@ class MockASRStore {
 
   get isSelectedTierReady(): boolean {
     return this.selectedTierState === 'ready';
+  }
+
+  get setupTier(): AsrTier {
+    return this.isSelectedTierReady ? this.selectedTier : 'base';
   }
 }
 

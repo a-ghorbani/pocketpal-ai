@@ -14,6 +14,9 @@ import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import android.app.ActivityManager
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import java.net.Inet4Address
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -292,6 +295,30 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
       }
     } catch (e: Throwable) {
       0L
+    }
+  }
+
+  override fun getWifiIPv4(promise: Promise) {
+    try {
+      val connectivity = reactApplicationContext
+        .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+      @Suppress("DEPRECATION")
+      val networks = connectivity.allNetworks
+      val address = networks
+        .filter { network ->
+          val capabilities = connectivity.getNetworkCapabilities(network)
+          capabilities != null &&
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+            !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        }
+        .flatMap { connectivity.getLinkProperties(it)?.linkAddresses.orEmpty() }
+        .map { it.address }
+        .firstOrNull {
+          it is Inet4Address && !it.isLoopbackAddress && !it.isLinkLocalAddress
+        }
+      promise.resolve(address?.hostAddress)
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
     }
   }
 

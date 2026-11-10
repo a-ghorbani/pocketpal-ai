@@ -1,4 +1,5 @@
 import {MMProjRegex} from '../../utils/multimodalPatterns';
+import {isSafePathSegment} from '../../utils/pathGuard';
 
 import {CoreVersion, passesMinAppVersion, toCoreVersion} from './appVersion';
 import {
@@ -48,19 +49,6 @@ const isHuggingFaceUrl = (url: unknown): url is string => {
     return false;
   }
 };
-
-// A wire-supplied path part (author, repo, filename) flows into both the derived
-// download URL and the local model path, so reject anything that is not a plain
-// segment (no path separators, no parent-dir traversal).
-const isSafePathSegment = (v: unknown): v is string =>
-  typeof v === 'string' &&
-  v.length > 0 &&
-  !v.includes('/') &&
-  !v.includes('\\') &&
-  // With separators already disallowed, only an exact "."/".." segment can
-  // traverse — reject those, but allow a literal ".." inside a longer name.
-  v !== '.' &&
-  v !== '..';
 
 const asString = (v: unknown): string | undefined =>
   typeof v === 'string' ? v : undefined;

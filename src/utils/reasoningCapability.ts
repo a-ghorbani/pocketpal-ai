@@ -49,6 +49,21 @@ export function orderEffortValues(values: string[]): string[] {
   return EFFORT_LEVELS.filter(level => values.includes(level));
 }
 
+export function clampEffort(
+  effort: string | undefined,
+  effortValues: string[],
+): string | undefined {
+  if (!effort || effortValues.length === 0) {
+    return undefined;
+  }
+  if (effortValues.includes(effort)) {
+    return effort;
+  }
+  const rank = (level: string) => EFFORT_LEVELS.indexOf(level as EffortLevel);
+  const lower = effortValues.filter(value => rank(value) < rank(effort));
+  return lower[lower.length - 1] ?? effortValues[0];
+}
+
 const UNKNOWN: ReasoningCapability = {
   isReasoning: 'unknown',
   source: 'unknown',

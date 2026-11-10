@@ -1,4 +1,5 @@
-import React, {useRef, ReactNode, useState} from 'react';
+import React, {useMemo, useRef, ReactNode, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
@@ -8,10 +9,15 @@ import {
   ChatView,
   ErrorSnackbar,
   ModelErrorReportSheet,
+  VoiceMemorySheet,
+  VoiceModeControlsContext,
+  VoiceModeView,
+  VoiceSetupSheet,
+  VoiceTeaser,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
-import {useChatSession} from '../../hooks';
+import {useChatSession, useVoiceMode} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
@@ -20,12 +26,17 @@ import {
   chatSessionStore,
   palStore,
   serverStore,
+  ttsStore,
   uiStore,
+  voiceModeStore,
 } from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
-import {resolveReasoningCapability} from '../../utils/reasoningCapability';
+import {
+  clampEffort,
+  resolveReasoningCapability,
+} from '../../utils/reasoningCapability';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
@@ -78,6 +89,40 @@ export const ChatScreen: React.FC = observer(() => {
     assistant,
   );
 
+  const voiceMode = useVoiceMode({
+    port: {
+      send: async (text, onTurnCreated) => {
+        await handleSendPress(
+          {text, type: 'text'},
+          {spoken: true, onTurnCreated},
+        );
+      },
+      stop: () => handleStopPress(),
+    },
+  });
+  const {tapCloud, toggleMute, end, dismissSheet} = voiceMode;
+  React.useEffect(() => {
+    if (isVideoPal) {
+      end();
+    }
+  }, [isVideoPal, end]);
+  const voiceControls = useMemo(
+    () => ({tapCloud, toggleMute, end}),
+    [tapCloud, toggleMute, end],
+  );
+  const handleCloseVoiceTeaser = React.useCallback(
+    () => dismissSheet('teaser'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceSetup = React.useCallback(
+    () => dismissSheet('setup'),
+    [dismissSheet],
+  );
+  const handleCloseVoiceMemory = React.useCallback(
+    () => dismissSheet('memory'),
+    [dismissSheet],
+  );
+
   // Handle deep linking for message prefill
   const {pendingMessage, clearPendingMessage} = usePendingMessage();
 
@@ -117,8 +162,12 @@ export const ChatScreen: React.FC = observer(() => {
     !!modelStore.activeModel && reasoningCapability.isReasoning !== 'no';
 
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
-  const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(
+  const [storedEffort, setStoredEffort] = useState<string | undefined>(
     undefined,
+  );
+  const reasoningEffort = clampEffort(
+    storedEffort,
+    reasoningCapability.effortValues,
   );
   const activeSession = chatSessionStore.sessions.find(
     s => s.id === chatSessionStore.activeSessionId,
@@ -128,7 +177,7 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       if (!cancelled) {
         setThinkingEnabled(settings.enable_thinking ?? true);
-        setReasoningEffort(settings.reasoning?.effort);
+        setStoredEffort(settings.reasoning?.effort);
       }
     });
     return () => {
@@ -244,7 +293,7 @@ export const ChatScreen: React.FC = observer(() => {
       }
     }
     setThinkingEnabled(nextEnabled);
-    setReasoningEffort(nextEffort);
+    setStoredEffort(nextEffort);
     await persistReasoning(nextEnabled, nextEffort);
   };
 
@@ -253,41 +302,71 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
+  const teaserOpen = voiceMode.sheet?.kind === 'teaser';
+  const chatCovered = voiceModeStore.isFullViewOpen || teaserOpen;
+
   // Otherwise, show the regular chat view
   return (
-    <>
-      <ChatView
-        renderBubble={renderBubble}
-        messages={chatSessionStore.currentSessionMessages}
-        activePal={activePal}
-        onSendPress={handleSendPress}
-        evaluateSendBudget={evaluateSendBudget}
-        onStopPress={handleStopPress}
-        onPalSettingsSelect={handleOpenPalSheet}
-        user={user}
-        isStopVisible={modelStore.inferencing}
-        isStreaming={modelStore.isStreaming}
-        sendButtonVisibilityMode="always"
-        showImageUpload={true}
-        isVisionEnabled={visionEnabled}
-        initialInputText={pendingMessage || undefined}
-        onInitialTextConsumed={clearPendingMessage}
-        inputProps={{
-          showThinkingToggle: thinkingSupported,
-          isThinkingEnabled: thinkingEnabled,
-          onThinkingToggle: handleThinkingToggle,
-          supportsEffort: reasoningCapability.supportsEffort,
-          effortValues: reasoningCapability.effortValues,
-          reasoningEffort,
-          onEffortCycle: handleEffortCycle,
-        }}
-        textInputProps={{
-          placeholder: !modelStore.engine
-            ? modelStore.isContextLoading
-              ? l10n.chat.loadingModel
-              : l10n.chat.modelNotLoaded
-            : l10n.chat.typeYourMessage,
-        }}
+    <VoiceModeControlsContext.Provider value={voiceControls}>
+      <View
+        style={styles.chat}
+        importantForAccessibility={chatCovered ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={chatCovered}>
+        <ChatView
+          renderBubble={renderBubble}
+          messages={chatSessionStore.currentSessionMessages}
+          activePal={activePal}
+          onSendPress={handleSendPress}
+          evaluateSendBudget={evaluateSendBudget}
+          onStopPress={handleStopPress}
+          onPalSettingsSelect={handleOpenPalSheet}
+          user={user}
+          isStopVisible={modelStore.inferencing}
+          isStreaming={modelStore.isStreaming}
+          sendButtonVisibilityMode="always"
+          showImageUpload={true}
+          isVisionEnabled={visionEnabled}
+          initialInputText={pendingMessage || undefined}
+          onInitialTextConsumed={clearPendingMessage}
+          onVoiceModePress={voiceMode.requestEntry}
+          inputProps={{
+            showThinkingToggle: thinkingSupported,
+            isThinkingEnabled: thinkingEnabled,
+            onThinkingToggle: handleThinkingToggle,
+            supportsEffort: reasoningCapability.supportsEffort,
+            effortValues: reasoningCapability.effortValues,
+            reasoningEffort,
+            onEffortCycle: handleEffortCycle,
+          }}
+          textInputProps={{
+            placeholder: !modelStore.engine
+              ? modelStore.isContextLoading
+                ? l10n.chat.loadingModel
+                : l10n.chat.modelNotLoaded
+              : l10n.chat.typeYourMessage,
+          }}
+        />
+      </View>
+      {voiceModeStore.isFullViewOpen && <VoiceModeView />}
+      {teaserOpen && (
+        <VoiceTeaser
+          onGetPlus={voiceMode.getPlus}
+          onKeepTyping={voiceMode.keepTyping}
+          onClose={handleCloseVoiceTeaser}
+        />
+      )}
+      <VoiceSetupSheet
+        isVisible={voiceMode.sheet?.kind === 'setup'}
+        onClose={handleCloseVoiceSetup}
+        onDone={voiceMode.setupDone}
+      />
+      <VoiceMemorySheet
+        fit={voiceMode.sheet?.kind === 'memory' ? voiceMode.sheet.fit : null}
+        chatModelName={modelStore.activeModel?.name ?? ''}
+        voiceName={ttsStore.currentVoice?.name ?? ''}
+        onClose={handleCloseVoiceMemory}
+        onContinue={voiceMode.continueAnyway}
+        onChooseSmallerModel={voiceMode.chooseSmallerModel}
       />
       {uiStore.chatWarning && (
         <ErrorSnackbar
@@ -314,6 +393,12 @@ export const ChatScreen: React.FC = observer(() => {
           pal={activePal}
         />
       )}
-    </>
+    </VoiceModeControlsContext.Provider>
   );
+});
+
+const styles = StyleSheet.create({
+  chat: {
+    flex: 1,
+  },
 });

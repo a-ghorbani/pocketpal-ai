@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert, StyleSheet} from 'react-native';
+import {ScrollView, Alert, StyleSheet, TextInput} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -9,7 +9,13 @@ import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
-import {palStore, chatSessionStore, modelStore} from '../../../store';
+import {
+  asrStore,
+  palStore,
+  chatSessionStore,
+  modelStore,
+  voiceModeStore,
+} from '../../../store';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 // Mock react-native-image-picker
@@ -1088,5 +1094,211 @@ describe('input', () => {
         imageUris: undefined,
       });
     });
+  });
+});
+
+describe('voice mode button', () => {
+  const onVoicePress = jest.fn();
+  const renderInput = (props: Record<string, unknown> = {}) =>
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{
+            onSendPress: jest.fn(),
+            sendButtonVisibilityMode: 'always',
+            onVoicePress,
+            ...props,
+          }}
+        />
+      </UserContext.Provider>,
+    );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (voiceModeStore as any).reset();
+    voiceModeStore.setUnlockOverride(true);
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      modelStore.deviceTier = 'high';
+      modelStore.isContextLoading = false;
+      chatSessionStore.isEditMode = false;
+      asrStore.captureState = 'idle';
+    });
+  });
+
+  it('shows the voice button while empty and Send once the user types', () => {
+    const {getByTestId, queryByTestId, getByPlaceholderText} = renderInput();
+    expect(getByTestId('voice-mode-button')).toBeTruthy();
+    expect(queryByTestId('send-button')).toBeNull();
+
+    const input = getByPlaceholderText(
+      l10n.en.components.chatInput.inputPlaceholder,
+    );
+    fireEvent.changeText(input, 'h');
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+    expect(getByTestId('send-button')).toBeTruthy();
+
+    fireEvent.changeText(input, '');
+    expect(getByTestId('voice-mode-button')).toBeTruthy();
+  });
+
+  it('opens voice mode on press, with a way to focus this composer', () => {
+    const focus = TextInput.prototype.focus as jest.Mock;
+    const {getByTestId} = renderInput();
+    fireEvent.press(getByTestId('voice-mode-button'));
+    expect(onVoicePress).toHaveBeenCalledTimes(1);
+
+    focus.mockClear();
+    onVoicePress.mock.calls[0][0]();
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the lock badge when voice mode is locked', () => {
+    voiceModeStore.setUnlockOverride(false);
+    const {getByTestId} = renderInput();
+    expect(getByTestId('voice-mode-lock')).toBeTruthy();
+  });
+
+  it.each([
+    [
+      'the device tier is below the gate',
+      () => {
+        modelStore.deviceTier = 'low';
+      },
+    ],
+    [
+      'dictation is recording',
+      () => {
+        asrStore.captureState = 'recording';
+      },
+    ],
+    [
+      'dictation is transcribing',
+      () => {
+        asrStore.captureState = 'transcribing';
+      },
+    ],
+    [
+      'a message is being edited',
+      () => {
+        chatSessionStore.isEditMode = true;
+      },
+    ],
+  ])('shows no voice button when %s', (_case, arrange) => {
+    runInAction(arrange);
+    const {queryByTestId} = renderInput();
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button while a reply runs', () => {
+    const {queryByTestId} = renderInput({isStopVisible: true});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button with an image attached', () => {
+    const {queryByTestId} = renderInput({defaultImages: ['file://a.jpg']});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+
+  it('shows no voice button without a voice-mode handler', () => {
+    const {queryByTestId} = renderInput({onVoicePress: undefined});
+    expect(queryByTestId('voice-mode-button')).toBeNull();
+  });
+});
+
+describe('native text clear', () => {
+  const clear = TextInput.prototype.clear as jest.Mock;
+
+  const renderInput = (props = {}) =>
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{
+            onSendPress: jest.fn(),
+            renderScrollable,
+            sendButtonVisibilityMode: 'editing',
+            ...props,
+          }}
+        />
+      </UserContext.Provider>,
+    );
+
+  const typeAndSend = ({getByPlaceholderText, getByLabelText}: any) => {
+    fireEvent.changeText(
+      getByPlaceholderText(l10n.en.components.chatInput.inputPlaceholder),
+      'line one\nline two\nline three',
+    );
+    fireEvent.press(
+      getByLabelText(l10n.en.components.sendButton.accessibilityLabel),
+    );
+  };
+
+  beforeEach(() => {
+    clear.mockClear();
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      chatSessionStore.isEditMode = false;
+    });
+  });
+
+  it('clears the native text when a message is sent', () => {
+    const onSendPress = jest.fn();
+    typeAndSend(renderInput({onSendPress}));
+    expect(onSendPress).toHaveBeenCalledTimes(1);
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the native text when the parent empties a controlled composer', () => {
+    const {rerender} = renderInput({textInputProps: {value: 'held'}});
+    expect(clear).not.toHaveBeenCalled();
+
+    rerender(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          {...{
+            onSendPress: jest.fn(),
+            renderScrollable,
+            sendButtonVisibilityMode: 'editing',
+            textInputProps: {value: ''},
+          }}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the native text of a controlled composer whose send is held back', () => {
+    const onSendPress = jest.fn();
+    const {getByLabelText} = renderInput({
+      onSendPress,
+      textInputProps: {value: 'held back'},
+    });
+    fireEvent.press(
+      getByLabelText(l10n.en.components.sendButton.accessibilityLabel),
+    );
+    expect(onSendPress).toHaveBeenCalledTimes(1);
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('keeps the native text when the send is blocked without a model', () => {
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+    });
+    const onSendPress = jest.fn();
+    typeAndSend(renderInput({onSendPress}));
+    expect(onSendPress).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('clears the native text when an edit is cancelled', () => {
+    runInAction(() => {
+      chatSessionStore.isEditMode = true;
+    });
+    const onCancelEdit = jest.fn();
+    const {getByTestId} = renderInput({onCancelEdit});
+    fireEvent.press(getByTestId('edit-bar-cancel'));
+    expect(onCancelEdit).toHaveBeenCalledTimes(1);
+    expect(clear).toHaveBeenCalledTimes(1);
   });
 });

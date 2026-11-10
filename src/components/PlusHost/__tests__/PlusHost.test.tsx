@@ -171,6 +171,7 @@ describe('PlusHost', () => {
     const {getByTestId, queryByTestId} = renderHost();
     act(() => openPlus());
 
+    fireEvent.press(getByTestId('plus-tile-plus.1'));
     fireEvent.press(getByTestId('plus-cta'));
     fireEvent.press(getByTestId('plus-close'));
     await act(async () => settle('purchased'));
@@ -371,7 +372,7 @@ describe.each([
     nextFrame();
     expect(calls.map(({target, event: sent}) => [target, sent])).toEqual([
       ['header:Push local AI further.', event],
-      ['header:Thanks for pushing local AI forward with us.', event],
+      ['header:Thank you for keeping PocketPal going.', event],
     ]);
   });
 
@@ -393,7 +394,7 @@ describe.each([
     nextFrame();
 
     expect(targets()).toEqual([
-      'header:Thanks for pushing local AI forward with us.',
+      'header:Thank you for keeping PocketPal going.',
     ]);
   });
 
@@ -421,7 +422,7 @@ describe.each([
     nextFrame();
 
     expect(targets()).toEqual([
-      'header:Thanks for pushing local AI forward with us.',
+      'header:Thank you for keeping PocketPal going.',
     ]);
   });
 

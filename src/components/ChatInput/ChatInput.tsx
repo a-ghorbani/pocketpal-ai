@@ -43,6 +43,7 @@ import {
   modelStore,
   palStore,
   uiStore,
+  voiceModeStore,
 } from '../../store';
 
 import {MessageType} from '../../utils/types';
@@ -68,6 +69,7 @@ import {
   MicButton,
   VoiceRecordingBar,
   DocumentChip,
+  VoiceModeButton,
 } from '..';
 
 export type ComposerDocumentsUpdate = (
@@ -118,6 +120,11 @@ export interface ChatInputTopLevelProps {
   onThinkingToggle?: (enabled: boolean) => void;
   /** Append a voice transcript to the composer (never auto-sent). */
   appendTranscript?: (text: string) => void;
+  /**
+   * Opens voice mode; the empty composer then shows the voice button.
+   * `focusInput` puts the cursor back in this composer.
+   */
+  onVoicePress?: (focusInput: () => void) => void;
   /** Whether the model supports graded reasoning effort (axis 2) */
   supportsEffort?: boolean;
   /** The graded effort value set, e.g. ['low','medium','high'] */
@@ -190,6 +197,7 @@ export const ChatInput = observer(
     isThinkingEnabled = false,
     onThinkingToggle,
     appendTranscript,
+    onVoicePress,
     supportsEffort = false,
     effortValues = [],
     reasoningEffort,
@@ -199,6 +207,9 @@ export const ChatInput = observer(
     const theme = useTheme();
     const user = React.useContext(UserContext);
     const inputRef = React.useRef<TextInputInstance>(null);
+    const focusInput = React.useCallback(() => inputRef.current?.focus(), []);
+    // iOS keeps the old height when only `value` is cleared: react/react-native#56291
+    const clearNativeText = () => inputRef.current?.clear();
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
     const activePalId = chatSessionStore.activePalId;
@@ -242,6 +253,16 @@ export const ChatInput = observer(
       isVideoCapable && promptText !== undefined
         ? promptText
         : (textInputProps?.value ?? text);
+
+    // The parent may hold a send back and keep the text, so the native text
+    // is cleared when the composer empties, not when Send is pressed.
+    const hadText = React.useRef(value !== '');
+    React.useEffect(() => {
+      if (hadText.current && value === '') {
+        clearNativeText();
+      }
+      hadText.current = value !== '';
+    }, [value]);
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -515,6 +536,7 @@ export const ChatInput = observer(
     };
 
     const handleCancel = () => {
+      clearNativeText();
       setText('');
       onCancelEdit?.();
     };
@@ -530,6 +552,16 @@ export const ChatInput = observer(
       hasActiveModel &&
       !isStopping &&
       !documentsPending;
+    const isVoiceModeButtonVisible =
+      !!onVoicePress &&
+      voiceModeStore.supported &&
+      !value.trim() &&
+      selectedImages.length === 0 &&
+      documents.length === 0 &&
+      !isEditMode &&
+      !isVideoCapable &&
+      !isStopVisible &&
+      !isVoiceCaptureActive;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -917,6 +949,8 @@ export const ChatInput = observer(
                       {l10n.video.startCamera}
                     </Text>
                   </TouchableOpacity>
+                ) : isVoiceModeButtonVisible ? (
+                  <VoiceModeButton onPress={() => onVoicePress?.(focusInput)} />
                 ) : (
                   isSendButtonVisible && (
                     <View

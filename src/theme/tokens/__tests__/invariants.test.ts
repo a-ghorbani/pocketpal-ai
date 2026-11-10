@@ -120,6 +120,12 @@ describe('design-token grep invariants', () => {
       // onboarding; lives at app-level above the navigator.
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
+      // Voice mode: the voice view, its bar, the composer button and the
+      // locked-voice teaser.
+      'components/VoiceModeView',
+      'components/VoiceBar',
+      'components/VoiceModeButton',
+      'components/VoiceTeaser',
       'screens/PlusScreen',
       'components/SidebarContent/PlusDrawerItem',
     ];

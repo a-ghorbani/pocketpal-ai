@@ -514,6 +514,28 @@ describe('exportUtils', () => {
         expect(exportedData.thumbnail_url).toBeUndefined();
       });
 
+      it.each([
+        '..',
+        '../..',
+        '/etc/hosts',
+        'file:///data/local/tmp/x',
+        'a\u0000b.jpg',
+      ])(
+        'drops the unsafe local thumbnail %j without reading it',
+        async url => {
+          palStore.pals = [{...mockPal, thumbnail_url: url} as any];
+
+          await exportPal('pal-1');
+
+          expect(RNFS.readFile).not.toHaveBeenCalled();
+          const exported = JSON.parse(
+            (RNFS.writeFile as jest.Mock).mock.calls[0][1],
+          );
+          expect(exported.thumbnail_data).toBeUndefined();
+          expect(exported.thumbnail_url).toBeUndefined();
+        },
+      );
+
       it('should throw error if pal not found', async () => {
         palStore.pals = [];
 

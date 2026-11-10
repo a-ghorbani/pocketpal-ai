@@ -1,2 +1,1 @@
-export const activateKeepAwake = jest.fn();
-export const deactivateKeepAwake = jest.fn();
+export const acquireKeepAwake = jest.fn(() => jest.fn());

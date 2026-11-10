@@ -5,7 +5,11 @@ jest.mock('../../store/ModelStore', () => ({
   modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
 }));
 
-import {ASR_INSUFFICIENT_STORAGE} from '../../services/asr';
+import {
+  ASR_DEFAULT_TIER,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIER_ORDER,
+} from '../../services/asr';
 import {asrStore} from '../../store/ASRStore';
 import {modelStore} from '../../store/ModelStore';
 import {runAsrCommand} from '../asrAutomation';
@@ -14,8 +18,11 @@ describe('runAsrCommand', () => {
   beforeEach(() => {
     modelStore.deviceTier = 'high';
     asrStore.userASROverride = null;
-    asrStore.downloadStates[asrStore.selectedTier] = 'not_installed';
-    asrStore.downloadError[asrStore.selectedTier] = null;
+    asrStore.selectedTier = ASR_DEFAULT_TIER;
+    for (const tier of ASR_TIER_ORDER) {
+      asrStore.downloadStates[tier] = 'not_installed';
+      asrStore.downloadError[tier] = null;
+    }
     asrStore.freeDiskBytes = null;
     asrStore.captureState = 'idle';
     asrStore.lastError = null;
@@ -91,6 +98,40 @@ describe('runAsrCommand', () => {
     expect(asrStore.downloadStates[tier]).toBe('error');
     expect(asrStore.downloadError[tier]).toBe(ASR_INSUFFICIENT_STORAGE);
     expect(asrStore.freeDiskBytes).toBeGreaterThan(0);
+  });
+
+  it('tiers::none → gate open, nothing installed, default tier selected', async () => {
+    await runAsrCommand('tiers::small');
+    await runAsrCommand('tiers::none');
+
+    expect(asrStore.asrAvailable).toBe(true);
+    expect(ASR_TIER_ORDER.map(t => asrStore.downloadStates[t])).toEqual([
+      'not_installed',
+      'not_installed',
+      'not_installed',
+    ]);
+    expect(asrStore.selectedTier).toBe(ASR_DEFAULT_TIER);
+  });
+
+  it('tiers::<csv> → exactly the listed tiers ready, the first one selected', async () => {
+    await runAsrCommand('tiers::small,base');
+
+    expect(asrStore.asrAvailable).toBe(true);
+    expect(asrStore.downloadStates).toEqual({
+      base: 'ready',
+      small: 'ready',
+      'large-turbo': 'not_installed',
+    });
+    expect(asrStore.selectedTier).toBe('small');
+  });
+
+  it('tiers:: clears a forced disk error', async () => {
+    await runAsrCommand('state::error-disk');
+    await runAsrCommand('tiers::base,small,large-turbo');
+
+    expect(asrStore.isSelectedTierReady).toBe(true);
+    expect(Object.values(asrStore.downloadError)).toEqual([null, null, null]);
+    expect(asrStore.selectedTier).toBe('base');
   });
 
   it('ignores an unrecognized command', async () => {

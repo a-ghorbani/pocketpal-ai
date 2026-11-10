@@ -1,9 +1,15 @@
 import React from 'react';
-import {Linking, Alert} from 'react-native';
+import {Linking, Alert, StyleSheet} from 'react-native';
 
-import {runInAction} from 'mobx';
+import {observable, runInAction} from 'mobx';
 
-import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
+import {
+  render,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from '../../../../../jest/test-utils';
 import {
   basicModel,
   createModel,
@@ -452,66 +458,209 @@ describe('ModelCard', () => {
       );
     });
 
-    it('shows projection model warning badge when projection model is missing', async () => {
+    describe('download projection model action', () => {
       const visionModelWithMissingProjection = {
         ...downloadedModel,
         supportsMultimodal: true,
         defaultProjectionModel: 'missing/projection-model',
       };
+      const missingProjector = {
+        ...downloadedModel,
+        id: 'missing/projection-model',
+        modelType: ModelType.PROJECTION,
+        isDownloaded: false,
+        size: 851_234_567,
+        progress: 0,
+      };
 
-      // Mock getProjectionModelStatus to return missing state
-      modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
-        isAvailable: false,
-        state: 'missing',
+      beforeEach(() => {
+        modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+          isAvailable: false,
+          state: 'missing',
+        });
       });
 
-      // Mock vision preference to be enabled (required for warning to show)
-      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+      it('offers the projector as one button with its size', async () => {
+        modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+          isAvailable: false,
+          state: 'missing',
+          projectionModel: missingProjector,
+        });
+        const {getByTestId, getByText} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
 
-      const {getByTestId} = customRender(
-        <ModelCard model={visionModelWithMissingProjection} />,
-      );
+        const offer = getByTestId('projection-warning-badge');
+        expect(
+          getByText(l10n.en.models.modelCard.projectorOffer.rowTitle),
+        ).toBeTruthy();
+        expect(getByText('851 MB')).toBeTruthy();
+        expect(offer.props.accessibilityRole).toBe('button');
+        expect(offer.props.accessibilityLabel).toBe(
+          'Download projection model, 851 MB',
+        );
+        expect(
+          StyleSheet.flatten(offer.props.style).minHeight,
+        ).toBeGreaterThanOrEqual(44);
+      });
 
-      // First expand the details to see the projection warning
-      const expandButton = getByTestId('expand-details-button');
-      fireEvent.press(expandButton);
+      it('falls back to Download without a projector size', async () => {
+        const {getByTestId, getByText, queryByText} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
 
-      await waitFor(() => {
+        expect(
+          getByText(l10n.en.models.modelCard.projectorOffer.download),
+        ).toBeTruthy();
+        expect(queryByText(/MB$/)).toBeNull();
+        expect(
+          getByTestId('projection-warning-badge').props.accessibilityLabel,
+        ).toBe(l10n.en.models.modelCard.labels.downloadProjectionModel);
+      });
+
+      it('shows on the collapsed card and downloads the selected projector', async () => {
+        const {getByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        await waitFor(() => {
+          expect(getByTestId('projection-warning-badge')).toBeTruthy();
+        });
+        fireEvent.press(getByTestId('projection-warning-badge'));
+
+        expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
+          'missing/projection-model',
+        );
+      });
+
+      it('renders once when the card is expanded', async () => {
+        const {getAllByTestId, getByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        fireEvent.press(getByTestId('expand-details-button'));
+
+        await waitFor(() => {
+          expect(getAllByTestId('projection-warning-badge')).toHaveLength(1);
+        });
+      });
+
+      it('shows download progress in place of the offer while the projector downloads', async () => {
+        modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+          isAvailable: true,
+          state: 'downloading',
+          projectionModel: {...missingProjector, progress: 34.4},
+        });
+        const {getByTestId, queryByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+
+        const row = getByTestId('projector-download-progress');
+        expect(
+          within(row).getByText('Downloading projection model · 34%'),
+        ).toBeTruthy();
+        expect(
+          within(row).getByRole('progressbar').props.accessibilityValue.now,
+        ).toBe(34);
+        expect(queryByTestId('projection-warning-badge')).toBeNull();
+      });
+
+      it('follows the projector download and offers it again after a failure or cancel', async () => {
+        const projector = observable({...missingProjector, progress: 10});
+        const download = observable({active: true});
+        modelStore.getProjectionModelStatus = jest.fn(() =>
+          download.active
+            ? {
+                isAvailable: true,
+                state: 'downloading',
+                projectionModel: projector,
+              }
+            : {
+                isAvailable: false,
+                state: 'missing',
+                projectionModel: projector,
+              },
+        );
+        const {getByTestId, getByText, queryByTestId} = customRender(
+          <ModelCard model={visionModelWithMissingProjection} />,
+        );
+        expect(getByText('Downloading projection model · 10%')).toBeTruthy();
+
+        act(() => {
+          runInAction(() => {
+            projector.progress = 60;
+          });
+        });
+        expect(getByText('Downloading projection model · 60%')).toBeTruthy();
+
+        act(() => {
+          runInAction(() => {
+            download.active = false;
+          });
+        });
+        expect(queryByTestId('projector-download-progress')).toBeNull();
         expect(getByTestId('projection-warning-badge')).toBeTruthy();
       });
-    });
 
-    it('handles projection warning badge press to download missing projection model', async () => {
-      const visionModelWithMissingProjection = {
-        ...downloadedModel,
-        supportsMultimodal: true,
-        defaultProjectionModel: 'missing/projection-model',
-      };
+      it.each([
+        ['vision is off', {}, false],
+        ['the model is not downloaded', {isDownloaded: false}, true],
+      ])(
+        'shows no projector progress when %s',
+        async (_label, overrides, visionOn) => {
+          modelStore.getModelVisionPreference = jest
+            .fn()
+            .mockReturnValue(visionOn);
+          modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+            isAvailable: true,
+            state: 'downloading',
+            projectionModel: {...missingProjector, progress: 50},
+          });
 
-      // Mock getProjectionModelStatus to return missing state
-      modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
-        isAvailable: false,
-        state: 'missing',
-      });
+          const {queryByTestId} = customRender(
+            <ModelCard
+              model={{...visionModelWithMissingProjection, ...overrides}}
+            />,
+          );
 
-      // Mock vision preference to be enabled (required for warning to show)
-      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
-
-      const {getByTestId} = customRender(
-        <ModelCard model={visionModelWithMissingProjection} />,
+          expect(queryByTestId('projector-download-progress')).toBeNull();
+          expect(queryByTestId('projection-warning-badge')).toBeNull();
+        },
       );
 
-      // First expand the details to see the projection warning
-      const expandButton = getByTestId('expand-details-button');
-      fireEvent.press(expandButton);
+      it.each([
+        ['vision is off', {}, false, 'missing'],
+        ['the projector is downloaded', {}, true, 'downloaded'],
+        ['the projector is downloading', {}, true, 'downloading'],
+        ['the model is not downloaded', {isDownloaded: false}, true, 'missing'],
+        [
+          'no projector is selected',
+          {defaultProjectionModel: undefined},
+          true,
+          'not_needed',
+        ],
+      ])(
+        'is absent when %s',
+        async (_label, overrides, visionOn, projectorState) => {
+          modelStore.getModelVisionPreference = jest
+            .fn()
+            .mockReturnValue(visionOn);
+          modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+            isAvailable: projectorState === 'downloaded',
+            state: projectorState,
+          });
 
-      await waitFor(() => {
-        const warningBadge = getByTestId('projection-warning-badge');
-        fireEvent.press(warningBadge);
-      });
+          const {getByTestId, queryByTestId} = customRender(
+            <ModelCard
+              model={{...visionModelWithMissingProjection, ...overrides}}
+            />,
+          );
+          fireEvent.press(getByTestId('expand-details-button'));
 
-      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
-        'missing/projection-model',
+          await waitFor(() => {
+            expect(queryByTestId('projection-warning-badge')).toBeNull();
+          });
+        },
       );
     });
   });

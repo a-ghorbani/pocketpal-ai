@@ -27,3 +27,15 @@ export const fakePlusL10n = {
     },
   },
 } as typeof l10n.en;
+
+/** The real catalog with nothing shipped, for tests of the gate before any feature ships. */
+export const mockUnshippedCatalog = () => {
+  const actual = jest.requireActual('../../src/services/plus/catalog');
+  return {
+    ...actual,
+    PLUS_FEATURES: actual.PLUS_FEATURES.map((feature: PlusFeature) => ({
+      ...feature,
+      shipped: false,
+    })),
+  };
+};
