@@ -1,4 +1,78 @@
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
+index a0f37cd..e243c0c 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
+@@ -112,6 +112,7 @@ class RendererFactory(
+       put(MarkdownASTNode.NodeType.ThematicBreak, ThematicBreakRenderer(config))
+       put(MarkdownASTNode.NodeType.BlankLine, BlankLineRenderer(config))
+       put(MarkdownASTNode.NodeType.Spoiler, SpoilerRenderer())
++      put(MarkdownASTNode.NodeType.Table, TableTextRenderer())
+       if (FeatureFlags.IS_MATH_ENABLED) {
+         try {
+           val mathInlineRendererClass = Class.forName("com.swmansion.enriched.markdown.renderer.MathInlineRenderer")
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
+new file mode 100644
+index 0000000..8ccc34f
+--- /dev/null
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
+@@ -0,0 +1,55 @@
++package com.swmansion.enriched.markdown.renderer
++
++import android.text.SpannableStringBuilder
++import com.swmansion.enriched.markdown.parser.MarkdownASTNode
++import com.swmansion.enriched.markdown.spans.StrongSpan
++import com.swmansion.enriched.markdown.spans.TextSpan
++import com.swmansion.enriched.markdown.utils.text.span.SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE
++
++/**
++ * Draws a table that sits inside a list item as text rows, cells joined by " | ",
++ * header row bold. Root tables get their own segment view and never reach here.
++ */
++class TableTextRenderer : NodeRenderer {
++  override fun render(
++    node: MarkdownASTNode,
++    builder: SpannableStringBuilder,
++    onLinkPress: ((String) -> Unit)?,
++    onLinkLongPress: ((String) -> Unit)?,
++    factory: RendererFactory,
++  ) {
++    if (factory.blockStyleContext.listDepth == 0) return
++    if (builder.isNotEmpty() && builder.last() != '\n') builder.append("\n")
++    renderRows(node, builder, onLinkPress, onLinkLongPress, factory)
++  }
++
++  private fun renderRows(
++    node: MarkdownASTNode,
++    builder: SpannableStringBuilder,
++    onLinkPress: ((String) -> Unit)?,
++    onLinkLongPress: ((String) -> Unit)?,
++    factory: RendererFactory,
++  ) {
++    for (child in node.children) {
++      if (child.type != MarkdownASTNode.NodeType.TableRow) {
++        renderRows(child, builder, onLinkPress, onLinkLongPress, factory)
++        continue
++      }
++      val rowStart = builder.length
++      child.children.forEachIndexed { index, cell ->
++        if (index > 0) {
++          factory.renderWithSpan(builder, { builder.append(" | ") }) { start, end, blockStyle ->
++            builder.setSpan(TextSpan(blockStyle, factory.context), start, end, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++          }
++        }
++        factory.renderChildren(cell, builder, onLinkPress, onLinkLongPress)
++      }
++      val isHeader = child.children.any { it.type == MarkdownASTNode.NodeType.TableHeaderCell }
++      if (isHeader && builder.length > rowStart) {
++        val blockStyle = factory.blockStyleContext.requireBlockStyle()
++        builder.setSpan(StrongSpan(factory.styleCache, blockStyle), rowStart, builder.length, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++      }
++      builder.append("\n")
++    }
++  }
++}
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
+index 1100ee4..414377b 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
 +++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
 @@ -252,7 +252,7 @@ class TableContainerView(
@@ -11,6 +85,7 @@ diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/c
          contentDescription = description
          if (isHeaderRow) ViewCompat.setAccessibilityHeading(this, true)
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
+index 12ad32f..fee67e5 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
 +++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
 @@ -1,16 +1,20 @@
@@ -37,6 +112,7 @@ diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/c
  
    private fun multiplyAlpha(
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
+index 37082b4..b07e36e 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
 +++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
 @@ -105,9 +105,11 @@ object ContextMenuPopup {
