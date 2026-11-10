@@ -246,6 +246,39 @@
       "signInAgain": "Entre novamente",
       "creatorSupport": "As contas de criador são apagadas pela nossa equipa de suporte: {{contact}}",
       "failed": "Não foi possível apagar, tente novamente"
+    },
+    "localApiServer": {
+      "title": "Servidor de API local",
+      "enable": "Disponibilizar o modelo carregado",
+      "enableDescription": "Permite que outras apps usem o modelo carregado através de uma API compatível com OpenAI. Os pedidos entram na mesma fila que as suas conversas.",
+      "starting": "A iniciar…",
+      "url": "URL do servidor",
+      "copyUrl": "Copiar URL",
+      "servedModel": "A disponibilizar {{model}}",
+      "noModel": "Nenhum modelo carregado. Os pedidos vão falhar até carregar um.",
+      "port": "Porta",
+      "portInvalid": "Use uma porta entre 1024 e 65535",
+      "lan": "Permitir outros dispositivos na rede",
+      "lanWarning": "O servidor fica acessível em todas as redes a que este telemóvel está ligado: Wi-Fi, dados móveis, hotspot e VPN. Defina uma chave de API para limitar quem o pode usar.",
+      "notOnWifi": "Não está ligado ao Wi-Fi, por isso não é mostrado nenhum URL de rede.",
+      "apiKey": "Chave de API",
+      "apiKeySet": "Os pedidos têm de enviar esta chave",
+      "apiKeyNotSet": "Sem chave: qualquer app que consiga chegar ao servidor pode usá-lo, exceto páginas abertas no navegador.",
+      "setApiKey": "Definir chave",
+      "clearApiKey": "Limpar chave",
+      "apiKeyPlaceholder": "Insira uma chave de API",
+      "stopToEdit": "Desligue o servidor para alterar estas definições.",
+      "lockedHint": "Funcionalidade Plus. Abre os pormenores.",
+      "teaserTitle": "O servidor de API local é uma funcionalidade Plus",
+      "teaserBody": "Permita que outras apps usem o modelo carregado neste telemóvel.",
+      "teaserGetPlus": "Obter o Plus",
+      "teaserNotNow": "Agora não",
+      "errors": {
+        "portInUse": "A porta {{port}} já está em uso. Desligue o servidor e escolha outra porta.",
+        "listenFailed": "Não foi possível iniciar o servidor. Desligue-o e volte a ligá-lo ou escolha outra porta.",
+        "stoppedListening": "O servidor parou inesperadamente. Desligue-o e volte a ligá-lo.",
+        "keyUnavailable": "Não foi possível ler a chave de API. Desbloqueie o telemóvel e depois desligue e volte a ligar o servidor."
+      }
     }
   },
   "memory": {
@@ -465,6 +498,12 @@
         "memoryWarningButton": "Mostrar pormenores do aviso de memória",
         "integrityWarningButton": "Mostrar pormenores do aviso de integridade",
         "memoryWarningSnackbar": "Notificação de aviso de memória"
+      },
+      "projectorOffer": {
+        "rowTitle": "A visão precisa do modelo de projeção",
+        "download": "Descarregar",
+        "downloading": "A descarregar modelo de projeção · {{progress}}%",
+        "a11yWithSize": "Descarregar modelo de projeção, {{size}}"
       }
     },
     "modelSettings": {
