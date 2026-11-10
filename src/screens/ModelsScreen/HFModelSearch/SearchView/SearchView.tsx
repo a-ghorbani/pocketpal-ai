@@ -1,4 +1,10 @@
-import React, {useState, useContext, useCallback, useRef} from 'react';
+import React, {
+  useState,
+  useContext,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -34,6 +40,9 @@ interface SearchViewProps {
   onChangeSearchQuery: (query: string) => void;
 }
 
+// Quantization tags matched against GGUF/safetensors file names in each repo.
+const QUANT_OPTIONS = ['Q4_K_M', 'Q5_K_M', 'Q6_K', 'Q8_0', 'F16', 'BF16', 'FP8'];
+
 export const SearchView = observer(
   ({testID, onModelSelect, onChangeSearchQuery}: SearchViewProps) => {
     const theme = useTheme();
@@ -42,6 +51,21 @@ export const SearchView = observer(
     const styles = createStyles(theme);
     const [searchQuery, setSearchQuery] = useState('');
     const lastOnEndReachedCall = useRef<number>(0);
+    const [activeQuant, setActiveQuant] = useState<string | null>(null);
+
+    // Client-side filter over the loaded results: keep repos that ship at
+    // least one file whose name contains the selected quantization tag.
+    const visibleModels = useMemo(() => {
+      if (!activeQuant) {
+        return hfStore.models;
+      }
+      const needle = activeQuant.toUpperCase();
+      return hfStore.models.filter(model =>
+        (model.siblings || []).some(file =>
+          (file.rfilename || '').toUpperCase().includes(needle),
+        ),
+      );
+    }, [hfStore.models, activeQuant]);
 
     const handleSearchChange = (query: string) => {
       setSearchQuery(query);
@@ -197,8 +221,29 @@ export const SearchView = observer(
           }}
           testID="enhanced-search-bar"
         />
+        <View style={styles.quantRow} testID="hf-quant-filter">
+          <Chip
+            compact
+            mode={activeQuant === null ? 'flat' : 'outlined'}
+            onPress={() => setActiveQuant(null)}
+            testID="hf-quant-any">
+            {l10n.models.search.filters.quantAny}
+          </Chip>
+          {QUANT_OPTIONS.map(quant => (
+            <Chip
+              key={quant}
+              compact
+              mode={activeQuant === quant ? 'flat' : 'outlined'}
+              onPress={() =>
+                setActiveQuant(activeQuant === quant ? null : quant)
+              }
+              testID={`hf-quant-${quant}`}>
+              {quant}
+            </Chip>
+          ))}
+        </View>
         <BottomSheetFlatList
-          data={hfStore.models}
+          data={visibleModels}
           keyExtractor={(item: HuggingFaceModel) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
