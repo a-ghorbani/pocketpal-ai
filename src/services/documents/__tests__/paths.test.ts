@@ -22,6 +22,8 @@ const BAD_IDS = [
   'a/b',
   'a\\b',
   '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+  `${docId('control')}\u0000`,
+  `${docId('control')}\n`,
 ];
 
 describe('document paths', () => {
@@ -72,6 +74,10 @@ describe('document paths', () => {
       '/path/to/documents/models',
       `${ROOT}/a\\b`,
       `${ROOT}/./x`,
+      `${ROOT}/${ID}//text.all.json`,
+      `${ROOT}/${ID}/text\u0000.json`,
+      `${ROOT}/${ID}/te\u001fxt.json`,
+      `${ROOT}/${ID}/text\u007f.json`,
     ]) {
       expect(() => assertContained(path)).toThrow(DocumentPathError);
     }

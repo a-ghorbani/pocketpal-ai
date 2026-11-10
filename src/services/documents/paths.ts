@@ -1,6 +1,8 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {validate, version} from 'uuid';
 
+import {isSafePathSegment} from '../../utils/pathGuard';
+
 import type {PageRange} from './types';
 
 export class DocumentPathError extends Error {
@@ -31,12 +33,7 @@ export const documentsRoot = (): string =>
 export const assertContained = (path: string): string => {
   const root = `${documentsRoot()}/`;
   const rest = path.startsWith(root) ? path.slice(root.length) : '';
-  const segments = rest.split('/');
-  if (
-    !rest ||
-    rest.includes('\\') ||
-    segments.some(segment => !segment || segment === '.' || segment === '..')
-  ) {
+  if (!rest.split('/').every(segment => isSafePathSegment(segment))) {
     throw new DocumentPathError(`not a document path: ${path}`);
   }
   return path;
