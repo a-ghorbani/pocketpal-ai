@@ -246,6 +246,39 @@
       "signInAgain": "请重新登录",
       "creatorSupport": "创作者账户需由我们的客服团队删除：{{contact}}",
       "failed": "删除失败，请重试"
+    },
+    "localApiServer": {
+      "title": "本地 API 服务器",
+      "enable": "开放已加载的模型",
+      "enableDescription": "让其他应用通过 OpenAI 兼容的 API 使用已加载的模型。请求会和您的聊天一起排队，依次处理。",
+      "starting": "正在启动…",
+      "url": "服务器URL",
+      "copyUrl": "复制URL",
+      "servedModel": "正在提供 {{model}}",
+      "noModel": "尚未加载模型，在加载之前请求都会失败。",
+      "port": "端口",
+      "portInvalid": "请使用 1024 到 65535 之间的端口",
+      "lan": "允许网络上的其他设备访问",
+      "lanWarning": "这部手机连接的每个网络都能访问此服务器：Wi-Fi、移动数据、热点和 VPN。设置 API 密钥可以限制谁能使用它。",
+      "notOnWifi": "当前未连接 Wi-Fi，因此不显示网络URL。",
+      "apiKey": "API 密钥",
+      "apiKeySet": "请求必须带上此密钥",
+      "apiKeyNotSet": "未设置密钥：除浏览器页面外，任何能访问此服务器的应用都能使用它。",
+      "setApiKey": "设置密钥",
+      "clearApiKey": "清除密钥",
+      "apiKeyPlaceholder": "输入 API 密钥",
+      "stopToEdit": "关闭服务器后才能修改这些设置。",
+      "lockedHint": "Plus 功能，点击查看详情。",
+      "teaserTitle": "本地 API 服务器是 Plus 功能",
+      "teaserBody": "让其他应用也能用上这部手机里加载的模型。",
+      "teaserGetPlus": "获取 Plus",
+      "teaserNotNow": "以后再说",
+      "errors": {
+        "portInUse": "端口 {{port}} 已被占用。请关闭服务器，然后换一个端口。",
+        "listenFailed": "服务器未能启动。请关闭后重新打开，或者换一个端口。",
+        "stoppedListening": "服务器意外停止了。请关闭后重新打开。",
+        "keyUnavailable": "无法读取 API 密钥。请先解锁手机，然后关闭服务器再重新打开。"
+      }
     }
   },
   "memory": {
@@ -456,6 +489,12 @@
         "memoryWarningButton": "显示内存警告详情",
         "integrityWarningButton": "显示完整性警告详情",
         "memoryWarningSnackbar": "内存警告通知"
+      },
+      "projectorOffer": {
+        "rowTitle": "视觉功能需要配套的投影模型",
+        "download": "下载",
+        "downloading": "正在下载投影模型 · {{progress}}%",
+        "a11yWithSize": "下载投影模型，{{size}}"
       }
     },
     "modelSettings": {
