@@ -974,6 +974,12 @@
         "memoryWarningButton": "메모리 경고 세부정보 보기",
         "integrityWarningButton": "무결성 경고 세부정보 보기",
         "memoryWarningSnackbar": "메모리 경고 알림"
+      },
+      "projectorOffer": {
+        "rowTitle": "시각 기능에는 프로젝션 모델이 필요합니다",
+        "download": "다운로드",
+        "downloading": "프로젝션 모델 다운로드 중 · {{progress}}%",
+        "a11yWithSize": "프로젝션 모델 다운로드, {{size}}"
       }
     },
     "modelSettings": {
@@ -1292,6 +1298,39 @@
       "signInAgain": "다시 로그인해 주세요",
       "creatorSupport": "크리에이터 계정은 고객지원팀에서 삭제해 드립니다: {{contact}}",
       "failed": "삭제하지 못했습니다. 다시 시도해 주세요"
+    },
+    "localApiServer": {
+      "title": "로컬 API 서버",
+      "enable": "로드된 모델 제공하기",
+      "enableDescription": "다른 앱에서 OpenAI 호환 API로 로드된 모델을 사용할 수 있습니다. 요청은 내 채팅과 같은 대기열에서 차례대로 처리됩니다.",
+      "starting": "시작 중…",
+      "url": "서버 URL",
+      "copyUrl": "URL 복사",
+      "servedModel": "{{model}} 제공 중",
+      "noModel": "로드된 모델이 없습니다. 모델을 로드하기 전까지 요청은 실패합니다.",
+      "port": "포트",
+      "portInvalid": "1024~65535 사이의 포트를 사용해 주세요",
+      "lan": "네트워크의 다른 기기 허용하기",
+      "lanWarning": "이 기기가 연결된 모든 네트워크에서 서버에 접근할 수 있습니다: Wi-Fi, 모바일 데이터, 핫스팟, VPN. 사용할 수 있는 대상을 제한하려면 API 키를 설정해 주세요.",
+      "notOnWifi": "Wi-Fi에 연결되어 있지 않아 네트워크 URL이 표시되지 않습니다.",
+      "apiKey": "API 키",
+      "apiKeySet": "요청에 이 키를 함께 보내야 합니다",
+      "apiKeyNotSet": "키 없음: 브라우저 페이지를 제외하고, 서버에 접근할 수 있는 모든 앱이 사용할 수 있습니다.",
+      "setApiKey": "키 설정",
+      "clearApiKey": "키 삭제",
+      "apiKeyPlaceholder": "API 키 입력",
+      "stopToEdit": "이 설정을 변경하려면 서버를 꺼 주세요.",
+      "lockedHint": "Plus 기능입니다. 세부정보가 열립니다.",
+      "teaserTitle": "로컬 API 서버는 Plus 기능입니다",
+      "teaserBody": "이 기기에 로드된 모델을 다른 앱에서도 사용해 보세요.",
+      "teaserGetPlus": "Plus 구매",
+      "teaserNotNow": "나중에",
+      "errors": {
+        "portInUse": "{{port}} 포트는 이미 사용 중입니다. 서버를 끄고 다른 포트를 선택해 주세요.",
+        "listenFailed": "서버를 시작할 수 없습니다. 서버를 껐다가 다시 켜거나, 다른 포트를 선택해 주세요.",
+        "stoppedListening": "서버가 예기치 않게 중지되었습니다. 서버를 껐다가 다시 켜 주세요.",
+        "keyUnavailable": "API 키를 읽을 수 없습니다. 기기 잠금을 해제한 뒤 서버를 껐다가 다시 켜 주세요."
+      }
     }
   },
   "storage": {
