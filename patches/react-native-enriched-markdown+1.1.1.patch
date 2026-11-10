@@ -211,3 +211,122 @@ index 37082b4..b07e36e 100644
      val y =
        (topY - container.measuredHeight - margin)
          .coerceAtLeast(margin)
+diff --git a/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m b/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
+index a555419..0c7d5bb 100644
+--- a/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
++++ b/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
+@@ -1,4 +1,5 @@
+ #import "RendererFactory.h"
++#import "BaseRenderer.h"
+ #import "BlankLineRenderer.h"
+ #import "BlockquoteRenderer.h"
+ #import "CodeBlockRenderer.h"
+@@ -19,6 +20,7 @@
+ #import "ListRenderer.h"
+ #import "MarkdownASTNode.h"
+ #import "ParagraphRenderer.h"
++#import "ParagraphStyleUtils.h"
+ #import "RenderContext.h"
+ #import "StrikethroughRenderer.h"
+ #import "StrongRenderer.h"
+@@ -29,6 +31,63 @@
+ #import "ThematicBreakRenderer.h"
+ #import "UnderlineRenderer.h"
+ 
++NSString *const ENRMTableTextRowAttribute = @"ENRMTableTextRow";
++
++/// Draws a table that sits inside a list item as text rows, cells joined by " | ",
++/// header row bold. Root tables get their own segment view and never reach here.
++@interface ENRMTableTextRenderer : BaseRenderer
++@end
++
++@implementation ENRMTableTextRenderer
++
++- (void)renderNodeContent:(MarkdownASTNode *)node
++                     into:(NSMutableAttributedString *)output
++                  context:(RenderContext *)context
++{
++  if (context.listDepth == 0) {
++    [_rendererFactory renderChildrenOfNode:node into:output context:context];
++    return;
++  }
++  if (output.length > 0 && ![output.string hasSuffix:@"\n"]) {
++    [output appendAttributedString:kNewlineAttributedString];
++  }
++  [self renderRowsOf:node into:output context:context];
++}
++
++- (void)renderRowsOf:(MarkdownASTNode *)node into:(NSMutableAttributedString *)output context:(RenderContext *)context
++{
++  for (MarkdownASTNode *child in node.children) {
++    if (child.type != MarkdownNodeTypeTableRow) {
++      [self renderRowsOf:child into:output context:context];
++      continue;
++    }
++    BOOL isHeader = NO;
++    MarkdownASTNode *row = [[MarkdownASTNode alloc] initWithType:MarkdownNodeTypeTableRow];
++    for (MarkdownASTNode *cell in child.children) {
++      isHeader = isHeader || cell.type == MarkdownNodeTypeTableHeaderCell;
++      if (row.children.count > 0) {
++        MarkdownASTNode *separator = [[MarkdownASTNode alloc] initWithType:MarkdownNodeTypeText];
++        separator.content = @" | ";
++        [row addChild:separator];
++      }
++      [row addChild:cell];
++    }
++    NSUInteger rowStart = output.length;
++    if (isHeader) {
++      row.type = MarkdownNodeTypeStrong;
++      [[_rendererFactory rendererForNodeType:MarkdownNodeTypeStrong] renderNode:row into:output context:context];
++    } else {
++      [_rendererFactory renderChildrenOfNode:row into:output context:context];
++    }
++    if (output.length > rowStart) {
++      [output addAttribute:ENRMTableTextRowAttribute value:@YES range:NSMakeRange(rowStart, output.length - rowStart)];
++    }
++    [output appendAttributedString:kNewlineAttributedString];
++  }
++}
++
++@end
++
+ @implementation RendererFactory {
+   StyleConfig *_config;
+   NSMutableDictionary<NSNumber *, id<NodeRenderer>> *_cache;
+@@ -129,6 +188,8 @@
+ #endif
+     case MarkdownNodeTypeSpoiler:
+       return [[ENRMSpoilerRenderer alloc] initWithRendererFactory:self config:_config];
++    case MarkdownNodeTypeTable:
++      return [[ENRMTableTextRenderer alloc] initWithRendererFactory:self config:_config];
+     default:
+       return nil;
+   }
+diff --git a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
+index 3c4241c..0eff622 100644
+--- a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
++++ b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
+@@ -14,6 +14,8 @@
+ #import "RuntimeKeys.h"
+ #import "ThematicBreakAttachment.h"
+ 
++extern NSString *const ENRMTableTextRowAttribute;
++
+ #pragma mark - Extraction Context
+ 
+ typedef struct {
+@@ -327,7 +329,13 @@ NSString *_Nullable extractMarkdownFromAttributedString(NSAttributedString *attr
+                             } else {
+                               BOOL isOrdered = ([listTypeNum integerValue] == 1);
+                               NSInteger itemNumber = listItemNum ? [listItemNum integerValue] : 1;
+-                              [prefixedSegment appendString:buildListPrefix(currentListDepth, isOrdered, itemNumber)];
++                              NSString *listPrefix = buildListPrefix(currentListDepth, isOrdered, itemNumber);
++                              if (attrs[ENRMTableTextRowAttribute]) {
++                                listPrefix = [@"" stringByPaddingToLength:listPrefix.length
++                                                               withString:@" "
++                                                          startingAtIndex:0];
++                              }
++                              [prefixedSegment appendString:listPrefix];
+                             }
+                           }
+ 
