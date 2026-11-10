@@ -335,6 +335,7 @@ export const ChatView = observer(
     const inputTextRef = React.useRef(inputText);
     inputTextRef.current = inputText;
     const syncedDraftRef = React.useRef('');
+    const nativeClearRef = React.useRef<(() => void) | null>(null);
     const carriedTextRef = React.useRef<string | null>(null);
     /** The draft key the composer was last loaded for. */
     const loadedDraftKeyRef = React.useRef<string | null>(null);
@@ -623,6 +624,7 @@ export const ChatView = observer(
       }
       // The edited text is not a draft: a chat being left keeps its own.
       inputTextRef.current = syncedDraftRef.current;
+      nativeClearRef.current?.();
       setInputText('');
       setInputImages([]);
       updateComposerDocuments(() => []);
@@ -898,9 +900,17 @@ export const ChatView = observer(
                     resend ? {replaceFromId, resend} : {replaceFromId},
                   );
             if (clear !== 'none') {
-              setInputText(live =>
-                clear === 'text' ? '' : unsentPart(live, message.text),
-              );
+              const remainder =
+                clear === 'text'
+                  ? ''
+                  : unsentPart(inputTextRef.current, message.text);
+              // iOS keeps the sent text's height unless the native field is
+              // cleared while it still holds that text (#1052). A remainder
+              // is a real text change, so it needs no clear.
+              if (remainder === '') {
+                nativeClearRef.current?.();
+              }
+              setInputText(remainder);
               syncedDraftRef.current = '';
               chatSessionStore.clearDraft(draftKey);
               Keyboard.dismiss();
@@ -1651,6 +1661,7 @@ export const ChatView = observer(
                     onDocumentsChange: updateComposerDocuments,
                     onOpenDocumentRange: setRangeKey,
                     documentModes,
+                    nativeClearRef,
                     textInputProps: {
                       ...textInputProps,
                       ...(!composerShowsPromptText && {

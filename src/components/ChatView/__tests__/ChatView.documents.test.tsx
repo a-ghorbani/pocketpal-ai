@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {TextInput} from 'react-native';
 import {runInAction} from 'mobx';
 import {pick} from '@react-native-documents/picker';
 
@@ -112,6 +113,91 @@ afterEach(() => {
   documentStore.setComposerHeld([]);
   runInAction(() => {
     modelStore.activeModelId = undefined;
+  });
+});
+
+/** Records the composer text each native clear saw; the clear must come first. */
+const watchNativeClear = (chat: {input: () => any}) => {
+  const seen: string[] = [];
+  (TextInput.prototype.clear as jest.Mock).mockImplementation(() => {
+    seen.push(chat.input().props.value);
+  });
+  return seen;
+};
+
+afterEach(() => {
+  (TextInput.prototype.clear as jest.Mock).mockReset();
+});
+
+describe('ChatView native text clear', () => {
+  it('clears the native text before emptying an accepted send', async () => {
+    const chat = renderChat();
+    const seen = watchNativeClear(chat);
+    chat.type('hello');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(seen).toEqual(['hello']);
+    expect(chat.input().props.value).toBe('');
+  });
+
+  it('keeps the native text of a send held back by the budget', async () => {
+    const big = ref('held-big', {pageCount: 40, tokenEstimate: 9000});
+    const chat = renderChat({
+      evaluateSendBudget: jest.fn().mockResolvedValue({
+        verdict: {
+          kind: 'over',
+          reason: 'new',
+          needed: 9100,
+          available: 3072,
+          newDocs: [{ref: big, tokens: 9000, mode: 'searched'}],
+          historyDocTokens: 0,
+        },
+      }),
+    });
+    const seen = watchNativeClear(chat);
+    await chat.attach(big);
+    chat.type('Summarise');
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(seen).toEqual([]);
+    expect(chat.input().props.value).toBe('Summarise');
+  });
+
+  it('leaves the native text alone when text typed during the check stays', async () => {
+    const big = ref('kept-big');
+    let answer: (plan: unknown) => void = () => {};
+    let checking = false;
+    const chat = renderChat({
+      evaluateSendBudget: jest.fn().mockImplementation(async () =>
+        checking
+          ? new Promise(resolve => {
+              checking = false;
+              answer = resolve;
+            })
+          : {verdict: {kind: 'fits'}, newModes: []},
+      ),
+    });
+    const seen = watchNativeClear(chat);
+    await chat.attach(big);
+    chat.type('Summarise');
+    checking = true;
+    await act(async () => {
+      chat.pressSend();
+    });
+    chat.type('Summarise and more');
+
+    await act(async () => {
+      answer({verdict: {kind: 'fits'}, newModes: []});
+    });
+
+    expect(seen).toEqual([]);
+    expect(chat.input().props.value).toBe('and more');
   });
 });
 
@@ -1598,6 +1684,37 @@ describe('ChatView edit mode', () => {
       expect(drafts.get('session-1')).toBe('earlier');
       expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
     });
+  });
+
+  it('clears the native text before emptying an edited send', async () => {
+    shown = [olderRow];
+    const chat = renderChat({
+      messages: shown,
+      evaluateSendBudget: jest.fn().mockResolvedValue(fitsPlan),
+    });
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    chat.type('Older row, rewritten');
+    const seen = watchNativeClear(chat);
+
+    await act(async () => {
+      chat.pressSend();
+    });
+
+    expect(seen).toEqual(['Older row, rewritten']);
+    expect(chat.input().props.value).toBe('');
+  });
+
+  it('clears the native text before emptying the composer on an edit exit', async () => {
+    shown = [olderRow];
+    const chat = renderChat({messages: shown});
+    await pressMenu(chat, 'Older row', menuLabels.edit);
+    const seen = watchNativeClear(chat);
+
+    act(() => chatSessionStore.exitEditMode());
+    rerender(chat);
+
+    expect(seen).toEqual(['Older row']);
+    expect(chat.input().props.value).toBe('');
   });
 
   it('clears the composer when edit mode ends from outside', async () => {

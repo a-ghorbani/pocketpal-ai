@@ -1248,22 +1248,12 @@ describe('native text clear', () => {
     expect(clear).toHaveBeenCalledTimes(1);
   });
 
-  it('clears the native text when the parent empties a controlled composer', () => {
-    const {rerender} = renderInput({textInputProps: {value: 'held'}});
+  it('hands a parent that owns the text the native clear', () => {
+    const nativeClearRef = {current: null as (() => void) | null};
+    renderInput({textInputProps: {value: 'sent'}, nativeClearRef});
     expect(clear).not.toHaveBeenCalled();
 
-    rerender(
-      <UserContext.Provider value={user}>
-        <ChatInput
-          {...{
-            onSendPress: jest.fn(),
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {value: ''},
-          }}
-        />
-      </UserContext.Provider>,
-    );
+    nativeClearRef.current?.();
 
     expect(clear).toHaveBeenCalledTimes(1);
   });

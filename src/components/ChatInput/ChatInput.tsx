@@ -102,6 +102,11 @@ export interface ChatInputTopLevelProps {
   onOpenDocumentRange?: (key: string) => void;
   /** Predicted mode per composer document key. */
   documentModes?: Record<string, DocumentMode>;
+  /**
+   * Receives the native-text clear for a parent that owns `value`; it calls
+   * it right before emptying the text, while the field still holds it.
+   */
+  nativeClearRef?: React.MutableRefObject<(() => void) | null>;
 
   /** Camera-specific props */
   isCameraActive?: boolean;
@@ -193,6 +198,7 @@ export const ChatInput = observer(
     onDocumentsChange,
     onOpenDocumentRange,
     documentModes = {},
+    nativeClearRef,
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
@@ -254,15 +260,10 @@ export const ChatInput = observer(
         ? promptText
         : (textInputProps?.value ?? text);
 
-    // The parent may hold a send back and keep the text, so the native text
-    // is cleared when the composer empties, not when Send is pressed.
-    const hadText = React.useRef(value !== '');
-    React.useEffect(() => {
-      if (hadText.current && value === '') {
-        clearNativeText();
-      }
-      hadText.current = value !== '';
-    }, [value]);
+    const parentOwnsText = textInputProps?.value !== undefined;
+    if (nativeClearRef) {
+      nativeClearRef.current = clearNativeText;
+    }
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -324,6 +325,11 @@ export const ChatInput = observer(
         const readyDocuments = documents.flatMap(doc =>
           doc.ref ? [doc.ref] : [],
         );
+        // A parent that owns the text may hold the send back; it clears
+        // through `nativeClearRef` once it accepts it.
+        if (!parentOwnsText) {
+          clearNativeText();
+        }
         onSendPress({
           text: trimmedValue,
           type: 'text',
