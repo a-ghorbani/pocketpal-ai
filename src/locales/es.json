@@ -246,6 +246,39 @@
       "signInAgain": "Vuelve a iniciar sesión",
       "creatorSupport": "Las cuentas de creador las elimina nuestro equipo de soporte: {{contact}}",
       "failed": "No se pudo eliminar, inténtalo de nuevo"
+    },
+    "localApiServer": {
+      "title": "Servidor de API local",
+      "enable": "Servir el modelo cargado",
+      "enableDescription": "Permite que otras aplicaciones usen el modelo cargado a través de una API compatible con OpenAI. Las solicitudes esperan su turno junto con tus chats.",
+      "starting": "Iniciando…",
+      "url": "URL del servidor",
+      "copyUrl": "Copiar URL",
+      "servedModel": "Sirviendo {{model}}",
+      "noModel": "No hay ningún modelo cargado. Las solicitudes fallarán hasta que cargues uno.",
+      "port": "Puerto",
+      "portInvalid": "Usa un puerto entre 1024 y 65535",
+      "lan": "Permitir el acceso desde otros dispositivos de la red",
+      "lanWarning": "Se puede acceder al servidor desde cualquier red a la que esté conectado este teléfono: Wi-Fi, datos móviles, punto de acceso y VPN. Establece una clave de API para limitar quién puede usarlo.",
+      "notOnWifi": "No estás conectado a una red Wi-Fi, así que no se muestra ninguna URL de red.",
+      "apiKey": "Clave de API",
+      "apiKeySet": "Las solicitudes deben enviar esta clave",
+      "apiKeyNotSet": "Sin clave: cualquier aplicación que pueda acceder al servidor puede usarlo, excepto las páginas del navegador.",
+      "setApiKey": "Establecer clave",
+      "clearApiKey": "Borrar clave",
+      "apiKeyPlaceholder": "Introduce una clave de API",
+      "stopToEdit": "Desactiva el servidor para cambiar estos ajustes.",
+      "lockedHint": "Función Plus. Abre los detalles.",
+      "teaserTitle": "El servidor de API local es una función Plus",
+      "teaserBody": "Deja que otras aplicaciones usen el modelo cargado en este teléfono.",
+      "teaserGetPlus": "Obtener Plus",
+      "teaserNotNow": "Ahora no",
+      "errors": {
+        "portInUse": "El puerto {{port}} ya está en uso. Desactiva el servidor y elige otro puerto.",
+        "listenFailed": "No se ha podido iniciar el servidor. Desactívalo y vuelve a activarlo, o elige otro puerto.",
+        "stoppedListening": "El servidor se ha detenido de forma inesperada. Desactívalo y vuelve a activarlo.",
+        "keyUnavailable": "No se ha podido leer la clave de API. Desbloquea el teléfono; después, desactiva el servidor y vuelve a activarlo."
+      }
     }
   },
   "memory": {
@@ -465,6 +498,12 @@
         "downloadProjectionModel": "Descargar modelo de proyección",
         "viewModelCardOnHuggingFace": "Ver ficha del modelo en Hugging Face",
         "draftOnlyReason": "Modelo exclusivo para borrador. Selecciónalo en Ajustes → Decodificación especulativa."
+      },
+      "projectorOffer": {
+        "rowTitle": "La visión necesita su modelo de proyección",
+        "download": "Descargar",
+        "downloading": "Descargando el modelo de proyección · {{progress}}%",
+        "a11yWithSize": "Descargar el modelo de proyección, {{size}}"
       }
     },
     "modelSettings": {
