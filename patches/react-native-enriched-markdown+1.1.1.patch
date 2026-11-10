@@ -1,3 +1,18 @@
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
+index 2bac5b1..a0c0431 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
+@@ -68,7 +68,9 @@ class ListRenderer(
+     // TODO: LineHeightSpan may also clip superscript/subscript glyphs that extend
+     // outside the normal line bounds. A similar "skip" strategy as for images may
+     // be needed here once super/subscript usage in practice is better understood.
+-    applyLineHeightSkippingImages(builder, start, builder.length, style.lineHeight)
++    // A quote sizes its own lines and spacers; the list's span would grow them to a
++    // full line, and only in the view, which reads spans in insertion order.
++    applyLineHeightSkippingImages(builder, start, builder.length, style.lineHeight, skipBlockquotes = true)
+ 
+     // Item spacing and external bottom margin are only handled by the root-level list
+     if (depth == 0) {
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
 index a0f37cd..e243c0c 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
@@ -111,6 +126,42 @@ index 12ad32f..fee67e5 100644
    }
  
    private fun multiplyAlpha(
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
+index 296673b..abaf1ac 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
+@@ -1,6 +1,7 @@
+ package com.swmansion.enriched.markdown.utils.text.span
+ 
+ import android.text.SpannableStringBuilder
++import com.swmansion.enriched.markdown.spans.BlockquoteSpan
+ import com.swmansion.enriched.markdown.spans.CodeBlockSpan
+ import com.swmansion.enriched.markdown.spans.ImageSpan
+ import com.swmansion.enriched.markdown.spans.LineHeightSpan
+@@ -22,6 +23,7 @@ fun applyLineHeightSkippingImages(
+   end: Int,
+   lineHeight: Float,
+   spanFlags: Int = SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE,
++  skipBlockquotes: Boolean = false,
+ ) {
+   val blockImageRanges =
+     builder
+@@ -34,7 +36,14 @@ fun applyLineHeightSkippingImages(
+       .getSpans(start, end, CodeBlockSpan::class.java)
+       .map { builder.getSpanStart(it) to builder.getSpanEnd(it) }
+ 
+-  val excludedRanges = (blockImageRanges + codeBlockRanges).sortedBy { it.first }
++  val blockquoteRanges =
++    if (skipBlockquotes) {
++      builder.getSpans(start, end, BlockquoteSpan::class.java).map { builder.getSpanStart(it) to builder.getSpanEnd(it) }
++    } else {
++      emptyList()
++    }
++
++  val excludedRanges = (blockImageRanges + codeBlockRanges + blockquoteRanges).sortedBy { it.first }
+ 
+   var pos = start
+   for ((exStart, exEnd) in excludedRanges) {
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
 index 37082b4..b07e36e 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
