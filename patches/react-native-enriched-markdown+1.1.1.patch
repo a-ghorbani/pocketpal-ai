@@ -27,10 +27,10 @@ index a0f37cd..e243c0c 100644
            val mathInlineRendererClass = Class.forName("com.swmansion.enriched.markdown.renderer.MathInlineRenderer")
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
 new file mode 100644
-index 0000000..8ccc34f
+index 0000000..c681e76
 --- /dev/null
 +++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,62 @@
 +package com.swmansion.enriched.markdown.renderer
 +
 +import android.text.SpannableStringBuilder
@@ -82,10 +82,17 @@ index 0000000..8ccc34f
 +        val blockStyle = factory.blockStyleContext.requireBlockStyle()
 +        builder.setSpan(StrongSpan(factory.styleCache, blockStyle), rowStart, builder.length, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
 +      }
++      if (builder.length > rowStart) {
++        builder.setSpan(TableTextRowSpan(), rowStart, builder.length, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++      }
 +      builder.append("\n")
 +    }
 +  }
 +}
++
++/** Marks a table row drawn as text, so Copy as Markdown indents it instead of repeating the item marker. */
++class TableTextRowSpan
++
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
 index 1100ee4..414377b 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
@@ -126,6 +133,31 @@ index 12ad32f..fee67e5 100644
    }
  
    private fun multiplyAlpha(
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
+index 2957f98..a16fef5 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
+@@ -4,6 +4,7 @@ import android.text.Spannable
+ import android.text.style.UnderlineSpan
+ import android.widget.TextView
+ import com.swmansion.enriched.markdown.EnrichedMarkdownText
++import com.swmansion.enriched.markdown.renderer.TableTextRowSpan
+ import com.swmansion.enriched.markdown.spans.BaseListSpan
+ import com.swmansion.enriched.markdown.spans.BaselineShiftSpan
+ import com.swmansion.enriched.markdown.spans.BlockquoteSpan
+@@ -145,7 +146,11 @@ object MarkdownExtractor {
+     state: ExtractionState,
+   ) {
+     val blockquotePrefix = detectBlockquote(spannable, segmentStart, segmentEnd, state)
+-    val listPrefix = detectList(spannable, segmentStart, segmentEnd, state)
++    val listPrefix =
++      detectList(spannable, segmentStart, segmentEnd, state)?.let { prefix ->
++        val isTableRow = spannable.getSpans(segmentStart, segmentEnd, TableTextRowSpan::class.java).isNotEmpty()
++        if (isTableRow) " ".repeat(prefix.length) else prefix
++      }
+     var segment = applyInlineFormatting(spannable, segmentText, segmentStart, segmentEnd)
+ 
+     if (result.isAtLineStart() && !segmentText.startsWith("\n")) {
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
 index 296673b..abaf1ac 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
