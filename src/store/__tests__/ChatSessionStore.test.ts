@@ -1345,7 +1345,7 @@ describe('chatSessionStore', () => {
       dateNowSpy.mockRestore();
     });
 
-    it('should apply update immediately when no throttle is active', () => {
+    it('should apply update on the next timer tick when no throttle is active', () => {
       const update = {text: 'Streaming text...'};
 
       chatSessionStore.updateMessageStreaming(
@@ -1354,10 +1354,60 @@ describe('chatSessionStore', () => {
         update,
       );
 
-      // Should apply immediately
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Hello, world!');
+
+      jest.advanceTimersByTime(0);
+
       expect(
         (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
       ).toBe('Streaming text...');
+    });
+
+    it('should coalesce tokens that arrive before the timer fires into one apply', () => {
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'One',
+      });
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'One two',
+      });
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'One two three',
+      });
+
+      expect(chatSessionRepository.updateMessage).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(0);
+
+      expect(chatSessionRepository.updateMessage).toHaveBeenCalledTimes(1);
+      expect(chatSessionRepository.updateMessage).toHaveBeenCalledWith(
+        testMessage.id,
+        {text: 'One two three'},
+      );
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('One two three');
+    });
+
+    it('should apply the next token a full throttle interval after the last apply', () => {
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'One',
+      });
+      jest.advanceTimersByTime(0);
+
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'One two',
+      });
+      jest.advanceTimersByTime(29);
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('One');
+
+      jest.advanceTimersByTime(1);
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('One two');
     });
 
     it('should update message metadata', () => {
@@ -1372,6 +1422,7 @@ describe('chatSessionStore', () => {
         'session1',
         update,
       );
+      jest.advanceTimersByTime(0);
 
       expect(
         (chatSessionStore.sessions[0].messages[0] as MessageType.Text).metadata
@@ -1391,6 +1442,7 @@ describe('chatSessionStore', () => {
           newKey: 'new value',
         },
       });
+      jest.advanceTimersByTime(0);
 
       const metadata = (
         chatSessionStore.sessions[0].messages[0] as MessageType.Text
@@ -1407,6 +1459,7 @@ describe('chatSessionStore', () => {
         'session1',
         update,
       );
+      jest.advanceTimersByTime(0);
 
       expect(chatSessionRepository.updateMessage).toHaveBeenCalledWith(
         testMessage.id,
@@ -1465,6 +1518,7 @@ describe('chatSessionStore', () => {
       const update = {text: 'Active session update'};
 
       chatSessionStore.updateMessageStreaming(testMessage.id, '', update);
+      jest.advanceTimersByTime(0);
 
       expect(
         (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
@@ -1483,6 +1537,7 @@ describe('chatSessionStore', () => {
       chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
         text: 'Test update',
       });
+      jest.advanceTimersByTime(0);
 
       // Message should still be updated in memory
       expect(

@@ -680,16 +680,11 @@ class ChatSessionStore {
       return;
     }
 
-    const now = Date.now();
-    const timeSinceLastUpdate = now - this.lastStreamingUpdateTime;
-
-    if (timeSinceLastUpdate >= STREAMING_THROTTLE_MS) {
-      this.applyStreamingUpdate();
-      this.lastStreamingUpdateTime = Date.now();
-      return;
-    }
-
-    const remainingTime = STREAMING_THROTTLE_MS - timeSinceLastUpdate;
+    // Never apply inline: tokens queued behind a slow render must merge into one apply.
+    const remainingTime = Math.max(
+      0,
+      STREAMING_THROTTLE_MS - (Date.now() - this.lastStreamingUpdateTime),
+    );
     this.streamingThrottleTimer = setTimeout(() => {
       this.streamingThrottleTimer = null;
       if (this.pendingStreamingUpdate) {
