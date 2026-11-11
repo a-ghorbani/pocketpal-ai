@@ -27,10 +27,10 @@ index a0f37cd..e243c0c 100644
            val mathInlineRendererClass = Class.forName("com.swmansion.enriched.markdown.renderer.MathInlineRenderer")
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
 new file mode 100644
-index 0000000..c681e76
+index 0000000..7aac7c0
 --- /dev/null
 +++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,61 @@
 +package com.swmansion.enriched.markdown.renderer
 +
 +import android.text.SpannableStringBuilder
@@ -92,7 +92,6 @@ index 0000000..c681e76
 +
 +/** Marks a table row drawn as text, so Copy as Markdown indents it instead of repeating the item marker. */
 +class TableTextRowSpan
-+
 diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
 index 1100ee4..414377b 100644
 --- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
@@ -303,7 +302,7 @@ index a555419..0c7d5bb 100644
        return nil;
    }
 diff --git a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
-index 3c4241c..0eff622 100644
+index 3c4241c..b416877 100644
 --- a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
 +++ b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
 @@ -14,6 +14,8 @@
@@ -315,18 +314,30 @@ index 3c4241c..0eff622 100644
  #pragma mark - Extraction Context
  
  typedef struct {
-@@ -327,7 +329,13 @@ NSString *_Nullable extractMarkdownFromAttributedString(NSAttributedString *attr
+@@ -318,17 +320,24 @@ NSString *_Nullable extractMarkdownFromAttributedString(NSAttributedString *attr
+                           NSMutableString *prefixedSegment = [NSMutableString string];
+ 
+                           if (listDepthNum && ![text hasPrefix:@"\n"]) {
++                            NSString *listPrefix;
+                             if (isTaskItem) {
+                               NSString *indent = [@"" stringByPaddingToLength:(currentListDepth * 2)
+                                                                    withString:@" "
+                                                               startingAtIndex:0];
+                               NSString *checkbox = isTaskChecked ? @"[x]" : @"[ ]";
+-                              [prefixedSegment appendFormat:@"%@- %@ ", indent, checkbox];
++                              listPrefix = [NSString stringWithFormat:@"%@- %@ ", indent, checkbox];
                              } else {
                                BOOL isOrdered = ([listTypeNum integerValue] == 1);
                                NSInteger itemNumber = listItemNum ? [listItemNum integerValue] : 1;
 -                              [prefixedSegment appendString:buildListPrefix(currentListDepth, isOrdered, itemNumber)];
-+                              NSString *listPrefix = buildListPrefix(currentListDepth, isOrdered, itemNumber);
-+                              if (attrs[ENRMTableTextRowAttribute]) {
-+                                listPrefix = [@"" stringByPaddingToLength:listPrefix.length
-+                                                               withString:@" "
-+                                                          startingAtIndex:0];
-+                              }
-+                              [prefixedSegment appendString:listPrefix];
++                              listPrefix = buildListPrefix(currentListDepth, isOrdered, itemNumber);
++                            }
++                            if (attrs[ENRMTableTextRowAttribute]) {
++                              listPrefix = [@"" stringByPaddingToLength:listPrefix.length
++                                                             withString:@" "
++                                                        startingAtIndex:0];
                              }
++                            [prefixedSegment appendString:listPrefix];
                            }
  
+                           if (blockquotePrefix) {
