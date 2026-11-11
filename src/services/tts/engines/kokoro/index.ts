@@ -5,6 +5,7 @@ import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {
   KOKORO_MODEL_BASE_URL,
+  KOKORO_MODEL_FILENAME,
   KOKORO_MODEL_FILES,
   KOKORO_MODEL_SUBDIR,
   KOKORO_VOICES_BASE_URL,
@@ -25,13 +26,17 @@ import type {
 } from '../../types';
 import {KOKORO_VOICES} from './voices';
 
+const LEGACY_MODEL_FILENAMES = ['model.onnx', 'model_fp32.onnx'].filter(
+  name => name !== KOKORO_MODEL_FILENAME,
+);
+
 export type KokoroProgressCallback = (progress: number) => void;
 
 /**
- * Kokoro neural TTS engine (82M FP32 ONNX port).
+ * Kokoro neural TTS engine (82M ONNX port; int8 on Android, FP32 on iOS).
  *
  * Installation is two-phase:
- *   1. Core files (`model_fp32.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
+ *   1. Core files (model weights, `tokenizer.json`, IPA dict) — all-or-nothing;
  *      any failure cleans up the whole `tts/kokoro/` dir.
  *   2. Per-voice `.bin` embedding files — best-effort; partial success is
  *      accepted (engine usable with whichever voices did land). The voices
@@ -74,6 +79,7 @@ export class KokoroEngine implements NeuralEngine {
   }
 
   async isInstalled(): Promise<boolean> {
+    await this.reclaimLegacySpace().catch(() => {});
     try {
       for (const file of KOKORO_MODEL_FILES) {
         if (!(await RNFS.exists(this.getFilePath(file.name)))) {
@@ -94,16 +100,15 @@ export class KokoroEngine implements NeuralEngine {
     return KOKORO_VOICES;
   }
 
-  // Reclaim FP16 weights from previous installs (saved as `model.onnx`)
-  // before the disk-space gate runs. isInstalled() reports false for legacy
-  // users because the new local name is `model_fp32.onnx`, so the bundled
-  // FP32 file does not double-count — but the orphan ~163 MB sits on disk
-  // and can push a borderline device below the install threshold. Run this
-  // BEFORE the store's disk preflight so reclaimable space counts.
+  // Deletes weights no build of the app can load any more: FP16
+  // `model.onnx` everywhere, and `model_fp32.onnx` on Android, which moved to
+  // int8. Runs before the disk-space checks so the freed space counts.
   async reclaimLegacySpace(): Promise<void> {
-    const legacyModelPath = this.getFilePath('model.onnx');
-    if (await RNFS.exists(legacyModelPath)) {
-      await RNFS.unlink(legacyModelPath).catch(() => {});
+    for (const name of LEGACY_MODEL_FILENAMES) {
+      const path = this.getFilePath(name);
+      if (await RNFS.exists(path)) {
+        await RNFS.unlink(path).catch(() => {});
+      }
     }
   }
 
@@ -116,8 +121,6 @@ export class KokoroEngine implements NeuralEngine {
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(voicesDir, {NSURLIsExcludedFromBackupKey: true});
 
-    // Defensive: ensure legacy FP16 file is gone even if the store skipped
-    // `reclaimLegacySpace()`. Idempotent.
     await this.reclaimLegacySpace();
 
     // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
@@ -224,7 +227,7 @@ export class KokoroEngine implements NeuralEngine {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.KOKORO,
-      modelPath: `file://${modelDir}/model_fp32.onnx`,
+      modelPath: `file://${modelDir}/${KOKORO_MODEL_FILENAME}`,
       tokenizerPath: `file://${modelDir}/tokenizer.json`,
       voicesPath: `file://${modelDir}/${KOKORO_VOICES_MANIFEST_FILENAME}`,
       dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,

@@ -92,33 +92,47 @@ export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 398_352_949;
 
 // ---------------------------------------------------------------------------
-// Kokoro (FP32 variant)
+// Kokoro (int8 on Android, FP32 on iOS)
 // ---------------------------------------------------------------------------
 
 /**
- * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port.
- * Full-precision (FP32) variant. The FP16 weights produce silent audio on
- * some devices (numeric overflow during inference); FP32 trades disk + RAM
- * for correctness everywhere: ~330 MB on disk, ~1 GB peak RAM. Q8 also
- * produces garbage on some Android ONNX Runtime builds, so neither
- * quantized variant is viable today.
+ * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port. FP16 weights
+ * produce silent audio and q8f16 all-NaN audio on onnxruntime >= 1.24. Int8
+ * is faster than FP32 on Android CPUs but slower on iOS, hence the
+ * per-platform weights below.
  */
 export const KOKORO_MODEL_BASE_URL =
   'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main';
+
+/** Int8 weights, pinned to a revision (Android). */
+export const KOKORO_INT8_MODEL_URL =
+  'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/onnx/model_quantized.onnx';
 
 /** Base URL for the Kokoro per-voice `.bin` embedding files. */
 export const KOKORO_VOICES_BASE_URL = `${KOKORO_MODEL_BASE_URL}/voices`;
 
 /**
- * Core Kokoro files — downloaded all-or-nothing (Phase 1). Without these
- * the engine cannot initialize. Local name is `model_fp32.onnx` so users
- * who previously downloaded the FP16 weights (saved as `model.onnx`) get
- * a clean re-download instead of inheriting the silent-audio bug.
+ * Local name of this platform's Kokoro weights. Each precision has its own
+ * name, so an install of another precision reads as not installed and is
+ * re-downloaded.
  */
-export const KOKORO_MODEL_FILES = [
-  {name: 'model_fp32.onnx', urlPath: 'onnx/model.onnx'},
+export const KOKORO_MODEL_FILENAME =
+  Platform.OS === 'android' ? 'model_int8.onnx' : 'model_fp32.onnx';
+
+type KokoroModelFile =
+  | {readonly name: string; readonly url: string}
+  | {readonly name: string; readonly urlPath: string};
+
+/**
+ * Core Kokoro files, downloaded all-or-nothing (Phase 1). Without these the
+ * engine cannot initialize.
+ */
+export const KOKORO_MODEL_FILES: readonly KokoroModelFile[] = [
+  Platform.OS === 'android'
+    ? {name: KOKORO_MODEL_FILENAME, url: KOKORO_INT8_MODEL_URL}
+    : {name: KOKORO_MODEL_FILENAME, urlPath: 'onnx/model.onnx'},
   {name: 'tokenizer.json', urlPath: 'tokenizer.json'},
-] as const;
+];
 
 /**
  * IPA dictionary for the MIT `phonemize` JS phonemizer (required by the

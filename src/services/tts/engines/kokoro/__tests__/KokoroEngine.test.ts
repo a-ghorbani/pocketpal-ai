@@ -123,7 +123,10 @@ describe('KokoroEngine', () => {
       for (const file of KOKORO_MODEL_FILES) {
         expect(RNFS.downloadFile).toHaveBeenCalledWith(
           expect.objectContaining({
-            fromUrl: `${KOKORO_MODEL_BASE_URL}/${file.urlPath}`,
+            fromUrl:
+              'url' in file
+                ? file.url
+                : `${KOKORO_MODEL_BASE_URL}/${file.urlPath}`,
             toFile: expect.stringContaining(`/tts/kokoro/${file.name}`),
           }),
         );
@@ -318,6 +321,182 @@ describe('KokoroEngine', () => {
           expect.objectContaining({firstChunk: 'clause'}),
         ),
       );
+    });
+  });
+
+  describe('per-platform weights and migration', () => {
+    const INT8_URL =
+      'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/onnx/model_quantized.onnx';
+    const DIRS = {
+      android: '/path/to/documents/tts/kokoro',
+      ios: '/path/to/library/Application Support/tts/kokoro',
+    };
+    const FP32_INSTALL = [
+      'model_fp32.onnx',
+      'tokenizer.json',
+      TTS_DICT_FILENAME,
+      KOKORO_VOICES_MANIFEST_FILENAME,
+      'voices/af_heart.bin',
+    ];
+
+    type Loaded = {
+      engine: KokoroEngine;
+      fs: jest.Mocked<typeof RNFS>;
+      speech: typeof Speech;
+      files: Set<string>;
+      dir: string;
+    };
+
+    // Constants are chosen per platform at module load, so each platform gets
+    // its own module registry over a small in-memory filesystem. Platform is
+    // set in both registries: react-native resolves it lazily on each access.
+    const loadOn = (os: 'ios' | 'android', present: string[]): Loaded => {
+      const dir = DIRS[os];
+      const files = new Set(present.map(name => `${dir}/${name}`));
+      let loaded!: Loaded;
+      setPlatform(os);
+      jest.isolateModules(() => {
+        Object.defineProperty(require('react-native').Platform, 'OS', {
+          configurable: true,
+          get: () => os,
+        });
+        const fs = require('@dr.pogodin/react-native-fs');
+        fs.exists.mockImplementation(async (path: string) => files.has(path));
+        fs.mkdir.mockResolvedValue(undefined);
+        fs.unlink.mockImplementation(async (path: string) => {
+          for (const file of [...files]) {
+            if (file === path || file.startsWith(`${path}/`)) {
+              files.delete(file);
+            }
+          }
+        });
+        fs.writeFile.mockImplementation(async (path: string) => {
+          files.add(path);
+        });
+        fs.moveFile.mockImplementation(async (from: string, to: string) => {
+          files.delete(from);
+          files.add(to);
+        });
+        fs.downloadFile.mockImplementation(({toFile}: {toFile: string}) => {
+          files.add(toFile);
+          return {
+            jobId: 1,
+            promise: Promise.resolve({statusCode: 200, bytesWritten: 1}),
+          };
+        });
+        loaded = {
+          engine: new (require('..').KokoroEngine)(),
+          fs,
+          speech: require('@pocketpalai/react-native-speech').default,
+          files,
+          dir,
+        };
+      });
+      return loaded;
+    };
+
+    const has = ({files, dir}: Loaded, name: string) =>
+      files.has(`${dir}/${name}`);
+
+    describe('Android (int8)', () => {
+      it('downloads the pinned int8 weights into model_int8.onnx and loads them', async () => {
+        const kokoro = loadOn('android', []);
+
+        await kokoro.engine.downloadModel();
+
+        expect(kokoro.fs.downloadFile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            fromUrl: INT8_URL,
+            toFile: `${kokoro.dir}/model_int8.onnx`,
+          }),
+        );
+        expect(kokoro.fs.downloadFile).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            fromUrl: expect.stringContaining('onnx/model.onnx'),
+          }),
+        );
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(true);
+
+        await kokoro.engine.loadInto();
+        expect(kokoro.speech.initialize).toHaveBeenCalledWith(
+          expect.objectContaining({
+            modelPath: `file://${kokoro.dir}/model_int8.onnx`,
+          }),
+        );
+      });
+
+      it('reads an FP32 install as not installed and deletes its weights', async () => {
+        const kokoro = loadOn('android', [...FP32_INSTALL, 'model.onnx']);
+
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(false);
+
+        expect(has(kokoro, 'model_fp32.onnx')).toBe(false);
+        expect(has(kokoro, 'model.onnx')).toBe(false);
+        expect(has(kokoro, 'tokenizer.json')).toBe(true);
+        expect(has(kokoro, TTS_DICT_FILENAME)).toBe(true);
+        expect(has(kokoro, 'voices/af_heart.bin')).toBe(true);
+      });
+
+      it('reclaimLegacySpace() keeps the int8 install intact', async () => {
+        const kokoro = loadOn('android', ['model_int8.onnx', ...FP32_INSTALL]);
+
+        await kokoro.engine.reclaimLegacySpace();
+
+        expect(has(kokoro, 'model_fp32.onnx')).toBe(false);
+        expect(has(kokoro, 'model_int8.onnx')).toBe(true);
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(true);
+      });
+
+      it('an install check still runs when the reclaim fails', async () => {
+        const kokoro = loadOn('android', ['model_int8.onnx', ...FP32_INSTALL]);
+        kokoro.fs.exists.mockImplementationOnce(() =>
+          Promise.reject(new Error('io')),
+        );
+
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(true);
+      });
+    });
+
+    describe('iOS (FP32)', () => {
+      it('keeps an FP32 install installed and untouched', async () => {
+        const kokoro = loadOn('ios', FP32_INSTALL);
+
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(true);
+        await kokoro.engine.reclaimLegacySpace();
+
+        expect(kokoro.files).toEqual(
+          new Set(FP32_INSTALL.map(name => `${kokoro.dir}/${name}`)),
+        );
+        expect(kokoro.fs.downloadFile).not.toHaveBeenCalled();
+      });
+
+      it('reclaims only the FP16 weights', async () => {
+        const kokoro = loadOn('ios', [...FP32_INSTALL, 'model.onnx']);
+
+        await kokoro.engine.reclaimLegacySpace();
+
+        expect(has(kokoro, 'model.onnx')).toBe(false);
+        expect(has(kokoro, 'model_fp32.onnx')).toBe(true);
+      });
+
+      it('downloads FP32 weights into model_fp32.onnx and loads them', async () => {
+        const kokoro = loadOn('ios', []);
+
+        await kokoro.engine.downloadModel();
+
+        expect(kokoro.fs.downloadFile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            fromUrl: `${KOKORO_MODEL_BASE_URL}/onnx/model.onnx`,
+            toFile: `${kokoro.dir}/model_fp32.onnx`,
+          }),
+        );
+        await kokoro.engine.loadInto();
+        expect(kokoro.speech.initialize).toHaveBeenCalledWith(
+          expect.objectContaining({
+            modelPath: `file://${kokoro.dir}/model_fp32.onnx`,
+          }),
+        );
+      });
     });
   });
 });
