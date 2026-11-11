@@ -6,6 +6,10 @@ jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
 }));
 
+jest.mock('../ModelStore', () => ({
+  modelStore: require('../../../__mocks__/stores/modelStore').mockModelStore,
+}));
+
 // AppState.addEventListener spy — capture registered handler so we can invoke it
 const mockAppStateRemove = jest.fn();
 const appStateHandlers: Array<(s: string) => void> = [];
@@ -185,6 +189,7 @@ import {TTSStore} from '../TTSStore';
 import type {Voice} from '../../services/tts';
 import {ttsRuntime} from '../../services/tts';
 import {chatSessionStore} from '../ChatSessionStore';
+import {modelStore} from '../ModelStore';
 
 const SYSTEM_VOICE: Voice = {
   id: 'com.apple.voice.Sarah',
@@ -218,6 +223,7 @@ describe('TTSStore', () => {
     appStateHandlers.length = 0;
     lastSystemHandle = null;
     lastSupertonicHandle = null;
+    modelStore.deviceTier = null;
   });
 
   describe('memory gate', () => {
@@ -778,7 +784,8 @@ describe('TTSStore', () => {
       mockSupertonicPlayStreaming.mockImplementation(defaultPlayStreaming);
     });
 
-    it('opens a voice reply with a clause first chunk and progress', async () => {
+    it('opens a voice reply with a capped clause first chunk and progress', async () => {
+      modelStore.deviceTier = 'flagship';
       const store = await makeVoiceStore();
 
       store.onAssistantMessageStart('msg-1');
@@ -788,6 +795,7 @@ describe('TTSStore', () => {
       expect(handle!.opts).toEqual(
         expect.objectContaining({
           firstChunk: 'clause',
+          firstChunkMaxWords: 20,
           language: 'na',
           onProgress: expect.any(Function),
         }),
@@ -1790,10 +1798,11 @@ describe('TTSStore', () => {
       expect(voice).toEqual(ZOEY);
       expect(opts).toEqual(
         expect.objectContaining({
-          firstChunk: 'clause',
+          firstChunk: 'sentence',
           onProgress: expect.any(Function),
         }),
       );
+      expect(opts).not.toHaveProperty('firstChunkMaxWords');
       opts.onProgress({
         chunkText: '',
         streamRange: {start: 0, end: 1},

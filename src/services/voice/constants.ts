@@ -1,9 +1,29 @@
+import type {Tier} from '../deviceRules/types';
+import type {EngineId} from '../tts/types';
+
 /**
  * A local model's voice reply holds its first speech chunk until the reply
  * settles or this long after the stream opens (ms). Synthesis next to a
  * decoding model roughly doubles time to first audio.
  */
 export const VOICE_FIRST_CHUNK_HOLD_MS = 1500;
+
+/**
+ * Engines whose voice reply starts at the first clause; every other engine
+ * starts at the first sentence.
+ */
+export const VOICE_CLAUSE_FIRST_CHUNK_ENGINES: ReadonlySet<EngineId> = new Set([
+  'kokoro',
+  'supertonic',
+]);
+
+/**
+ * Word cap on a clause first chunk, by device tier. A tier left out keeps
+ * the speech library's default of 12.
+ */
+export const VOICE_FIRST_CHUNK_MAX_WORDS: Readonly<
+  Partial<Record<Tier, number>>
+> = {flagship: 20, high: 16, mid: 16};
 
 /** Silence after speech that ends an utterance (ms). */
 export const VOICE_ENDPOINT_HANG_MS = 600;
