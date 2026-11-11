@@ -6,6 +6,7 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
+import {languageLabel} from '../../../services/tts';
 import {ttsStore} from '../../../store';
 
 import {VoicePickerView} from '../VoicePickerView';
@@ -98,7 +99,7 @@ describe('VoicePickerView', () => {
 
       expect(ttsStore.setCurrentVoice).toHaveBeenCalledWith({
         id: 'en-us-x-sfg-local',
-        name: 'en-us-x-sfg-local',
+        name: `${languageLabel('en-US')} · Voice 1 · sfg`,
         engine: 'system',
         language: 'en-US',
       });

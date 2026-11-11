@@ -5,8 +5,9 @@ import {observer} from 'mobx-react';
 
 import {CloudIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
-import {systemSections} from '../../services/tts';
+import {systemSections, systemShownLanguages} from '../../services/tts';
 import type {SystemVoiceRow, Voice} from '../../services/tts';
+import {ttsStore, uiStore} from '../../store';
 import {L10nContext} from '../../utils';
 
 import {createStyles} from './styles';
@@ -27,10 +28,14 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
     const l10n = useContext(L10nContext);
     const styles = createStyles(theme);
     const needsInternet = l10n.voiceAndSpeech.systemNeedsInternet;
+    const languages = systemShownLanguages({
+      appLanguage: uiStore.language,
+      currentVoice: ttsStore.currentVoice,
+    });
 
     return (
       <>
-        {systemSections(voices).map(section => (
+        {systemSections(voices, languages).map(section => (
           <View key={section.key}>
             <View style={styles.systemBand}>
               <Text style={styles.systemBandTitle}>{section.title}</Text>

@@ -2,8 +2,17 @@ export * from './constants';
 export * from './types';
 export {SystemEngine} from './engines/system';
 export {getSystemVoices} from './engines/system/voices';
-export {systemSections} from './engines/system/catalog';
+export type {SystemVoiceCopy} from './engines/system/voices';
+export {
+  languageLabel,
+  languageName,
+  systemLanguageOptions,
+  systemSections,
+  systemShortLabel,
+  systemShownLanguages,
+} from './engines/system/catalog';
 export type {
+  SystemLanguageOption,
   SystemVoiceRow,
   SystemVoiceSection,
 } from './engines/system/catalog';

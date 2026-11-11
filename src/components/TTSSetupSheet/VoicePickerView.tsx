@@ -263,12 +263,12 @@ export const VoicePickerView: React.FC = observer(() => {
   };
 
   useEffect(() => {
-    getSystemVoices()
+    getSystemVoices(l10n.voiceAndSpeech)
       .then(vs => setSystemVoices(vs))
       .catch(err => {
         console.warn('[VoicePickerView] system voices failed:', err);
       });
-  }, []);
+  }, [l10n]);
 
   const voicesByEngine = useMemo(() => {
     return {

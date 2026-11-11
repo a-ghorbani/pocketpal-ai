@@ -1,5 +1,6 @@
 import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
+import {l10n} from '../../../../locales';
 import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {Engine, StreamingHandle, Voice} from '../../types';
@@ -17,7 +18,7 @@ export class SystemEngine implements Engine {
   }
 
   getVoices(): Promise<Voice[]> {
-    return getSystemVoices();
+    return getSystemVoices(l10n.en.voiceAndSpeech);
   }
 
   /**

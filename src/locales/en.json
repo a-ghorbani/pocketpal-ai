@@ -1638,6 +1638,8 @@
     "voicesEmptyState": "No voices found.",
     "kokoroDeviceNote": "Some voices may not work on all devices.",
     "systemNeedsInternet": "Needs internet",
+    "systemVoiceNumber": "Voice {{number}}",
+    "systemQualityEnhanced": "Enhanced",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   },
   "voiceInput": {
