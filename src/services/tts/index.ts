@@ -9,6 +9,7 @@ export {
   languageLabel,
   languageName,
   systemLanguageOptions,
+  systemPhoneLocale,
   systemSections,
   systemShortLabel,
   systemShownLanguages,

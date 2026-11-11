@@ -18,6 +18,7 @@ import {
   cantoneseUnderZh,
   languageName,
   systemLanguageOptions,
+  systemPhoneLocale,
   systemSections,
   systemShownLanguages,
 } from '../../services/tts';
@@ -61,9 +62,10 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
     const muted = theme.colors.onSurfaceVariant;
     const isAndroid = Platform.OS === 'android';
     const underZh = cantoneseUnderZh(voices, isAndroid);
+    const locale = systemPhoneLocale(phoneLocale, underZh);
 
     const languages = systemShownLanguages({
-      phoneLocale,
+      phoneLocale: locale,
       appLanguage: uiStore.language,
       currentVoice: ttsStore.currentVoice,
       pickedLanguage,
@@ -175,7 +177,7 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
                 </View>
               </TouchableRipple>
             </View>
-            {systemSections(voices, languages, phoneLocale).map(renderSection)}
+            {systemSections(voices, languages, locale).map(renderSection)}
           </>
         ) : (
           <View style={styles.engineGroupBody}>

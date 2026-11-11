@@ -354,7 +354,7 @@ describe('VoicePickerView', () => {
       expect(getByTestId('tts-system-get-voices-yue')).toBeTruthy();
     });
 
-    it.each(['zh-Hant-HK'])(
+    it.each(['zh-Hant-HK', 'yue-Hant-HK'])(
       'lists Hong Kong Chinese first and no Cantonese band on an iPhone set to %s',
       async phoneLocale => {
         Platform.OS = 'ios';

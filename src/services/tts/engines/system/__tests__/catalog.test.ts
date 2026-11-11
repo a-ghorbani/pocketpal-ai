@@ -6,6 +6,7 @@ import {
   localeKey,
   primaryLanguage,
   systemLanguageOptions,
+  systemPhoneLocale,
   systemSections,
   systemShortLabel,
   systemShownLanguages,
@@ -146,14 +147,15 @@ describe('Cantonese', () => {
     canInstallVoices: boolean,
   ) => {
     const underZh = cantoneseUnderZh(voices, canInstallVoices);
+    const locale = systemPhoneLocale(phoneLocale, underZh);
     const languages = systemShownLanguages({
-      phoneLocale,
+      phoneLocale: locale,
       appLanguage: 'en',
       cantoneseUnderZh: underZh,
     });
     return {
       languages,
-      sections: systemSections(voices, languages, phoneLocale).map(s => s.key),
+      sections: systemSections(voices, languages, locale).map(s => s.key),
     };
   };
 
@@ -183,6 +185,19 @@ describe('Cantonese', () => {
 
   it('keeps Chinese without Cantonese on a Taiwan phone', () => {
     expect(shown('zh_TW', [mainland], true).languages).toEqual(['zh', 'en']);
+  });
+
+  it('reads a Cantonese phone as Chinese when Cantonese is under Chinese', () => {
+    expect(systemPhoneLocale('yue-Hant-HK', true)).toBe('zh-HK');
+    expect(systemPhoneLocale('yue-Hant', true)).toBe('zh-HK');
+    expect(systemPhoneLocale('yue-Hant-MO', true)).toBe('zh-MO');
+    expect(systemPhoneLocale('yue-Hant-HK', false)).toBe('yue-Hant-HK');
+    expect(systemPhoneLocale('zh-Hant-HK', true)).toBe('zh-Hant-HK');
+    expect(systemPhoneLocale(undefined, true)).toBeUndefined();
+    expect(shown('yue-Hant-HK', [mainland, hongKong], false)).toEqual({
+      languages: ['zh', 'en'],
+      sections: ['zh-hk', 'zh-cn', 'en'],
+    });
   });
 });
 

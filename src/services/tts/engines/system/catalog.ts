@@ -159,6 +159,17 @@ export const cantoneseUnderZh = (
   !canInstallVoices &&
   !voices.some(voice => primaryLanguage(voice.language ?? '') === 'yue');
 
+export const systemPhoneLocale = (
+  phoneLocale: string | undefined,
+  underZh: boolean,
+): string | undefined => {
+  if (!phoneLocale || !underZh || primaryLanguage(phoneLocale) !== 'yue') {
+    return phoneLocale;
+  }
+  const region = localeKey(phoneLocale).split('-')[1];
+  return `zh-${region ? region.toUpperCase() : 'HK'}`;
+};
+
 export type ShownLanguagesInput = {
   phoneLocale?: string;
   appLanguage: string;
