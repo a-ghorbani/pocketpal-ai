@@ -12,7 +12,7 @@ class SpeechPlaybackModule(reactContext: ReactApplicationContext) :
     NativeSpeechPlaybackSpec(reactContext) {
 
     init {
-        SpeechPlayback.attach(reactContext)
+        UiThreadUtil.runOnUiThread { SpeechPlayback.attach(reactContext) }
     }
 
     override fun addListener(eventName: String) = Unit
