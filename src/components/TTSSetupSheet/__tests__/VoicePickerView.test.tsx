@@ -1,5 +1,6 @@
 import React from 'react';
 import {runInAction} from 'mobx';
+import Speech from '@pocketpalai/react-native-speech';
 
 import {fireEvent, render} from '../../../../jest/test-utils';
 
@@ -18,6 +19,23 @@ jest.mock('../engineMeta', () => {
   });
   return androidMeta;
 });
+
+// Google TTS voices from a Redmi 12C (Android 14), in the shape the speech
+// library's Android getAvailableVoices returns them.
+const ANDROID_SYSTEM_VOICES = [
+  {
+    quality: 'Enhanced',
+    name: 'en-us-x-sfg-local',
+    identifier: 'en-us-x-sfg-local',
+    language: 'en-US',
+  },
+  {
+    quality: 'Enhanced',
+    name: 'en-us-x-sfg-network',
+    identifier: 'en-us-x-sfg-network',
+    language: 'en-US',
+  },
+];
 
 const renderView = () =>
   render(
@@ -45,12 +63,47 @@ describe('VoicePickerView', () => {
     });
   });
 
-  it('renders one engine group per neural engine (system hidden)', () => {
-    const {getByTestId, queryByTestId} = renderView();
+  it('renders one engine group per neural engine', () => {
+    const {getByTestId} = renderView();
     expect(getByTestId('tts-engine-group-kitten')).toBeTruthy();
     expect(getByTestId('tts-engine-group-kokoro')).toBeTruthy();
     expect(getByTestId('tts-engine-group-supertonic')).toBeTruthy();
-    expect(queryByTestId('tts-engine-group-system')).toBeNull();
+  });
+
+  describe('System voices', () => {
+    beforeEach(() => {
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(
+        ANDROID_SYSTEM_VOICES,
+      );
+    });
+
+    it("lists the phone's voices in a System group", async () => {
+      const {findByTestId, getByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+
+      expect(
+        getByTestId('tts-voice-row-system-en-us-x-sfg-local'),
+      ).toBeTruthy();
+      expect(
+        getByTestId('tts-voice-row-system-en-us-x-sfg-network'),
+      ).toBeTruthy();
+    });
+
+    it('tapping a system voice sets it and closes the sheet', async () => {
+      const {findByTestId, getByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+      fireEvent.press(getByTestId('tts-voice-row-system-en-us-x-sfg-local'));
+
+      expect(ttsStore.setCurrentVoice).toHaveBeenCalledWith({
+        id: 'en-us-x-sfg-local',
+        name: 'en-us-x-sfg-local',
+        engine: 'system',
+        language: 'en-US',
+      });
+      expect(ttsStore.closeSetupSheet).toHaveBeenCalled();
+    });
   });
 
   it('groups start collapsed when no current voice; tap expands', () => {
