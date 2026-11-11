@@ -1,7 +1,7 @@
 import {documentPlan} from '../plan';
 import {estimateDocTokens} from '../estimate';
 import {documentKey} from '../render';
-import {EXCERPT_MAX_TOKENS, type DocumentRef} from '../types';
+import {EXCERPT_MAX_TOKENS, REPLY_RESERVE, type DocumentRef} from '../types';
 import {MessageType} from '../../../utils/types';
 
 const notes: DocumentRef = {
@@ -24,7 +24,7 @@ describe('documentPlan when the chat holds no documents', () => {
   const longChat = 'plain chat text '.repeat(400);
 
   it('raises no document sheet when plain chat text alone fills the window', () => {
-    expect(estimateDocTokens(longChat)).toBeGreaterThan(2048 - 1024);
+    expect(estimateDocTokens(longChat)).toBeGreaterThan(2048 - REPLY_RESERVE);
 
     const p = documentPlan({
       rows: [plainRow],
@@ -65,16 +65,23 @@ describe('documentPlan when the chat holds no documents', () => {
   });
 
   it('never blames earlier documents whose files are gone', () => {
-    const p = documentPlan({
-      rows: [{...plainRow, documents: [notes]}],
-      message: {type: 'text', text: 'thanks'},
-      windowTokens: 2048,
-      activeModelId: 'm',
-      nonDocText: 'x'.repeat(3000),
-      missingKeys: new Set([documentKey(notes)]),
-    });
+    const planWith = (missingKeys: Set<string>) =>
+      documentPlan({
+        rows: [{...plainRow, documents: [notes]}],
+        message: {type: 'text', text: 'thanks'},
+        windowTokens: 2048,
+        activeModelId: 'm',
+        nonDocText: 'x'.repeat(4200),
+        missingKeys,
+      });
 
-    expect(p.verdict).toEqual({kind: 'fits'});
+    expect(planWith(new Set()).verdict).toMatchObject({
+      kind: 'over',
+      reason: 'history',
+    });
+    expect(planWith(new Set([documentKey(notes)])).verdict).toEqual({
+      kind: 'fits',
+    });
   });
 
   it('still blames earlier documents when they are part of what overflows', () => {
