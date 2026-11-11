@@ -417,6 +417,60 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       dateNowSpy.mockRestore();
     });
 
+    const session = (id: string, messages: MessageType.Any[]) => ({
+      id,
+      title: '',
+      date: '',
+      messages,
+      completionSettings: defaultCompletionSettings,
+      settingsSource: 'pal' as const,
+    });
+
+    it('lands a pending update in its own chat after another chat opens', () => {
+      const turn = makeAssistantTurn([{content: '', partial: true}]);
+      const other = makeAssistantTurn([{content: 'other', partial: false}]);
+      chatSessionStore.sessions = [
+        session('session1', [turn]),
+        session('session2', [{...other, id: turn.id}]),
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+
+      chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
+        content: 'reply',
+      });
+      chatSessionStore.activeSessionId = 'session2';
+      jest.advanceTimersByTime(1000);
+
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.AssistantTurn)
+          .steps[0].content,
+      ).toBe('reply');
+      expect(
+        (chatSessionStore.sessions[1].messages[0] as MessageType.AssistantTurn)
+          .steps[0].content,
+      ).toBe('other');
+    });
+
+    it('drops a pending update whose turn was removed before the timer fired', () => {
+      const turn = makeAssistantTurn([{content: '', partial: true}]);
+      chatSessionStore.sessions = [session('session1', [turn])];
+      chatSessionStore.activeSessionId = 'session1';
+      const update = chatSessionRepository.updateMessage as jest.Mock;
+      const callsBefore = update.mock.calls.length;
+
+      chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
+        content: 'late',
+      });
+      chatSessionStore.updateMessageStreaming(turn.id, 'session1', {
+        metadata: {interrupted: true},
+      } as any);
+      chatSessionStore.sessions[0].messages = [];
+      jest.advanceTimersByTime(1000);
+
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+      expect(update.mock.calls.length).toBe(callsBefore);
+    });
+
     it('#5 merges into steps[steps.length - 1] only; earlier steps untouched', () => {
       const turn = makeAssistantTurn([
         {content: 'first', partial: false},
