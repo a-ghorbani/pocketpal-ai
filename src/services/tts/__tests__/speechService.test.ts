@@ -91,5 +91,6 @@ describe('speechService', () => {
     expect(mockStart).not.toHaveBeenCalled();
     expect(mockStop).not.toHaveBeenCalled();
     expect(mockAddListener).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 });
