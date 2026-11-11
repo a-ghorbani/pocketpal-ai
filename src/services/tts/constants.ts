@@ -149,8 +149,14 @@ export const TTS_DICT_FILENAME = 'en-us.bin';
 /** Name of the Kokoro voices manifest generated locally after download. */
 export const KOKORO_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
-/** Estimated total size of the Kokoro FP32 model bundle (~330 MB including voices). */
-export const KOKORO_MODEL_ESTIMATED_BYTES = 330 * 1024 * 1024;
+/**
+ * Size of this platform's Kokoro install: weights, tokenizer, dict and every
+ * catalog voice, in whole MiB. Feeds the disk-space preflight
+ * (`estimated * 1.2`), so it must be >= the real total; `ENGINE_META.kokoro`
+ * shows it as the size label.
+ */
+export const KOKORO_MODEL_ESTIMATED_BYTES =
+  (Platform.OS === 'android' ? 107 : 330) * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Kitten (nano-fp32 variant)
