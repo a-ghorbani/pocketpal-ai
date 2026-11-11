@@ -184,6 +184,21 @@ export const createStyles = (theme: Theme) =>
     heroPreviewButton: {
       margin: 0,
     },
+    heroNetworkStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: theme.colors.surface,
+    },
+    heroNetworkStripText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      fontWeight: '600',
+      marginLeft: 6,
+    },
     heroQualityBlock: {
       marginTop: 14,
       paddingHorizontal: 2,

@@ -5,6 +5,7 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
+import {languageLabel} from '../../../services/tts';
 import {ttsStore} from '../../../store';
 
 import {HeroRow} from '../HeroRow';
@@ -47,6 +48,69 @@ describe('HeroRow', () => {
     const {getByTestId} = renderHero();
     expect(getByTestId('tts-hero-voice-name').props.children).toBe('Heart');
     expect(getByTestId('tts-hero-preview-button')).toBeTruthy();
+  });
+
+  describe('system voice', () => {
+    const systemVoice = {
+      id: 'en-us-x-sfg-network',
+      name: `${languageLabel('en-US')} · Voice 2 · sfg`,
+      engine: 'system' as const,
+      language: 'en-US',
+    };
+
+    it('shows the short label with the language in the subtitle', () => {
+      runInAction(() => {
+        ttsStore.currentVoice = systemVoice;
+      });
+      const {getByTestId, getByText, queryByTestId} = renderHero();
+
+      expect(getByTestId('tts-hero-voice-name').props.children).toBe(
+        'Voice 2 · sfg',
+      );
+      expect(
+        getByText(
+          `${l10n.en.voiceAndSpeech.engineChipSystem}  ·  ${languageLabel('en-US')}`,
+        ),
+      ).toBeTruthy();
+      expect(queryByTestId('tts-hero-network')).toBeNull();
+    });
+
+    it('shows the Needs internet strip for a network voice', () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {...systemVoice, requiresNetwork: true};
+      });
+      const {getByTestId} = renderHero();
+
+      expect(getByTestId('tts-hero-network')).toHaveTextContent(
+        l10n.en.voiceAndSpeech.systemNeedsInternet,
+      );
+    });
+
+    it('keeps a saved name without the language prefix whole', () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {...systemVoice, name: 'Ava (Enhanced)'};
+      });
+      const {getByTestId} = renderHero();
+
+      expect(getByTestId('tts-hero-voice-name').props.children).toBe(
+        'Ava (Enhanced)',
+      );
+    });
+  });
+
+  it('shows no strip or language for a neural voice', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'af_heart',
+        name: 'Heart',
+        engine: 'kokoro',
+        language: 'en-US',
+      };
+    });
+    const {queryByTestId, queryByText} = renderHero();
+
+    expect(queryByTestId('tts-hero-network')).toBeNull();
+    expect(queryByText(languageLabel('en-US'), {exact: false})).toBeNull();
   });
 
   it('preview button routes through ttsStore.preview', () => {
