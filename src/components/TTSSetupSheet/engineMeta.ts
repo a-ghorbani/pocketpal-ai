@@ -16,6 +16,7 @@ import type {EngineId} from '../../services/tts';
  * is the higher of the two platforms, rounded. Approximate, not disk
  * footprint. Phonon can't run on the x86_64 emulator: its value is the Pixel 9
  * per-launch peak less Kitten's phone-vs-emulator offset, rounded up to 50.
+ * Kokoro on Android runs int8: its value is the int8 peak measured on a phone.
  */
 export interface EngineMeta {
   /** ~MB on disk after install (0 for system). */
@@ -40,7 +41,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
   },
   kokoro: {
     sizeMb: Platform.OS === 'android' ? 107 : 330,
-    ramMb: 640,
+    ramMb: Platform.OS === 'android' ? 310 : 640,
     voices: 30,
     accent: '#6F5CD6',
     gradientFrom: 'rgba(111, 92, 214, 0.14)',

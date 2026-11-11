@@ -12,10 +12,14 @@ export const TTS_PREVIEW_SAMPLE =
 /** Minimum total RAM required to enable the TTS feature (4 GiB). */
 export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
-/** Peak runtime memory of each neural engine once loaded. */
+/**
+ * Peak runtime memory of each neural engine once loaded. Kokoro on Android
+ * runs the int8 model: its measured peak (305 MB on a phone) rounded up to
+ * 50 MB.
+ */
 export const TTS_ENGINE_RUNTIME_BYTES: Record<NeuralEngineId, number> = {
   supertonic: 500_000_000,
-  kokoro: 500_000_000,
+  kokoro: Platform.OS === 'android' ? 350_000_000 : 500_000_000,
   kitten: 200_000_000,
   phonon: 200 * 1024 * 1024,
 };

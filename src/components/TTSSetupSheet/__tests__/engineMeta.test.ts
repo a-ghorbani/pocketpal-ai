@@ -7,17 +7,28 @@ const KOKORO_INSTALL_BYTES = {
   ios: 325_532_232 + 3_497 + 3_556_124 + 30 * 522_240,
 };
 
+// Peak delta PSS of the int8 model on an Android phone (tts-memory-profile).
+const KOKORO_INT8_PEAK_BYTES = 291.08 * MiB;
+
 const loadOn = (os: 'ios' | 'android') => {
-  let loaded!: {sizeMb: number; estimatedBytes: number};
+  let loaded!: {
+    sizeMb: number;
+    ramMb: number;
+    estimatedBytes: number;
+    runtimeBytes: number;
+  };
   jest.isolateModules(() => {
     Object.defineProperty(require('react-native').Platform, 'OS', {
       configurable: true,
       get: () => os,
     });
+    const {ENGINE_META} = require('../engineMeta');
+    const constants = require('../../../services/tts/constants');
     loaded = {
-      sizeMb: require('../engineMeta').ENGINE_META.kokoro.sizeMb,
-      estimatedBytes: require('../../../services/tts/constants')
-        .KOKORO_MODEL_ESTIMATED_BYTES,
+      sizeMb: ENGINE_META.kokoro.sizeMb,
+      ramMb: ENGINE_META.kokoro.ramMb,
+      estimatedBytes: constants.KOKORO_MODEL_ESTIMATED_BYTES,
+      runtimeBytes: constants.TTS_ENGINE_RUNTIME_BYTES.kokoro,
     };
   });
   return loaded;
@@ -34,6 +45,24 @@ describe('Kokoro size per platform', () => {
       expect(sizeMb * MiB).toBe(estimatedBytes);
     },
   );
+});
+
+describe('Kokoro RAM per platform', () => {
+  it('Android counts the measured int8 peak, below the FP32 figures', () => {
+    const {ramMb, runtimeBytes} = loadOn('android');
+
+    expect(runtimeBytes).toBeGreaterThanOrEqual(KOKORO_INT8_PEAK_BYTES);
+    expect(runtimeBytes).toBeLessThan(500_000_000);
+    expect(ramMb * 1e6).toBeGreaterThanOrEqual(KOKORO_INT8_PEAK_BYTES);
+    expect(ramMb).toBeLessThan(640);
+  });
+
+  it('iOS keeps the FP32 figures', () => {
+    const {ramMb, runtimeBytes} = loadOn('ios');
+
+    expect(runtimeBytes).toBe(500_000_000);
+    expect(ramMb).toBe(640);
+  });
 });
 
 describe('Voice count label', () => {
