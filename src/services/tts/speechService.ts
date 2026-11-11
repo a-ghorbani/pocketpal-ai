@@ -1,0 +1,25 @@
+import NativeSpeechPlayback from '../../specs/NativeSpeechPlayback';
+import type {SpeechPlaybackCopy} from '../../specs/NativeSpeechPlayback';
+
+export type {SpeechPlaybackCopy};
+
+/**
+ * Asks Android to keep PocketPal in the foreground while it speaks. A refused
+ * or failed start is logged and never surfaces: speech goes on without it.
+ */
+export async function holdSpeechService(
+  copy: SpeechPlaybackCopy,
+): Promise<void> {
+  if (!NativeSpeechPlayback) {
+    return;
+  }
+  try {
+    await NativeSpeechPlayback.start(copy);
+  } catch (err) {
+    console.warn('[tts] speech service start failed:', err);
+  }
+}
+
+export function releaseSpeechService(): void {
+  NativeSpeechPlayback?.stop();
+}

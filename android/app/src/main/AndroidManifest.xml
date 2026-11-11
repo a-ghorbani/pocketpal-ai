@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
@@ -64,6 +66,11 @@
         <service
             android:name="com.pocketpal.download.DownloadJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
+        <service
+            android:name="com.pocketpal.speech.SpeechPlaybackService"
+            android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->
