@@ -539,4 +539,33 @@ describe('KokoroEngine', () => {
       });
     });
   });
+
+  describe('Mandarin voices', () => {
+    const isMandarin = (voice: {id: string}) => voice.id.startsWith('z');
+
+    it('keeps an English voice first, Mandarin voices last', () => {
+      expect(KOKORO_VOICES[0]!.id).toBe('af_heart');
+      const firstMandarin = KOKORO_VOICES.findIndex(isMandarin);
+      expect(KOKORO_VOICES.slice(firstMandarin).every(isMandarin)).toBe(true);
+      expect(
+        KOKORO_VOICES.filter(isMandarin).every(v => v.language === 'zh'),
+      ).toBe(true);
+    });
+
+    it('registers the Mandarin G2P whenever the catalog has a Mandarin voice', () => {
+      let registered = false;
+      let voices: Array<{id: string}> = [];
+      jest.isolateModules(() => {
+        jest.doMock('@pocketpalai/react-native-speech/zh', () => {
+          registered = true;
+          return {};
+        });
+        voices = require('../voices').KOKORO_VOICES;
+        require('..');
+      });
+      jest.dontMock('@pocketpalai/react-native-speech/zh');
+
+      expect(registered || !voices.some(isMandarin)).toBe(true);
+    });
+  });
 });

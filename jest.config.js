@@ -95,6 +95,8 @@ module.exports = {
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
     '^@pocketpalai/react-native-speech$':
       '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech.ts',
+    '^@pocketpalai/react-native-speech/zh$':
+      '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech-zh.ts',
     '^@pocketpalai/react-native-speech-phonon$':
       '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech-phonon.ts',
     '^react-native-iap$': '<rootDir>/__mocks__/external/react-native-iap.ts',
