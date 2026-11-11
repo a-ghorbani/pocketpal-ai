@@ -1,19 +1,34 @@
 import Speech from '@pocketpalai/react-native-speech';
+import type {VoiceProps} from '@pocketpalai/react-native-speech';
 
 import type {Voice} from '../../types';
 
+/** Android-only fields; `undefined` means the engine did not say. */
+type OsVoice = VoiceProps & {
+  networkConnectionRequired?: boolean;
+  notInstalled?: boolean;
+};
+
 /**
- * Fetch the OS-provided voice catalog and map it onto our generic `Voice`
- * shape. Lives in its own file so v2 can grow filtering/sorting helpers
- * (e.g., "only English voices", "group by quality") without touching
- * `SystemEngine`.
+ * The OS voice catalog as the picker shows it. Android speaks with the last
+ * voice whose name matches the id, so a repeated id keeps its last entry.
  */
 export const getSystemVoices = async (): Promise<Voice[]> => {
-  const voices = await Speech.getAvailableVoices();
-  return voices.map(v => ({
-    id: v.identifier,
-    name: v.name ?? v.identifier,
-    engine: 'system',
-    language: v.language,
-  }));
+  const osVoices: OsVoice[] = await Speech.getAvailableVoices();
+  const lastById = new Map<string, OsVoice>();
+  for (const voice of osVoices) {
+    lastById.delete(voice.identifier);
+    lastById.set(voice.identifier, voice);
+  }
+  return [...lastById.values()]
+    .filter(voice => voice.notInstalled !== true)
+    .map(voice => ({
+      id: voice.identifier,
+      name: voice.name ?? voice.identifier,
+      engine: 'system',
+      language: voice.language,
+      ...(voice.networkConnectionRequired === true
+        ? {requiresNetwork: true}
+        : {}),
+    }));
 };

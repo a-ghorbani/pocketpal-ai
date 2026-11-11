@@ -106,6 +106,83 @@ describe('VoicePickerView', () => {
     });
   });
 
+  describe('System voices with availability fields', () => {
+    const withFields = (
+      voices: typeof ANDROID_SYSTEM_VOICES,
+      fields: (name: string) => Record<string, boolean>,
+    ) => voices.map(v => ({...v, ...fields(v.name)}));
+
+    it('puts network voices under one Needs internet header and says so per row', async () => {
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(
+        withFields(ANDROID_SYSTEM_VOICES, name => ({
+          networkConnectionRequired: name.endsWith('-network'),
+          notInstalled: false,
+        })),
+      );
+      const {findByTestId, getByTestId, getAllByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+
+      expect(getAllByTestId(/^tts-system-network-header-/)).toHaveLength(1);
+      expect(getByTestId('tts-system-network-header-en-us')).toBeTruthy();
+      const rows = getAllByTestId(/^tts-voice-row-system-/);
+      expect(rows.map(r => r.props.testID)).toEqual([
+        'tts-voice-row-system-en-us-x-sfg-local',
+        'tts-voice-row-system-en-us-x-sfg-network',
+      ]);
+      expect(rows[0]!.props.accessibilityLabel).not.toMatch(/Needs internet/);
+      expect(rows[1]!.props.accessibilityLabel).toMatch(/, Needs internet$/);
+    });
+
+    it('carries requiresNetwork into the current voice only for a network voice', async () => {
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(
+        withFields(ANDROID_SYSTEM_VOICES, name => ({
+          networkConnectionRequired: name.endsWith('-network'),
+          notInstalled: false,
+        })),
+      );
+      const {findByTestId, getByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+      fireEvent.press(getByTestId('tts-voice-row-system-en-us-x-sfg-network'));
+
+      expect(ttsStore.setCurrentVoice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'en-us-x-sfg-network',
+          requiresNetwork: true,
+        }),
+      );
+    });
+
+    it('leaves out voices that are not installed', async () => {
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(
+        withFields(ANDROID_SYSTEM_VOICES, name => ({
+          networkConnectionRequired: false,
+          notInstalled: name.endsWith('-network'),
+        })),
+      );
+      const {findByTestId, getAllByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+
+      expect(
+        getAllByTestId(/^tts-voice-row-system-/).map(r => r.props.testID),
+      ).toEqual(['tts-voice-row-system-en-us-x-sfg-local']);
+    });
+
+    it('shows no Needs internet header when the engine does not report it', async () => {
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(
+        ANDROID_SYSTEM_VOICES,
+      );
+      const {findByTestId, queryAllByTestId, getAllByTestId} = renderView();
+
+      fireEvent.press(await findByTestId('tts-engine-group-toggle-system'));
+
+      expect(getAllByTestId(/^tts-voice-row-system-/)).toHaveLength(2);
+      expect(queryAllByTestId(/^tts-system-network-header-/)).toHaveLength(0);
+    });
+  });
+
   it('groups start collapsed when no current voice; tap expands', () => {
     const {getByTestId, queryByTestId} = renderView();
     // Collapsed → install button not rendered yet.
@@ -160,6 +237,7 @@ describe('VoicePickerView', () => {
         'tts-engine-group-kitten',
         'tts-engine-group-kokoro',
         'tts-engine-group-supertonic',
+        'tts-engine-group-system',
       ]);
       fireEvent.press(getByTestId('tts-engine-group-toggle-phonon'));
       expect(getByTestId('tts-phonon-credit')).toBeTruthy();
@@ -177,6 +255,7 @@ describe('VoicePickerView', () => {
         'tts-engine-group-kitten',
         'tts-engine-group-kokoro',
         'tts-engine-group-supertonic',
+        'tts-engine-group-system',
       ]);
 
       expect(queryByTestId('tts-engine-group-phonon')).toBeNull();

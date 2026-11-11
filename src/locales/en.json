@@ -1637,6 +1637,7 @@
     "engineRetryCta": "Try again",
     "voicesEmptyState": "No voices found.",
     "kokoroDeviceNote": "Some voices may not work on all devices.",
+    "systemNeedsInternet": "Needs internet",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   },
   "voiceInput": {

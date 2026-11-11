@@ -243,6 +243,39 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '700',
     },
 
+    // System voice group (used by SystemVoiceGroup)
+    systemBand: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.surfaceVariant,
+      paddingHorizontal: 14,
+      minHeight: 34,
+      marginTop: 8,
+    },
+    systemBandTitle: {
+      color: theme.colors.onSurface,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    systemSubHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingTop: 10,
+      paddingBottom: 2,
+    },
+    systemSubHeaderText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    systemIconGap: {
+      marginLeft: 4,
+    },
+
     voicesEmptyHint: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12.5,

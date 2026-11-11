@@ -34,6 +34,8 @@ export interface Voice {
   language?: string;
   /** Optional gender hint for UI grouping. */
   gender?: 'f' | 'm';
+  /** Set only for a system voice whose engine reports it needs a network connection. */
+  requiresNetwork?: true;
 }
 
 export interface SpeakOptions {
