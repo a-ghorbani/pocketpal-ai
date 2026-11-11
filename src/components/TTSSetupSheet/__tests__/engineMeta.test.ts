@@ -35,3 +35,14 @@ describe('Kokoro size per platform', () => {
     },
   );
 });
+
+describe('Voice count label', () => {
+  it('matches the Kokoro catalog', () => {
+    const {ENGINE_META} = require('../engineMeta');
+    const {
+      KOKORO_VOICES,
+    } = require('../../../services/tts/engines/kokoro/voices');
+
+    expect(ENGINE_META.kokoro.voices).toBe(KOKORO_VOICES.length);
+  });
+});
