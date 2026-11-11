@@ -1,12 +1,13 @@
 import React from 'react';
+import {AppState, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 import Speech from '@pocketpalai/react-native-speech';
 
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {act, fireEvent, render, within} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
-import {languageLabel} from '../../../services/tts';
+import {getPhoneLocale, languageLabel} from '../../../services/tts';
 import {ttsStore} from '../../../store';
 
 import {VoicePickerView} from '../VoicePickerView';
@@ -14,12 +15,27 @@ import {VoicePickerView} from '../VoicePickerView';
 jest.mock('../engineMeta', () => {
   let androidMeta: unknown;
   jest.isolateModules(() => {
-    const {Platform} = require('react-native');
-    Platform.OS = 'android';
+    const ReactNative = require('react-native');
+    ReactNative.Platform.OS = 'android';
     androidMeta = jest.requireActual('../engineMeta');
   });
   return androidMeta;
 });
+
+jest.mock('../../../services/tts/engines/system/phoneLocale', () => ({
+  getPhoneLocale: jest.fn(() => undefined),
+}));
+
+const appStateHandlers: Array<(state: string) => void> = [];
+const appStateRemove = jest.fn();
+jest
+  .spyOn(AppState, 'addEventListener')
+  .mockImplementation((event: string, handler: any) => {
+    if (event === 'change') {
+      appStateHandlers.push(handler);
+    }
+    return {remove: appStateRemove} as any;
+  });
 
 // Google TTS voices from a Redmi 12C (Android 14), in the shape the speech
 // library's Android getAvailableVoices returns them.
@@ -181,6 +197,246 @@ describe('VoicePickerView', () => {
 
       expect(getAllByTestId(/^tts-voice-row-system-/)).toHaveLength(2);
       expect(queryAllByTestId(/^tts-system-network-header-/)).toHaveLength(0);
+    });
+  });
+
+  describe('System group', () => {
+    const originalOS = Platform.OS;
+    const mockVoices = (voices: object[]) =>
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValue(voices);
+    const googleVoice = (name: string, language: string) => ({
+      quality: 'Enhanced',
+      name,
+      identifier: name,
+      language,
+      networkConnectionRequired: name.endsWith('-network'),
+      notInstalled: false,
+    });
+    const MIXED_CATALOG = [
+      googleVoice('en-us-x-sfg-local', 'en-US'),
+      googleVoice('en-us-x-sfg-network', 'en-US'),
+      googleVoice('en-gb-x-gba-local', 'en-GB'),
+      googleVoice('de-de-x-deb-local', 'de-DE'),
+      googleVoice('de-de-x-deb-network', 'de-DE'),
+    ];
+    const testIDs = (nodes: Array<{props: {testID?: string}}>) =>
+      nodes.map(n => n.props.testID);
+
+    const openSystemGroup = async () => {
+      const view = renderView();
+      fireEvent.press(
+        await view.findByTestId('tts-engine-group-toggle-system'),
+      );
+      return view;
+    };
+
+    beforeEach(() => {
+      appStateHandlers.length = 0;
+      Platform.OS = 'android';
+      (getPhoneLocale as jest.Mock).mockReturnValue(undefined);
+      mockVoices(MIXED_CATALOG);
+    });
+
+    afterEach(() => {
+      Platform.OS = originalOS;
+      (Speech.getAvailableVoices as jest.Mock).mockReset();
+      (Speech.getAvailableVoices as jest.Mock).mockResolvedValue([]);
+    });
+
+    it('opens with the voice-mode hint and the Languages field above the first band', async () => {
+      const {getByText, getByTestId, getAllByTestId, queryByText} =
+        await openSystemGroup();
+
+      expect(
+        getByText(l10n.en.voiceAndSpeech.systemVoiceModeHint),
+      ).toBeTruthy();
+      const field = getByTestId('tts-system-language-button');
+      expect(field.props.accessibilityLabel).toBe(
+        'Languages: \u2068English\u2069',
+      );
+      expect(
+        testIDs(
+          getAllByTestId(/^tts-system-(language-button|section-|get-voices$)/),
+        ),
+      ).toEqual([
+        'tts-system-language-button',
+        'tts-system-section-en-gb',
+        'tts-system-section-en-us',
+        'tts-system-get-voices',
+      ]);
+      expect(queryByText(/Show all languages/)).toBeNull();
+    });
+
+    it('labels rows short and heads a mixed locale with On this phone and Needs internet', async () => {
+      const {getByTestId, getByText, queryByTestId} = await openSystemGroup();
+
+      const row = getByTestId('tts-voice-row-system-en-us-x-sfg-local');
+      expect(within(row).getByText('Voice 1 · sfg')).toBeTruthy();
+      expect(getByTestId('tts-system-network-header-en-us')).toBeTruthy();
+      expect(queryByTestId('tts-system-network-header-en-gb')).toBeNull();
+      expect(
+        getByText(l10n.en.voiceAndSpeech.systemOnDeviceSection),
+      ).toBeTruthy();
+    });
+
+    it('lists the phone language first', async () => {
+      (getPhoneLocale as jest.Mock).mockReturnValue('de_DE');
+      const {getByTestId, getAllByTestId} = await openSystemGroup();
+
+      expect(
+        getByTestId('tts-system-language-button').props.accessibilityLabel,
+      ).toBe('Languages: \u2068Deutsch\u2069, \u2068English\u2069');
+      expect(testIDs(getAllByTestId(/^tts-system-section-/))).toEqual([
+        'tts-system-section-de-de',
+        'tts-system-section-en-gb',
+        'tts-system-section-en-us',
+      ]);
+    });
+
+    it('shows only the picked language, and keeps it when the group collapses', async () => {
+      const {getByTestId, getAllByTestId} = await openSystemGroup();
+
+      fireEvent.press(getByTestId('tts-system-language-button'));
+      expect(getByTestId('tts-system-language-option-en')).toBeTruthy();
+      fireEvent.press(getByTestId('tts-system-language-option-de'));
+
+      expect(testIDs(getAllByTestId(/^tts-system-section-/))).toEqual([
+        'tts-system-section-de-de',
+      ]);
+      fireEvent.press(getByTestId('tts-engine-group-toggle-system'));
+      fireEvent.press(getByTestId('tts-engine-group-toggle-system'));
+      expect(testIDs(getAllByTestId(/^tts-system-section-/))).toEqual([
+        'tts-system-section-de-de',
+      ]);
+    });
+
+    it("shows the current system voice's language and checks its row", async () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'de-de-x-deb-local',
+          name: 'Deutsch (DE) · Voice 1 · deb',
+          engine: 'system',
+          language: 'de-DE',
+        };
+      });
+      const {findByTestId} = renderView();
+
+      const row = await findByTestId('tts-voice-row-system-de-de-x-deb-local');
+      expect(row.props.accessibilityState).toEqual(
+        expect.objectContaining({checked: true}),
+      );
+    });
+
+    it('offers Get more voices for a shown language with none installed, and opens the installer', async () => {
+      (getPhoneLocale as jest.Mock).mockReturnValue('zh_CN_#Hans');
+      const {getByTestId, getByText} = await openSystemGroup();
+
+      expect(
+        getByText('No \u2068中文\u2069 voices on this phone yet.'),
+      ).toBeTruthy();
+      fireEvent.press(getByTestId('tts-system-get-voices-zh'));
+      fireEvent.press(getByTestId('tts-system-get-voices'));
+      expect(Speech.openVoiceDataInstaller).toHaveBeenCalledTimes(2);
+    });
+
+    it('only logs when the installer is unavailable', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (Speech.openVoiceDataInstaller as jest.Mock).mockRejectedValueOnce(
+        new Error('UNSUPPORTED_OPERATION'),
+      );
+      const {getByTestId} = await openSystemGroup();
+
+      await act(async () => {
+        fireEvent.press(getByTestId('tts-system-get-voices'));
+      });
+
+      expect(warn).toHaveBeenCalledWith(
+        '[SystemVoiceGroup] voice installer failed:',
+        expect.any(Error),
+      );
+      warn.mockRestore();
+    });
+
+    it('keeps the empty state and Get more voices when the phone lists no voice', async () => {
+      mockVoices([]);
+      const {getByTestId, getByText, queryByTestId} = await openSystemGroup();
+
+      expect(getByText(l10n.en.voiceAndSpeech.voicesEmptyState)).toBeTruthy();
+      expect(getByTestId('tts-system-get-voices')).toBeTruthy();
+      expect(queryByTestId('tts-system-language-button')).toBeNull();
+    });
+
+    it('shows the Settings hint instead of Get more voices on iOS', async () => {
+      Platform.OS = 'ios';
+      mockVoices([
+        {
+          identifier: 'a',
+          name: 'Samantha',
+          language: 'en-US',
+          quality: 'Default',
+        },
+      ]);
+      const {getByText, queryByTestId, queryAllByTestId} =
+        await openSystemGroup();
+
+      expect(
+        getByText(l10n.en.voiceAndSpeech.systemIosSettingsHint),
+      ).toBeTruthy();
+      expect(queryByTestId('tts-system-get-voices')).toBeNull();
+      expect(queryAllByTestId(/^tts-system-network-header-/)).toHaveLength(0);
+    });
+
+    it('re-reads the voices when the app returns, without loading an engine', async () => {
+      const {findByTestId, getByTestId} = await openSystemGroup();
+      mockVoices([...MIXED_CATALOG, googleVoice('en-us-x-iob-local', 'en-US')]);
+
+      await act(async () => {
+        appStateHandlers.forEach(h => h('active'));
+      });
+
+      expect(
+        await findByTestId('tts-voice-row-system-en-us-x-iob-local'),
+      ).toBeTruthy();
+      expect(
+        getByTestId('tts-voice-row-system-en-us-x-sfg-local'),
+      ).toBeTruthy();
+      expect(Speech.getAvailableVoices).toHaveBeenCalledTimes(2);
+      expect(Speech.initialize).not.toHaveBeenCalled();
+    });
+
+    it('applies only the latest read, and none after unmount', async () => {
+      const pending: Array<(voices: object[]) => void> = [];
+      (Speech.getAvailableVoices as jest.Mock).mockImplementation(
+        () => new Promise(resolve => pending.push(resolve)),
+      );
+      const {getByTestId, queryByTestId, unmount} = renderView();
+      fireEvent.press(getByTestId('tts-engine-group-toggle-system'));
+
+      act(() => {
+        appStateHandlers.forEach(h => h('active'));
+      });
+      await act(async () => {
+        pending[1]!([googleVoice('en-us-x-iob-local', 'en-US')]);
+      });
+      await act(async () => {
+        pending[0]!([googleVoice('en-us-x-sfg-local', 'en-US')]);
+      });
+
+      expect(
+        getByTestId('tts-voice-row-system-en-us-x-iob-local'),
+      ).toBeTruthy();
+      expect(
+        queryByTestId('tts-voice-row-system-en-us-x-sfg-local'),
+      ).toBeNull();
+
+      act(() => {
+        appStateHandlers.forEach(h => h('active'));
+      });
+      unmount();
+      await act(async () => {
+        pending[2]!([]);
+      });
+      expect(appStateRemove).toHaveBeenCalled();
     });
   });
 

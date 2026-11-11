@@ -1640,6 +1640,14 @@
     "systemNeedsInternet": "Needs internet",
     "systemVoiceNumber": "Voice {{number}}",
     "systemQualityEnhanced": "Enhanced",
+    "systemVoiceModeHint": "System voices can't speak in voice mode.",
+    "systemOnDeviceSection": "On this phone",
+    "systemLanguagesLabel": "Languages",
+    "systemGetMoreVoices": "Get more voices",
+    "systemNoVoicesForLanguage": "No {{language}} voices on this phone yet.",
+    "systemIosSettingsHint": "Add voices in Settings > Accessibility > Spoken Content > Voices.",
+    "systemLanguageSheetTitle": "Voice language",
+    "systemLanguageSearchPlaceholder": "Search languages",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   },
   "voiceInput": {

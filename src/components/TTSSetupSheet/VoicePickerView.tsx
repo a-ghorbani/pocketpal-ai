@@ -1,6 +1,7 @@
 import React, {useContext, useEffect, useMemo, useState} from 'react';
 import {
   Alert,
+  AppState,
   LayoutAnimation,
   Platform,
   StyleSheet,
@@ -37,6 +38,7 @@ import {
   KITTEN_MODEL_ESTIMATED_BYTES,
   PHONON_MODEL_ESTIMATED_BYTES,
   PHONON_VOICES,
+  getPhoneLocale,
   getSystemVoices,
 } from '../../services/tts';
 import type {
@@ -237,7 +239,13 @@ export const VoicePickerView: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
-  const [systemVoices, setSystemVoices] = useState<Voice[]>([]);
+  const [systemCatalog, setSystemCatalog] = useState<{
+    voices: Voice[];
+    phoneLocale?: string;
+  }>({voices: []});
+  const [pickedSystemLanguage, setPickedSystemLanguage] = useState<
+    string | null
+  >(null);
   const [expanded, setExpanded] = useState<Set<EngineId>>(() => {
     const active = ttsStore.currentVoice?.engine;
     return new Set(active ? [active] : []);
@@ -263,19 +271,38 @@ export const VoicePickerView: React.FC = observer(() => {
   };
 
   useEffect(() => {
-    getSystemVoices(l10n.voiceAndSpeech)
-      .then(vs => setSystemVoices(vs))
-      .catch(err => {
-        console.warn('[VoicePickerView] system voices failed:', err);
-      });
+    let latestRead = 0;
+    let mounted = true;
+    const readSystemVoices = () => {
+      const read = ++latestRead;
+      getSystemVoices(l10n.voiceAndSpeech)
+        .then(voices => {
+          if (mounted && read === latestRead) {
+            setSystemCatalog({voices, phoneLocale: getPhoneLocale()});
+          }
+        })
+        .catch(err => {
+          console.warn('[VoicePickerView] system voices failed:', err);
+        });
+    };
+    readSystemVoices();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        readSystemVoices();
+      }
+    });
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
   }, [l10n]);
 
   const voicesByEngine = useMemo(() => {
     return {
       ...VOICES_BY_ENGINE,
-      system: systemVoices,
+      system: systemCatalog.voices,
     };
-  }, [systemVoices]);
+  }, [systemCatalog]);
 
   const selectedKey = ttsStore.currentVoice
     ? `${ttsStore.currentVoice.engine}:${ttsStore.currentVoice.id}`
@@ -567,7 +594,15 @@ export const VoicePickerView: React.FC = observer(() => {
             </View>
           </View>
         </TouchableRipple>
-        {isExpanded ? (
+        {isExpanded && engineId === 'system' ? (
+          <SystemVoiceGroup
+            voices={voices}
+            phoneLocale={systemCatalog.phoneLocale}
+            pickedLanguage={pickedSystemLanguage}
+            onPickLanguage={setPickedSystemLanguage}
+            renderRow={renderSystemRow}
+          />
+        ) : isExpanded ? (
           ready ? (
             voices.length > 0 ? (
               <>
@@ -583,14 +618,7 @@ export const VoicePickerView: React.FC = observer(() => {
                     {renderPhononCredit()}
                   </View>
                 ) : null}
-                {engineId === 'system' ? (
-                  <SystemVoiceGroup
-                    voices={voices}
-                    renderRow={renderSystemRow}
-                  />
-                ) : (
-                  voices.map(voice => renderVoiceRow(voice))
-                )}
+                {voices.map(voice => renderVoiceRow(voice))}
               </>
             ) : (
               <View style={styles.engineGroupBody}>
