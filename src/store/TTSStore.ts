@@ -33,6 +33,7 @@ import type {
 } from '../services/tts';
 import {
   holdSpeechService,
+  onSpeechServiceStop,
   releaseSpeechService,
 } from '../services/tts/speechService';
 import {
@@ -319,6 +320,12 @@ export class TTSStore {
         }
       },
     );
+
+    onSpeechServiceStop(() => {
+      if (this.speechServiceWanted) {
+        this.stop('notification');
+      }
+    });
 
     reaction(
       () => this.playbackState.mode === 'idle',

@@ -182,10 +182,17 @@ jest.mock('../../services/tts', () => {
 
 const mockHoldSpeechService = jest.fn().mockResolvedValue(undefined);
 const mockReleaseSpeechService = jest.fn();
+const speechServiceStopListeners: Array<() => void> = [];
 jest.mock('../../services/tts/speechService', () => ({
   holdSpeechService: (copy: unknown) => mockHoldSpeechService(copy),
   releaseSpeechService: () => mockReleaseSpeechService(),
+  onSpeechServiceStop: (listener: () => void) => {
+    speechServiceStopListeners.push(listener);
+    return () => {};
+  },
 }));
+const tapNotificationStop = () =>
+  speechServiceStopListeners[speechServiceStopListeners.length - 1]();
 
 // Import after mocks
 import {TTSStore} from '../TTSStore';
@@ -1234,6 +1241,45 @@ describe('TTSStore', () => {
       finishPlay();
       await played;
       releaseSpy.mockRestore();
+    });
+
+    it('notification Stop stops chat speech like the in-app Stop', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      tapNotificationStop();
+      await flush();
+
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+      expect(store.autoSpeakEnabled).toBe(true);
+    });
+
+    it('notification Stop is ignored while a voice reply speaks', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+      store.onAssistantMessageStart('msg-1');
+
+      tapNotificationStop();
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+    });
+
+    it('notification Stop does nothing when nothing speaks', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockSystemStop.mockClear();
+
+      tapNotificationStop();
+      await flush();
+
+      expect(mockSystemStop).not.toHaveBeenCalled();
     });
 
     it('still stops and releases a voice reply when the app goes to the background', async () => {

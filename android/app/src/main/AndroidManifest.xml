@@ -73,6 +73,10 @@
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
 
+        <receiver
+            android:name="com.pocketpal.speech.SpeechPlaybackStopReceiver"
+            android:exported="false" />
+
         <!-- Optional native library for OpenCL (GPU acceleration) -->
         <uses-native-library
             android:name="libOpenCL.so"

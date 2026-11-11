@@ -40,6 +40,10 @@ class SpeechPlaybackService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        SpeechPlayback.requestStop()
+    }
+
     private fun notification(copy: SpeechPlaybackCopy): Notification {
         val appName = getString(R.string.app_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -54,10 +58,21 @@ class SpeechPlaybackService : Service() {
         val openApp = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
         }
+        val stop = PendingIntent.getBroadcast(
+            this,
+            0,
+            Intent(this, SpeechPlaybackStopReceiver::class.java),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(copy.title.ifBlank { appName })
             .setContentIntent(openApp)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                copy.stopLabel.ifBlank { getString(android.R.string.cancel) },
+                stop,
+            )
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)

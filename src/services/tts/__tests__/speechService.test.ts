@@ -9,7 +9,16 @@ jest.mock('../../../specs/NativeSpeechPlayback', () => ({
   },
 }));
 
-import {holdSpeechService, releaseSpeechService} from '../speechService';
+import {NativeEventEmitter} from 'react-native';
+
+import {
+  holdSpeechService,
+  onSpeechServiceStop,
+  releaseSpeechService,
+} from '../speechService';
+
+const mockRemove = jest.fn();
+const mockAddListener = NativeEventEmitter.prototype.addListener as jest.Mock;
 
 const COPY = {
   title: 'PocketPal is speaking',
@@ -23,6 +32,7 @@ describe('speechService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNative = {start: mockStart, stop: mockStop};
+    mockAddListener.mockReturnValue({remove: mockRemove});
     warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
@@ -58,13 +68,28 @@ describe('speechService', () => {
     expect(mockStop).toHaveBeenCalledTimes(1);
   });
 
+  it('subscribes to the Stop event and unsubscribes', () => {
+    const listener = jest.fn();
+
+    const unsubscribe = onSpeechServiceStop(listener);
+    expect(mockAddListener).toHaveBeenCalledWith(
+      'speechPlaybackStop',
+      listener,
+    );
+
+    unsubscribe();
+    expect(mockRemove).toHaveBeenCalledTimes(1);
+  });
+
   it('does nothing where the module does not exist (iOS)', async () => {
     mockNative = null;
 
     await holdSpeechService(COPY);
     releaseSpeechService();
+    onSpeechServiceStop(jest.fn())();
 
     expect(mockStart).not.toHaveBeenCalled();
     expect(mockStop).not.toHaveBeenCalled();
+    expect(mockAddListener).not.toHaveBeenCalled();
   });
 });

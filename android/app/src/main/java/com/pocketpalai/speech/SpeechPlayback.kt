@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.facebook.react.bridge.ReactApplicationContext
+import java.lang.ref.WeakReference
 
 data class SpeechPlaybackCopy(val title: String, val stopLabel: String, val channelName: String)
 
@@ -13,8 +15,11 @@ data class SpeechPlaybackCopy(val title: String, val stopLabel: String, val chan
  * a reload never loses track of a running service. Main thread only.
  */
 internal object SpeechPlayback {
+    const val STOP_EVENT = "speechPlaybackStop"
+
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var context: Context
+    private var reactContext = WeakReference<ReactApplicationContext>(null)
 
     var copy = SpeechPlaybackCopy("", "", "")
         private set
@@ -38,8 +43,23 @@ internal object SpeechPlayback {
         }
     })
 
-    fun attach(appContext: Context) {
-        context = appContext
+    fun attach(react: ReactApplicationContext) {
+        context = react.applicationContext
+        reactContext = WeakReference(react)
+    }
+
+    fun detach(react: ReactApplicationContext) {
+        if (reactContext.get() === react) {
+            reactContext.clear()
+        }
+    }
+
+    /** The user asked to stop: tell JS, which stops speech and then the service. */
+    fun requestStop() {
+        val react = reactContext.get() ?: return
+        if (react.hasActiveReactInstance()) {
+            react.emitDeviceEvent(STOP_EVENT)
+        }
     }
 
     fun start(copy: SpeechPlaybackCopy) {

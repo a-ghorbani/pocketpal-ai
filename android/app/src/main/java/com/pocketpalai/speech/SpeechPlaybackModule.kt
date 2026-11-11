@@ -12,7 +12,7 @@ class SpeechPlaybackModule(reactContext: ReactApplicationContext) :
     NativeSpeechPlaybackSpec(reactContext) {
 
     init {
-        SpeechPlayback.attach(reactContext.applicationContext)
+        SpeechPlayback.attach(reactContext)
     }
 
     override fun addListener(eventName: String) = Unit
@@ -40,7 +40,11 @@ class SpeechPlaybackModule(reactContext: ReactApplicationContext) :
     }
 
     override fun invalidate() {
-        UiThreadUtil.runOnUiThread { SpeechPlayback.controller.stop(lingerMs = 0) }
+        val react = reactApplicationContext
+        UiThreadUtil.runOnUiThread {
+            SpeechPlayback.detach(react)
+            SpeechPlayback.controller.stop(lingerMs = 0)
+        }
         super.invalidate()
     }
 
