@@ -9,6 +9,7 @@ import {
 import {
   EXCERPT_MAX_TOKENS,
   FULL_TOTAL_MAX_TOKENS,
+  REPLY_RESERVE,
   type DocumentRef,
 } from '../types';
 import {MessageType} from '../../../utils/types';
@@ -100,7 +101,7 @@ describe('documentPlan', () => {
   it('is over for the new message when even one passage does not fit', () => {
     const p = plan({
       windowTokens: 2048,
-      nonDocText: 'x'.repeat(920 * 3),
+      nonDocText: 'x'.repeat(1400 * 3),
       documents: [{...ref('file', 900), kind: 'text', pageCount: undefined}],
     });
     expect(p.newModes).toEqual(['searched']);
@@ -108,15 +109,29 @@ describe('documentPlan', () => {
     expect(p.verdict).toMatchObject({kind: 'over', reason: 'new'});
   });
 
-  it('degrades to a smaller excerpt budget on a default 2048 window', () => {
+  it('keeps most of a default 2048 window for excerpts after the reply reserve', () => {
+    const prompt = 'x'.repeat(120 * 3);
     const p = plan({
       windowTokens: 2048,
-      nonDocText: 'summarise the method',
+      nonDocText: prompt,
       documents: [ref('paper', 30000, {pageCount: 60})],
     });
     expect(p.newModes).toEqual(['searched']);
-    expect(p.excerptBudget).toBeGreaterThan(900);
-    expect(p.excerptBudget).toBeLessThan(1024);
+    expect(p.excerptBudget).toBe(
+      2048 - REPLY_RESERVE - estimateDocTokens(prompt) - p.fullLoad,
+    );
+    expect(p.excerptBudget).toBeGreaterThan(1300);
+    expect(p.excerptBudget).toBeLessThan(1400);
+    expect(p.verdict.kind).toBe('fits');
+  });
+
+  it('keeps a document of about 1,200 tokens in full on a 2048 window', () => {
+    const p = plan({
+      windowTokens: 2048,
+      nonDocText: 'x'.repeat(100 * 3),
+      documents: [ref('report', 1200)],
+    });
+    expect(p.newModes).toEqual(['full']);
     expect(p.verdict.kind).toBe('fits');
   });
 
@@ -132,7 +147,7 @@ describe('documentPlan', () => {
 
   it('demotes new full documents in reverse attach order when room is short', () => {
     const p = plan({
-      windowTokens: 2900,
+      windowTokens: 2400,
       documents: [ref('a', 900), ref('b', 900), ref('big', 60000)],
     });
     expect(p.newModes).toEqual(['full', 'searched', 'searched']);
@@ -143,7 +158,7 @@ describe('documentPlan', () => {
     const searched = ref('old', 60000, {mode: 'searched'});
     const p = plan({
       windowTokens: 2048,
-      nonDocText: 'x'.repeat(2700),
+      nonDocText: 'x'.repeat(4200),
       rows: [row([searched])],
     });
     expect(p.verdict).toMatchObject({kind: 'over', reason: 'history'});

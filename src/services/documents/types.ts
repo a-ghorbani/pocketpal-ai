@@ -58,7 +58,7 @@ export const MAX_TEXT_DOCUMENT_BYTES = 3_000_000;
 export const MAX_RANGE_PAGES = 500;
 export const MAX_DOCUMENT_CHARS = 1_000_000;
 export const MAX_DOCUMENTS_PER_MESSAGE = 5;
-export const REPLY_RESERVE = 1024;
+export const REPLY_RESERVE = 512;
 
 export const FULL_DOC_MAX_TOKENS = 2048;
 export const FULL_TOTAL_MAX_TOKENS = 2048;

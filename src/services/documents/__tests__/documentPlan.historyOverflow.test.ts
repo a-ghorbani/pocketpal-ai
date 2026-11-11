@@ -82,7 +82,7 @@ describe('documentPlan when the chat holds no documents', () => {
       ...notes,
       id: 'earlier-0000-0000',
       name: 'earlier.md',
-      tokenEstimate: 900,
+      tokenEstimate: 1500,
     };
     const p = documentPlan({
       rows: [{...plainRow, documents: [earlier]}],
@@ -97,7 +97,7 @@ describe('documentPlan when the chat holds no documents', () => {
   });
 
   describe('when plain chat text alone already overflows', () => {
-    const plain = 'x'.repeat(3100);
+    const plain = 'x'.repeat(4800);
     const planFor = (documents: DocumentRef[]) =>
       documentPlan({
         rows: [plainRow],
