@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.pocketpal.R
 
 /**
  * Keeps the process in the foreground scheduling group while PocketPal speaks,
@@ -21,11 +22,12 @@ class SpeechPlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = notification(SpeechPlayback.copy)
         try {
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
-                notification(SpeechPlayback.copy),
+                notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
             )
         } catch (e: Exception) {
@@ -39,9 +41,14 @@ class SpeechPlaybackService : Service() {
     }
 
     private fun notification(copy: SpeechPlaybackCopy): Notification {
+        val appName = getString(R.string.app_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, copy.channelName, NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(
+                    CHANNEL_ID,
+                    copy.channelName.ifBlank { appName },
+                    NotificationManager.IMPORTANCE_LOW,
+                ),
             )
         }
         val openApp = packageManager.getLaunchIntentForPackage(packageName)?.let {
@@ -49,7 +56,7 @@ class SpeechPlaybackService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(copy.title)
+            .setContentTitle(copy.title.ifBlank { appName })
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
