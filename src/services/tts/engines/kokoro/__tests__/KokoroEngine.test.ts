@@ -341,7 +341,7 @@ describe('KokoroEngine', () => {
 
     type Loaded = {
       engine: KokoroEngine;
-      fs: jest.Mocked<typeof RNFS>;
+      fs: Record<string, jest.Mock>;
       speech: typeof Speech;
       files: Set<string>;
       dir: string;
@@ -454,6 +454,46 @@ describe('KokoroEngine', () => {
         );
 
         await expect(kokoro.engine.isInstalled()).resolves.toBe(true);
+      });
+
+      it('deletes the old voices manifest before the first core download', async () => {
+        const kokoro = loadOn('android', FP32_INSTALL);
+        let manifestAtFirstDownload: boolean | undefined;
+        kokoro.fs.downloadFile.mockImplementation(
+          ({toFile}: {toFile: string}) => {
+            manifestAtFirstDownload ??= has(
+              kokoro,
+              KOKORO_VOICES_MANIFEST_FILENAME,
+            );
+            kokoro.files.add(toFile);
+            return {
+              jobId: 1,
+              promise: Promise.resolve({statusCode: 200, bytesWritten: 1}),
+            };
+          },
+        );
+
+        await kokoro.engine.downloadModel();
+
+        expect(manifestAtFirstDownload).toBe(false);
+        expect(has(kokoro, KOKORO_VOICES_MANIFEST_FILENAME)).toBe(true);
+      });
+
+      it('an install killed during the weights download never reads as installed', async () => {
+        const kokoro = loadOn('android', FP32_INSTALL);
+        kokoro.fs.downloadFile.mockImplementation(
+          ({toFile}: {toFile: string}) => {
+            kokoro.files.add(toFile);
+            return {jobId: 1, promise: new Promise(() => {})};
+          },
+        );
+
+        kokoro.engine.downloadModel();
+        await waitFor(() =>
+          expect(kokoro.fs.downloadFile).toHaveBeenCalledTimes(1),
+        );
+
+        await expect(kokoro.engine.isInstalled()).resolves.toBe(false);
       });
     });
 

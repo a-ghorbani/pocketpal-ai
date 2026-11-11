@@ -123,6 +123,11 @@ export class KokoroEngine implements NeuralEngine {
 
     await this.reclaimLegacySpace();
 
+    const manifestPath = this.getFilePath(KOKORO_VOICES_MANIFEST_FILENAME);
+    if (await RNFS.exists(manifestPath)) {
+      await RNFS.unlink(manifestPath);
+    }
+
     // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
     const corePhaseWeight = 0.6;
     const coreFiles = [
@@ -203,10 +208,7 @@ export class KokoroEngine implements NeuralEngine {
       baseUrl: KOKORO_VOICES_BASE_URL,
       voices: KOKORO_VOICES.map(v => v.id),
     };
-    await RNFS.writeFile(
-      this.getFilePath(KOKORO_VOICES_MANIFEST_FILENAME),
-      JSON.stringify(manifest, null, 2),
-    );
+    await RNFS.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     if (onProgress) {
       onProgress(1);
