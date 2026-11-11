@@ -40,6 +40,7 @@ export * from './MarkdownView';
 export * from './PendingIndicator';
 export * from './Menu';
 export * from './Message';
+export * from './MessageMenuButton';
 export * from './ModelsHeaderRight';
 export * from './ModelsResetDialog';
 export * from './PalGenerationSettingsSheet';

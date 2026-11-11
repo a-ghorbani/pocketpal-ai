@@ -1,0 +1,343 @@
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
+index 2bac5b1..a0c0431 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/ListRenderer.kt
+@@ -68,7 +68,9 @@ class ListRenderer(
+     // TODO: LineHeightSpan may also clip superscript/subscript glyphs that extend
+     // outside the normal line bounds. A similar "skip" strategy as for images may
+     // be needed here once super/subscript usage in practice is better understood.
+-    applyLineHeightSkippingImages(builder, start, builder.length, style.lineHeight)
++    // A quote sizes its own lines and spacers; the list's span would grow them to a
++    // full line, and only in the view, which reads spans in insertion order.
++    applyLineHeightSkippingImages(builder, start, builder.length, style.lineHeight, skipBlockquotes = true)
+ 
+     // Item spacing and external bottom margin are only handled by the root-level list
+     if (depth == 0) {
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
+index a0f37cd..e243c0c 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/NodeRenderer.kt
+@@ -112,6 +112,7 @@ class RendererFactory(
+       put(MarkdownASTNode.NodeType.ThematicBreak, ThematicBreakRenderer(config))
+       put(MarkdownASTNode.NodeType.BlankLine, BlankLineRenderer(config))
+       put(MarkdownASTNode.NodeType.Spoiler, SpoilerRenderer())
++      put(MarkdownASTNode.NodeType.Table, TableTextRenderer())
+       if (FeatureFlags.IS_MATH_ENABLED) {
+         try {
+           val mathInlineRendererClass = Class.forName("com.swmansion.enriched.markdown.renderer.MathInlineRenderer")
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
+new file mode 100644
+index 0000000..7aac7c0
+--- /dev/null
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/renderer/TableTextRenderer.kt
+@@ -0,0 +1,61 @@
++package com.swmansion.enriched.markdown.renderer
++
++import android.text.SpannableStringBuilder
++import com.swmansion.enriched.markdown.parser.MarkdownASTNode
++import com.swmansion.enriched.markdown.spans.StrongSpan
++import com.swmansion.enriched.markdown.spans.TextSpan
++import com.swmansion.enriched.markdown.utils.text.span.SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE
++
++/**
++ * Draws a table that sits inside a list item as text rows, cells joined by " | ",
++ * header row bold. Root tables get their own segment view and never reach here.
++ */
++class TableTextRenderer : NodeRenderer {
++  override fun render(
++    node: MarkdownASTNode,
++    builder: SpannableStringBuilder,
++    onLinkPress: ((String) -> Unit)?,
++    onLinkLongPress: ((String) -> Unit)?,
++    factory: RendererFactory,
++  ) {
++    if (factory.blockStyleContext.listDepth == 0) return
++    if (builder.isNotEmpty() && builder.last() != '\n') builder.append("\n")
++    renderRows(node, builder, onLinkPress, onLinkLongPress, factory)
++  }
++
++  private fun renderRows(
++    node: MarkdownASTNode,
++    builder: SpannableStringBuilder,
++    onLinkPress: ((String) -> Unit)?,
++    onLinkLongPress: ((String) -> Unit)?,
++    factory: RendererFactory,
++  ) {
++    for (child in node.children) {
++      if (child.type != MarkdownASTNode.NodeType.TableRow) {
++        renderRows(child, builder, onLinkPress, onLinkLongPress, factory)
++        continue
++      }
++      val rowStart = builder.length
++      child.children.forEachIndexed { index, cell ->
++        if (index > 0) {
++          factory.renderWithSpan(builder, { builder.append(" | ") }) { start, end, blockStyle ->
++            builder.setSpan(TextSpan(blockStyle, factory.context), start, end, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++          }
++        }
++        factory.renderChildren(cell, builder, onLinkPress, onLinkLongPress)
++      }
++      val isHeader = child.children.any { it.type == MarkdownASTNode.NodeType.TableHeaderCell }
++      if (isHeader && builder.length > rowStart) {
++        val blockStyle = factory.blockStyleContext.requireBlockStyle()
++        builder.setSpan(StrongSpan(factory.styleCache, blockStyle), rowStart, builder.length, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++      }
++      if (builder.length > rowStart) {
++        builder.setSpan(TableTextRowSpan(), rowStart, builder.length, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
++      }
++      builder.append("\n")
++    }
++  }
++}
++
++/** Marks a table row drawn as text, so Copy as Markdown indents it instead of repeating the item marker. */
++class TableTextRowSpan
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
+index 1100ee4..414377b 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/segments/TableContainerView.kt
+@@ -252,7 +252,7 @@ class TableContainerView(
+         isClickable = false
+         isLongClickable = false
+         isFocusable = true
+-        isScreenReaderFocusable = true
++        ViewCompat.setScreenReaderFocusable(this, true)
+         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+         contentDescription = description
+         if (isHeaderRow) ViewCompat.setAccessibilityHeading(this, true)
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
+index 12ad32f..fee67e5 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/spans/FadeInSpan.kt
+@@ -1,16 +1,20 @@
+ package com.swmansion.enriched.markdown.spans
+ 
++import android.os.Build
+ import android.text.TextPaint
+ import android.text.style.CharacterStyle
+ import androidx.annotation.FloatRange
+ 
+ class FadeInSpan : CharacterStyle() {
+-  @set:FloatRange(from = 0.0, to = 1.0)
++  @setparam:FloatRange(from = 0.0, to = 1.0)
+   var alpha: Float = 0f
+ 
+   override fun updateDrawState(tp: TextPaint) {
+     tp.color = multiplyAlpha(tp.color, alpha)
+-    tp.underlineColor = multiplyAlpha(tp.underlineColor, alpha)
++    // Public from API 29; below that, underlines are drawn in `color`, which is already faded.
++    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++      tp.underlineColor = multiplyAlpha(tp.underlineColor, alpha)
++    }
+   }
+ 
+   private fun multiplyAlpha(
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
+index 2957f98..a16fef5 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/conversion/MarkdownExtractor.kt
+@@ -4,6 +4,7 @@ import android.text.Spannable
+ import android.text.style.UnderlineSpan
+ import android.widget.TextView
+ import com.swmansion.enriched.markdown.EnrichedMarkdownText
++import com.swmansion.enriched.markdown.renderer.TableTextRowSpan
+ import com.swmansion.enriched.markdown.spans.BaseListSpan
+ import com.swmansion.enriched.markdown.spans.BaselineShiftSpan
+ import com.swmansion.enriched.markdown.spans.BlockquoteSpan
+@@ -145,7 +146,11 @@ object MarkdownExtractor {
+     state: ExtractionState,
+   ) {
+     val blockquotePrefix = detectBlockquote(spannable, segmentStart, segmentEnd, state)
+-    val listPrefix = detectList(spannable, segmentStart, segmentEnd, state)
++    val listPrefix =
++      detectList(spannable, segmentStart, segmentEnd, state)?.let { prefix ->
++        val isTableRow = spannable.getSpans(segmentStart, segmentEnd, TableTextRowSpan::class.java).isNotEmpty()
++        if (isTableRow) " ".repeat(prefix.length) else prefix
++      }
+     var segment = applyInlineFormatting(spannable, segmentText, segmentStart, segmentEnd)
+ 
+     if (result.isAtLineStart() && !segmentText.startsWith("\n")) {
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
+index 296673b..abaf1ac 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/utils/text/span/BlockSpacing.kt
+@@ -1,6 +1,7 @@
+ package com.swmansion.enriched.markdown.utils.text.span
+ 
+ import android.text.SpannableStringBuilder
++import com.swmansion.enriched.markdown.spans.BlockquoteSpan
+ import com.swmansion.enriched.markdown.spans.CodeBlockSpan
+ import com.swmansion.enriched.markdown.spans.ImageSpan
+ import com.swmansion.enriched.markdown.spans.LineHeightSpan
+@@ -22,6 +23,7 @@ fun applyLineHeightSkippingImages(
+   end: Int,
+   lineHeight: Float,
+   spanFlags: Int = SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE,
++  skipBlockquotes: Boolean = false,
+ ) {
+   val blockImageRanges =
+     builder
+@@ -34,7 +36,14 @@ fun applyLineHeightSkippingImages(
+       .getSpans(start, end, CodeBlockSpan::class.java)
+       .map { builder.getSpanStart(it) to builder.getSpanEnd(it) }
+ 
+-  val excludedRanges = (blockImageRanges + codeBlockRanges).sortedBy { it.first }
++  val blockquoteRanges =
++    if (skipBlockquotes) {
++      builder.getSpans(start, end, BlockquoteSpan::class.java).map { builder.getSpanStart(it) to builder.getSpanEnd(it) }
++    } else {
++      emptyList()
++    }
++
++  val excludedRanges = (blockImageRanges + codeBlockRanges + blockquoteRanges).sortedBy { it.first }
+ 
+   var pos = start
+   for ((exStart, exEnd) in excludedRanges) {
+diff --git a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
+index 37082b4..b07e36e 100644
+--- a/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
++++ b/node_modules/react-native-enriched-markdown/android/src/main/java/com/swmansion/enriched/markdown/views/ContextMenuPopup.kt
+@@ -105,9 +105,11 @@ object ContextMenuPopup {
+     val screenW = context.resources.displayMetrics.widthPixels
+     val margin = 8f.dp
+ 
++    // Not coerceIn: it throws when the popup is wider than the screen.
+     val x =
+       (centerX - container.measuredWidth / 2)
+-        .coerceIn(margin, screenW - container.measuredWidth - margin)
++        .coerceAtMost(screenW - container.measuredWidth - margin)
++        .coerceAtLeast(margin)
+     val y =
+       (topY - container.measuredHeight - margin)
+         .coerceAtLeast(margin)
+diff --git a/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m b/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
+index a555419..0c7d5bb 100644
+--- a/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
++++ b/node_modules/react-native-enriched-markdown/ios/renderer/RendererFactory.m
+@@ -1,4 +1,5 @@
+ #import "RendererFactory.h"
++#import "BaseRenderer.h"
+ #import "BlankLineRenderer.h"
+ #import "BlockquoteRenderer.h"
+ #import "CodeBlockRenderer.h"
+@@ -19,6 +20,7 @@
+ #import "ListRenderer.h"
+ #import "MarkdownASTNode.h"
+ #import "ParagraphRenderer.h"
++#import "ParagraphStyleUtils.h"
+ #import "RenderContext.h"
+ #import "StrikethroughRenderer.h"
+ #import "StrongRenderer.h"
+@@ -29,6 +31,63 @@
+ #import "ThematicBreakRenderer.h"
+ #import "UnderlineRenderer.h"
+ 
++NSString *const ENRMTableTextRowAttribute = @"ENRMTableTextRow";
++
++/// Draws a table that sits inside a list item as text rows, cells joined by " | ",
++/// header row bold. Root tables get their own segment view and never reach here.
++@interface ENRMTableTextRenderer : BaseRenderer
++@end
++
++@implementation ENRMTableTextRenderer
++
++- (void)renderNodeContent:(MarkdownASTNode *)node
++                     into:(NSMutableAttributedString *)output
++                  context:(RenderContext *)context
++{
++  if (context.listDepth == 0) {
++    [_rendererFactory renderChildrenOfNode:node into:output context:context];
++    return;
++  }
++  if (output.length > 0 && ![output.string hasSuffix:@"\n"]) {
++    [output appendAttributedString:kNewlineAttributedString];
++  }
++  [self renderRowsOf:node into:output context:context];
++}
++
++- (void)renderRowsOf:(MarkdownASTNode *)node into:(NSMutableAttributedString *)output context:(RenderContext *)context
++{
++  for (MarkdownASTNode *child in node.children) {
++    if (child.type != MarkdownNodeTypeTableRow) {
++      [self renderRowsOf:child into:output context:context];
++      continue;
++    }
++    BOOL isHeader = NO;
++    MarkdownASTNode *row = [[MarkdownASTNode alloc] initWithType:MarkdownNodeTypeTableRow];
++    for (MarkdownASTNode *cell in child.children) {
++      isHeader = isHeader || cell.type == MarkdownNodeTypeTableHeaderCell;
++      if (row.children.count > 0) {
++        MarkdownASTNode *separator = [[MarkdownASTNode alloc] initWithType:MarkdownNodeTypeText];
++        separator.content = @" | ";
++        [row addChild:separator];
++      }
++      [row addChild:cell];
++    }
++    NSUInteger rowStart = output.length;
++    if (isHeader) {
++      row.type = MarkdownNodeTypeStrong;
++      [[_rendererFactory rendererForNodeType:MarkdownNodeTypeStrong] renderNode:row into:output context:context];
++    } else {
++      [_rendererFactory renderChildrenOfNode:row into:output context:context];
++    }
++    if (output.length > rowStart) {
++      [output addAttribute:ENRMTableTextRowAttribute value:@YES range:NSMakeRange(rowStart, output.length - rowStart)];
++    }
++    [output appendAttributedString:kNewlineAttributedString];
++  }
++}
++
++@end
++
+ @implementation RendererFactory {
+   StyleConfig *_config;
+   NSMutableDictionary<NSNumber *, id<NodeRenderer>> *_cache;
+@@ -129,6 +188,8 @@
+ #endif
+     case MarkdownNodeTypeSpoiler:
+       return [[ENRMSpoilerRenderer alloc] initWithRendererFactory:self config:_config];
++    case MarkdownNodeTypeTable:
++      return [[ENRMTableTextRenderer alloc] initWithRendererFactory:self config:_config];
+     default:
+       return nil;
+   }
+diff --git a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
+index 3c4241c..b416877 100644
+--- a/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
++++ b/node_modules/react-native-enriched-markdown/ios/utils/MarkdownExtractor.m
+@@ -14,6 +14,8 @@
+ #import "RuntimeKeys.h"
+ #import "ThematicBreakAttachment.h"
+ 
++extern NSString *const ENRMTableTextRowAttribute;
++
+ #pragma mark - Extraction Context
+ 
+ typedef struct {
+@@ -318,17 +320,24 @@ NSString *_Nullable extractMarkdownFromAttributedString(NSAttributedString *attr
+                           NSMutableString *prefixedSegment = [NSMutableString string];
+ 
+                           if (listDepthNum && ![text hasPrefix:@"\n"]) {
++                            NSString *listPrefix;
+                             if (isTaskItem) {
+                               NSString *indent = [@"" stringByPaddingToLength:(currentListDepth * 2)
+                                                                    withString:@" "
+                                                               startingAtIndex:0];
+                               NSString *checkbox = isTaskChecked ? @"[x]" : @"[ ]";
+-                              [prefixedSegment appendFormat:@"%@- %@ ", indent, checkbox];
++                              listPrefix = [NSString stringWithFormat:@"%@- %@ ", indent, checkbox];
+                             } else {
+                               BOOL isOrdered = ([listTypeNum integerValue] == 1);
+                               NSInteger itemNumber = listItemNum ? [listItemNum integerValue] : 1;
+-                              [prefixedSegment appendString:buildListPrefix(currentListDepth, isOrdered, itemNumber)];
++                              listPrefix = buildListPrefix(currentListDepth, isOrdered, itemNumber);
++                            }
++                            if (attrs[ENRMTableTextRowAttribute]) {
++                              listPrefix = [@"" stringByPaddingToLength:listPrefix.length
++                                                             withString:@" "
++                                                        startingAtIndex:0];
+                             }
++                            [prefixedSegment appendString:listPrefix];
+                           }
+ 
+                           if (blockquotePrefix) {
