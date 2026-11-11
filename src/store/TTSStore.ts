@@ -1,4 +1,4 @@
-import {AppState, AppStateStatus} from 'react-native';
+import {AppState, AppStateStatus, Platform} from 'react-native';
 
 import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
@@ -32,12 +32,17 @@ import type {
   Voice,
 } from '../services/tts';
 import {
+  holdSpeechService,
+  releaseSpeechService,
+} from '../services/tts/speechService';
+import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
 import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
 import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
+import {uiStore} from './UIStore';
 
 /**
  * Discriminated union describing what the store is currently doing.
@@ -294,6 +299,22 @@ export class TTSStore {
       this.handleAppStateChange,
     );
 
+    reaction(
+      () => this.speechServiceWanted,
+      wanted => {
+        if (wanted) {
+          const copy = uiStore.l10n.voiceAndSpeech;
+          holdSpeechService({
+            title: copy.speakingNotificationTitle,
+            stopLabel: copy.speakingNotificationStop,
+            channelName: copy.speakingNotificationChannel,
+          });
+        } else {
+          releaseSpeechService();
+        }
+      },
+    );
+
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
@@ -320,7 +341,7 @@ export class TTSStore {
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (nextAppState === 'background') {
+    if (nextAppState === 'background' && !this.speechServiceWanted) {
       // Stop in-flight audio AND release the active engine's native
       // resources (200-450 MB depending on engine). Re-init is lazy on
       // the next play after foreground.
@@ -334,6 +355,19 @@ export class TTSStore {
         });
     }
   };
+
+  /**
+   * Whether Android should keep PocketPal in the foreground for its speech,
+   * which then also keeps playing in the background. Voice replies are left
+   * out: voice mode ends when the app leaves the screen.
+   */
+  get speechServiceWanted(): boolean {
+    return (
+      Platform.OS === 'android' &&
+      this.playbackState.mode !== 'idle' &&
+      !this.voiceOutputActive
+    );
+  }
 
   /** Whether the next assistant reply opens a speech stream. */
   get streamsReplies(): boolean {
