@@ -341,6 +341,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
               <ScrollView
                 ref={scrollViewRef}
                 style={styles.contentContainer}
+                scrollEnabled={false}
                 showsVerticalScrollIndicator={false}
                 onContentSizeChange={() =>
                   scrollViewRef.current?.scrollToEnd({animated: true})
@@ -368,6 +369,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
                 <ScrollView
                   ref={scrollViewRef}
                   style={styles.contentContainer}
+                  scrollEnabled={false}
                   showsVerticalScrollIndicator={false}
                   onContentSizeChange={() =>
                     scrollViewRef.current?.scrollToEnd({animated: true})

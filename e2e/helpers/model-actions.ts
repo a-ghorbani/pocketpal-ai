@@ -12,6 +12,7 @@ import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
 import {Selectors, byTestId} from './selectors';
 import {Gestures} from './gestures';
+import {readTimingText} from './element-text';
 import {TIMEOUTS, ModelTestConfig, ModelQuantVariant} from '../fixtures/models';
 
 declare const browser: WebdriverIO.Browser;
@@ -330,10 +331,7 @@ export async function readNewestTimingText(): Promise<string | undefined> {
     return undefined;
   }
 
-  const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
-  const labelText = await labels[newestIndex]
-    .getAttribute(attrName)
-    .catch(() => '');
+  const labelText = await readTimingText(labels[newestIndex]);
   const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
   return timingMatch ? timingMatch[1] : labelText.slice(-100);
 }

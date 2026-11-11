@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text} from 'react-native';
+import {ScrollView, Text} from 'react-native';
 import {render, fireEvent} from '../../../../jest/test-utils';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {L10nContext} from '../../../utils';
@@ -147,6 +147,20 @@ describe('ThinkingBubble', () => {
 
     // In PARTIAL state and not animating, it should use MaskedView
     expect(getByTestId('masked-view')).toBeTruthy();
+  });
+
+  it('leaves vertical drags on the PARTIAL card to the chat and still scrolls it to the end', () => {
+    const scrollToEnd = jest
+      .spyOn(ScrollView.prototype, 'scrollToEnd')
+      .mockImplementation(jest.fn());
+    const {UNSAFE_getByType} = renderThinkingBubble();
+    const card = UNSAFE_getByType(ScrollView);
+
+    expect(card.props.scrollEnabled).toBe(false);
+
+    card.props.onContentSizeChange(320, 600);
+    expect(scrollToEnd).toHaveBeenCalledWith({animated: true});
+    scrollToEnd.mockRestore();
   });
 
   it('handles long content properly', () => {
