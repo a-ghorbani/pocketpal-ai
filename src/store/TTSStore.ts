@@ -4,6 +4,7 @@ import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import {onAudioInterruption} from '@pocketpalai/react-native-speech';
 import type {
   StreamProgressEvent,
   SupertonicLanguage,
@@ -324,6 +325,12 @@ export class TTSStore {
     onSpeechServiceStop(() => {
       if (this.speechServiceWanted) {
         this.stop('notification');
+      }
+    });
+
+    onAudioInterruption(({type}) => {
+      if (type === 'began' && this.speechServiceWanted) {
+        this.stop('interruption');
       }
     });
 

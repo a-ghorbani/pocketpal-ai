@@ -1,5 +1,6 @@
 import {Alert, AppState, Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import {onAudioInterruption} from '@pocketpalai/react-native-speech';
 
 // Mock persistence BEFORE importing the store
 jest.mock('mobx-persist-store', () => ({
@@ -1280,6 +1281,55 @@ describe('TTSStore', () => {
       await flush();
 
       expect(mockSystemStop).not.toHaveBeenCalled();
+    });
+
+    const interruptAudio = (type: 'began' | 'ended') => {
+      const calls = (onAudioInterruption as jest.Mock).mock.calls;
+      calls[calls.length - 1][0]({type});
+    };
+
+    it('an audio interruption ends chat speech without resuming it', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+
+      interruptAudio('ended');
+      await flush();
+      expect(store.playbackState.mode).toBe('idle');
+    });
+
+    it('an audio interruption leaves a voice reply to voice mode', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+    });
+
+    it('an audio interruption changes nothing off Android', async () => {
+      Platform.OS = 'ios';
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
     });
 
     it('still stops and releases a voice reply when the app goes to the background', async () => {
