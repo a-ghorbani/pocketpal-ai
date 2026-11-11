@@ -100,6 +100,36 @@ const renderChat = (props: ChatProps = {}) => {
   return {screen, element, onSendPress, input, type, pressSend, attach};
 };
 
+/**
+ * Opens a row's message menu: a long-press on a user row, the "…" button on
+ * an assistant row.
+ */
+const openRowMenu = async (screen: any, rowText: string) => {
+  const event = {nativeEvent: {pageX: 10, pageY: 20}};
+  for (let n = screen.getByText(rowText); n; n = n.parent) {
+    if (typeof n.props?.onTouchCancel === 'function') {
+      fireEvent(n, 'touchStart', event);
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 600));
+      });
+      return;
+    }
+    const buttons = n.findAll(
+      (node: any) =>
+        typeof node.type === 'string' &&
+        node.props?.testID === 'message-menu-button',
+    );
+    if (buttons.length === 1) {
+      fireEvent.press(buttons[0], event);
+      return;
+    }
+    if (buttons.length > 1) {
+      break;
+    }
+  }
+  throw new Error(`no message menu for ${rowText}`);
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   chatSessionStore.sessions = sessionFixtures as any;
@@ -1102,9 +1132,7 @@ describe('ChatView resend', () => {
   });
 
   const regenerateAnswer = async (chat: ReturnType<typeof renderChat>) => {
-    fireEvent(chat.screen.getByText('Earlier answer'), 'onLongPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
+    await openRowMenu(chat.screen, 'Earlier answer');
     await act(async () => {
       fireEvent.press(chat.screen.getByText(menuLabels.regenerate));
     });
@@ -1321,9 +1349,7 @@ describe('ChatView edit mode', () => {
   it('clears the composer when a plain Edit is cancelled', async () => {
     shown = [olderRow];
     const chat = renderChat({messages: shown});
-    fireEvent(chat.screen.getByText('Older row'), 'onLongPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
+    await openRowMenu(chat.screen, 'Older row');
     await act(async () => {
       fireEvent.press(chat.screen.getByText(menuLabels.edit));
     });
@@ -1343,9 +1369,7 @@ describe('ChatView edit mode', () => {
     shown = [olderRow];
     const chat = renderChat({messages: shown});
     expect(chat.input().props.value).toBe('earlier');
-    fireEvent(chat.screen.getByText('Older row'), 'onLongPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
+    await openRowMenu(chat.screen, 'Older row');
     await act(async () => {
       fireEvent.press(chat.screen.getByText(menuLabels.edit));
     });
@@ -1375,9 +1399,7 @@ describe('ChatView edit mode', () => {
     rowText: string,
     label: string,
   ) => {
-    fireEvent(chat.screen.getByText(rowText), 'onLongPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
+    await openRowMenu(chat.screen, rowText);
     await act(async () => {
       fireEvent.press(chat.screen.getByText(label));
     });

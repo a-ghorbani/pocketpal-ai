@@ -66,9 +66,15 @@ import type {
 } from '../../hooks/useChatSession';
 import type {VoiceEntryActions} from '../../hooks/useVoiceMode';
 
+import {finiteNumber} from '../../utils/finite';
 import {openMicSettings} from '../../utils/asrMicPermission';
 import type {AsrErrorKind} from '../../services/asr';
-import {MessageType, ModelOrigin, User} from '../../utils/types';
+import {
+  MessageType,
+  ModelOrigin,
+  PressPointEvent,
+  User,
+} from '../../utils/types';
 import {
   holdForSend,
   releaseSendHold,
@@ -292,7 +298,6 @@ export const ChatView = observer(
     isStreaming = false,
     messages,
     onEndReached,
-    onMessageLongPress: externalOnMessageLongPress,
     onMessagePress,
     activePal,
     onPalSettingsSelect,
@@ -1110,20 +1115,22 @@ export const ChatView = observer(
       [disableImageGallery, handleImagePress, onMessagePress],
     );
 
-    const handleMessageLongPress = React.useCallback(
-      (message: MessageType.Any, event: any) => {
+    const openMessageMenu = React.useCallback(
+      (message: MessageType.Any, event: PressPointEvent) => {
         if (message.type !== 'text' && message.type !== 'assistant_turn') {
-          externalOnMessageLongPress?.(message);
           return;
         }
 
-        const {pageX, pageY} = event.nativeEvent;
-        setMenuPosition({x: pageX, y: pageY});
+        const x = finiteNumber(event.nativeEvent?.pageX);
+        const y = finiteNumber(event.nativeEvent?.pageY);
+        if (x === undefined || y === undefined) {
+          return;
+        }
+        setMenuPosition({x, y});
         setSelectedMessage(message);
         setMenuVisible(true);
-        externalOnMessageLongPress?.(message);
       },
-      [externalOnMessageLongPress],
+      [],
     );
 
     const handleMenuDismiss = React.useCallback(() => {
@@ -1161,8 +1168,10 @@ export const ChatView = observer(
         modelStore.activeModelId !== undefined && !isStopping && !voiceModeOpen;
       const models = modelStore.availableModels || [];
 
-      const baseItems: MenuItem[] = [
-        {
+      const baseItems: MenuItem[] = [];
+
+      if (isAuthor || !selectedMessage.metadata?.copyable) {
+        baseItems.push({
           label: copyLabel,
           onPress: () => {
             handleCopy(selectedMessage);
@@ -1170,8 +1179,8 @@ export const ChatView = observer(
           },
           icon: () => <CopyIcon stroke={theme.colors.primary} />,
           disabled: false,
-        },
-      ];
+        });
+      }
 
       if (!isAuthor) {
         baseItems.push({
@@ -1344,7 +1353,7 @@ export const ChatView = observer(
                   : false,
                 message,
                 messageWidth,
-                onMessageLongPress: handleMessageLongPress,
+                onMessageMenuPress: openMessageMenu,
                 onMessagePress: handleMessagePress,
                 onPreviewDataFetched,
                 renderBubble,
@@ -1365,7 +1374,7 @@ export const ChatView = observer(
       },
       [
         enableAnimation,
-        handleMessageLongPress,
+        openMessageMenu,
         handleMessagePress,
         onPreviewDataFetched,
         renderBubble,

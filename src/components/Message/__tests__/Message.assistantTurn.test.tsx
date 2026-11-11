@@ -217,7 +217,7 @@ describe('Message — AssistantTurn renderer', () => {
     );
   });
 
-  it('#11 AssistantTurn occupies ONE FlatList row (renderer returns a single Pressable wrapping all blocks)', () => {
+  it('#11 AssistantTurn has no touch handler above its content (selection would fight it)', () => {
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -227,28 +227,34 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {UNSAFE_root, getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
         onMessagePress={jest.fn()}
+        onMessageMenuPress={jest.fn()}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    // Exactly ONE node carries an `onLongPress` prop (the Pressable wrapping
-    // the row). This proves long-press routing is turn-level — not split
-    // across N step-level rows.
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
-    );
-    expect(longPressables).toHaveLength(1);
+    for (const block of getAllByTestId('ContentContainer')) {
+      for (let n = block.parent; n; n = n.parent) {
+        for (const handler of ['onPress', 'onLongPress', 'onPressIn']) {
+          expect(typeof n.props?.[handler]).not.toBe('function');
+        }
+      }
+    }
+    expect(
+      UNSAFE_root.findAll(
+        (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      ),
+    ).toHaveLength(0);
   });
 
-  it('#12 long-press on the row yields the SAME message id regardless of which inner block is targeted', () => {
-    const onLongPress = jest.fn();
+  it('#12 the footer "…" yields the turn regardless of step count', () => {
+    const onMessageMenuPress = jest.fn();
     const message = makeDerivedTurn([
       {content: 'A'},
       {
@@ -258,27 +264,39 @@ describe('Message — AssistantTurn renderer', () => {
       },
       {content: 'C'},
     ]);
-    const {UNSAFE_root} = render(
+    const {getAllByTestId} = render(
       <Message
         message={message}
         messageWidth={440}
-        onMessageLongPress={onLongPress}
-        onMessagePress={jest.fn()}
+        onMessageMenuPress={onMessageMenuPress}
         roundBorder
         showAvatar
         showName
         showStatus
       />,
     );
-    const longPressables = UNSAFE_root.findAll(
-      (n: any) => n.props && typeof n.props.onLongPress === 'function',
+    const buttons = getAllByTestId('message-menu-button');
+    expect(buttons).toHaveLength(1);
+    const event = {nativeEvent: {pageX: 7, pageY: 8}};
+    fireEvent.press(buttons[0], event);
+    expect(onMessageMenuPress).toHaveBeenCalledTimes(1);
+    expect(onMessageMenuPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(onMessageMenuPress.mock.calls[0][1]).toEqual(event);
+  });
+
+  it('#12b the active row shows no "…"', () => {
+    const {queryByTestId} = render(
+      <Message
+        message={makeDerivedTurn([{content: 'A', partial: true}])}
+        messageWidth={440}
+        isActiveRun
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
     );
-    expect(longPressables).toHaveLength(1);
-    fireEvent(longPressables[0], 'longPress', {
-      nativeEvent: {pageX: 0, pageY: 0},
-    });
-    expect(onLongPress).toHaveBeenCalledTimes(1);
-    expect(onLongPress.mock.calls[0][0].id).toBe('turn-1');
+    expect(queryByTestId('message-menu-button')).toBeNull();
   });
 
   it('#13 avatar renders once per AssistantTurn (showAvatar=true, showUserAvatars=true)', () => {
@@ -890,4 +908,146 @@ describe('Message — AssistantTurn renderer', () => {
       mockTalentSurfaceCalls[mockTalentSurfaceCalls.length - 1].step?.toolCalls,
     ).toEqual(toolCalls);
   });
+});
+
+describe('Message — step content markdown', () => {
+  const {EnrichedMarkdownText} = require('react-native-enriched-markdown');
+  const {TextMessage} = require('../../TextMessage/TextMessage');
+  const markdownSpy = EnrichedMarkdownText as jest.Mock;
+  const recordingTextMessage = (
+    TextMessage as jest.Mock
+  ).getMockImplementation();
+
+  beforeEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(
+      jest.requireActual('../../TextMessage/TextMessage').TextMessage,
+    );
+    markdownSpy.mockClear();
+  });
+
+  afterEach(() => {
+    (TextMessage as jest.Mock).mockImplementation(recordingTextMessage);
+  });
+
+  it('marks step content selectable', () => {
+    render(
+      <Message
+        message={makeDerivedTurn([{content: 'Hi', partial: false}])}
+        messageWidth={440}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(markdownSpy.mock.calls[0][0].selectable).toBe(true);
+  });
+
+  it('passes a nested table to the library and copies the reply as written', () => {
+    const reply = '1. Compare:\n\n   | a | b |\n   | --- | --- |\n   | 1 | 2 |';
+    const {getByTestId} = render(
+      <Message
+        message={makeDerivedTurn([{content: reply, partial: false}], {
+          metadata: {copyable: true},
+        })}
+        messageWidth={440}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(markdownSpy.mock.calls[0][0].markdown).toBe(reply);
+    fireEvent.press(getByTestId('footer-copy'));
+    expect(
+      require('@react-native-clipboard/clipboard').setString,
+    ).toHaveBeenCalledWith(reply);
+  });
+});
+
+describe('Message — reasoning card', () => {
+  const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
+  const recordingReasoningBlock = (
+    ReasoningBlock as jest.Mock
+  ).getMockImplementation();
+
+  beforeEach(() => {
+    (ReasoningBlock as jest.Mock).mockImplementation(props =>
+      React.createElement(
+        jest.requireActual('../../ReasoningBlock/ReasoningBlock')
+          .ReasoningBlock,
+        props,
+      ),
+    );
+  });
+
+  afterEach(() => {
+    (ReasoningBlock as jest.Mock).mockImplementation(recordingReasoningBlock);
+  });
+
+  it('collapses once content starts on the same partial step', () => {
+    const {getByTestId} = render(
+      <Message
+        message={makeDerivedTurn([
+          {
+            content: 'Answer',
+            reasoningContent: 'Plan\n```py\nx=1',
+            partial: true,
+          },
+        ])}
+        messageWidth={440}
+        isActiveRun
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+
+    expect(getByTestId('thinking-bubble-collapsed')).toBeTruthy();
+  });
+});
+
+describe('Message — reasoning collapse trigger', () => {
+  const {ReasoningBlock} = require('../../ReasoningBlock/ReasoningBlock');
+  const reasoningBlock = ReasoningBlock as jest.Mock;
+
+  beforeEach(() => {
+    reasoningBlock.mockClear();
+  });
+
+  const cases: Array<[boolean, boolean | undefined, string]> = [];
+  for (const isActiveRun of [true, false]) {
+    for (const partial of [true, false, undefined]) {
+      for (const content of ['', 'Answer']) {
+        cases.push([isActiveRun, partial, content]);
+      }
+    }
+  }
+
+  it.each(cases)(
+    'collapses once content starts or the step ends (active %s, partial %s, content %j)',
+    (isActiveRun, partial, content) => {
+      render(
+        <Message
+          message={makeDerivedTurn([
+            {content, reasoningContent: 'Plan\n```py\nx=1', partial},
+          ])}
+          messageWidth={440}
+          isActiveRun={isActiveRun}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+
+      expect(reasoningBlock).toHaveBeenCalled();
+      for (const [props] of reasoningBlock.mock.calls) {
+        expect(props.autoCollapse).toBe(content !== '' || partial === false);
+      }
+    },
+  );
 });

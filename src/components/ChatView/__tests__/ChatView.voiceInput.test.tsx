@@ -316,9 +316,20 @@ describe('ChatView voice mode', () => {
           withBottomSheetProvider: true,
         },
       );
-      fireEvent(view.getAllByTestId('ContentContainer')[0], 'onLongPress', {
-        nativeEvent: {pageX: 0, pageY: 0},
-      });
+      const point = {nativeEvent: {pageX: 0, pageY: 0}};
+      if (message.author.id === user.id) {
+        const userRow = view.UNSAFE_root.find(
+          (node: any) =>
+            typeof node.type === 'string' &&
+            typeof node.props.onTouchCancel === 'function',
+        );
+        fireEvent(userRow, 'touchStart', point);
+        act(() => {
+          jest.advanceTimersByTime(500);
+        });
+      } else {
+        fireEvent.press(view.getByTestId('message-menu-button'), point);
+      }
       return view;
     };
 

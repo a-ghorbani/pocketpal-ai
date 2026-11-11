@@ -131,10 +131,6 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       jest.useFakeTimers();
       const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
       try {
-        // Force the throttle to schedule a setTimeout (rather than
-        // applying inline) by setting lastStreamingUpdateTime to "just
-        // now" — so the first updateActiveStepStreaming call goes
-        // through the timer path.
         (chatSessionStore as any).lastStreamingUpdateTime = 2_000_000;
         (chatSessionStore as any).pendingStreamingUpdate = null;
         if ((chatSessionStore as any).streamingThrottleTimer) {
@@ -441,6 +437,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
         content: 'streaming text',
       });
+      jest.advanceTimersByTime(0);
       const updated = chatSessionStore.sessions[0]
         .messages[0] as MessageType.AssistantTurn;
       // Earlier step untouched.
@@ -464,10 +461,11 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       ];
       chatSessionStore.activeSessionId = 'session1';
 
-      // First call: applies immediately (no throttle active).
+      // First call: applies on the next timer tick (no throttle active).
       chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
         content: 'a',
       });
+      jest.advanceTimersByTime(0);
       expect(
         (chatSessionStore.sessions[0].messages[0] as MessageType.AssistantTurn)
           .steps[0].content,

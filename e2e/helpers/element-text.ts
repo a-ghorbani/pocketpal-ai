@@ -4,6 +4,8 @@
 
 import {isAndroid} from './selectors';
 
+type ChainableElement = ReturnType<WebdriverIO.Browser['$']>;
+
 declare const browser: WebdriverIO.Browser;
 
 /**
@@ -48,6 +50,53 @@ export async function readAccessibilityLabel(
     // Element gone or subtree unreadable; an empty label is the honest answer.
   }
   return '';
+}
+
+/**
+ * The rendered text of a chat reply, joined with newlines.
+ *
+ * The markdown renderer draws one native text view per run of paragraphs and
+ * may mount them beside `markdown-content` rather than inside it, so the
+ * search covers the whole reply. Android exposes each block's text on virtual
+ * nodes that only a descendant query reaches; iOS hides the text views and
+ * labels each run instead, which a static-text query does not match.
+ */
+export async function readReplyText(reply: ChainableElement): Promise<string> {
+  const parts: string[] = [];
+  if (isAndroid()) {
+    for (const node of await reply.$$('.//*')) {
+      const text = await node.getText().catch(() => '');
+      if (text && text !== parts[parts.length - 1]) {
+        parts.push(text);
+      }
+    }
+  } else {
+    for (const node of await reply.$$('-ios class chain:**/*')) {
+      const label = normalise(
+        await node.getAttribute('label').catch(() => null),
+      );
+      if (label && label !== parts[parts.length - 1]) {
+        parts.push(label);
+      }
+    }
+  }
+  return parts.join('\n');
+}
+
+/**
+ * The text of a footer timing element. On iOS it is the label; on Android the
+ * footer's Text carries it as `text` (no wrapper merges it into `content-desc`).
+ */
+export async function readTimingText(
+  element: ChainableElement,
+): Promise<string> {
+  if (!isAndroid()) {
+    return (await element.getAttribute('label').catch(() => '')) || '';
+  }
+  const label = normalise(
+    await element.getAttribute('content-desc').catch(() => null),
+  );
+  return label || (await element.getText().catch(() => ''));
 }
 
 /** UiAutomator2 reports an absent attribute as the string "null". */
