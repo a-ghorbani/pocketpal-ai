@@ -351,6 +351,8 @@ export const VoicePickerView: React.FC = observer(() => {
             onPress={() => handleSelect(voice)}
             uncheckedColor={theme.colors.outline}
             color={accent}
+            importantForAccessibility="no"
+            accessibilityElementsHidden
           />
           <View style={styles.voiceRowLabelBlock}>
             <Text
