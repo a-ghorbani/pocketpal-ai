@@ -97,7 +97,6 @@ const ENDONYMS: Record<string, string> = {
 const CANTONESE_PHONE_LOCALES = new Set(['zh-hk', 'zh-mo']);
 
 const isRegion = (segment: string) => /^([a-z]{2}|\d{3})$/.test(segment);
-const isScript = (segment: string) => /^[a-z]{4}$/.test(segment);
 
 /**
  * Normalises an Android (`zh_CN_#Hans`) or BCP-47 (`zh-Hans-CN`) locale tag
@@ -118,7 +117,7 @@ export const localeKey = (tag: string): string => {
     return '';
   }
   const primary = LEGACY_LANGUAGE_CODES[language] ?? language;
-  const region = rest.filter(s => !isScript(s)).find(isRegion);
+  const region = rest.find(isRegion);
   return region ? `${primary}-${region}` : primary;
 };
 

@@ -109,7 +109,6 @@ export const getSystemVoices = async (
   const codes = speakerCodes(osVoices);
   const lastById = new Map<string, OsVoice>();
   for (const voice of osVoices) {
-    lastById.delete(voice.identifier);
     lastById.set(voice.identifier, voice);
   }
   const installed = [...lastById.values()].filter(v => v.notInstalled !== true);
