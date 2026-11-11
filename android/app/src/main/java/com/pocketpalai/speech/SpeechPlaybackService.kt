@@ -51,7 +51,7 @@ class SpeechPlaybackService : Service() {
                 NotificationChannel(
                     CHANNEL_ID,
                     copy.channelName.ifBlank { appName },
-                    NotificationManager.IMPORTANCE_LOW,
+                    NotificationManager.IMPORTANCE_DEFAULT,
                 ),
             )
         }
@@ -74,16 +74,17 @@ class SpeechPlaybackService : Service() {
                 stop,
             )
             .setOngoing(true)
+            .setSilent(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 
     companion object {
         private const val TAG = "SpeechPlaybackService"
-        private const val CHANNEL_ID = "speech_playback"
+        private const val CHANNEL_ID = "speech_speaking"
         private const val NOTIFICATION_ID = 1
     }
 }
