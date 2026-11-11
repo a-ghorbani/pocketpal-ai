@@ -68,10 +68,8 @@ internal class SpeechPlaybackController(private val port: Port) {
     private fun linger(delayMs: Long) {
         state = State.LINGERING
         port.schedule(delayMs) {
-            if (state == State.LINGERING) {
-                port.stopService()
-                state = State.NONE
-            }
+            port.stopService()
+            state = State.NONE
         }
     }
 

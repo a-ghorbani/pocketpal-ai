@@ -392,9 +392,6 @@ export class TTSStore {
   private releaseIdleInBackground(): void {
     const inBackground = () =>
       Platform.OS === 'android' && AppState.currentState === 'background';
-    if (!inBackground()) {
-      return;
-    }
     this.stopsSettled
       .then(() => {
         if (this.playbackState.mode === 'idle' && inBackground()) {
