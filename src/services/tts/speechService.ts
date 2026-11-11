@@ -3,8 +3,6 @@ import {NativeEventEmitter} from 'react-native';
 import NativeSpeechPlayback from '../../specs/NativeSpeechPlayback';
 import type {SpeechPlaybackCopy} from '../../specs/NativeSpeechPlayback';
 
-export type {SpeechPlaybackCopy};
-
 /**
  * Asks Android to keep PocketPal in the foreground while it speaks. A refused
  * or failed start is logged and never surfaces: speech goes on without it.
