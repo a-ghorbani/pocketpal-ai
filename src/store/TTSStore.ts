@@ -147,6 +147,8 @@ export class TTSStore {
   /** Message id of the last voice reply whose speech failed. */
   voiceStreamFailed: string | null = null;
   private voiceStream: VoiceStream | null = null;
+  /** Settles once every `stop()` started so far has finished cancelling. */
+  private stopsSettled: Promise<void> = Promise.resolve();
 
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
@@ -209,9 +211,12 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable<TTSStore, 'holdFirstChunk' | 'voiceStream'>(
+    makeAutoObservable<
+      TTSStore,
+      'holdFirstChunk' | 'voiceStream' | 'stopsSettled'
+    >(
       this,
-      {holdFirstChunk: false, voiceStream: false},
+      {holdFirstChunk: false, voiceStream: false, stopsSettled: false},
       {autoBind: true},
     );
     makePersistable(this, {
@@ -315,6 +320,15 @@ export class TTSStore {
       },
     );
 
+    reaction(
+      () => this.playbackState.mode === 'idle',
+      idle => {
+        if (idle) {
+          this.releaseIdleInBackground();
+        }
+      },
+    );
+
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
@@ -355,6 +369,28 @@ export class TTSStore {
         });
     }
   };
+
+  /**
+   * Speech kept playing in the background holds its engine until it ends.
+   * The release waits for stops still cancelling: releasing under a stream
+   * leaves its finalize hanging.
+   */
+  private releaseIdleInBackground(): void {
+    const inBackground = () =>
+      Platform.OS === 'android' && AppState.currentState === 'background';
+    if (!inBackground()) {
+      return;
+    }
+    this.stopsSettled
+      .then(() => {
+        if (this.playbackState.mode === 'idle' && inBackground()) {
+          return ttsRuntime.release();
+        }
+      })
+      .catch(err => {
+        console.warn('[TTSStore] background release failed:', err);
+      });
+  }
 
   /**
    * Whether Android should keep PocketPal in the foreground for its speech,
@@ -606,26 +642,35 @@ export class TTSStore {
     const state = this.playbackState;
     const voice = this.currentVoice;
     vtrace('tts.stop', {by, mode: state.mode});
-    runInAction(() => {
-      this.playbackState = {mode: 'idle'};
-    });
-    this.streamStripper = null;
-    this.streamPlaceholderEmitted = false;
-    this.clearVoiceHold();
-    if (state.mode === 'streaming') {
-      try {
-        await state.handle.cancel();
-      } catch (err) {
-        console.warn('[TTSStore] streaming cancel failed:', err);
+    let settle = () => {};
+    const settled = new Promise<void>(resolve => (settle = resolve));
+    this.stopsSettled = Promise.all([this.stopsSettled, settled]).then(
+      () => undefined,
+    );
+    try {
+      runInAction(() => {
+        this.playbackState = {mode: 'idle'};
+      });
+      this.streamStripper = null;
+      this.streamPlaceholderEmitted = false;
+      this.clearVoiceHold();
+      if (state.mode === 'streaming') {
+        try {
+          await state.handle.cancel();
+        } catch (err) {
+          console.warn('[TTSStore] streaming cancel failed:', err);
+        }
+        return;
       }
-      return;
-    }
-    if (voice) {
-      try {
-        await getEngine(voice.engine).stop();
-      } catch (err) {
-        console.warn('[TTSStore] stop failed:', err);
+      if (voice) {
+        try {
+          await getEngine(voice.engine).stop();
+        } catch (err) {
+          console.warn('[TTSStore] stop failed:', err);
+        }
       }
+    } finally {
+      settle();
     }
   }
 
