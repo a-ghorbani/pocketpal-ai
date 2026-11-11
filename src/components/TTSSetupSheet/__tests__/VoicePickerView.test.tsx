@@ -366,6 +366,26 @@ describe('VoicePickerView', () => {
       expect(queryByTestId('tts-system-language-button')).toBeNull();
     });
 
+    it('logs a failed read and keeps the empty state with Get more voices', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (Speech.getAvailableVoices as jest.Mock).mockRejectedValue(
+        new Error('engine unbound'),
+      );
+      const {getByTestId, getByText} = renderView();
+
+      await act(async () => {
+        fireEvent.press(getByTestId('tts-engine-group-toggle-system'));
+      });
+
+      expect(warn).toHaveBeenCalledWith(
+        '[VoicePickerView] system voices failed:',
+        expect.any(Error),
+      );
+      expect(getByText(l10n.en.voiceAndSpeech.voicesEmptyState)).toBeTruthy();
+      expect(getByTestId('tts-system-get-voices')).toBeTruthy();
+      warn.mockRestore();
+    });
+
     it('shows the Settings hint instead of Get more voices on iOS', async () => {
       Platform.OS = 'ios';
       mockVoices([
@@ -437,6 +457,45 @@ describe('VoicePickerView', () => {
         pending[2]!([]);
       });
       expect(appStateRemove).toHaveBeenCalled();
+      expect(getPhoneLocale).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts every visible voice in the header, not only the shown languages', async () => {
+      const {getByText, getAllByTestId} = await openSystemGroup();
+
+      expect(getAllByTestId(/^tts-voice-row-system-/)).toHaveLength(3);
+      expect(
+        getByText(
+          l10n.en.voiceAndSpeech.engineSystemSpecsLine.replace(
+            '{{voices}}',
+            '5',
+          ),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('checks no row for a saved system voice this phone no longer has', async () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'en-us-x-gone-local',
+          name: `${languageLabel('en-US')} · Voice 3 · gone`,
+          engine: 'system',
+          language: 'en-US',
+        };
+      });
+      const {findByTestId, getAllByTestId, getByTestId} = renderView();
+
+      await findByTestId('tts-voice-row-system-en-us-x-sfg-local');
+      const rows = getAllByTestId(/^tts-voice-row-system-/);
+      expect(rows).toHaveLength(3);
+      rows.forEach(row =>
+        expect(row.props.accessibilityState).toEqual(
+          expect.objectContaining({checked: false}),
+        ),
+      );
+      expect(getByTestId('tts-hero-voice-name').props.children).toBe(
+        'Voice 3 · gone',
+      );
     });
   });
 

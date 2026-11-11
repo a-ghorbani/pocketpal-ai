@@ -27,6 +27,8 @@ describe('localeKey', () => {
     ['zh__#Hans', 'zh'],
     ['ar-001', 'ar-001'],
     ['en-US-u-ca-gregory', 'en-us'],
+    ['en__#u-fw-mon-mu-celsius', 'en'],
+    ['en-u-ca-gregory', 'en'],
     ['de-x-private', 'de'],
     ['zh_Hant', 'zh'],
     ['', ''],

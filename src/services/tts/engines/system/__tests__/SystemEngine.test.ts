@@ -23,6 +23,27 @@ const flush = async () => {
   }
 };
 
+describe('SystemEngine.play', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    ttsRuntime._resetForTests();
+  });
+
+  it('speaks with the saved id as is, even one the phone no longer lists', async () => {
+    (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce([]);
+
+    await new SystemEngine().play('hello', {
+      id: 'en-us-x-gone-local',
+      name: 'Voice 3 · gone',
+      engine: 'system',
+      language: 'en-US',
+    });
+
+    expect(Speech.speak).toHaveBeenCalledWith('hello', 'en-us-x-gone-local');
+    expect(Speech.getAvailableVoices).not.toHaveBeenCalled();
+  });
+});
+
 describe('SystemEngine streaming', () => {
   beforeEach(() => {
     jest.clearAllMocks();
