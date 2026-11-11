@@ -102,8 +102,8 @@ export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 398_352_949;
 /**
  * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port. FP16 weights
  * produce silent audio and q8f16 all-NaN audio on onnxruntime >= 1.24. Int8
- * is faster than FP32 on Android CPUs but slower on iOS, hence the
- * per-platform weights below.
+ * was faster than FP32 on most Android phones tested (not all) and slower on
+ * iOS, hence the per-platform weights below.
  */
 export const KOKORO_MODEL_BASE_URL =
   'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main';
