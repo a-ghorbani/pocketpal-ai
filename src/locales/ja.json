@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "多くのデバイスでは非常に低速",
     "useCta": "使用",
     "inUseLabel": "使用中",
-    "modelSectionHelper": "音声入力とハンズフリー音声で使用されます。"
+    "modelSectionHelper": "音声入力とハンズフリー音声で使用されます。",
+    "memoryAlertTitle": "メモリに余裕がありません",
+    "memoryAlertBody": "音声入力は、このチャットモデルに加えてさらにメモリを使います。動作が非常に遅くなったり、アプリが終了したりする可能性があります。",
+    "memoryAlertTryAnyway": "それでも試す"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "音声認識 · Whisper {{tier}}",
     "memoryVoiceRow": "音声 · {{name}}",
     "memoryNeeded": "必要メモリ",
-    "memoryNeededValue": "{{needed}} / 利用可能 {{available}}",
     "continueAnywayCta": "それでも続行",
     "chooseSmallerModelCta": "より小さいモデルを選択",
     "startLabel": "音声モードを開始",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Plusを入手",
     "teaserKeepTyping": "テキスト入力を続ける（無料）",
     "voiceRowFileMissing": "{{voice}}はまだダウンロードされていません。「続行」でダウンロードします。",
-    "voiceRowFileFailed": "{{voice}}をダウンロードできませんでした。インターネットに接続してもう一度お試しください。"
+    "voiceRowFileFailed": "{{voice}}をダウンロードできませんでした。インターネットに接続してもう一度お試しください。",
+    "memoryNeededOfTotal": "{{needed}} / {{total}}（このデバイス）"
   }
 }

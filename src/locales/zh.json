@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "在大多数手机上非常慢",
     "useCta": "使用",
     "inUseLabel": "使用中",
-    "modelSectionHelper": "语音输入和免提语音都会使用它。"
+    "modelSectionHelper": "语音输入和免提语音都会使用它。",
+    "memoryAlertTitle": "内存紧张",
+    "memoryAlertBody": "除了当前聊天模型，语音输入还需要额外内存。可能会很慢，App 也可能闪退。",
+    "memoryAlertTryAnyway": "仍要试试"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "语音识别 · Whisper {{tier}}",
     "memoryVoiceRow": "语音 · {{name}}",
     "memoryNeeded": "需要",
-    "memoryNeededValue": "{{needed}}（可用 {{available}}）",
     "continueAnywayCta": "仍要继续",
     "chooseSmallerModelCta": "选择更小的模型",
     "startLabel": "启动语音模式",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "获取 Plus",
     "teaserKeepTyping": "继续打字，免费",
     "voiceRowFileMissing": "{{voice}} 还没有下载，点击“继续”即可下载。",
-    "voiceRowFileFailed": "无法下载 {{voice}}，请连接网络后重试。"
+    "voiceRowFileFailed": "无法下载 {{voice}}，请连接网络后重试。",
+    "memoryNeededOfTotal": "{{needed}} / {{total}}（这部手机）"
   }
 }

@@ -1705,7 +1705,7 @@
     "errorPermissionBlocked": "麥克風權限已被封鎖，請在「設定」中開啟。",
     "errorTranscribeFailed": "無法轉錄 — 請再試一次。",
     "errorNotInstalled": "請下載語音模型以使用語音輸入。",
-    "errorInsufficientMemory": "記憶體不足，無法在使用此聊天模型時進行語音輸入。請改用較小的模型。",
+    "errorInsufficientMemory": "此聊天模型與語音輸入所需的記憶體超過此手機的容量。請嘗試使用較小的模型。",
     "errorMicUnavailable": "麥克風沒有回應。請再試一次，或改用較小的聊天模型。",
     "errorTranscriptPartial": "您的部分語音內容無法轉錄。",
     "openSettingsLabel": "開啟設定",
@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "在多數手機上跑起來會很慢",
     "useCta": "使用",
     "inUseLabel": "正在使用",
-    "modelSectionHelper": "由語音輸入與免持語音所使用。"
+    "modelSectionHelper": "由語音輸入與免持語音所使用。",
+    "memoryAlertTitle": "記憶體吃緊",
+    "memoryAlertBody": "此聊天模型與語音輸入會額外佔用記憶體。這可能導致運行速度變慢，或導致應用程式關閉。",
+    "memoryAlertTryAnyway": "儘管嘗試"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1812,11 +1815,10 @@
     "memoryTightTitle": "記憶體吃緊",
     "memoryTightBody": "語音模式會同時載入三個模型。在您的手機上可能會跑得比較慢，或者 App 可能會自動閃退。",
     "memoryWontFitTitle": "記憶體不足",
-    "memoryWontFitBody": "由於記憶體限制，此對話模型無法與語音辨識同時運作。請切換到較小的模型以開啟語音模式。",
+    "memoryWontFitBody": "這些模型所需的記憶體超過此手機的容量。請選擇較小的模型以使用語音模式。",
     "memoryChatRow": "對話模型 · {{name}}",
     "memoryVoiceRow": "語音 · {{name}}",
     "memoryNeeded": "需要",
-    "memoryNeededValue": "需要 {{needed}} / 可用 {{available}}",
     "continueAnywayCta": "不論如何繼續",
     "chooseSmallerModelCta": "選擇較小的模型",
     "startLabel": "開啟語音模式",
@@ -1829,6 +1831,7 @@
     "sttRowModel": "Whisper {{tier}} · {{size}}",
     "memorySttRowModel": "語音辨識 · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} 尚未下載。繼續將會下載它。",
-    "voiceRowFileFailed": "無法下載{{voice}}。連接網路並重試。"
+    "voiceRowFileFailed": "無法下載{{voice}}。連接網路並重試。",
+    "memoryNeededOfTotal": "此手機所需量：{{needed}} / {{total}}"
   }
 }

@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "איטי מאוד ברוב הטלפונים",
     "useCta": "השתמש",
     "inUseLabel": "בשימוש",
-    "modelSectionHelper": "משמש את הקלט הקולי ואת השיחה הקולית ללא ידיים."
+    "modelSectionHelper": "משמש את הקלט הקולי ואת השיחה הקולית ללא ידיים.",
+    "memoryAlertTitle": "הזיכרון צפוף",
+    "memoryAlertBody": "הקלט הקולי צריך זיכרון נוסף לצד מודל הצ'אט הזה. זה עלול להיות איטי מאוד, או שהאפליקציה עלולה להיסגר.",
+    "memoryAlertTryAnyway": "נסה בכל זאת"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "זיהוי דיבור · Whisper {{tier}}",
     "memoryVoiceRow": "קול · {{name}}",
     "memoryNeeded": "נדרש",
-    "memoryNeededValue": "{{needed}} מתוך {{available}} זמינים",
     "continueAnywayCta": "המשך בכל זאת",
     "chooseSmallerModelCta": "בחר מודל קטן יותר",
     "startLabel": "הפעל מצב קולי",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "קבל את Plus",
     "teaserKeepTyping": "המשך להקליד, בחינם",
     "voiceRowFileMissing": "{{voice}} עוד לא הורד. הקש על \"המשך\" כדי להוריד אותו.",
-    "voiceRowFileFailed": "לא הצלחנו להוריד את {{voice}}. התחבר לאינטרנט ונסה שוב."
+    "voiceRowFileFailed": "לא הצלחנו להוריד את {{voice}}. התחבר לאינטרנט ונסה שוב.",
+    "memoryNeededOfTotal": "{{needed}} מתוך {{total}} בטלפון הזה"
   }
 }

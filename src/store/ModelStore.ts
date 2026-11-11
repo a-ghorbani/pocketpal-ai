@@ -45,6 +45,7 @@ import {
   parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {isModelFilePath} from '../utils/pathGuard';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import {stopQuietly} from '../utils/stopQuietly';
@@ -169,6 +170,14 @@ const answersSession = (
 ): boolean =>
   capsMatchBinding(caps, binding, binding.modelId) &&
   caps?.samplerDefaults !== undefined;
+
+const isRegularFile = async (path: string): Promise<boolean> => {
+  try {
+    return (await RNFS.stat(path)).isFile();
+  } catch {
+    return false;
+  }
+};
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
@@ -730,6 +739,58 @@ class ModelStore {
     });
   };
 
+  // A text-only record sharing its id with a search file from a repo that
+  // ships an mmproj (a rule preset). Waits for the header backfill like the
+  // draft heal, so a metadata draft is never marked vision.
+  private isUpgradeableToVision = (model: Model): boolean =>
+    !model.supportsMultimodal &&
+    model.modelType === undefined &&
+    !isDraftOnlyModel(model) &&
+    !(model.isDownloaded && !model.ggufMetadata);
+
+  private markAsVision = (
+    model: Model,
+    searchFields?: Pick<
+      Model,
+      | 'compatibleProjectionModels'
+      | 'defaultProjectionModel'
+      | 'hfModel'
+      | 'hfModelFile'
+    >,
+    enableVision?: boolean,
+  ) => {
+    runInAction(() => {
+      Object.assign(model, searchFields);
+      model.supportsMultimodal = true;
+      model.modelType = ModelType.VISION;
+      model.capabilities = [
+        ...new Set([...(model.capabilities ?? []), 'vision' as const]),
+      ];
+      model.visionEnabled = model.visionEnabled ?? enableVision ?? true;
+    });
+  };
+
+  // Older builds wrote the projector pick onto a shadowed record without
+  // marking it vision. The projector is not fetched here; the model card
+  // offers it.
+  healShadowedVisionClassification = () => {
+    runInAction(() => {
+      this.models
+        .filter(
+          model =>
+            model.defaultProjectionModel && this.isUpgradeableToVision(model),
+        )
+        .forEach(model => {
+          const projector = this.models.find(
+            m => m.id === model.defaultProjectionModel,
+          );
+          if (projector?.modelType === ModelType.PROJECTION) {
+            this.markAsVision(model);
+          }
+        });
+    });
+  };
+
   /**
    * Delete projection models the heal orphaned. Runs every launch: an id
    * stays queued while its download is still in flight or its deletion
@@ -777,6 +838,7 @@ class ModelStore {
     console.log('models: ', this.models);
 
     this.healDraftVisionClassification();
+    this.healShadowedVisionClassification();
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
@@ -1642,6 +1704,9 @@ class ModelStore {
 
     try {
       const destinationPath = await this.getModelFullPath(model);
+      if (!isModelFilePath(destinationPath)) {
+        throw new Error(`Invalid model download path: ${destinationPath}`);
+      }
       const authToken = hfStore.shouldUseToken ? hfStore.hfToken : null;
       await downloadManager.startDownload(model, destinationPath, authToken);
 
@@ -1804,18 +1869,24 @@ class ModelStore {
         await this.releaseContext(true); // Clear active model and all related state
       }
 
-      // Delete the file from internal storage
-      try {
-        await RNFS.unlink(filePath);
-      } catch (err) {
-        console.error('Failed to delete local model file:', err);
+      if (isModelFilePath(filePath) && (await isRegularFile(filePath))) {
+        try {
+          await RNFS.unlink(filePath);
+        } catch (err) {
+          console.error('Failed to delete local model file:', err);
+        }
+      } else {
+        console.warn(
+          '[ModelStore] Skipped deleting unexpected path:',
+          filePath,
+        );
       }
     } else {
       // Non-local models are not removed from the list, when the file is deleted.
       console.log('deleting: ', filePath);
 
       try {
-        if (filePath) {
+        if (isModelFilePath(filePath) && (await isRegularFile(filePath))) {
           await RNFS.unlink(filePath);
 
           // Check if we need to release context (if this model is currently active)
@@ -1834,7 +1905,10 @@ class ModelStore {
 
           //console.log('models: ', this.models);
         } else {
-          console.error("Failed to delete, file doesn't exist: ", filePath);
+          console.warn(
+            '[ModelStore] Skipped deleting unexpected path:',
+            filePath,
+          );
         }
         this.refreshDownloadStatuses();
       } catch (err) {
@@ -2788,7 +2862,9 @@ class ModelStore {
     },
   ) => {
     try {
-      const newModel = await this.addHFModel(hfModel, modelFile);
+      const newModel = await this.addHFModel(hfModel, modelFile, {
+        enableVision: options?.enableVision,
+      });
       if (!newModel) {
         throw new Error('Failed to add model to store');
       }
@@ -2825,8 +2901,12 @@ class ModelStore {
       // This is needed because addHFModel adds mmproj models asynchronously
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Use the centralized download method which handles mmproj automatically
-      this.checkSpaceAndDownload(newModel.id);
+      if (newModel.isDownloaded) {
+        this._downloadProjectionModelIfNeeded(newModel);
+      } else {
+        // Use the centralized download method which handles mmproj automatically
+        this.checkSpaceAndDownload(newModel.id);
+      }
 
       // The error handling is now done in the downloadManager callbacks
     } catch (error) {
@@ -2846,9 +2926,15 @@ class ModelStore {
    * For multimodal models, ensures all required projection models are also added.
    * @param hfModel - The Hugging Face model to add.
    * @param modelFile - The model file to add.
+   * @param options.enableVision - The caller's vision choice, applied when an
+   * existing text-only record is upgraded to vision.
    * @returns The new model that was added.
    */
-  addHFModel = async (hfModel: HuggingFaceModel, modelFile: ModelFile) => {
+  addHFModel = async (
+    hfModel: HuggingFaceModel,
+    modelFile: ModelFile,
+    options?: {enableVision?: boolean},
+  ) => {
     const newModel = hfAsModel(hfModel, modelFile);
     const storeModel = this.models.find(m => m.id === newModel.id);
 
@@ -2888,9 +2974,19 @@ class ModelStore {
         }
       }
 
-      // If we're working with an existing model, update its projection model references
-      // to ensure they're current with what's now in the store
-      if (storeModel) {
+      if (storeModel && this.isUpgradeableToVision(storeModel)) {
+        this.markAsVision(
+          storeModel,
+          {
+            compatibleProjectionModels: newModel.compatibleProjectionModels,
+            defaultProjectionModel: newModel.defaultProjectionModel,
+            hfModel: newModel.hfModel,
+            hfModelFile: newModel.hfModelFile,
+          },
+          options?.enableVision,
+        );
+      } else if (storeModel?.supportsMultimodal) {
+        // Refresh projection model references; keep the user's pick.
         const updatedCompatibleModels = mmprojFiles.map(
           file => `${hfModel.id}/${file.rfilename}`,
         );

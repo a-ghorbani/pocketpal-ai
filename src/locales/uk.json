@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Дуже повільна на більшості телефонів",
     "useCta": "Використати",
     "inUseLabel": "Використовується",
-    "modelSectionHelper": "Використовується для голосового вводу та голосового режиму без рук."
+    "modelSectionHelper": "Використовується для голосового вводу та голосового режиму без рук.",
+    "memoryAlertTitle": "Пам'яті не вистачає",
+    "memoryAlertBody": "Голосове введення потребує пам'яті на додачу до цієї моделі чату. Це може працювати дуже повільно, або програма може закритися.",
+    "memoryAlertTryAnyway": "Спробувати все одно"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1816,7 +1819,6 @@
     "memoryChatRow": "Модель чату · {{name}}",
     "memoryVoiceRow": "Голос · {{name}}",
     "memoryNeeded": "Потрібно",
-    "memoryNeededValue": "{{needed}} з {{available}} доступних",
     "continueAnywayCta": "Продовжити все одно",
     "chooseSmallerModelCta": "Оберіть меншу модель",
     "startLabel": "Увімкнути голосовий режим",
@@ -1829,6 +1831,7 @@
     "sttRowModel": "Whisper {{tier}} · {{size}}",
     "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} ще не завантажено. Натисніть «Продовжити» — і ми його завантажимо.",
-    "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз."
+    "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз.",
+    "memoryNeededOfTotal": "{{needed}} із {{total}} на цьому телефоні"
   }
 }

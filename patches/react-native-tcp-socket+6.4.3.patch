@@ -1,0 +1,159 @@
+diff --git a/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketClient.java b/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketClient.java
+index 7511570..11512fe 100644
+--- a/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketClient.java
++++ b/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketClient.java
+@@ -15,6 +15,7 @@ import java.security.GeneralSecurityException;
+ import java.util.Arrays;
+ import java.util.concurrent.ExecutorService;
+ import java.util.concurrent.Executors;
++import java.util.concurrent.RejectedExecutionException;
+ 
+ import javax.net.ssl.SSLSocket;
+ import javax.net.ssl.SSLSocketFactory;
+@@ -143,7 +144,11 @@ class TcpSocketClient extends TcpSocket {
+ 
+     public void startListening() {
+         receiverTask = new TcpReceiverTask(this, receiverListener);
+-        listenExecutor.execute(receiverTask);
++        try {
++            listenExecutor.execute(receiverTask);
++        } catch (RejectedExecutionException alreadyDestroyed) {
++            return;
++        }
+     }
+ 
+     /**
+@@ -152,23 +157,29 @@ class TcpSocketClient extends TcpSocket {
+      * @param data data to be sent
+      */
+     public void write(final int msgId, final byte[] data) {
+-        writeExecutor.execute(new Runnable() {
+-            @Override
+-            public void run() {
+-                final Socket s = socket;
+-                if (s == null) {
+-                    receiverListener.onError(getId(), new IOException("Attempted to write to closed socket"));
+-                    return;
+-                }
+-                try {
+-                    s.getOutputStream().write(data);
+-                    receiverListener.onWritten(getId(), msgId, null);
+-                } catch (IOException e) {
+-                    receiverListener.onWritten(getId(), msgId, e);
+-                    receiverListener.onError(getId(), e);
++        try {
++            writeExecutor.execute(new Runnable() {
++                @Override
++                public void run() {
++                    final Socket s = socket;
++                    if (s == null) {
++                        receiverListener.onError(getId(), new IOException("Attempted to write to closed socket"));
++                        return;
++                    }
++                    try {
++                        s.getOutputStream().write(data);
++                        receiverListener.onWritten(getId(), msgId, null);
++                    } catch (IOException e) {
++                        receiverListener.onWritten(getId(), msgId, e);
++                        receiverListener.onError(getId(), e);
++                    }
+                 }
+-            }
+-        });
++            });
++        } catch (RejectedExecutionException e) {
++            final IOException closed = new IOException("Attempted to write to closed socket");
++            receiverListener.onWritten(getId(), msgId, closed);
++            receiverListener.onError(getId(), closed);
++        }
+     }
+ 
+     public ReadableMap getPeerCertificate() {
+@@ -193,6 +204,9 @@ class TcpSocketClient extends TcpSocket {
+             }
+         } catch (IOException e) {
+             receiverListener.onClose(getId(), e);
++        } finally {
++            listenExecutor.shutdown();
++            writeExecutor.shutdown();
+         }
+     }
+ 
+diff --git a/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketModule.java b/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketModule.java
+index 121edb4..37bb019 100644
+--- a/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketModule.java
++++ b/node_modules/react-native-tcp-socket/android/src/main/java/com/asterinet/react/tcpsocket/TcpSocketModule.java
+@@ -140,7 +140,18 @@ public class TcpSocketModule extends ReactContextBaseJavaModule {
+         executorService.execute(new Runnable() {
+             @Override
+             public void run() {
+-                TcpSocketClient socketClient = getTcpClient(cId);
++                TcpSocket socket = socketMap.get(cId);
++                if (socket == null) {
++                    return;
++                }
++                if (!(socket instanceof TcpSocketClient)) {
++                    tcpEvtListener.onError(cId, new IllegalArgumentException("Socket with id " + cId + " is not a client"));
++                    return;
++                }
++                TcpSocketClient socketClient = (TcpSocketClient) socket;
++                if (!socketMap.remove(cId, socketClient)) {
++                    return;
++                }
+                 socketClient.destroy();
+             }
+         });
+diff --git a/node_modules/react-native-tcp-socket/ios/TcpSockets.m b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
+index a5553c6..47437a5 100644
+--- a/node_modules/react-native-tcp-socket/ios/TcpSockets.m
++++ b/node_modules/react-native-tcp-socket/ios/TcpSockets.m
+@@ -252,11 +252,20 @@ - (void)onConnect:(TcpSocketClient *)client {
+ 
+ - (void)onListen:(TcpSocketClient *)server {
+     GCDAsyncSocket *socket = [server getSocket];
++    NSString *localAddress = [socket localHost];
++    if (localAddress == nil) {
++        [self sendEventWithName:@"error"
++                           body:@{
++                               @"id" : server.id,
++                               @"error" : @"Server socket closed before listening could be reported"
++                           }];
++        return;
++    }
+     [self sendEventWithName:@"listening"
+                        body:@{
+                            @"id" : server.id,
+                            @"connection" : @{
+-                               @"localAddress" : [socket localHost],
++                               @"localAddress" : localAddress,
+                                @"localPort" :
+                                    [NSNumber numberWithInt:[socket localPort]],
+                                @"localFamily" : [socket isIPv4] ? @"IPv4"
+@@ -286,6 +295,14 @@ - (void)onSocketConnection:(TcpSocketClient *)client
+                   toClient:(NSNumber *)clientID
+             connectionType:(NSString *)connectionType {
+     GCDAsyncSocket *socket = [client getSocket];
++    NSString *localAddress = [socket localHost];
++    NSString *remoteAddress = [socket connectedHost];
++    if (localAddress == nil || remoteAddress == nil) {
++        RCTLogWarn(@"Dropping incoming connection %@: peer disconnected before it was accepted",
++                   client.id);
++        [self destroyClient:client.id];
++        return;
++    }
+ 
+     [self sendEventWithName:connectionType
+                        body:@{
+@@ -293,10 +310,10 @@ - (void)onSocketConnection:(TcpSocketClient *)client
+                            @"info" : @{
+                                @"id" : client.id,
+                                @"connection" : @{
+-                                   @"localAddress" : [socket localHost],
++                                   @"localAddress" : localAddress,
+                                    @"localPort" : [NSNumber
+                                        numberWithInt:[socket localPort]],
+-                                   @"remoteAddress" : [socket connectedHost],
++                                   @"remoteAddress" : remoteAddress,
+                                    @"remotePort" : [NSNumber
+                                        numberWithInt:[socket connectedPort]],
+                                    @"remoteFamily" : [socket isIPv4] ? @"IPv4"

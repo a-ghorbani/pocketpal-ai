@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Bardzo wolny na większości telefonów",
     "useCta": "Użyj",
     "inUseLabel": "W użyciu",
-    "modelSectionHelper": "Używany przez wprowadzanie głosowe i rozmowę głosową bez rąk."
+    "modelSectionHelper": "Używany przez wprowadzanie głosowe i rozmowę głosową bez rąk.",
+    "memoryAlertTitle": "Mało pamięci",
+    "memoryAlertBody": "Wprowadzanie głosowe potrzebuje dodatkowej pamięci obok tego modelu czatu. Może działać bardzo wolno lub aplikacja może się zamknąć.",
+    "memoryAlertTryAnyway": "Spróbuj mimo to"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Rozpoznawanie mowy · Whisper {{tier}}",
     "memoryVoiceRow": "Głos · {{name}}",
     "memoryNeeded": "Wymagane",
-    "memoryNeededValue": "{{needed}} z dostępnych {{available}}",
     "continueAnywayCta": "Kontynuuj mimo to",
     "chooseSmallerModelCta": "Wybierz mniejszy model",
     "startLabel": "Uruchom tryb głosowy",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Kup Plus",
     "teaserKeepTyping": "Pisz dalej, za darmo",
     "voiceRowFileMissing": "{{voice}} nie jest jeszcze pobrany. Dotknij Kontynuuj, aby go pobrać.",
-    "voiceRowFileFailed": "Nie udało się pobrać {{voice}}. Połącz się z internetem i spróbuj ponownie."
+    "voiceRowFileFailed": "Nie udało się pobrać {{voice}}. Połącz się z internetem i spróbuj ponownie.",
+    "memoryNeededOfTotal": "{{needed}} z {{total}} na tym telefonie"
   }
 }

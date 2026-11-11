@@ -85,6 +85,12 @@ interface RunArgs {
   help: boolean;
 }
 
+/**
+ * `skipped` means the run exited cleanly but executed no tests (every test
+ * self-skipped). It is not a failure, but it is not a pass either.
+ */
+type RunStatus = 'passed' | 'failed' | 'skipped';
+
 interface TestRunResult {
   deviceId: string | null;
   deviceName: string | null;
@@ -93,7 +99,11 @@ interface TestRunResult {
   modelId: string | null;
   spec: string;
   success: boolean;
+  status: RunStatus;
   duration: number;
+  /** Test counts from the run's JUnit report, when one was written. */
+  tests?: number;
+  skipped?: number;
   error?: string;
   junitFile?: string;
 }
@@ -108,6 +118,7 @@ interface RunSummary {
   totalRuns: number;
   passed: number;
   failed: number;
+  skipped: number;
   totalDuration: number;
   results: TestRunResult[];
 }
@@ -728,9 +739,17 @@ function runSingleTest(opts: {
     });
 
     const duration = Date.now() - startTime;
-    console.log(
-      `\n[PASS] ${label} completed in ${(duration / 1000).toFixed(1)}s\n`,
-    );
+    const counts = readRunJunitCounts(runReportDir);
+    const status = classifyCleanRun(counts);
+    if (status === 'skipped') {
+      console.log(
+        `\n[SKIP] ${label} executed no tests (${counts?.skipped} skipped) in ${(duration / 1000).toFixed(1)}s\n`,
+      );
+    } else {
+      console.log(
+        `\n[PASS] ${label} completed in ${(duration / 1000).toFixed(1)}s\n`,
+      );
+    }
 
     return {
       deviceId: device?.id ?? null,
@@ -740,7 +759,10 @@ function runSingleTest(opts: {
       modelId: model?.id ?? null,
       spec,
       success: true,
+      status,
       duration,
+      tests: counts?.tests,
+      skipped: counts?.skipped,
     };
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -758,6 +780,7 @@ function runSingleTest(opts: {
       modelId: model?.id ?? null,
       spec,
       success: false,
+      status: 'failed',
       duration,
       error: errorMessage,
     };
@@ -767,6 +790,93 @@ function runSingleTest(opts: {
 // ---------------------------------------------------------------------------
 // JUnit Merging
 // ---------------------------------------------------------------------------
+
+const MERGED_JUNIT_FILE = 'junit-results.xml';
+
+interface JunitCounts {
+  tests: number;
+  failures: number;
+  errors: number;
+  skipped: number;
+}
+
+/** Extracts the <testsuite> elements of a JUnit report and sums their counts. */
+export function parseJunitSuites(content: string): {
+  suites: string[];
+  counts: JunitCounts;
+} {
+  const counts: JunitCounts = {tests: 0, failures: 0, errors: 0, skipped: 0};
+  const suites = content.match(/<testsuite[\s>][\s\S]*?<\/testsuite>/g) ?? [];
+
+  for (const suite of suites) {
+    const testsMatch = suite.match(/tests="(\d+)"/);
+    const failuresMatch = suite.match(/failures="(\d+)"/);
+    const errorsMatch = suite.match(/errors="(\d+)"/);
+    const skippedMatch = suite.match(/skipped="(\d+)"/);
+
+    if (testsMatch) {
+      counts.tests += parseInt(testsMatch[1], 10);
+    }
+    if (failuresMatch) {
+      counts.failures += parseInt(failuresMatch[1], 10);
+    }
+    if (errorsMatch) {
+      counts.errors += parseInt(errorsMatch[1], 10);
+    }
+    if (skippedMatch) {
+      counts.skipped += parseInt(skippedMatch[1], 10);
+    }
+  }
+
+  return {suites, counts};
+}
+
+/**
+ * Sums the JUnit reports wdio wrote directly into one run's report directory.
+ * Returns null when there are none, as when a worker wrote no report.
+ */
+export function readRunJunitCounts(runReportDir: string): JunitCounts | null {
+  let files: string[];
+  try {
+    files = fs
+      .readdirSync(runReportDir)
+      .filter(
+        name =>
+          name.startsWith('junit-') &&
+          name.endsWith('.xml') &&
+          name !== MERGED_JUNIT_FILE,
+      );
+  } catch {
+    return null;
+  }
+  if (files.length === 0) {
+    return null;
+  }
+
+  const total: JunitCounts = {tests: 0, failures: 0, errors: 0, skipped: 0};
+  for (const name of files) {
+    const {counts} = parseJunitSuites(
+      fs.readFileSync(path.join(runReportDir, name), 'utf8'),
+    );
+    total.tests += counts.tests;
+    total.failures += counts.failures;
+    total.errors += counts.errors;
+    total.skipped += counts.skipped;
+  }
+  return total;
+}
+
+/**
+ * Status of a run whose wdio process exited 0. A run in which every test
+ * skipped executed nothing, so it must not read as a pass. Without a JUnit
+ * report there is nothing to go on, so the exit code stands.
+ */
+export function classifyCleanRun(counts: JunitCounts | null): RunStatus {
+  if (counts && counts.tests > 0 && counts.tests === counts.skipped) {
+    return 'skipped';
+  }
+  return 'passed';
+}
 
 function mergeJUnitReports(reportDir: string): void {
   const junitFiles = findJunitFiles(reportDir);
@@ -783,32 +893,14 @@ function mergeJUnitReports(reportDir: string): void {
   const testSuites: string[] = [];
 
   for (const filePath of junitFiles) {
-    const content = fs.readFileSync(filePath, 'utf8');
-
-    const suiteMatch = content.match(/<testsuite[\s\S]*?<\/testsuite>/g);
-    if (suiteMatch) {
-      for (const suite of suiteMatch) {
-        testSuites.push(suite);
-
-        const testsMatch = suite.match(/tests="(\d+)"/);
-        const failuresMatch = suite.match(/failures="(\d+)"/);
-        const errorsMatch = suite.match(/errors="(\d+)"/);
-        const skippedMatch = suite.match(/skipped="(\d+)"/);
-
-        if (testsMatch) {
-          totalTests += parseInt(testsMatch[1], 10);
-        }
-        if (failuresMatch) {
-          totalFailures += parseInt(failuresMatch[1], 10);
-        }
-        if (errorsMatch) {
-          totalErrors += parseInt(errorsMatch[1], 10);
-        }
-        if (skippedMatch) {
-          totalSkipped += parseInt(skippedMatch[1], 10);
-        }
-      }
-    }
+    const {suites, counts} = parseJunitSuites(
+      fs.readFileSync(filePath, 'utf8'),
+    );
+    testSuites.push(...suites);
+    totalTests += counts.tests;
+    totalFailures += counts.failures;
+    totalErrors += counts.errors;
+    totalSkipped += counts.skipped;
   }
 
   const mergedXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -816,7 +908,7 @@ function mergeJUnitReports(reportDir: string): void {
 ${testSuites.join('\n')}
 </testsuites>`;
 
-  const mergedPath = path.join(reportDir, 'junit-results.xml');
+  const mergedPath = path.join(reportDir, MERGED_JUNIT_FILE);
   fs.writeFileSync(mergedPath, mergedXml);
   console.log(
     `\nMerged ${junitFiles.length} JUnit reports into: ${mergedPath}`,
@@ -880,13 +972,15 @@ function printSummary(results: TestRunResult[]): void {
   console.log('TEST SUMMARY');
   console.log(`${'='.repeat(60)}\n`);
 
-  const passed = results.filter(r => r.success);
-  const failed = results.filter(r => !r.success);
+  const passed = results.filter(r => r.status === 'passed');
+  const failed = results.filter(r => r.status === 'failed');
+  const skipped = results.filter(r => r.status === 'skipped');
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
   console.log(`Total runs: ${results.length}`);
   console.log(`Passed: ${passed.length}`);
   console.log(`Failed: ${failed.length}`);
+  console.log(`Skipped (no tests executed): ${skipped.length}`);
   console.log(`Duration: ${(totalDuration / 1000 / 60).toFixed(1)} minutes\n`);
 
   if (passed.length > 0) {
@@ -895,6 +989,17 @@ function printSummary(results: TestRunResult[]): void {
       const label = [r.deviceName, r.modelId].filter(Boolean).join(' / ');
       console.log(
         `  [PASS] ${label || r.devicePlatform} (${(r.duration / 1000).toFixed(1)}s)`,
+      );
+    });
+    console.log();
+  }
+
+  if (skipped.length > 0) {
+    console.log('Skipped:');
+    skipped.forEach(r => {
+      const label = [r.deviceName, r.modelId].filter(Boolean).join(' / ');
+      console.log(
+        `  [SKIP] ${label || r.devicePlatform} (${(r.duration / 1000).toFixed(1)}s)`,
       );
     });
     console.log();
@@ -919,8 +1024,9 @@ function writeSummary(
   gitInfo: {branch: string; commit: string},
   timestamp: string,
 ): void {
-  const passed = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success).length;
+  const passed = results.filter(r => r.status === 'passed').length;
+  const failed = results.filter(r => r.status === 'failed').length;
+  const skipped = results.filter(r => r.status === 'skipped').length;
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
   const summary: RunSummary = {
@@ -933,6 +1039,7 @@ function writeSummary(
     totalRuns: results.length,
     passed,
     failed,
+    skipped,
     totalDuration,
     results,
   };
@@ -1157,7 +1264,9 @@ async function main(): Promise<void> {
   process.exit(hasFailures ? 1 : 0);
 }
 
-main().catch(error => {
-  console.error('Runner failed:', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error('Runner failed:', error);
+    process.exit(1);
+  });
+}

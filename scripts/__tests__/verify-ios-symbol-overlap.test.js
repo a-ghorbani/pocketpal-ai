@@ -731,6 +731,7 @@ describe('self-test', () => {
     'DENY weak external / weak external ggml_planted_weak',
     'DENY weak private external / weak private external ggml_planted_weak_hidden',
     'DENY weak external automatically hidden / weak external automatically hidden ggml_planted_autohidden',
+    'DENY external / external ThreadPool::ThreadPool(unsigned long)',
   ];
 
   it('denies a planted symbol of each binding, then compares the archives', () => {
@@ -748,6 +749,27 @@ describe('self-test', () => {
       selfTest: true,
     });
     expect(verdictOf(result, C_FUNCTION)).toEqual(['DENY']);
+    expect(result.status).toBe(1);
+  });
+
+  it('fails before comparing when c++filt leaves the planted C++ name mangled', () => {
+    const map = path.join(tmp, 'cxxfilt-no-thread-pool.map');
+    fs.writeFileSync(
+      map,
+      fs
+        .readFileSync(path.join(tmp, 'cxxfilt.map'), 'utf-8')
+        .split('\n')
+        .filter(line => !line.startsWith(`${mangled(THREAD_POOL)}\t`))
+        .join('\n'),
+    );
+    const result = run([STD_FUNCTION, OWN_A], [STD_FUNCTION, OWN_B], {
+      selfTest: true,
+      env: {STUB_CXXFILT_MAP: map},
+    });
+    expect(result.stderr).toContain(
+      'a planted ThreadPool::ThreadPool(unsigned long) was not denied',
+    );
+    expect(result.stdout).not.toContain('1 shared, 0 denied');
     expect(result.status).toBe(1);
   });
 

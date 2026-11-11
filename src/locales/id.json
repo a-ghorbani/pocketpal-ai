@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Sangat lambat di sebagian besar ponsel",
     "useCta": "Gunakan",
     "inUseLabel": "Digunakan",
-    "modelSectionHelper": "Digunakan oleh input suara dan suara bebas genggam."
+    "modelSectionHelper": "Digunakan oleh input suara dan suara bebas genggam.",
+    "memoryAlertTitle": "Memori terbatas",
+    "memoryAlertBody": "Input suara perlu memori tambahan selain model obrolan ini. Bisa jadi sangat lambat, atau aplikasi bisa tertutup.",
+    "memoryAlertTryAnyway": "Tetap coba"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Pengenalan ucapan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
     "memoryNeeded": "Dibutuhkan",
-    "memoryNeededValue": "{{needed}} dari {{available}} tersedia",
     "continueAnywayCta": "Tetap lanjutkan",
     "chooseSmallerModelCta": "Pilih model lebih kecil",
     "startLabel": "Mulai mode suara",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Dapatkan Plus",
     "teaserKeepTyping": "Tetap mengetik, gratis",
     "voiceRowFileMissing": "{{voice}} belum diunduh. Ketuk Lanjutkan untuk mengunduhnya.",
-    "voiceRowFileFailed": "Tidak dapat mengunduh {{voice}}. Sambungkan ke internet dan coba lagi."
+    "voiceRowFileFailed": "Tidak dapat mengunduh {{voice}}. Sambungkan ke internet dan coba lagi.",
+    "memoryNeededOfTotal": "{{needed}} dari {{total}} di ponsel ini"
   }
 }

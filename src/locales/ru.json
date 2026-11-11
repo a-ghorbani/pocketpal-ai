@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Очень медленно на большинстве телефонов",
     "useCta": "Использовать",
     "inUseLabel": "Используется",
-    "modelSectionHelper": "Используется для голосового ввода и голосового режима без рук."
+    "modelSectionHelper": "Используется для голосового ввода и голосового режима без рук.",
+    "memoryAlertTitle": "Память на пределе",
+    "memoryAlertBody": "Голосовому вводу нужна дополнительная память помимо этой модели чата. Всё может работать очень медленно, а приложение может закрыться.",
+    "memoryAlertTryAnyway": "Всё равно попробовать"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Распознавание речи · Whisper {{tier}}",
     "memoryVoiceRow": "Голос · {{name}}",
     "memoryNeeded": "Требуется",
-    "memoryNeededValue": "{{needed}} из {{available}} доступных",
     "continueAnywayCta": "Всё равно продолжить",
     "chooseSmallerModelCta": "Выбрать модель поменьше",
     "startLabel": "Запустить голосовой режим",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Получить Plus",
     "teaserKeepTyping": "Продолжить писать, бесплатно",
     "voiceRowFileMissing": "{{voice}} ещё не загружен. Нажмите Продолжить – и мы его загрузим.",
-    "voiceRowFileFailed": "Не удалось загрузить {{voice}}. Подключитесь к интернету и попробуйте ещё раз."
+    "voiceRowFileFailed": "Не удалось загрузить {{voice}}. Подключитесь к интернету и попробуйте ещё раз.",
+    "memoryNeededOfTotal": "{{needed}} из {{total}} на этом телефоне"
   }
 }

@@ -10,11 +10,23 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
-import {MessageType} from './types';
+import {
+  AgentStep,
+  AgentToolCall,
+  AgentToolCallMetrics,
+  AgentToolOutcome,
+  MessageType,
+} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
 import {palStore} from '../store';
+import {getAbsoluteThumbnailPath, isRemoteThumbnailUrl} from './imageUtils';
+import {isAllowedChatImageUri} from './chatImageUri';
 import type {Pal, ParameterDefinition} from '../types/pal';
+import type {
+  TalentResult,
+  WebSearchResultItem,
+} from '../services/talents/types';
 
 /**
  * Interface for imported chat session data
@@ -150,6 +162,12 @@ const validateSingleSession = (session: any): ImportedChatSession => {
       msg.createdAt = Date.now();
     }
 
+    if (msg.metadata?.imageUris !== undefined) {
+      msg.metadata.imageUris = Array.isArray(msg.metadata.imageUris)
+        ? msg.metadata.imageUris.filter(isAllowedChatImageUri)
+        : [];
+    }
+
     return msg;
   });
 
@@ -208,6 +226,108 @@ export const importChatSessions = async (): Promise<number> => {
   }
 };
 
+const isPlainObject = (value: unknown): value is Record<string, any> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isNumber = (value: unknown): value is number => typeof value === 'number';
+
+const arrayOf =
+  <T>(isItem: (item: unknown) => item is T) =>
+  (value: unknown): value is T[] =>
+    Array.isArray(value) && value.every(isItem);
+
+const isAbsentOr = <T>(
+  value: unknown,
+  isPresent: (item: unknown) => item is T,
+): value is T | null | undefined => value == null || isPresent(value);
+
+const isToolCallMetrics = (value: unknown): value is AgentToolCallMetrics =>
+  isPlainObject(value) && isNumber(value.tokens) && isNumber(value.durationMs);
+
+const isToolCall = (value: unknown): value is AgentToolCall =>
+  isPlainObject(value) &&
+  isString(value.id) &&
+  isPlainObject(value.function) &&
+  isString(value.function.name) &&
+  (isString(value.function.arguments) ||
+    isPlainObject(value.function.arguments)) &&
+  isAbsentOr(value.metrics, isToolCallMetrics);
+
+const isSearchHit = (value: unknown): value is WebSearchResultItem =>
+  isPlainObject(value) &&
+  isString(value.url) &&
+  isString(value.title) &&
+  isString(value.snippet);
+
+const hasResultFields = (result: Record<string, any>): boolean => {
+  switch (result.type) {
+    case 'html':
+      return isString(result.html) && isAbsentOr(result.title, isString);
+    case 'text':
+      return isAbsentOr(result.links, arrayOf(isString));
+    case 'search':
+      return isString(result.query) && arrayOf(isSearchHit)(result.results);
+    case 'audio':
+      return isString(result.audioUri);
+    case 'error':
+      return isString(result.errorMessage);
+    default:
+      return false;
+  }
+};
+
+const isTalentResult = (value: unknown): value is TalentResult =>
+  isPlainObject(value) && isString(value.summary) && hasResultFields(value);
+
+const isToolOutcome = (value: unknown): value is AgentToolOutcome =>
+  isPlainObject(value) &&
+  isString(value.callId) &&
+  isString(value.toolName) &&
+  isString(value.responseContent) &&
+  isTalentResult(value.result);
+
+const isAgentStep = (step: unknown): step is AgentStep =>
+  isPlainObject(step) &&
+  isAbsentOr(step.content, isString) &&
+  isAbsentOr(step.reasoningContent, isString) &&
+  isAbsentOr(step.toolCalls, arrayOf(isToolCall)) &&
+  isAbsentOr(step.toolOutcomes, arrayOf(isToolOutcome));
+
+const importedSteps = (steps: unknown, text?: string): AgentStep[] => {
+  const valid = Array.isArray(steps) ? steps.filter(isAgentStep) : [];
+  if (valid.length > 0) {
+    return valid;
+  }
+  return typeof text === 'string' && text.length > 0 ? [{content: text}] : [];
+};
+
+const toMessage = (msg: ImportedMessage): MessageType.Any => {
+  const base = {
+    id: msg.id,
+    author: {id: msg.author},
+    createdAt: msg.createdAt || Date.now(),
+  };
+  if (msg.type === 'assistant_turn') {
+    const {steps, ...metadata} = isPlainObject(msg.metadata)
+      ? msg.metadata
+      : {};
+    return {
+      ...base,
+      type: 'assistant_turn',
+      steps: importedSteps(steps, msg.text),
+      metadata,
+    };
+  }
+  return {
+    ...base,
+    text: msg.text || '',
+    type: msg.type as any,
+    metadata: msg.metadata || {},
+  } as MessageType.Any;
+};
+
 /**
  * Import a single chat session
  */
@@ -215,18 +335,7 @@ const importSingleSession = async (
   session: ImportedChatSession,
 ): Promise<void> => {
   try {
-    // Map messages to the correct format
-    const messages = session.messages.map(
-      msg =>
-        ({
-          id: msg.id,
-          author: {id: msg.author},
-          text: msg.text || '',
-          type: msg.type as any,
-          metadata: msg.metadata || {},
-          createdAt: msg.createdAt || Date.now(),
-        }) as MessageType.Any,
-    );
+    const messages = session.messages.map(toMessage);
 
     // Create a new session in the database
     await chatSessionRepository.createSession(
@@ -388,7 +497,10 @@ const saveBase64Image = async (
   // Use same directory and naming convention as imageUtils.ts
   const PAL_IMAGES_DIR = `${RNFS.DocumentDirectoryPath}/pal-images`;
   const fileName = `${palId}_thumbnail.${fileExtension}`;
-  const filePath = `${PAL_IMAGES_DIR}/${fileName}`;
+  const filePath = getAbsoluteThumbnailPath(fileName);
+  if (!filePath) {
+    throw new Error(`Invalid thumbnail filename: ${fileName}`);
+  }
 
   // Ensure directory exists (same as imageUtils.ts)
   const exists = await RNFS.exists(PAL_IMAGES_DIR);
@@ -403,6 +515,9 @@ const saveBase64Image = async (
   return fileName;
 };
 
+const keepRemoteThumbnailUrl = (url: unknown): string | undefined =>
+  typeof url === 'string' && isRemoteThumbnailUrl(url) ? url : undefined;
+
 /**
  * Transform imported pal to the format expected by palStore.createPal
  */
@@ -410,7 +525,7 @@ const transformImportPal = async (
   pal: ImportedPal,
 ): Promise<Omit<Pal, 'id' | 'created_at' | 'updated_at'>> => {
   // Handle thumbnail image - save base64 data as local file if present
-  let thumbnailUrl = pal.thumbnail_url;
+  let thumbnailUrl = keepRemoteThumbnailUrl(pal.thumbnail_url);
 
   if (pal.thumbnail_data) {
     try {

@@ -74,6 +74,41 @@ describe('importUtils', () => {
     });
   });
 
+  describe('imported chat image URIs', () => {
+    const tmp = RNFS.TemporaryDirectoryPath;
+    const pickerUri = `file://${tmp}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.jpg`;
+    const importedMessage = (metadata: unknown) =>
+      (
+        validateImportedData({
+          id: 's1',
+          title: 'Chat',
+          date: '2024-01-01T12:00:00.000Z',
+          messages: [
+            {id: 'm1', author: 'user', text: 'look', type: 'text', metadata},
+          ],
+        }) as ImportedChatSession
+      ).messages[0];
+
+    it.each([
+      `file://${tmp}..`,
+      `file://${tmp}../..`,
+      '/etc/hosts',
+      'file:///data/local/tmp/x',
+      '',
+      `file://${tmp}A1B2C3D4-E5F6-4789-ABCD-EF0123456789.j\u0000pg`,
+    ])('drops %j and keeps the message', bad => {
+      const message = importedMessage({imageUris: [bad, pickerUri]});
+      expect(message.metadata?.imageUris).toEqual([pickerUri]);
+      expect(message.text).toBe('look');
+    });
+
+    it('turns a non-array imageUris into an empty list', () => {
+      expect(
+        importedMessage({imageUris: 'file:///etc/hosts'}).metadata?.imageUris,
+      ).toEqual([]);
+    });
+  });
+
   describe('Pal Import Functions', () => {
     const mockImportedPal = {
       version: '2.0',
@@ -227,6 +262,45 @@ describe('importUtils', () => {
         const created = (palStore.createPal as jest.Mock).mock.calls[0][0];
         expect(created.pact).toEqual(palWithTalents.pact);
         expect(created.greeting).toEqual(palWithTalents.greeting);
+      });
+
+      it('does not write a base64 thumbnail whose generated name is unsafe', async () => {
+        jest.spyOn(require('uuid'), 'v4').mockReturnValueOnce('../x');
+        (RNFS.readFile as jest.Mock).mockResolvedValue(
+          JSON.stringify([mockImportedPalWithBase64]),
+        );
+
+        expect(await importPals()).toBe(1);
+
+        expect(RNFS.writeFile).not.toHaveBeenCalled();
+        const created = (palStore.createPal as jest.Mock).mock.calls[0][0];
+        expect(created.thumbnail_url).toBeUndefined();
+      });
+
+      const importThumbnail = async (thumbnail_url: unknown) => {
+        (RNFS.readFile as jest.Mock).mockResolvedValue(
+          JSON.stringify({...mockImportedPal, thumbnail_url}),
+        );
+        expect(await importPals()).toBe(1);
+        return (palStore.createPal as jest.Mock).mock.calls[0][0];
+      };
+
+      it.each([
+        '..',
+        '../..',
+        '/etc/hosts',
+        'file:///data/local/tmp/x',
+        '',
+        '\u0000https://h/a.png',
+      ])('drops the thumbnail_url %j and keeps the pal', async url => {
+        const created = await importThumbnail(url);
+        expect(created.thumbnail_url).toBeUndefined();
+        expect(created.name).toBe(mockImportedPal.name);
+      });
+
+      it('keeps an https thumbnail_url', async () => {
+        const created = await importThumbnail('https://h/a.png');
+        expect(created.thumbnail_url).toBe('https://h/a.png');
       });
     });
   });

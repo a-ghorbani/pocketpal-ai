@@ -90,8 +90,8 @@ android {
         applicationId "com.pocketpalai"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 158
-        versionName "1.22.0"
+        versionCode 160
+        versionName "1.23.0"
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
@@ -260,6 +260,11 @@ configurations.matching {
 }.configureEach {
     exclude group: 'androidx.compose.ui'
     exclude group: 'androidx.compose.runtime'
+}
+
+// react-native-tcp-socket needs BouncyCastle only for TLS servers; the local API server is plain TCP.
+configurations.matching { it.name.endsWith('RuntimeClasspath') }.configureEach {
+    exclude group: 'org.bouncycastle'
 }
 
 project.ext.vectoricons = [

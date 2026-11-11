@@ -1,4 +1,6 @@
+const {execFileSync, spawnSync} = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const vm = require('vm');
 
@@ -20,6 +22,7 @@ const metalGate = read('ios/PocketPal/LlamaMetalGate.swift');
 const podfile = read('ios/Podfile');
 const pbxproj = read('ios/PocketPal.xcodeproj/project.pbxproj');
 const metallibScript = read('scripts/build-ios-metallib.sh');
+const payloadScript = read('scripts/verify-ios-payload.sh');
 const deviceCapabilities = read('src/utils/deviceCapabilities.ts');
 const podspec = fs.readFileSync(
   path.join(LLAMA_RN, 'llama-rn.podspec'),
@@ -40,10 +43,11 @@ const parseKernelSet = (source, macro) =>
       new RegExp(`^#define ${macro}((?:.*\\\\\\n)+.*)`, 'm'),
     ) || ['', ''])[1].matchAll(/X\(\s*\w+\s*,\s*(\w+)\s*\)/g),
   ].map(match => match[1]);
+const KERNEL_INPUT = /^[^.].*\.(?:metal|h)$/;
 const listKernelFiles = metalDir =>
   fs
     .readdirSync(path.join(metalDir, 'kernels'), {withFileTypes: true})
-    .filter(entry => entry.isFile())
+    .filter(entry => entry.isFile() && KERNEL_INPUT.test(entry.name))
     .map(entry => entry.name)
     .sort();
 
@@ -53,6 +57,14 @@ const whisperMetalDevice = fs.readFileSync(
 );
 const whisperCpp = fs.readFileSync(
   path.join(WHISPER_CPP, 'whisper.cpp'),
+  'utf-8',
+);
+const whisperHeader = fs.readFileSync(
+  path.join(WHISPER_CPP, 'whisper.h'),
+  'utf-8',
+);
+const rnWhisper = fs.readFileSync(
+  path.join(ROOT, 'node_modules', 'whisper.rn', 'ios', 'RNWhisper.mm'),
   'utf-8',
 );
 const ciWorkflow = read('.github/workflows/ci.yml');
@@ -181,9 +193,9 @@ describe('the launch-time Metal gate', () => {
     expect(launchBody[1].trim()).toBe('configureGgmlMetal()');
   });
 
-  it('turns llama.rn Metal off through the env ggml reads', () => {
+  it("turns both ggml copies' Metal off through the env each reads", () => {
     expect(appDelegate).toMatch(
-      /disablesLlamaMetal\([^)]*\)\s*\{\s*setenv\("GGML_METAL_DEVICES", "0", 1\)/,
+      /disablesGgmlMetal\([^)]*\)\s*\{\s*setenv\("GGML_METAL_DEVICES", "0", 1\)\s*setenv\("WSP_GGML_METAL_DEVICES", "0", 1\)/,
     );
   });
 
@@ -194,7 +206,7 @@ describe('the launch-time Metal gate', () => {
 
 describe('the Metal gate logic', () => {
   const predicate = metalGate.match(
-    /func disablesLlamaMetal\(iOS18OrLater: Bool, supportsApple6: Bool\) -> Bool \{\s*([^}]*?)\s*\}/,
+    /func disablesGgmlMetal\(iOS18OrLater: Bool, supportsApple6: Bool\) -> Bool \{\s*([^}]*?)\s*\}/,
   );
   const launchGate = appDelegate.match(
     /func configureGgmlMetal\(\) \{([\s\S]*?)\n {2}\}/,
@@ -203,6 +215,13 @@ describe('the Metal gate logic', () => {
   it('finds the predicate and the launch gate', () => {
     expect(predicate).not.toBeNull();
     expect(launchGate).not.toBeNull();
+  });
+
+  it('names both precompiled libraries it protects', () => {
+    const comment = metalGate.match(/^\/\/ (.*)\nfunc disablesGgmlMetal\(/m);
+    expect(comment).not.toBeNull();
+    expect(comment[1]).toContain('rnllama.metallib');
+    expect(comment[1]).toContain('rnwhisper.metallib');
   });
 
   it.each([
@@ -231,7 +250,7 @@ describe('the Metal gate logic', () => {
       'iOS18OrLater = true',
       '}',
       'let supportsApple6 = iOS18OrLater && (MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false)',
-      'if disablesLlamaMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {',
+      'if disablesGgmlMetal(iOS18OrLater: iOS18OrLater, supportsApple6: supportsApple6) {',
       'setenv("GGML_METAL_DEVICES", "0", 1)',
       'setenv("WSP_GGML_METAL_DEVICES", "0", 1)',
       '}',
@@ -346,12 +365,12 @@ describe("whisper.rn's Metal library lookup", () => {
     /pre_install do \|installer\|([\s\S]*?)\n {2}end/,
   );
 
-  it("looks up default.metallib in its own class's bundle, which static linking makes the app's", () => {
+  it("looks up rnwhisper.metallib in its own class's bundle, which static linking makes the app's", () => {
     const bundle = whisperMetalDevice.indexOf(
       'NSBundle * bundle = [NSBundle bundleForClass:[WSPGGMLMetalClass class]];',
     );
     const lookup = whisperMetalDevice.indexOf(
-      'NSString * path_lib = [bundle pathForResource:@"default" ofType:@"metallib"];',
+      'NSString * path_lib = [bundle pathForResource:@"rnwhisper" ofType:@"metallib"];',
     );
     expect(bundle).toBeGreaterThan(-1);
     expect(lookup).toBeGreaterThan(bundle);
@@ -360,6 +379,20 @@ describe("whisper.rn's Metal library lookup", () => {
       /pod\.name == 'whisper-rn'|pod\.name\.start_with\?\('whisper'\)/,
     );
     expect(preInstall[1]).toMatch(/Pod::BuildType\.static_library/);
+  });
+
+  it('looks up rnwhisper.metallib next to the executable, and default.metallib nowhere', () => {
+    expect(whisperMetalDevice).toContain(
+      'NSString * path_lib_default = [NSString pathWithComponents:@[bin_dir, @"rnwhisper.metallib"]];',
+    );
+    expect(whisperMetalDevice).not.toContain('@"default"');
+    expect(whisperMetalDevice).not.toContain('@"default.metallib"');
+  });
+
+  it('logs the kernel-source fallback without naming a library file', () => {
+    expect(whisperMetalDevice).toMatch(
+      /WSP_GGML_LOG_INFO\("%s: no precompiled metallib, loading kernel sources\\n"/,
+    );
   });
 
   it('turns the tensor API on only by GPU family, so its opt-out cannot be overridden', () => {
@@ -475,6 +508,126 @@ describe('the patched whisper.rn GPU init', () => {
   });
 });
 
+describe("whisper.rn's parallel transcription", () => {
+  const start = whisperCpp.indexOf('int whisper_full_parallel(');
+  const body =
+    start < 0
+      ? ''
+      : whisperCpp.slice(start, whisperCpp.indexOf('\n}\n', start));
+  const firstWorker = body.indexOf('std::thread(whisper_full_with_state');
+
+  it('still hands a single processor to whisper_full', () => {
+    expect(body).toMatch(
+      /^\s*if \(n_processors == 1\) \{\s*return whisper_full\(ctx, params, samples, n_samples\);\s*\}/m,
+    );
+  });
+
+  it('creates every worker state before starting any worker', () => {
+    const inits = [...body.matchAll(/whisper_init_state\(/g)];
+    expect(inits).toHaveLength(1);
+    expect(firstWorker).toBeGreaterThan(-1);
+    expect(inits[0].index).toBeLessThan(firstWorker);
+  });
+
+  it('frees the states it made and fails on a null one, before any transcription', () => {
+    const guard = body.match(
+      /whisper_state \* (\w+) = whisper_init_state\(ctx\);\s*if \(\1 == nullptr\) \{\s*for \(whisper_state \* (\w+) : states\) \{\s*whisper_free_state\(\2\);\s*\}\s*return -1;\s*\}\s*states\.push_back\(\1\);/,
+    );
+    expect(guard).not.toBeNull();
+    expect(guard.index).toBeLessThan(body.indexOf('whisper_full_with_state'));
+  });
+});
+
+describe("whisper.rn's reported GPU use", () => {
+  const start = rnWhisper.indexOf(
+    'WhisperContextInitResult hostInitWhisperContext(',
+  );
+  const hostInit =
+    start < 0 ? '' : rnWhisper.slice(start, rnWhisper.indexOf('\n}\n', start));
+
+  it('is read from the context flag the probe clears', () => {
+    expect(whisperHeader).toMatch(
+      /WHISPER_API bool whisper_ctx_uses_gpu\s*\(struct whisper_context \* ctx\);/,
+    );
+    expect(whisperCpp).toMatch(
+      /\nbool whisper_ctx_uses_gpu\(struct whisper_context \* ctx\) \{\s*return ctx->params\.use_gpu;\s*\}\n/,
+    );
+  });
+
+  it('comes from the live context in from-source builds, and from the request otherwise', () => {
+    expect(hostInit.match(/result\.gpu = /g)).toHaveLength(2);
+    expect(hostInit).toMatch(
+      /\n#ifdef RNWHISPER_BUILD_FROM_SOURCE\n\s*result\.gpu = result\.context != nullptr && whisper_ctx_uses_gpu\(result\.context\);\n#else\n\s*result\.gpu = params\.use_gpu;\n#endif\n/,
+    );
+  });
+
+  it('is decided after the context is created', () => {
+    const created = hostInit.indexOf(
+      'result.context =\n        whisper_init_from_file_with_params(modelPath.c_str(), params);',
+    );
+    expect(created).toBeGreaterThan(-1);
+    expect(
+      hostInit.indexOf('#ifdef RNWHISPER_BUILD_FROM_SOURCE'),
+    ).toBeGreaterThan(created);
+  });
+
+  it('takes the live-context branch in the from-source podspec mode the Podfile selects', () => {
+    const macro = hostInit.match(/\n#ifdef (\w+)\n\s*result\.gpu = /);
+    const fromSource = whisperPodspec.match(
+      /if ENV\["RNWHISPER_BUILD_FROM_SOURCE"\] == "1"([\s\S]*?)\n {2}else/,
+    );
+    expect(macro).not.toBeNull();
+    expect(fromSource).not.toBeNull();
+    expect(fromSource[1]).toContain(`base_compiler_flags += " -D${macro[1]}"`);
+    expect(podfile).toMatch(/^ENV\['RNWHISPER_BUILD_FROM_SOURCE'\] = '1'$/m);
+  });
+});
+
+describe('the Podfile kernel phase inputs', () => {
+  const lambda = podfile.match(/^kernel_input_files = (.*)$/m);
+
+  it('are what both phases declare', () => {
+    expect(podfile).toMatch(
+      /^metal_kernel_files = kernel_input_files\.\(ggml_metal_dir\)$/m,
+    );
+    expect(podfile).toMatch(
+      /^whisper_metal_kernel_files = kernel_input_files\.\(whisper_metal_dir\)$/m,
+    );
+  });
+
+  it('are the kernel sources and headers only, never dotfiles or AppleDouble files', () => {
+    expect(lambda).not.toBeNull();
+    const metalDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kernel-input-files-'),
+    );
+    try {
+      fs.mkdirSync(path.join(metalDir, 'kernels'));
+      for (const name of [
+        'mul_mm.metal',
+        'common.h',
+        '.DS_Store',
+        '._mul_mm.metal',
+        '._common.h',
+      ]) {
+        fs.writeFileSync(path.join(metalDir, 'kernels', name), '');
+      }
+      const selected = execFileSync(
+        'ruby',
+        [
+          '-rpathname',
+          '-e',
+          `puts (${lambda[1]}).(Pathname.new(ARGV[0])).map { |path| path.basename }`,
+          metalDir,
+        ],
+        {encoding: 'utf-8'},
+      );
+      expect(selected.trim().split('\n')).toEqual(['common.h', 'mul_mm.metal']);
+    } finally {
+      fs.rmSync(metalDir, {recursive: true, force: true});
+    }
+  });
+});
+
 describe('the committed Metal kernel phase', () => {
   it('compiles exactly the vendored kernel set, in order', () => {
     const args = metalPhase.script.trim().split(/\s+/);
@@ -533,14 +686,52 @@ describe('the committed whisper.rn Metal kernel phase', () => {
     ]);
   });
 
-  it('writes only default.metallib', () => {
-    expect(whisperPhase.outputs).toEqual([`${APP_RESOURCES}/default.metallib`]);
+  it('writes only rnwhisper.metallib', () => {
+    expect(whisperPhase.outputs).toEqual([
+      `${APP_RESOURCES}/rnwhisper.metallib`,
+    ]);
   });
 
-  it('is the only writer of default.metallib in the app project', () => {
+  it('is the only writer of rnwhisper.metallib in the app project, and nothing writes default.metallib', () => {
     const phases = pbxproj.match(/Build whisper\.rn Metal kernels \*\/ = \{/g);
     expect(phases).toHaveLength(1);
-    expect(pbxproj.match(/default\.metallib/g)).toHaveLength(1);
+    expect(pbxproj.match(/rnwhisper\.metallib/g)).toHaveLength(1);
+    expect(pbxproj).not.toMatch(/default\.metallib/);
+  });
+});
+
+describe("whisper.rn's Metal library name", () => {
+  const names = {
+    bundleLookup: whisperMetalDevice.match(
+      /\[bundle pathForResource:@"(\w+)" ofType:@"metallib"\]/,
+    ),
+    executableLookup: whisperMetalDevice.match(
+      /@\[bin_dir, @"(\w+)\.metallib"\]/,
+    ),
+    script: metallibScript.match(
+      /mode=whisper\n(?:.*\n)*?\s*library=(\w+)\.metallib\n/,
+    ),
+    podfile: podfile.match(
+      /Build whisper\.rn Metal kernels'[\s\S]*?:output_files => \["#\{app_resources_dir\}\/(\w+)\.metallib"\]/,
+    ),
+    pbxproj: (whisperPhase.outputs[0] || '').match(/\/(\w+)\.metallib$/),
+    payload: payloadScript.match(
+      /check "(\w+)\.metallib at the \.app root" test -f "\$app\/\1\.metallib"\n(?=check "no \.metallib other)/,
+    ),
+  };
+
+  it.each(Object.keys(names))('is found in the %s', key => {
+    expect(names[key]).not.toBeNull();
+  });
+
+  it('is rnwhisper in each place', () => {
+    expect(
+      Object.fromEntries(
+        Object.entries(names).map(([key, match]) => [key, match && match[1]]),
+      ),
+    ).toEqual(
+      Object.fromEntries(Object.keys(names).map(key => [key, 'rnwhisper'])),
+    );
   });
 });
 
@@ -655,11 +846,25 @@ describe('the iOS CI job', () => {
   const stepIndex = name => steps.findIndex(step => step.name === name);
   const step = name => steps[stepIndex(name)] || {body: ''};
   const ARCHIVES = ['llama-rn/libllama-rn.a', 'whisper-rn/libwhisper-rn.a'];
+  const PRODUCTS = 'ios/build/Build/Products/Release-iphoneos';
   const GATES = [
     'Verify iOS payload',
-    'AMX scan (llama-rn, whisper-rn)',
+    'AMX scan (llama-rn, whisper-rn, app executable)',
     'Symbol overlap (llama-rn, whisper-rn)',
   ];
+
+  it('builds the app for the device SDK only', () => {
+    const {body} = step('Build iOS Release');
+    expect(body).toContain('-sdk iphoneos \\');
+    expect(body).toContain("-destination 'generic/platform=iOS' \\");
+    expect(job[1]).not.toMatch(/iphonesimulator|iOS Simulator|simctl/);
+  });
+
+  it('checks the payload of the device app', () => {
+    expect(step('Verify iOS payload').body.trim()).toBe(
+      `run: scripts/verify-ios-payload.sh ${PRODUCTS}/PocketPal.app --require-marker`,
+    );
+  });
 
   it('runs every whisper.rn gate after the Release build, unconditionally', () => {
     const build = stepIndex('Build iOS Release');
@@ -670,29 +875,188 @@ describe('the iOS CI job', () => {
     }
   });
 
-  it('fails the AMX scan on any AMX word in either archive, after flagging a planted one', () => {
-    const {body} = step('AMX scan (llama-rn, whisper-rn)');
+  it('fails the AMX scan on any AMX word in either device archive or the app executable, after flagging a planted one', () => {
+    const {body} = step('AMX scan (llama-rn, whisper-rn, app executable)');
     expect(body).toContain('shell: bash -eo pipefail {0}');
     const calibration = body.indexOf('test "$amx" -gt 0');
     const loop = body.match(
-      /for lib in ([^;]+); do\s*lib="ios\/build\/Build\/Products\/Release-iphonesimulator\/\$lib"\s*test -f "\$lib"\s*scan "\$lib"\s*test "\$amx" -eq 0\s*done/,
+      /for lib in ([^;]+); do\s*lib="ios\/build\/Build\/Products\/Release-iphoneos\/\$lib"\s*test -f "\$lib"\s*scan "\$lib"\s*test "\$amx" -eq 0\s*done/,
     );
     expect(calibration).toBeGreaterThan(-1);
     expect(loop).not.toBeNull();
     expect(loop.index).toBeGreaterThan(calibration);
-    expect(loop[1].split(/\s+/)).toEqual(ARCHIVES);
+    expect(loop[1].split(/\s+/)).toEqual([
+      ...ARCHIVES,
+      'PocketPal.app/PocketPal',
+    ]);
+  });
+
+  it('streams the disassembly, so an objdump failure fails the scan and no dump is written', () => {
+    const {body} = step('AMX scan (llama-rn, whisper-rn, app executable)');
+    expect(body).not.toContain('.objdump.txt');
+    expect(body).toMatch(
+      /^\s*local counts\n\s*counts=\$\("\$\{objdump\[@\]\}" -d --mattr=\+all "\$1" \| awk '/m,
+    );
+    expect(body).toMatch(/^\s*read -r raw amx <<<"\$counts"$/m);
   });
 
   it('self-tests the symbol gate, then compares the two archives', () => {
     const {body} = step('Symbol overlap (llama-rn, whisper-rn)');
-    expect(body).toMatch(
-      /^\s*products=ios\/build\/Build\/Products\/Release-iphonesimulator$/m,
-    );
+    expect(body).toMatch(new RegExp(`^\\s*products=${PRODUCTS}$`, 'm'));
     const lines = body.trim().split('\n');
     expect(lines[lines.length - 1].trim()).toBe(
       `scripts/verify-ios-symbol-overlap.sh --self-test ${ARCHIVES.map(
         archive => `"$products/${archive}"`,
       ).join(' ')}`,
+    );
+  });
+
+  describe('AMX scan, run under its CI shell with a stub disassembler', () => {
+    const SCAN = 'AMX scan (llama-rn, whisper-rn, app executable)';
+    const SCANNED = [...ARCHIVES, 'PocketPal.app/PocketPal'];
+    // Line layout of llvm-objdump -d --mattr=+all on an arm64 Mach-O build.
+    const DECODED = '  29a1b0: 00000450     \tudf\t#0x450';
+    const UNDECODED = '  29a1b4: fffffe14     \t<unknown>';
+    const AMX_WORD = '  793fc8: 00201220     \t<unknown>';
+    let tmp;
+
+    beforeEach(() => {
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-amx-scan-'));
+      fs.mkdirSync(path.join(tmp, 'bin'));
+      fs.mkdirSync(path.join(tmp, 'llvm', 'bin'), {recursive: true});
+      fs.mkdirSync(path.join(tmp, 'runner'));
+      fs.writeFileSync(
+        path.join(tmp, 'bin', 'brew'),
+        `#!/bin/bash
+[ "$*" = "--prefix llvm" ] || exit 1
+echo "${path.join(tmp, 'llvm')}"
+`,
+        {mode: 0o755},
+      );
+      fs.writeFileSync(
+        path.join(tmp, 'llvm', 'bin', 'llvm-objdump'),
+        `#!/bin/bash
+[ "$*" = --version ] && { echo "stub llvm-objdump"; exit 0; }
+[ "$1 $2" = "-d --mattr=+all" ] || { echo "stub llvm-objdump: unexpected $*" >&2; exit 2; }
+while IFS= read -r line; do
+  case $line in '!exit '*) exit "\${line#!exit }" ;; esac
+  printf '%s\\n' "$line"
+done <"$3"
+`,
+        {mode: 0o755},
+      );
+      fs.writeFileSync(
+        path.join(tmp, 'bin', 'xcrun'),
+        `#!/bin/bash
+[ "$*" = "clang -arch arm64 -x assembler -c - -o $RUNNER_TEMP/amx.o" ] || { echo "stub xcrun: unexpected $*" >&2; exit 2; }
+grep -qx '\\.inst 0x00201220' || exit 1
+cp "$STUB_CALIBRATION" "$RUNNER_TEMP/amx.o"
+`,
+        {mode: 0o755},
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmp, {recursive: true, force: true});
+    });
+
+    const runScan = (contents = {}, calibration = [AMX_WORD]) => {
+      for (const file of SCANNED) {
+        if (contents[file] === null) {
+          continue;
+        }
+        const target = path.join(tmp, PRODUCTS, file);
+        fs.mkdirSync(path.dirname(target), {recursive: true});
+        fs.writeFileSync(
+          target,
+          `${(contents[file] || [DECODED, UNDECODED]).join('\n')}\n`,
+        );
+      }
+      fs.writeFileSync(
+        path.join(tmp, 'calibration'),
+        `${calibration.join('\n')}\n`,
+      );
+      const {body} = step(SCAN);
+      const shell = body.match(/^\s*shell: (.+)$/m)[1];
+      const run = body.split(/^\s*run: \|\n/m)[1];
+      const indent = run.match(/^ */)[0].length;
+      const script = path.join(tmp, 'step.sh');
+      fs.writeFileSync(
+        script,
+        run
+          .split('\n')
+          .map(line => line.slice(indent))
+          .join('\n'),
+      );
+      const [command, ...args] = shell.replace('{0}', script).split(' ');
+      const result = spawnSync(command, args, {
+        cwd: tmp,
+        encoding: 'utf-8',
+        env: {
+          ...process.env,
+          PATH: `${path.join(tmp, 'bin')}:${process.env.PATH}`,
+          RUNNER_TEMP: path.join(tmp, 'runner'),
+          STUB_CALIBRATION: path.join(tmp, 'calibration'),
+        },
+      });
+      return {
+        status: result.status,
+        lines: result.stdout
+          .split('\n')
+          .filter(line => line.endsWith(' in AMX opcode space')),
+      };
+    };
+    const calibrated = (unknown, amx) =>
+      `${path.join(tmp, 'runner', 'amx.o')}: ${unknown} <unknown>, ${amx} in AMX opcode space`;
+    const scannedBefore = file =>
+      SCANNED.slice(0, SCANNED.indexOf(file)).map(
+        before => `${PRODUCTS}/${before}: 1 <unknown>, 0 in AMX opcode space`,
+      );
+
+    it('passes on clean device slices, scanning each once after flagging the planted word', () => {
+      const result = runScan();
+      expect(result.status).toBe(0);
+      expect(result.lines).toEqual([
+        calibrated(1, 1),
+        ...SCANNED.map(
+          file => `${PRODUCTS}/${file}: 1 <unknown>, 0 in AMX opcode space`,
+        ),
+      ]);
+      expect(fs.readdirSync(path.join(tmp, 'runner'))).toEqual(['amx.o']);
+    });
+
+    it('fails before scanning a slice when the planted word is not flagged', () => {
+      const result = runScan({}, [DECODED, UNDECODED]);
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([calibrated(1, 0)]);
+    });
+
+    it.each(SCANNED)('fails on one AMX word in %s, naming it', file => {
+      const result = runScan({[file]: [DECODED, UNDECODED, AMX_WORD]});
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([
+        calibrated(1, 1),
+        ...scannedBefore(file),
+        `${PRODUCTS}/${file}: 2 <unknown>, 1 in AMX opcode space`,
+      ]);
+    });
+
+    it.each(SCANNED)('fails when %s is missing', file => {
+      const result = runScan({[file]: null});
+      expect(result.status).not.toBe(0);
+      expect(result.lines).toEqual([calibrated(1, 1), ...scannedBefore(file)]);
+    });
+
+    it.each(SCANNED)(
+      'fails when the disassembler fails partway through %s, before an AMX word it would have hidden',
+      file => {
+        const result = runScan({[file]: [DECODED, '!exit 3', AMX_WORD]});
+        expect(result.status).not.toBe(0);
+        expect(result.lines).toEqual([
+          calibrated(1, 1),
+          ...scannedBefore(file),
+        ]);
+      },
     );
   });
 });

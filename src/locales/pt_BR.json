@@ -1720,7 +1720,10 @@
     "tierHintLargeTurbo": "Muito lento na maioria dos celulares",
     "useCta": "Usar",
     "inUseLabel": "Em uso",
-    "modelSectionHelper": "Usado pela entrada de voz e pela voz mãos-livres."
+    "modelSectionHelper": "Usado pela entrada de voz e pela voz mãos-livres.",
+    "memoryAlertTitle": "Memória limitada",
+    "memoryAlertBody": "A entrada de voz precisa de memória extra junto com este modelo de chat. Pode ficar muito lento, ou o app pode fechar.",
+    "memoryAlertTryAnyway": "Tentar mesmo assim"
   },
   "plus": {
     "eyebrow": "PocketPal Plus",
@@ -1818,7 +1821,6 @@
     "memorySttRowModel": "Reconhecimento de fala · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
     "memoryNeeded": "Necessário",
-    "memoryNeededValue": "{{needed}} de {{available}} disponíveis",
     "continueAnywayCta": "Continuar mesmo assim",
     "chooseSmallerModelCta": "Escolher um modelo menor",
     "startLabel": "Iniciar modo de voz",
@@ -1829,6 +1831,7 @@
     "teaserGetPlus": "Comprar o Plus",
     "teaserKeepTyping": "Continuar digitando, grátis",
     "voiceRowFileMissing": "{{voice}} ainda não foi baixada. Toque em Continuar para baixar.",
-    "voiceRowFileFailed": "Não deu para baixar {{voice}}. Conecte-se à internet e tente novamente."
+    "voiceRowFileFailed": "Não deu para baixar {{voice}}. Conecte-se à internet e tente novamente.",
+    "memoryNeededOfTotal": "{{needed}} de {{total}} neste celular"
   }
 }
