@@ -151,11 +151,20 @@ export const systemShortLabel = (voice: Voice): string => {
     : voice.name;
 };
 
+/** iOS files its Cantonese voices under `zh-HK`, not `yue`. */
+export const cantoneseUnderZh = (
+  voices: Voice[],
+  canInstallVoices: boolean,
+): boolean =>
+  !canInstallVoices &&
+  !voices.some(voice => primaryLanguage(voice.language ?? '') === 'yue');
+
 export type ShownLanguagesInput = {
   phoneLocale?: string;
   appLanguage: string;
   currentVoice?: Voice | null;
   pickedLanguage?: string | null;
+  cantoneseUnderZh: boolean;
 };
 
 export const systemShownLanguages = ({
@@ -163,13 +172,14 @@ export const systemShownLanguages = ({
   appLanguage,
   currentVoice,
   pickedLanguage,
+  cantoneseUnderZh: underZh,
 }: ShownLanguagesInput): string[] => {
   if (pickedLanguage) {
     return [pickedLanguage];
   }
   const phone = phoneLocale ? primaryLanguage(phoneLocale) : '';
   const cantonese =
-    phoneLocale && CANTONESE_PHONE_LOCALES.has(localeKey(phoneLocale))
+    !underZh && CANTONESE_PHONE_LOCALES.has(localeKey(phoneLocale ?? ''))
       ? 'yue'
       : '';
   const current =

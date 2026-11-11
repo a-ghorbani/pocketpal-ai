@@ -5,6 +5,7 @@ export {getSystemVoices} from './engines/system/voices';
 export type {SystemVoiceCopy} from './engines/system/voices';
 export {getPhoneLocale} from './engines/system/phoneLocale';
 export {
+  cantoneseUnderZh,
   languageLabel,
   languageName,
   systemLanguageOptions,

@@ -1,5 +1,6 @@
 import type {Voice} from '../../../types';
 import {
+  cantoneseUnderZh,
   languageLabel,
   languageName,
   localeKey,
@@ -76,26 +77,22 @@ describe('systemShortLabel', () => {
 describe('systemShownLanguages', () => {
   it('puts the phone language first, then the app language', () => {
     expect(
-      systemShownLanguages({phoneLocale: 'zh_CN_#Hans', appLanguage: 'en'}),
+      systemShownLanguages({
+        phoneLocale: 'zh_CN_#Hans',
+        appLanguage: 'en',
+        cantoneseUnderZh: false,
+      }),
     ).toEqual(['zh', 'en']);
   });
 
   it('collapses duplicates', () => {
     expect(
-      systemShownLanguages({phoneLocale: 'en_GB', appLanguage: 'en'}),
+      systemShownLanguages({
+        phoneLocale: 'en_GB',
+        appLanguage: 'en',
+        cantoneseUnderZh: false,
+      }),
     ).toEqual(['en']);
-  });
-
-  it('adds Cantonese right after Chinese on a Hong Kong or Macau phone', () => {
-    expect(
-      systemShownLanguages({phoneLocale: 'zh-Hant-HK', appLanguage: 'en'}),
-    ).toEqual(['zh', 'yue', 'en']);
-    expect(
-      systemShownLanguages({phoneLocale: 'zh_MO', appLanguage: 'en'}),
-    ).toEqual(['zh', 'yue', 'en']);
-    expect(
-      systemShownLanguages({phoneLocale: 'zh_TW', appLanguage: 'en'}),
-    ).toEqual(['zh', 'en']);
   });
 
   it("adds the current system voice's language", () => {
@@ -104,6 +101,7 @@ describe('systemShownLanguages', () => {
         phoneLocale: 'en_US',
         appLanguage: 'en',
         currentVoice: voice('de-de-x-deb-local', 'de-DE'),
+        cantoneseUnderZh: false,
       }),
     ).toEqual(['en', 'de']);
   });
@@ -113,6 +111,7 @@ describe('systemShownLanguages', () => {
       systemShownLanguages({
         appLanguage: 'en',
         currentVoice: {id: 'x', name: 'X', engine: 'kokoro', language: 'ja'},
+        cantoneseUnderZh: false,
       }),
     ).toEqual(['en']);
   });
@@ -124,12 +123,66 @@ describe('systemShownLanguages', () => {
         appLanguage: 'en',
         currentVoice: voice('de-de-x-deb-local', 'de-DE'),
         pickedLanguage: 'fr',
+        cantoneseUnderZh: false,
       }),
     ).toEqual(['fr']);
   });
 
   it('skips a missing phone language', () => {
-    expect(systemShownLanguages({appLanguage: 'zh_Hant'})).toEqual(['zh']);
+    expect(
+      systemShownLanguages({appLanguage: 'zh_Hant', cantoneseUnderZh: false}),
+    ).toEqual(['zh']);
+  });
+});
+
+describe('Cantonese', () => {
+  const hongKong = voice('com.apple.voice.compact.zh-HK.Sinji', 'zh-HK');
+  const mainland = voice('com.apple.voice.compact.zh-CN.Tingting', 'zh-CN');
+  const cantonese = voice('yue-hk-x-yuc-local', 'yue-HK');
+
+  const shown = (
+    phoneLocale: string,
+    voices: Voice[],
+    canInstallVoices: boolean,
+  ) => {
+    const underZh = cantoneseUnderZh(voices, canInstallVoices);
+    const languages = systemShownLanguages({
+      phoneLocale,
+      appLanguage: 'en',
+      cantoneseUnderZh: underZh,
+    });
+    return {
+      languages,
+      sections: systemSections(voices, languages, phoneLocale).map(s => s.key),
+    };
+  };
+
+  it.each(['zh-Hant-HK', 'zh_MO'])(
+    'adds Cantonese after Chinese on a %s phone that can install voices',
+    phoneLocale => {
+      expect(shown(phoneLocale, [mainland], true).languages).toEqual([
+        'zh',
+        'yue',
+        'en',
+      ]);
+    },
+  );
+
+  it('files Cantonese under Chinese when the phone has no yue voice and no installer', () => {
+    expect(shown('zh-Hant-HK', [mainland, hongKong], false)).toEqual({
+      languages: ['zh', 'en'],
+      sections: ['zh-hk', 'zh-cn', 'en'],
+    });
+  });
+
+  it('keeps Cantonese when the phone has a yue voice', () => {
+    expect(shown('zh-Hant-HK', [hongKong, cantonese], false).languages).toEqual(
+      ['zh', 'yue', 'en'],
+    );
+  });
+
+  it('keeps Chinese without Cantonese on a Taiwan phone', () => {
+    expect(shown('zh_TW', [mainland], true).languages).toEqual(['zh', 'en']);
   });
 });
 

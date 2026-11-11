@@ -15,6 +15,7 @@ import {
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import {
+  cantoneseUnderZh,
   languageName,
   systemLanguageOptions,
   systemSections,
@@ -59,12 +60,14 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
     const copy = l10n.voiceAndSpeech;
     const muted = theme.colors.onSurfaceVariant;
     const isAndroid = Platform.OS === 'android';
+    const underZh = cantoneseUnderZh(voices, isAndroid);
 
     const languages = systemShownLanguages({
       phoneLocale,
       appLanguage: uiStore.language,
       currentVoice: ttsStore.currentVoice,
       pickedLanguage,
+      cantoneseUnderZh: underZh,
     });
     const shownLanguages = languages.map(languageName).join(', ');
 

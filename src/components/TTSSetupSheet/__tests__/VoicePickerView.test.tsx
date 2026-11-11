@@ -339,6 +339,42 @@ describe('VoicePickerView', () => {
       expect(Speech.openVoiceDataInstaller).toHaveBeenCalledTimes(2);
     });
 
+    it('shows Cantonese with Get more voices on an Android Hong Kong phone', async () => {
+      (getPhoneLocale as jest.Mock).mockReturnValue('zh_HK');
+      mockVoices([
+        googleVoice('cmn-cn-x-ccc-local', 'zh-CN'),
+        ...MIXED_CATALOG,
+      ]);
+      const {getByTestId, getAllByTestId} = await openSystemGroup();
+
+      expect(testIDs(getAllByTestId(/^tts-system-section-(zh|yue)/))).toEqual([
+        'tts-system-section-zh-cn',
+        'tts-system-section-yue',
+      ]);
+      expect(getByTestId('tts-system-get-voices-yue')).toBeTruthy();
+    });
+
+    it.each(['zh-Hant-HK'])(
+      'lists Hong Kong Chinese first and no Cantonese band on an iPhone set to %s',
+      async phoneLocale => {
+        Platform.OS = 'ios';
+        (getPhoneLocale as jest.Mock).mockReturnValue(phoneLocale);
+        mockVoices([
+          {identifier: 'tingting', name: 'Tingting', language: 'zh-CN'},
+          {identifier: 'sinji', name: 'Sinji', language: 'zh-HK'},
+          {identifier: 'samantha', name: 'Samantha', language: 'en-US'},
+        ]);
+        const {getAllByTestId, queryByTestId} = await openSystemGroup();
+
+        expect(queryByTestId('tts-system-section-yue')).toBeNull();
+        expect(testIDs(getAllByTestId(/^tts-system-section-/))).toEqual([
+          'tts-system-section-zh-hk',
+          'tts-system-section-zh-cn',
+          'tts-system-section-en-us',
+        ]);
+      },
+    );
+
     it('only logs when the installer is unavailable', async () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       (Speech.openVoiceDataInstaller as jest.Mock).mockRejectedValueOnce(
