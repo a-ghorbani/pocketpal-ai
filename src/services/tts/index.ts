@@ -3,6 +3,7 @@ export * from './types';
 export {SystemEngine} from './engines/system';
 export {getSystemVoices} from './engines/system/voices';
 export type {SystemVoiceCopy} from './engines/system/voices';
+export {getPhoneLocale} from './engines/system/phoneLocale';
 export {
   languageLabel,
   languageName,
