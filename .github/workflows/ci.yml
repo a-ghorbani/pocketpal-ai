@@ -60,7 +60,7 @@ jobs:
 
       # Cache node_modules
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock', 'patches/**') }}
@@ -127,7 +127,7 @@ jobs:
 
       - name: Restore node_modules
         id: nm
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v6
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock', 'patches/**') }}
@@ -176,7 +176,7 @@ jobs:
 
       # Cache node_modules
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock', 'patches/**') }}
@@ -203,7 +203,7 @@ jobs:
       # decides the variant set and a patch changes the sources, so changing
       # either must invalidate the configured build tree.
       - name: Cache llama.rn native build tree
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules/llama.rn/android/.cxx
           key: ${{ runner.os }}-cxx-${{ hashFiles('yarn.lock', 'patches/**', 'scripts/android-payload-manifest.json') }}
@@ -410,7 +410,7 @@ jobs:
 
       # Cache node_modules
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock', 'patches/**') }}
