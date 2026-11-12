@@ -104,7 +104,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.29.13",
     "@babel/plugin-proposal-decorators": "^7.28.0",
     "@babel/plugin-transform-class-properties": "^7.29.7",
     "@babel/preset-env": "^7.25.3",
