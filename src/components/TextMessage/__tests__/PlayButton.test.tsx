@@ -180,6 +180,7 @@ describe('shouldShowPlayButton', () => {
       ['mixed Latin and Chinese', 'OK，好的。'],
       ['a Chinese reply with a Latin word', '我用iPhone。'],
       ['fullwidth Latin words', 'ＯＫ ＯＫ'],
+      ['fullwidth lowercase Latin words', 'ｏｋ ｏｋ'],
       ['fullwidth digit groups', '１２ ３４'],
       ['one Han character with an emoji', '好😀'],
     ])('is true for %s', (_, reply) => {
