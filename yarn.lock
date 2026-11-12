@@ -2528,10 +2528,10 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
-"@react-native-community/slider@^5.0.1":
-  version "5.0.1"
-  resolved "https://registry.yarnpkg.com/@react-native-community/slider/-/slider-5.0.1.tgz#478789e526af31e0660c6f49fa5c5429d8d4287b"
-  integrity sha512-K3JRWkIW4wQ79YJ6+BPZzp1SamoikxfPRw7Yw4B4PElEQmqZFrmH9M5LxvIo460/3QSrZF/wCgi3qizJt7g/iw==
+"@react-native-community/slider@^5.2.2":
+  version "5.2.2"
+  resolved "https://registry.yarnpkg.com/@react-native-community/slider/-/slider-5.2.2.tgz#3b6696a497201227fd7866f8792dda90850c99c2"
+  integrity sha512-KdWURcFqHZ/nvQwt9S7P2PHBREl83GZeflWZU1VpR/qJ+lF/mdiOBZshJQztE2hBDgW5iBIrRb3RY9uAie5k/w==
 
 "@react-native-documents/picker@^11.0.4":
   version "11.0.4"
