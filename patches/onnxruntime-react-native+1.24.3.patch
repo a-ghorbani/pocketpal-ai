@@ -65,3 +65,75 @@ index 8155f92..1228c8a 100644
  
      env = onnxruntimejsi::install(runtime, jsiInvoker);
  
+diff --git a/node_modules/onnxruntime-react-native/cpp/InferenceSessionHostObject.cpp b/node_modules/onnxruntime-react-native/cpp/InferenceSessionHostObject.cpp
+index c8efd49..a94eda4 100644
+--- a/node_modules/onnxruntime-react-native/cpp/InferenceSessionHostObject.cpp
++++ b/node_modules/onnxruntime-react-native/cpp/InferenceSessionHostObject.cpp
+@@ -79,11 +79,13 @@ class InferenceSessionHostObject::RunAsyncWorker : public AsyncWorker {
+       : AsyncWorker(runtime, session->env_),
+         env_(session->env_),
+         session_(session->session_),
+-        memoryInfo_(Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeDefault)) {
++        memoryInfo_(Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeDefault)),
++        runOptions_(std::make_shared<Ort::RunOptions>()) {
+     if (count < 1)
+       throw JSError(runtime, "run requires at least 1 argument");
+     if (count > 2 && !arguments[2].isUndefined()) {
+-      parseRunOptions(runtime, arguments[2], runOptions_);
++      parseRunOptions(runtime, arguments[2], *runOptions_);
++      attachAbortSignal(runtime, arguments[2]);
+     }
+     forEach(runtime, arguments[0].asObject(runtime),
+             [&](const std::string& key, const Value& value, size_t index) {
+@@ -122,7 +124,7 @@ class InferenceSessionHostObject::RunAsyncWorker : public AsyncWorker {
+     if (!session) {
+       throw std::runtime_error("Session is released");
+     }
+-    session->Run(runOptions_, inputNames.data(), inputValues_.data(),
++    session->Run(*runOptions_, inputNames.data(), inputValues_.data(),
+                  inputValues_.size(), outputNames.data(),
+                  outputValues_.data(), outputValues_.size());
+   }
+@@ -146,14 +148,40 @@ class InferenceSessionHostObject::RunAsyncWorker : public AsyncWorker {
+   }
+ 
+   void onAbort() {
+-    runOptions_.SetTerminate();
++    runOptions_->SetTerminate();
++  }
++
++  // options.signal (an AbortSignal) terminates this run when aborted: ORT
++  // checks the flag before each node, and run() then rejects with "Exiting
++  // due to terminate flag being set to true."
++  void attachAbortSignal(Runtime& rt, const Value& options) {
++    if (!options.isObject()) return;
++    auto sig = options.asObject(rt).getProperty(rt, "signal");
++    if (!sig.isObject()) return;
++    auto signal = sig.asObject(rt);
++    auto aborted = signal.getProperty(rt, "aborted");
++    if (aborted.isBool() && aborted.getBool()) {
++      runOptions_->SetTerminate();
++      return;
++    }
++    auto add = signal.getProperty(rt, "addEventListener");
++    if (!add.isObject() || !add.asObject(rt).isFunction(rt)) return;
++    std::weak_ptr<Ort::RunOptions> weak = runOptions_;
++    auto listener = Function::createFromHostFunction(
++        rt, PropNameID::forAscii(rt, "onAbort"), 0,
++        [weak](Runtime&, const Value&, const Value*, size_t) -> Value {
++          if (auto runOptions = weak.lock()) runOptions->SetTerminate();
++          return Value::undefined();
++        });
++    add.asObject(rt).asFunction(rt).callWithThis(
++        rt, signal, String::createFromAscii(rt, "abort"), listener);
+   }
+ 
+  private:
+   std::shared_ptr<Env> env_;
+   std::weak_ptr<Ort::Session> session_;
+   Ort::MemoryInfo memoryInfo_;
+-  Ort::RunOptions runOptions_;
++  std::shared_ptr<Ort::RunOptions> runOptions_;
+   std::vector<std::string> inputNames_;
+   std::vector<Ort::Value> inputValues_;
+   std::vector<std::string> outputNames_;

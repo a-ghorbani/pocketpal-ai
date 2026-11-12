@@ -1,16 +1,14 @@
 import type {Voice} from '../../types';
 
 /**
- * Kokoro 82M v1.0 voice catalog (22 voices).
+ * Kokoro 82M v1.0 voice catalog: 22 English voices, then 8 Mandarin ones.
+ * The first voice is the fallback when a stashed voice is gone, so English
+ * stays first.
  *
  * IDs follow the `<lang><gender>_<name>` convention used by the upstream
- * repo: `a` = American English, `b` = British English, `e` = Spanish,
- * `f` = French, `h` = Hindi, `i` = Italian, `j` = Japanese, `p` =
- * Brazilian Portuguese, `z` = Mandarin Chinese. `f` = female, `m` = male.
- *
- * v1b scope: surface English voices only in the picker (filter at the UI
- * layer by `language === 'en'`). Language switching is deferred to the
- * v1b-TTS-language follow-up.
+ * repo: `a` = American English, `b` = British English, `z` = Mandarin
+ * Chinese. `f` = female, `m` = male. Mandarin voices need the speech
+ * library's `/zh` entry, imported by the Kokoro engine module.
  */
 export const KOKORO_VOICES: Voice[] = [
   // American English — female
@@ -169,6 +167,64 @@ export const KOKORO_VOICES: Voice[] = [
     name: 'Lewis',
     engine: 'kokoro',
     language: 'en-GB',
+    gender: 'm',
+  },
+  // Mandarin Chinese — female
+  {
+    id: 'zf_xiaobei',
+    name: 'Xiaobei · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'f',
+  },
+  {
+    id: 'zf_xiaoni',
+    name: 'Xiaoni · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'f',
+  },
+  {
+    id: 'zf_xiaoxiao',
+    name: 'Xiaoxiao · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'f',
+  },
+  {
+    id: 'zf_xiaoyi',
+    name: 'Xiaoyi · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'f',
+  },
+  // Mandarin Chinese — male
+  {
+    id: 'zm_yunjian',
+    name: 'Yunjian · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'm',
+  },
+  {
+    id: 'zm_yunxi',
+    name: 'Yunxi · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'm',
+  },
+  {
+    id: 'zm_yunxia',
+    name: 'Yunxia · 中文',
+    engine: 'kokoro',
+    language: 'zh',
+    gender: 'm',
+  },
+  {
+    id: 'zm_yunyang',
+    name: 'Yunyang · 中文',
+    engine: 'kokoro',
+    language: 'zh',
     gender: 'm',
   },
 ];

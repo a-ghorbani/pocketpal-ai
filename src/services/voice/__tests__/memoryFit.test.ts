@@ -267,4 +267,47 @@ describe('voiceMemoryFit', () => {
       );
     },
   );
+
+  describe('Kokoro on Android', () => {
+    const totalBytes = 7.5e9;
+    let kokoroBytes = 0;
+    jest.isolateModules(() => {
+      Object.defineProperty(require('react-native').Platform, 'OS', {
+        configurable: true,
+        get: () => 'android',
+      });
+      kokoroBytes = require('../../tts/constants').TTS_ENGINE_RUNTIME_BYTES
+        .kokoro;
+    });
+    const fitWith = (chatBytes: number) =>
+      voiceMemoryFit({
+        memory: android(totalBytes),
+        chatBytes,
+        sttTier: 'base',
+        ttsBytes: kokoroBytes,
+      });
+    const roomForChat = totalBytes - sttBytes - kokoroBytes;
+
+    it("won't fit when chat, Base and Kokoro pass total RAM", () => {
+      const fit = fitWith(roomForChat + 1);
+
+      expect(fit.status).toBe('wont_fit');
+      expect(fit.breakdown.rows).toContainEqual({
+        kind: 'tts',
+        bytes: kokoroBytes,
+      });
+    });
+
+    it('is tight up to total RAM, where the FP32 figure would not fit', () => {
+      expect(fitWith(roomForChat).status).toBe('tight');
+      expect(
+        voiceMemoryFit({
+          memory: android(totalBytes),
+          chatBytes: roomForChat,
+          sttTier: 'base',
+          ttsBytes: 500_000_000,
+        }).status,
+      ).toBe('wont_fit');
+    });
+  });
 });
