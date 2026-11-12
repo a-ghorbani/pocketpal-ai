@@ -2162,6 +2162,43 @@ describe('TTSStore', () => {
     });
   });
 
+  describe('system replay holds until end of audio', () => {
+    it('stays playing until the system engine play resolves', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      let endOfAudio: () => void = () => {};
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>(r => (endOfAudio = r)),
+      );
+
+      const replay = store.play('msg-1', 'One. Two. Three.');
+      await flush();
+      expect(store.playbackState).toEqual({
+        mode: 'playing',
+        messageId: 'msg-1',
+      });
+
+      endOfAudio();
+      await replay;
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('Stop mid-replay goes idle and stops the system engine', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockSystemPlay.mockImplementationOnce(() => new Promise<void>(() => {}));
+
+      store.play('msg-1', 'One. Two. Three.');
+      await flush();
+      mockSystemStop.mockClear();
+
+      await store.stop();
+
+      expect(store.playbackState).toEqual({mode: 'idle'});
+      expect(mockSystemStop).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('preview() and isPreviewingVoice()', () => {
     it('flips isPreviewingVoice true while play() is in flight, false after', async () => {
       const store = await makeStore();

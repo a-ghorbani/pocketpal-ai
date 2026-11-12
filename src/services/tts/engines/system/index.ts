@@ -1,9 +1,8 @@
 import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {l10n} from '../../../../locales';
-import {ttsRuntime} from '../../runtime';
 import {createEngineStreamingHandle} from '../../streamingHandle';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import type {Engine, StreamOptions, StreamingHandle, Voice} from '../../types';
 import {getSystemVoices} from './voices';
 
 /**
@@ -32,19 +31,23 @@ export class SystemEngine implements Engine {
     await Speech.initialize({engine: TTSEngine.OS_NATIVE});
   }
 
+  /**
+   * On the OS engine `Speech.speak()` resolves once the text is queued, so
+   * replay goes through a one-shot stream, whose `finalize()` resolves when
+   * the last utterance's audio ends (or a `Speech.stop()` settles it).
+   */
   async play(text: string, voice: Voice): Promise<void> {
-    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
+    const handle = createEngineStreamingHandle(this, voice.id);
+    handle.appendText(text);
+    await handle.finalize();
   }
 
-  /**
-   * Streaming path. The library's stream degrades to roughly per-sentence
-   * speaks on OS engine (native `speak()` resolves on dispatch, so the
-   * stream's underrun guard fires immediately), but the OS native queue
-   * handles the chaining — behavior is equivalent to the prior JS-side
-   * `onFinish` loop and we inherit the library's CJK sentence handling.
-   */
-  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
+  playStreaming(
+    voice: Voice,
+    waitFor?: Promise<void>,
+    streamOpts?: StreamOptions,
+  ): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, streamOpts, waitFor);
   }
 
   async stop(): Promise<void> {
