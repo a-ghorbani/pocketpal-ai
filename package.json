@@ -56,7 +56,7 @@
     "axios": "^1.12.2",
     "buffer": "^6.0.3",
     "chat-formatter": "^0.3.4",
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.4.0",
     "dayjs": "^1.11.23",
     "expr-eval": "^2.0.2",
     "llama.rn": "0.13.0-rc.9",
