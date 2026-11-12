@@ -226,7 +226,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-appcheck-debug'
 
     // Room dependencies for DownloadModule
-    def room_version = "2.8.2"
+    def room_version = "2.8.5"
     implementation("androidx.room:room-runtime:$room_version")
     // Kotlin Extensions and Coroutines support for Room
     implementation("androidx.room:room-ktx:$room_version")
