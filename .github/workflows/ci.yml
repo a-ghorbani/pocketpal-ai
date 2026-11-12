@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload perf results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: render-perf
           path: .reassure/
@@ -336,7 +336,7 @@ jobs:
       # uploads whether or not the check passed. The APK below does not.
       - name: Upload payload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: payload-report
           path: payload-report.txt
@@ -385,7 +385,7 @@ jobs:
         run: scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --ungated
 
       - name: Upload Android APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
           path: android/app/build/outputs/apk/prod/release/app-prod-release.apk

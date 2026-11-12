@@ -179,14 +179,14 @@ jobs:
 
       - name: Upload payload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: payload-report
           path: payload-report.txt
           if-no-files-found: ignore
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-android-apk
           path: android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk

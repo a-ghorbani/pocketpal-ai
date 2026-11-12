@@ -228,7 +228,7 @@ jobs:
 
       - name: Upload payload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: payload-report
           path: payload-report.txt
@@ -382,7 +382,7 @@ jobs:
       # Step 10: Retain dSYM as a workflow artifact for crash symbolication (FOU-86)
       - name: Upload iOS dSYM
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-dsym-v${{ steps.version.outputs.marketing_version }}-build${{ steps.version.outputs.build_number }}
           path: ios/build/PocketPal.app.dSYM.zip
