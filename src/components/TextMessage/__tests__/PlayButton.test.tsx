@@ -164,6 +164,7 @@ describe('shouldShowPlayButton', () => {
     it.each([
       ['one Han character', '好。'],
       ['one Han character with fullwidth punctuation', '好！'],
+      ['one Han character with two punctuation marks', '好？！'],
       ['one kana character', 'ね'],
       ['CJK punctuation only', '。。。'],
       ['emoji only', '👍🙂'],
@@ -178,6 +179,23 @@ describe('shouldShowPlayButton', () => {
       ['a Chinese reply with a Latin word', '我用iPhone。'],
     ])('is true for %s', (_, reply) => {
       expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
+
+    it.each([
+      ['Han with the iteration mark', '人々'],
+      ['hiragana iteration mark', 'ゝゞ'],
+      ['katakana', 'テスト'],
+      ['katakana prolonged sound mark', 'ーー'],
+      ['katakana phonetic extension', 'ㇰㇱ'],
+      ['CJK extension A', '㐀㐁'],
+      ['CJK compatibility ideograph', '豈更'],
+      ['halfwidth katakana', 'ﾊｲ'],
+    ])('counts each %s character as a word', (_, reply) => {
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
+
+    it('does not count the katakana middle dot', () => {
+      expect(shouldShowPlayButton(makeTurn([{content: '好・'}]))).toBe(false);
     });
   });
 });
