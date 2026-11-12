@@ -57,7 +57,7 @@
     "buffer": "^5.5.0",
     "chat-formatter": "^0.3.4",
     "date-fns": "^4.1.0",
-    "dayjs": "^1.11.18",
+    "dayjs": "^1.11.23",
     "expr-eval": "^2.0.2",
     "llama.rn": "0.13.0-rc.9",
     "mobx": "^6.15.0",
