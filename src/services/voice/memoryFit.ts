@@ -8,7 +8,8 @@ export interface VoiceMemoryInputs {
   memory: DeviceMemory | null;
   chatBytes: number;
   sttTier: AsrTier;
-  ttsBytes: number;
+  /** null when the voice runs outside PocketPal: no tts row. */
+  ttsBytes: number | null;
 }
 
 /** One model's share of `neededBytes`, as the platform's rule counts it. */
@@ -46,7 +47,7 @@ export const voiceMemoryFit = ({
   const rows: VoiceMemoryRow[] = [
     {kind: 'chat', bytes: chatBytes},
     {kind: 'stt', bytes: sttBytes},
-    {kind: 'tts', bytes: ttsBytes},
+    ...(ttsBytes === null ? [] : [{kind: 'tts' as const, bytes: ttsBytes}]),
   ];
   const neededBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
   return {

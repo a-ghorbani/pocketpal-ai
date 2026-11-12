@@ -18,6 +18,20 @@ const ios = (ceilingBytes: number, totalBytes = 6e9) => ({
 });
 
 describe('voiceMemoryFit', () => {
+  it('counts chat and stt only for a voice that runs outside the app', () => {
+    const fit = voiceMemoryFit({
+      memory: android(7.4e9),
+      chatBytes: 3.23e9,
+      sttTier: 'base',
+      ttsBytes: null,
+    });
+    expect(fit.breakdown.rows).toEqual([
+      {kind: 'chat', bytes: 3.23e9},
+      {kind: 'stt', bytes: sttBytes},
+    ]);
+    expect(fit.breakdown.neededBytes).toBe(3.23e9 + sttBytes);
+  });
+
   it('is tight for a 3.23 GB chat model on a 7.4 GB Android phone', () => {
     const fit = voiceMemoryFit({
       memory: android(7.4e9),
