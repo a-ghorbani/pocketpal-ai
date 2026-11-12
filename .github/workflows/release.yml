@@ -252,7 +252,7 @@ jobs:
 
       # Step 11: Create GitHub Release with APK
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           files: android/app/build/outputs/apk/prod/release/app-prod-release.apk
           tag_name: "v${{ env.VERSION }}"
