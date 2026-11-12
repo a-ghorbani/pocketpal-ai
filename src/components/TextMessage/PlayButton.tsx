@@ -9,12 +9,17 @@ import {assistant, derivedText} from '../../utils/chat';
 import {PlayIcon, StopIcon} from '../../assets/icons';
 import type {MessageType} from '../../utils/types';
 
+const HAN_OR_KANA =
+  /[\u3005\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9D]/g;
+const CJK_PUNCTUATION = /[\u3000-\u303F\u30FB\uFF00-\uFF65]/g;
+
 const countWords = (text: string): number => {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) {
-    return 0;
-  }
-  return trimmed.split(/\s+/).length;
+  const hanOrKana = text.match(HAN_OR_KANA)?.length ?? 0;
+  const rest = text
+    .replace(HAN_OR_KANA, ' ')
+    .replace(CJK_PUNCTUATION, ' ')
+    .trim();
+  return hanOrKana + (rest.length === 0 ? 0 : rest.split(/\s+/).length);
 };
 
 const styles = StyleSheet.create({

@@ -160,6 +160,25 @@ describe('shouldShowPlayButton', () => {
         false,
       );
     });
+
+    it.each([
+      ['one Han character', '好。'],
+      ['one Han character with fullwidth punctuation', '好！'],
+      ['one kana character', 'ね'],
+      ['CJK punctuation only', '。。。'],
+      ['emoji only', '👍🙂'],
+    ])('is false for %s', (_, reply) => {
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(false);
+    });
+
+    it.each([
+      ['two Han characters', '你好'],
+      ['two kana characters', 'はい'],
+      ['mixed Latin and Chinese', 'OK，好的。'],
+      ['a Chinese reply with a Latin word', '我用iPhone。'],
+    ])('is true for %s', (_, reply) => {
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
   });
 });
 
