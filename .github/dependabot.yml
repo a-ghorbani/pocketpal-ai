@@ -4,23 +4,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 50
 
   - package-ecosystem: npm
     directory: /e2e
     schedule:
       interval: weekly
+    open-pull-requests-limit: 50
 
   - package-ecosystem: bundler
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 50
 
   - package-ecosystem: gradle
     directory: /android
     schedule:
       interval: weekly
+    open-pull-requests-limit: 50
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 50
