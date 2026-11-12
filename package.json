@@ -115,7 +115,7 @@
     "@react-native-community/cli-platform-android": "20.2.0",
     "@react-native-community/cli-platform-ios": "20.2.0",
     "@react-native/babel-preset": "0.87.1",
-    "@react-native/eslint-config": "0.87.1",
+    "@react-native/eslint-config": "0.88.1",
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
     "@react-native/typescript-config": "0.88.1",
