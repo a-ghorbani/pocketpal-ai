@@ -60,7 +60,7 @@
     "dayjs": "^1.11.23",
     "expr-eval": "^2.0.2",
     "llama.rn": "0.13.0-rc.9",
-    "mobx": "^6.15.0",
+    "mobx": "^6.16.1",
     "mobx-persist-store": "^1.1.8",
     "mobx-react": "^9.2.1",
     "mustache": "^4.2.0",
