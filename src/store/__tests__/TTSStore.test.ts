@@ -2162,7 +2162,7 @@ describe('TTSStore', () => {
     });
   });
 
-  describe('system replay holds until end of audio', () => {
+  describe('play() holds playing until the engine play settles', () => {
     it('stays playing until the system engine play resolves', async () => {
       const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);

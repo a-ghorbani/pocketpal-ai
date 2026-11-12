@@ -1,4 +1,5 @@
-import Speech from '@pocketpalai/react-native-speech';
+import {Platform} from 'react-native';
+import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {SystemEngine} from '..';
 import {ttsRuntime} from '../../../runtime';
@@ -42,6 +43,41 @@ const deferredStream = () => {
   (Speech.createSpeechStream as jest.Mock).mockImplementationOnce(() => stream);
   return {stream, settle: () => settle};
 };
+
+describe('SystemEngine.loadInto', () => {
+  const originalOS = Platform.OS;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    Platform.OS = originalOS;
+  });
+
+  it('initialises the OS engine with ducking on Android', async () => {
+    Platform.OS = 'android';
+
+    await new SystemEngine().loadInto();
+
+    expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledWith({
+      engine: TTSEngine.OS_NATIVE,
+      ducking: true,
+    });
+  });
+
+  it('initialises the OS engine without ducking or silentMode on iOS', async () => {
+    Platform.OS = 'ios';
+
+    await new SystemEngine().loadInto();
+
+    expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    expect(Speech.initialize).toHaveBeenCalledWith({
+      engine: TTSEngine.OS_NATIVE,
+    });
+  });
+});
 
 describe('SystemEngine.play', () => {
   beforeEach(() => {

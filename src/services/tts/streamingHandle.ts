@@ -17,12 +17,11 @@ const STREAM_TARGET_CHARS = 300;
  * Bridges the library's `createSpeechStream` with our `ttsRuntime`
  * engine-swap guard.
  *
- * The library's stream calls `Speech.speak` internally, which doesn't
- * route through `ttsRuntime.acquire` — so we pin the engine once, up
- * front, and hold appends in a queue until the acquire resolves. After
- * that, appends pass straight through. This keeps the per-call
- * acquire-release overhead out of the streaming hot path while still
- * guaranteeing the correct engine is loaded before any audio starts.
+ * The library's stream queues synthesis itself, outside
+ * `ttsRuntime.acquire` — so we pin the engine once, up front, and hold
+ * appends in a queue until the acquire resolves. After that, appends pass
+ * straight through. This keeps the per-call acquire-release overhead out of
+ * the streaming hot path while still guaranteeing the correct engine is loaded before any audio starts.
  *
  * `waitFor` lets the caller sequence the acquire behind an external
  * promise (e.g. a prior `stop()` so the old `Speech.stop()` completes
