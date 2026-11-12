@@ -2,8 +2,7 @@ name: CI Pipeline
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ "*" ]
   push:
     branches:
       - main
@@ -14,7 +13,7 @@ permissions:
 jobs:
   # Detect if changes are translation-only (src/locales/ files)
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       translation_only: ${{ steps.check.outputs.translation_only }}
     steps:
@@ -52,7 +51,7 @@ jobs:
 
   # Job for linting, type checking, unit testing
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       # Step 1: Check out the repository
       - name: Check out code
@@ -104,7 +103,7 @@ jobs:
   # Restores the shared node_modules cache but never saves it: this job installs
   # other commits' dependencies and skips llama.rn's native postinstall.
   perf:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: detect-changes
     if: github.event_name == 'pull_request' && needs.detect-changes.outputs.translation_only != 'true'
     timeout-minutes: 30
@@ -147,7 +146,7 @@ jobs:
 
   # Job for Android build
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [build-and-test, detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
     env:
@@ -383,6 +382,19 @@ jobs:
 
       - name: Verify the Plus store gate
         run: scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --ungated
+
+      - name: Sign app APK
+        uses: kevin-david/zipalign-sign-android-release@v2
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.DROID_KEYSTORE_B64 }}
+          alias: ${{ secrets.DROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.DROID_KEYSTORE_PASS }}
+          keyPassword: ${{ secrets.DROID_KEY_PASS }}
+          zipAlign: true
+        env:
+          BUILD_TOOLS_VERSION: "36.0.0"
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v7
