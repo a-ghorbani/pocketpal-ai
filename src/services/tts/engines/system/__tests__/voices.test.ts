@@ -1,24 +1,16 @@
 import {Platform} from 'react-native';
 import Speech from '@pocketpalai/react-native-speech';
+import type {VoiceProps} from '@pocketpalai/react-native-speech';
 
 import {l10n} from '../../../../../locales';
 import {languageLabel} from '../catalog';
 import {getSystemVoices} from '../voices';
 
-type OsVoice = {
-  name: string;
-  identifier: string;
-  language: string;
-  quality: string;
-  networkConnectionRequired?: boolean;
-  notInstalled?: boolean;
-};
-
 const android = (
   name: string,
   language: string,
-  fields: Partial<OsVoice> = {},
-): OsVoice => ({
+  fields: Partial<VoiceProps> = {},
+): VoiceProps => ({
   quality: 'Enhanced',
   name,
   identifier: name,
@@ -31,11 +23,11 @@ const android = (
 const ios = (
   identifier: string,
   name: string,
-  quality: string,
+  quality: VoiceProps['quality'],
   language = 'en-US',
-): OsVoice => ({identifier, name, quality, language});
+): VoiceProps => ({identifier, name, quality, language});
 
-const read = async (voices: OsVoice[]) => {
+const read = async (voices: VoiceProps[]) => {
   (Speech.getAvailableVoices as jest.Mock).mockResolvedValueOnce(voices);
   return getSystemVoices(l10n.en.voiceAndSpeech);
 };

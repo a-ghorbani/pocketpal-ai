@@ -7,12 +7,6 @@ import type {Voice} from '../../types';
 
 import {languageLabel, localeKey} from './catalog';
 
-/** Android-only fields; `undefined` means the engine did not say. */
-type OsVoice = VoiceProps & {
-  networkConnectionRequired?: boolean;
-  notInstalled?: boolean;
-};
-
 export type SystemVoiceCopy = {
   systemVoiceNumber: string;
   systemQualityEnhanced: string;
@@ -22,10 +16,10 @@ const GOOGLE_VOICE_NAME =
   /^[a-z]{2,3}-[a-z0-9]{2,3}-x-([a-z]+)-(local|network)$/;
 const ALIAS_SUFFIX = '-language';
 
-const localeOf = (voice: OsVoice) => localeKey(voice.language ?? '');
+const localeOf = (voice: VoiceProps) => localeKey(voice.language ?? '');
 
 /** Speaker codes per locale, over the full catalog so an install never renumbers. */
-const speakerCodes = (voices: OsVoice[]): Map<string, string[]> => {
+const speakerCodes = (voices: VoiceProps[]): Map<string, string[]> => {
   const codes = new Map<string, Set<string>>();
   for (const voice of voices) {
     const code = GOOGLE_VOICE_NAME.exec(voice.name ?? '')?.[1];
@@ -40,7 +34,7 @@ const speakerCodes = (voices: OsVoice[]): Map<string, string[]> => {
 };
 
 const readableName = (
-  voice: OsVoice,
+  voice: VoiceProps,
   codes: Map<string, string[]>,
   copy: SystemVoiceCopy,
 ): string => {
@@ -61,7 +55,7 @@ const readableName = (
   return name;
 };
 
-const withoutRedundantAliases = (voices: OsVoice[]): OsVoice[] => {
+const withoutRedundantAliases = (voices: VoiceProps[]): VoiceProps[] => {
   const localesWithVoices = new Set(
     voices.filter(v => !v.identifier.endsWith(ALIAS_SUFFIX)).map(localeOf),
   );
@@ -105,9 +99,9 @@ const withCollisionSuffixes = (voices: Voice[]): Voice[] => {
 export const getSystemVoices = async (
   copy: SystemVoiceCopy,
 ): Promise<Voice[]> => {
-  const osVoices: OsVoice[] = await Speech.getAvailableVoices();
+  const osVoices = await Speech.getAvailableVoices();
   const codes = speakerCodes(osVoices);
-  const lastById = new Map<string, OsVoice>();
+  const lastById = new Map<string, VoiceProps>();
   for (const voice of osVoices) {
     lastById.set(voice.identifier, voice);
   }
