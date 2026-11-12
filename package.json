@@ -90,7 +90,7 @@
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "^5.10.1",
     "react-native-screens": "^4.30.0",
-    "react-native-share": "^12.2.0",
+    "react-native-share": "^12.3.1",
     "react-native-svg": "^15.16.0",
     "react-native-tcp-socket": "6.4.3",
     "react-native-url-polyfill": "^4.0.0",
