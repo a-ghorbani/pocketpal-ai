@@ -165,6 +165,8 @@ describe('shouldShowPlayButton', () => {
       ['one Han character', '好。'],
       ['one Han character with fullwidth punctuation', '好！'],
       ['one Han character with two punctuation marks', '好？！'],
+      ['one Han character with fullwidth brackets', '好［］'],
+      ['one Han character with a fullwidth tilde', '好～'],
       ['one kana character', 'ね'],
       ['CJK punctuation only', '。。。'],
       ['emoji only', '👍🙂'],
@@ -177,6 +179,9 @@ describe('shouldShowPlayButton', () => {
       ['two kana characters', 'はい'],
       ['mixed Latin and Chinese', 'OK，好的。'],
       ['a Chinese reply with a Latin word', '我用iPhone。'],
+      ['fullwidth Latin words', 'ＯＫ ＯＫ'],
+      ['fullwidth digit groups', '１２ ３４'],
+      ['one Han character with an emoji', '好😀'],
     ])('is true for %s', (_, reply) => {
       expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
     });

@@ -11,7 +11,8 @@ import type {MessageType} from '../../utils/types';
 
 const HAN_OR_KANA =
   /[\u3005\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u31F0-\u31FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF66-\uFF9D]/g;
-const CJK_PUNCTUATION = /[\u3000-\u303F\u30FB\uFF00-\uFF65]/g;
+const CJK_PUNCTUATION =
+  /[\u3000-\u303F\u30FB\uFF01-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF40\uFF5B-\uFF65]/g;
 
 const countWords = (text: string): number => {
   const hanOrKana = text.match(HAN_OR_KANA)?.length ?? 0;
