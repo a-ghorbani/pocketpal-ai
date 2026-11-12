@@ -2649,10 +2649,10 @@
   dependencies:
     firebase "12.4.0"
 
-"@react-native-google-signin/google-signin@^16.0.0":
-  version "16.0.0"
-  resolved "https://registry.yarnpkg.com/@react-native-google-signin/google-signin/-/google-signin-16.0.0.tgz#05af652e16f7dab745907db06edc74c007c0e670"
-  integrity sha512-jVuzPo8odREekFc0b4RK3YsqCvedtLIM2P6NSszFr9cYyhKrUNikffPapL6LmkL9qkb8K6pDeb5CXg4qALOc0g==
+"@react-native-google-signin/google-signin@^17.0.0":
+  version "17.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-google-signin/google-signin/-/google-signin-17.0.0.tgz#4e50f283765ce29b92a03d89a58a55382c2cc31d"
+  integrity sha512-FAnq5tkoq01np7jCzGjBYK1QPS61hJxjLJHJyJjQN3gaTwAZiGll18Xn3nygITMsZ/WoJ0jmskuHSG/oknUskQ==
 
 "@react-native-masked-view/masked-view@^0.3.2":
   version "0.3.2"

@@ -46,7 +46,7 @@
     "@react-native-documents/picker": "^11.0.4",
     "@react-native-firebase/app": "^23.5.0",
     "@react-native-firebase/app-check": "^23.5.0",
-    "@react-native-google-signin/google-signin": "^16.0.0",
+    "@react-native-google-signin/google-signin": "^17.0.0",
     "@react-native-masked-view/masked-view": "^0.3.2",
     "@react-native-picker/picker": "^2.11.4",
     "@react-navigation/drawer": "^7.14.4",
