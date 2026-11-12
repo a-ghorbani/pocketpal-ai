@@ -1350,10 +1350,10 @@
     "@types/conventional-commits-parser" "^5.0.0"
     chalk "^5.3.0"
 
-"@dr.pogodin/react-native-fs@^2.36.0":
-  version "2.36.0"
-  resolved "https://registry.yarnpkg.com/@dr.pogodin/react-native-fs/-/react-native-fs-2.36.0.tgz#4a29a3201ec2740a56c6378fc232745c95ad88c2"
-  integrity sha512-1pBdtSjIGHs6nJ4JiOc0VzBkLSc7H56yv9P1dqqr1AZSUjarNjXFz+eDLdHig9rUCP2bEkXBmFScHiAc5sF5xg==
+"@dr.pogodin/react-native-fs@^2.41.0":
+  version "2.41.0"
+  resolved "https://registry.yarnpkg.com/@dr.pogodin/react-native-fs/-/react-native-fs-2.41.0.tgz#4af4ad369ea67f1f6f66e87eb3de7cef18e15f05"
+  integrity sha512-85eU5N7bk9dWwm1DF14iPSbzdZvhidxOKoAzzE7kHsCVpQ2+f1JWGuJMPTc6z7SV2cZJzTbAyGzBvEJmXHvkIw==
   dependencies:
     buffer "^6.0.3"
     http-status-codes "^2.3.0"

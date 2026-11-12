@@ -31,7 +31,7 @@
     "test:perf:compare": "bash scripts/perf-compare.sh"
   },
   "dependencies": {
-    "@dr.pogodin/react-native-fs": "^2.36.0",
+    "@dr.pogodin/react-native-fs": "^2.41.0",
     "@flyerhq/react-native-link-preview": "^1.6.0",
     "@fugood/react-native-audio-pcm-stream": "1.1.4",
     "@gorhom/bottom-sheet": "5.2.14",
