@@ -54,7 +54,7 @@
     "@react-navigation/stack": "^7.12.1",
     "@supabase/supabase-js": "^2.75.0",
     "axios": "^1.12.2",
-    "buffer": "^5.5.0",
+    "buffer": "^6.0.3",
     "chat-formatter": "^0.3.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.23",
