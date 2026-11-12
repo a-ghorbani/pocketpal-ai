@@ -44,7 +44,7 @@ GEM
       aws-eventstream (~> 1, >= 1.0.2)
     babosa (1.0.4)
     base64 (0.3.0)
-    benchmark (0.4.1)
+    benchmark (0.5.0)
     bigdecimal (4.0.1)
     cgi (0.5.2)
     claide (1.1.0)
