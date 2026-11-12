@@ -151,7 +151,6 @@ export const systemShortLabel = (voice: Voice): string => {
     : voice.name;
 };
 
-/** iOS files its Cantonese voices under `zh-HK`, not `yue`. */
 export const cantoneseUnderZh = (
   voices: Voice[],
   canInstallVoices: boolean,
