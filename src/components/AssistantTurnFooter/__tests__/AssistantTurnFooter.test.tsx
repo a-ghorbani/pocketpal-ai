@@ -271,6 +271,27 @@ describe('AssistantTurnFooter', () => {
       expect(UNSAFE_queryByType(playButtonType)).not.toBeNull();
       expect(copyMarginStart(getByTestId)).toBe(0);
     });
+
+    it('renders Play under a one-paragraph Chinese reply', () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = true;
+      });
+      const chineseTurn = baseTurn({
+        id: 'turn-zh',
+        author: {id: assistant.id},
+        steps: [
+          {
+            content:
+              '长城是中国古代的军事防御工程，长达万余公里，见证了中国悠久的历史和丰富的文化。',
+          },
+        ],
+        metadata: {copyable: true},
+      });
+      const {queryByTestId} = render(
+        <AssistantTurnFooter message={chineseTurn} />,
+      );
+      expect(queryByTestId('playbutton-turn-zh')).not.toBeNull();
+    });
   });
 
   it('renders timing line when timings present (no copy button if not copyable)', () => {

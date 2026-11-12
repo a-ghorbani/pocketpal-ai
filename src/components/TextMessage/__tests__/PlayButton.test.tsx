@@ -120,6 +120,47 @@ describe('shouldShowPlayButton', () => {
       true,
     );
   });
+
+  describe('replies in scripts written without spaces', () => {
+    const chineseReply =
+      '长城是中国古代的军事防御工程，长达万余公里，见证了中国悠久的历史和丰富的文化。';
+    const japaneseReply = '空が青いのは、太陽の光が大気で散乱するからです。';
+
+    it.each([
+      ['Chinese', chineseReply],
+      ['Japanese', japaneseReply],
+    ])('is true for a finished one-paragraph %s text reply', (_, reply) => {
+      expect(
+        shouldShowPlayButton(
+          makeAssistantMsg({
+            text: reply,
+            metadata: {completionResult: {content: reply}},
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it.each([
+      ['Chinese', chineseReply],
+      ['Japanese', japaneseReply],
+    ])('is true for a finished one-paragraph %s assistant turn', (_, reply) => {
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
+
+    it('is true for a spaced Korean reply', () => {
+      expect(
+        shouldShowPlayButton(
+          makeTurn([{content: '하늘이 파란 이유는 레일리 산란 때문입니다.'}]),
+        ),
+      ).toBe(true);
+    });
+
+    it('is false for a one-word Korean reply', () => {
+      expect(shouldShowPlayButton(makeTurn([{content: '감사합니다.'}]))).toBe(
+        false,
+      );
+    });
+  });
 });
 
 describe('PlayButton', () => {
