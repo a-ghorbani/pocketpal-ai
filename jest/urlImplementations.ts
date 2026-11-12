@@ -21,9 +21,16 @@ export const useUrlImplementation = (impl: typeof URL): void => {
   });
 };
 
-/** Host case survives parsing only under the polyfill: proves the swap is live. */
+/**
+ * Assert the active global URL implementation without assuming host-case
+ * preservation. The polyfill currently matches the WHATWG URL behavior by
+ * lowercasing hostnames, so the test should verify the global constructor is
+ * swapped instead of relying on a version-specific hostname quirk.
+ */
 export const expectUrlImplementationActive = (impl: typeof URL): void => {
-  expect(new URL('https://A.com/').hostname).toBe(
-    impl === NODE_URL ? 'a.com' : 'A.com',
-  );
+  const parsed = new URL('https://A.com/');
+  const expectedHostname = parsed.hostname.toLowerCase();
+
+  expect(globalThis.URL).toBe(impl);
+  expect(parsed.hostname).toBe(expectedHostname);
 };
