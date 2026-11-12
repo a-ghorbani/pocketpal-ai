@@ -118,7 +118,7 @@
     "@react-native/eslint-config": "0.87.1",
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
-    "@react-native/typescript-config": "0.87.1",
+    "@react-native/typescript-config": "0.88.1",
     "@resvg/resvg-js": "2.6.2",
     "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/react-native": "^13.3.3",
