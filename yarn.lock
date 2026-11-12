@@ -8461,10 +8461,10 @@ react-native-share@^12.3.1:
   resolved "https://registry.yarnpkg.com/react-native-share/-/react-native-share-12.3.1.tgz#beb36cf2d589335f93adc6f22bd34c8a950964b3"
   integrity sha512-mRVRie0qKbtj+jWqJ2POPkeSd8SxnMp6aazFZVmq8ZbkUGtQLENR/L58ky8zH4VUEF/WYRmdBiBHWHVtzOewtQ==
 
-react-native-svg-transformer@^1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/react-native-svg-transformer/-/react-native-svg-transformer-1.5.1.tgz#04467563becbea65b8e576df7e33c9a9a86961e8"
-  integrity sha512-dFvBNR8A9VPum9KCfh+LE49YiJEF8zUSnEFciKQroR/bEOhlPoZA0SuQ0qNk7m2iZl2w59FYjdRe0pMHWMDl0Q==
+react-native-svg-transformer@^1.5.3:
+  version "1.5.3"
+  resolved "https://registry.yarnpkg.com/react-native-svg-transformer/-/react-native-svg-transformer-1.5.3.tgz#a45b1bacb0623b66b134726a389ab2c67d856252"
+  integrity sha512-M4uFg5pUt35OMgjD4rWWbwd6PmxV96W7r/gQTTa+iZA5B+jO6aURhzAZGLHSrg1Kb91cKG0Rildy9q1WJvYstg==
   dependencies:
     "@svgr/core" "^8.1.0"
     "@svgr/plugin-jsx" "^8.1.0"

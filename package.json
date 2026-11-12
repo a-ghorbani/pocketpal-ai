@@ -140,7 +140,7 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "3.6.2",
     "react-native-dotenv": "^3.4.11",
-    "react-native-svg-transformer": "^1.5.1",
+    "react-native-svg-transformer": "^1.5.3",
     "react-test-renderer": "19.2.3",
     "reassure": "1.6.0",
     "typescript": "5.9.3"
