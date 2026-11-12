@@ -8422,10 +8422,10 @@ react-native-parsed-text@^0.0.22:
   dependencies:
     prop-types "^15.7.x"
 
-react-native-permissions@5.6.0:
-  version "5.6.0"
-  resolved "https://registry.yarnpkg.com/react-native-permissions/-/react-native-permissions-5.6.0.tgz#de5df5576c7762bc14da5b418bea025d300dacf6"
-  integrity sha512-iKq7rgAg9cQSy9e/7A6wCj0GYhw+o29Ob4OKC793fniDdwraDNu7D67X4holGJLChUDNzFZH1Qj+YWgrPNsGLw==
+react-native-permissions@5.6.3:
+  version "5.6.3"
+  resolved "https://registry.yarnpkg.com/react-native-permissions/-/react-native-permissions-5.6.3.tgz#f30d23c79364293b969c5e0fcce5c0b79c5904ac"
+  integrity sha512-jCl5TCbRsgBr3kgJdLmdyLa+QMW/jiTjKdQqXGrm7x1XMUwKlumnQWx1BRRcIv7eclnLN1NZud3KVaCkp8+wHA==
 
 react-native-picker-select@^9.3.1:
   version "9.3.1"

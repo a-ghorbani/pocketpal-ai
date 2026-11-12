@@ -85,7 +85,7 @@
     "react-native-nitro-modules": "0.37.1",
     "react-native-paper": "5.15.3",
     "react-native-parsed-text": "^0.0.22",
-    "react-native-permissions": "5.6.0",
+    "react-native-permissions": "5.6.3",
     "react-native-picker-select": "^9.3.1",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "^5.10.1",
