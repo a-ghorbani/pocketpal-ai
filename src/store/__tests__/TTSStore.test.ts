@@ -449,6 +449,29 @@ describe('TTSStore', () => {
     return store;
   };
 
+  describe('saved system voice', () => {
+    const SAVED_NETWORK_VOICE: Voice = {
+      id: 'en-us-x-sfg-network',
+      name: '⁨English⁩ (US) · Voice 2 · sfg',
+      engine: 'system',
+      language: 'en-US',
+      requiresNetwork: true,
+    };
+
+    it('survives init with no neural engine installed and reads the next reply', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(SAVED_NETWORK_VOICE);
+
+      await store.init();
+
+      expect(store.currentVoice).toEqual(SAVED_NETWORK_VOICE);
+      expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+      await store.play('msg-1', 'hello');
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SAVED_NETWORK_VOICE);
+    });
+  });
+
   describe('play() state machine', () => {
     it('resolves engine via currentVoice and invokes engine.play()', async () => {
       const store = await makeStore();
