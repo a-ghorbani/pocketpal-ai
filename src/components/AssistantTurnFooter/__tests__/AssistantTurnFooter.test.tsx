@@ -292,6 +292,22 @@ describe('AssistantTurnFooter', () => {
       );
       expect(queryByTestId('playbutton-turn-zh')).not.toBeNull();
     });
+
+    it('renders Play under a one-word reply', () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = true;
+      });
+      const oneWordTurn = baseTurn({
+        id: 'turn-one-word',
+        author: {id: assistant.id},
+        steps: [{content: 'Hello'}],
+        metadata: {copyable: true},
+      });
+      const {queryByTestId} = render(
+        <AssistantTurnFooter message={oneWordTurn} />,
+      );
+      expect(queryByTestId('playbutton-turn-one-word')).not.toBeNull();
+    });
   });
 
   it('renders timing line when timings present (no copy button if not copyable)', () => {

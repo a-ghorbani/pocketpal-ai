@@ -85,12 +85,27 @@ describe('shouldShowPlayButton', () => {
     ).toBe(false);
   });
 
-  it('is false for single-word messages', () => {
-    expect(shouldShowPlayButton(makeAssistantMsg({text: 'Hi'}))).toBe(false);
+  it('is true for single-word messages', () => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text: 'Hi'}))).toBe(true);
   });
 
   it('is false for empty / whitespace messages', () => {
     expect(shouldShowPlayButton(makeAssistantMsg({text: '   '}))).toBe(false);
+  });
+
+  it.each([
+    ['empty text', ''],
+    ['line breaks and tabs', '\n\t'],
+    ['an ideographic space', '\u3000'],
+  ])('is false for %s', (_, text) => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text}))).toBe(false);
+    expect(shouldShowPlayButton(makeTurn([{content: text}]))).toBe(false);
+  });
+
+  it('is false for an assistant turn whose steps carry no visible text', () => {
+    expect(
+      shouldShowPlayButton(makeTurn([{content: ''}, {content: ' \n '}])),
+    ).toBe(false);
   });
 
   it('is false for a text reply while streaming without a final completionResult', () => {
@@ -155,53 +170,41 @@ describe('shouldShowPlayButton', () => {
       ).toBe(true);
     });
 
-    it('is false for a one-word Korean reply', () => {
+    it('is true for a one-word Korean reply', () => {
       expect(shouldShowPlayButton(makeTurn([{content: '감사합니다.'}]))).toBe(
-        false,
+        true,
       );
     });
+  });
 
+  describe('replies of any length in any script', () => {
     it.each([
-      ['one Han character', '好。'],
-      ['one Han character with fullwidth punctuation', '好！'],
-      ['one Han character with two punctuation marks', '好？！'],
-      ['one Han character with fullwidth brackets', '好［］'],
-      ['one Han character with a fullwidth tilde', '好～'],
+      [
+        'a Thai sentence without spaces',
+        'ท้องฟ้าเป็นสีฟ้าเพราะแสงอาทิตย์กระเจิงในชั้นบรรยากาศ',
+      ],
+      ['a Lao reply', 'ຂອບໃຈ'],
+      ['a Khmer reply', 'អរគុណ'],
+      ['a Myanmar reply', 'ကျေးဇူးတင်ပါတယ်'],
+      ['one Han character', '好'],
+      ['one Han character with punctuation', '好。'],
       ['one kana character', 'ね'],
-      ['CJK punctuation only', '。。。'],
-      ['emoji only', '👍🙂'],
-    ])('is false for %s', (_, reply) => {
-      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(false);
-    });
-
-    it.each([
-      ['two Han characters', '你好'],
-      ['two kana characters', 'はい'],
+      ['one English word', 'Hello'],
+      ['several English words', 'Hello there friend'],
       ['mixed Latin and Chinese', 'OK，好的。'],
-      ['a Chinese reply with a Latin word', '我用iPhone。'],
-      ['fullwidth Latin words', 'ＯＫ ＯＫ'],
-      ['fullwidth lowercase Latin words', 'ｏｋ ｏｋ'],
-      ['fullwidth digit groups', '１２ ３４'],
-      ['one Han character with an emoji', '好😀'],
-    ])('is true for %s', (_, reply) => {
+      ['CJK punctuation only', '。。。'],
+      ['one emoji', '👍'],
+      ['two emoji', '👍🙂'],
+    ])('is true for %s, as text and as an assistant turn', (_, reply) => {
+      expect(
+        shouldShowPlayButton(
+          makeAssistantMsg({
+            text: reply,
+            metadata: {completionResult: {content: reply}},
+          }),
+        ),
+      ).toBe(true);
       expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
-    });
-
-    it.each([
-      ['Han with the iteration mark', '人々'],
-      ['hiragana iteration mark', 'ゝゞ'],
-      ['katakana', 'テスト'],
-      ['katakana prolonged sound mark', 'ーー'],
-      ['katakana phonetic extension', 'ㇰㇱ'],
-      ['CJK extension A', '㐀㐁'],
-      ['CJK compatibility ideograph', '豈更'],
-      ['halfwidth katakana', 'ﾊｲ'],
-    ])('counts each %s character as a word', (_, reply) => {
-      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
-    });
-
-    it('does not count the katakana middle dot', () => {
-      expect(shouldShowPlayButton(makeTurn([{content: '好・'}]))).toBe(false);
     });
   });
 });
