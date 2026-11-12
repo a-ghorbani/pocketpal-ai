@@ -19,7 +19,7 @@ jobs:
       translation_only: ${{ steps.check.outputs.translation_only }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -56,7 +56,7 @@ jobs:
     steps:
       # Step 1: Check out the repository
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       # Cache node_modules
       - name: Cache node_modules
@@ -112,7 +112,7 @@ jobs:
       RNLLAMA_SKIP_POSTINSTALL: '1'
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -157,7 +157,7 @@ jobs:
       ORG_GRADLE_PROJECT_rnllamaBuildFromSource: 'true'
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       # Must precede setup-node and setup-java: /opt/hostedtoolcache is where
       # those install. The Hexagon SDK adds ~3.1 GB on top of a from-source build.
@@ -399,7 +399,7 @@ jobs:
       NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       # Set up Node.js environment
       - name: Set up Node.js

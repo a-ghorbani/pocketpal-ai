@@ -44,7 +44,7 @@ jobs:
     steps:
       # Step 1: Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # Important for git history
           ssh-key: ${{ secrets.DEPLOY_KEY }}
@@ -274,7 +274,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref }}    # This ensures we get the latest changes including the version bump
           fetch-depth: 0
