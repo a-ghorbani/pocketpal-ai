@@ -34,7 +34,7 @@ export const defaultCompletionParams: CompletionParams = {
   xtc_threshold: 0.1, // Sets a minimum probability threshold for tokens to be removed.
   xtc_probability: 0.0, // Sets the chance for token removal (checked once on sampler start)
   typical_p: 1.0, // Enable locally typical sampling with parameter p. Default: `1.0`, which is disabled.
-  penalty_last_n: 64, // Last n tokens to consider for penalizing repetition. Default: `64`, where `0` is disabled and `-1` is ctx-size.
+  penalty_last_n: 64, // Last n tokens to consider for penalizing repetition. Default: `64`, where `0` or a negative value is disabled.
   penalty_repeat: 1.0, // Control the repetition of token sequences in the generated text.
   penalty_freq: 0.0, // Repeat alpha frequency penalty. Default: `0.0`, which is disabled.
   penalty_present: 0.0, // Repeat alpha presence penalty. Default: `0.0`, which is disabled.
