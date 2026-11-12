@@ -62,7 +62,7 @@
     "llama.rn": "0.13.0-rc.9",
     "mobx": "^6.16.1",
     "mobx-persist-store": "^1.1.8",
-    "mobx-react": "^9.2.1",
+    "mobx-react": "^9.2.2",
     "mustache": "^4.2.0",
     "onnxruntime-react-native": "^1.23.2",
     "prop-types": "15.8.1",
