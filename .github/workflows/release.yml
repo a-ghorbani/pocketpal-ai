@@ -66,7 +66,7 @@ jobs:
 
       # Step 3: Set up Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0' # Use the specified Node.js version
           cache: 'yarn'
@@ -293,7 +293,7 @@ jobs:
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0'
           cache: 'yarn'

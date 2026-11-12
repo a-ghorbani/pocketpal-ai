@@ -67,7 +67,7 @@ jobs:
 
       # Step 2: Set up Node.js environment
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0'
           cache: 'yarn'
@@ -117,7 +117,7 @@ jobs:
           fetch-depth: 2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0'
           cache: 'yarn'
@@ -169,7 +169,7 @@ jobs:
 
       # Set up Node.js environment
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0'
           cache: 'yarn'
@@ -403,7 +403,7 @@ jobs:
 
       # Set up Node.js environment
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: '22.21.0'
           cache: 'yarn'
