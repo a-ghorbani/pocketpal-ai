@@ -52,7 +52,7 @@
     "@react-navigation/drawer": "^7.14.4",
     "@react-navigation/native": "^7.5.1",
     "@react-navigation/stack": "^7.12.1",
-    "@supabase/supabase-js": "^2.75.0",
+    "@supabase/supabase-js": "^2.119.0",
     "axios": "^1.12.2",
     "buffer": "^6.0.3",
     "chat-formatter": "^0.3.4",
