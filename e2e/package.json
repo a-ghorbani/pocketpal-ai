@@ -27,7 +27,7 @@
     "appium": "^2.15.1",
     "appium-uiautomator2-driver": "^3.8.1",
     "appium-xcuitest-driver": "^7.32.5",
-    "@aws-sdk/client-device-farm": "^3.693.0"
+    "@aws-sdk/client-device-farm": "^3.1164.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
