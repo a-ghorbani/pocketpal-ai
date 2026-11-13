@@ -260,12 +260,12 @@
       "portInvalid": "Użyj portu z zakresu od 1024 do 65535",
       "lan": "Zezwalaj na dostęp z innych urządzeń w sieci",
       "lanWarning": "Serwer jest dostępny w każdej sieci, z którą ten telefon jest połączony: Wi-Fi, dane mobilne, hotspot i VPN. Ustaw klucz API, aby ograniczyć, kto może z niego korzystać.",
-      "notOnWifi": "Brak połączenia z Wi-Fi, więc nie pokazujemy adresu URL w sieci lokalnej.",
+      "notOnWifi": "Brak połączenia z Wi-Fi, więc adres URL w sieci lokalnej nie jest wyświetlany.",
       "apiKey": "Klucz API",
       "apiKeySet": "Żądania muszą zawierać ten klucz",
-      "apiKeyNotSet": "Bez klucza: z serwera może korzystać każda aplikacja, która ma do niego dostęp — z wyjątkiem stron w przeglądarce.",
+      "apiKeyNotSet": "Bez klucza: z serwera może korzystać każda aplikacja, która może się z nim połączyć — z wyjątkiem stron w przeglądarce.",
       "setApiKey": "Ustaw klucz",
-      "clearApiKey": "Usuń klucz",
+      "clearApiKey": "Wyczyść klucz",
       "apiKeyPlaceholder": "Wprowadź klucz API",
       "stopToEdit": "Aby zmienić te ustawienia, wyłącz serwer.",
       "lockedHint": "Funkcja Plus. Otwiera szczegóły.",
@@ -277,7 +277,7 @@
         "portInUse": "Port {{port}} jest już zajęty. Wyłącz serwer i wybierz inny port.",
         "listenFailed": "Nie udało się uruchomić serwera. Wyłącz go i włącz ponownie albo wybierz inny port.",
         "stoppedListening": "Serwer nieoczekiwanie się zatrzymał. Wyłącz go i włącz ponownie.",
-        "keyUnavailable": "Nie udało się odczytać klucza API. Odblokuj telefon, a potem wyłącz i włącz serwer ponownie."
+        "keyUnavailable": "Nie udało się odczytać klucza API. Odblokuj telefon, a potem wyłącz i ponownie włącz serwer."
       }
     }
   },
@@ -466,7 +466,7 @@
         "memoryWarningSnackbar": "Powiadomienie o ostrzeżeniu dotyczącym pamięci"
       },
       "projectorOffer": {
-        "rowTitle": "Wizja wymaga modelu projekcyjnego",
+        "rowTitle": "Wizja wymaga własnego modelu projekcyjnego",
         "download": "Pobierz",
         "downloading": "Pobieranie modelu projekcyjnego · {{progress}}%",
         "a11yWithSize": "Pobierz model projekcyjny, {{size}}"
@@ -1100,6 +1100,30 @@
       "usingServerDefaultUnreported": "Używana jest domyślna wartość serwera (nie podano jej)",
       "resetToServerDefault": "Domyślna wartość serwera: {{value}} · Zresetuj",
       "resetToServerDefaultAccessibilityLabel": "Zresetuj {{name}} do domyślnej wartości serwera, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Więcej opcji",
+      "openMenuAction": "Otwórz menu wiadomości"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Kopiuj",
+        "copyAsMarkdown": "Kopiuj jako Markdown",
+        "copyImageUrl": "Kopiuj URL obrazu",
+        "copyImageUrls": "Kopiuj URL obrazów ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "Punkt listy",
+        "nestedBulletPoint": "Zagnieżdżony punkt listy",
+        "orderedItem": "Element listy {{n}}",
+        "nestedOrderedItem": "Zagnieżdżony element listy {{n}}",
+        "quote": "Cytat blokowy",
+        "nestedQuote": "Zagnieżdżony cytat blokowy",
+        "tableRow": "Wiersz {{n}}: {{content}}",
+        "rotorHeadings": "Nagłówki",
+        "rotorLinks": "Linki",
+        "rotorImages": "Obrazy"
+      }
     }
   },
   "palsScreen": {
@@ -1507,7 +1531,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Szybki start. Zużywa mało pamięci RAM. Tylko język angielski.",
     "enginePhononCredit": "Model i głosy autorstwa Gradium (Apache-2.0), oparte na Mimi firmy Kyutai.",
-    "engineTierNatural": "naturalny angielski"
+    "engineTierNatural": "naturalny angielski",
+    "systemNeedsInternet": "Wymaga internetu",
+    "systemVoiceNumber": "Głos {{number}}",
+    "systemQualityEnhanced": "Ulepszona",
+    "systemVoiceModeHint": "Głosy systemowe nie działają w trybie głosowym.",
+    "systemOnDeviceSection": "Na tym telefonie",
+    "systemLanguagesLabel": "Języki",
+    "systemGetMoreVoices": "Pobierz więcej głosów",
+    "systemNoVoicesForLanguage": "{{language}}: na tym telefonie nie ma jeszcze żadnych głosów.",
+    "systemIosSettingsHint": "Dodaj głosy w sekcji Ustawienia > Dostępność > Treść mówiona > Głosy.",
+    "systemLanguageSheetTitle": "Język głosu",
+    "systemLanguageSearchPlaceholder": "Szukaj języków"
   },
   "onboarding": {
     "screen5": {
