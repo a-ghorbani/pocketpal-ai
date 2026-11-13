@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "Usando el valor predeterminado del servidor (no indicado)",
       "resetToServerDefault": "Predeterminado del servidor: {{value}} · Restablecer",
       "resetToServerDefaultAccessibilityLabel": "Restablecer {{name}} al valor predeterminado del servidor, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Más acciones",
+      "openMenuAction": "Abrir el menú del mensaje"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Copiar",
+        "copyAsMarkdown": "Copiar como Markdown",
+        "copyImageUrl": "Copiar URL de la imagen",
+        "copyImageUrls": "Copiar {{count}} URL de imágenes"
+      },
+      "accessibility": {
+        "bulletPoint": "Viñeta",
+        "nestedBulletPoint": "Viñeta anidada",
+        "orderedItem": "Elemento de lista {{n}}",
+        "nestedOrderedItem": "Elemento de lista anidada {{n}}",
+        "quote": "Cita",
+        "nestedQuote": "Cita anidada",
+        "tableRow": "Fila {{n}}: {{content}}",
+        "rotorHeadings": "Encabezados",
+        "rotorLinks": "Enlaces",
+        "rotorImages": "Imágenes"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Inicio rápido y poco consumo de RAM. Solo en inglés.",
     "enginePhononCredit": "Modelo y voces de Gradium (Apache-2.0), basados en Mimi de Kyutai.",
-    "engineTierNatural": "inglés natural"
+    "engineTierNatural": "inglés natural",
+    "systemNeedsInternet": "Necesita internet",
+    "systemVoiceNumber": "Voz {{number}}",
+    "systemQualityEnhanced": "Mejorada",
+    "systemVoiceModeHint": "Las voces del sistema no pueden hablar en el modo de voz.",
+    "systemOnDeviceSection": "En este teléfono",
+    "systemLanguagesLabel": "Idiomas",
+    "systemGetMoreVoices": "Obtener más voces",
+    "systemNoVoicesForLanguage": "Este teléfono todavía no tiene voces en {{language}}.",
+    "systemIosSettingsHint": "Añade voces en Ajustes > Accesibilidad > Contenido leído > Voces.",
+    "systemLanguageSheetTitle": "Idioma de la voz",
+    "systemLanguageSearchPlaceholder": "Buscar idiomas"
   },
   "onboarding": {
     "back": "Atrás",
