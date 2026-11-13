@@ -1,6 +1,7 @@
 import type {
   FirstChunkMode,
   StreamProgressEvent,
+  SynthesisOptions,
 } from '@pocketpalai/react-native-speech';
 
 /**
@@ -65,6 +66,8 @@ export interface StreamingHandle {
 export interface StreamOptions {
   /** `'clause'` starts speaking at the first clause instead of sentence. */
   firstChunk?: FirstChunkMode;
+  /** Word cap on a `'clause'` first chunk; the library defaults to 12. */
+  firstChunkMaxWords?: SynthesisOptions['firstChunkMaxWords'];
   /** Called as each chunk starts playing, with its range in the stream. */
   onProgress?: (event: StreamProgressEvent) => void;
 }
