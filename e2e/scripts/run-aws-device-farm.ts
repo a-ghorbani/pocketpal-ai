@@ -18,6 +18,20 @@
  * Or with default app paths:
  *   yarn test:aws --platform android
  *   yarn test:aws --platform ios
+ *
+ * One spec on one device, against a prebuilt app:
+ *   yarn e2e:aws --platform ios --app path/to/app.ipa \
+ *     --testspec testspec-ios-metal-load.yml --var METAL_LOAD_DEVICE=auto \
+ *     --device-arn arn:aws:devicefarm:us-west-2::device:XXXX \
+ *     --timeout 35 --name metal-load-1.22.0 --artifacts-dir device-farm-artifacts/x
+ *
+ *   --testspec <file>     test spec to upload instead of testspec-<platform>.yml
+ *   --var KEY=VALUE       replace __KEY__ in the test spec (repeatable)
+ *   --device-arn <arn>    run on exactly this device (no device pool needed)
+ *   --device-pool <arn>   device pool ARN (overrides AWS_DEVICE_POOL_ARN_*)
+ *   --timeout <minutes>   per-device job timeout (default 60, 120 with --all-models)
+ *   --name <label>        run name suffix
+ *   --artifacts-dir <dir> where artifacts are saved (default device-farm-artifacts)
  */
 
 import {config} from 'dotenv';
@@ -37,6 +51,7 @@ import {
 } from '@aws-sdk/client-device-farm';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import * as https from 'https';
 import {execSync} from 'child_process';
 
@@ -55,12 +70,45 @@ const DEVICE_POOL_ARN_IOS = process.env.AWS_DEVICE_POOL_ARN_IOS;
 const DEFAULT_ANDROID_APP = '../android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk';
 const DEFAULT_IOS_APP = '../ios/build/PocketPal.ipa';
 
+interface RunnerArgs {
+  platform: 'ios' | 'android';
+  appPath: string;
+  allModels: boolean;
+  testSpec?: string;
+  vars: Record<string, string>;
+  deviceArn?: string;
+  devicePool?: string;
+  timeoutMinutes?: number;
+  runName?: string;
+  artifactsDir?: string;
+}
+
+function optionValue(args: string[], flag: string): string | undefined {
+  const i = args.indexOf(flag);
+  return i !== -1 ? args[i + 1] : undefined;
+}
+
+function resolveFromE2e(p: string): string {
+  return path.isAbsolute(p) ? p : path.resolve(__dirname, '..', p);
+}
+
 // Parse command line arguments
-function parseArgs(): {platform: 'ios' | 'android'; appPath: string; allModels: boolean} {
+function parseArgs(): RunnerArgs {
   const args = process.argv.slice(2);
   const platformIndex = args.indexOf('--platform');
   const appIndex = args.indexOf('--app');
   const allModels = args.includes('--all-models');
+
+  const vars: Record<string, string> = {};
+  args.forEach((arg, i) => {
+    if (arg === '--var' && args[i + 1]?.includes('=')) {
+      const [key, ...rest] = args[i + 1].split('=');
+      vars[key] = rest.join('=');
+    }
+  });
+  const timeout = optionValue(args, '--timeout');
+  const testSpec = optionValue(args, '--testspec');
+  const artifactsDir = optionValue(args, '--artifacts-dir');
 
   const platform = (platformIndex !== -1 ? args[platformIndex + 1] : 'android') as 'ios' | 'android';
 
@@ -77,7 +125,18 @@ function parseArgs(): {platform: 'ios' | 'android'; appPath: string; allModels: 
     appPath = path.resolve(__dirname, '..', appPath);
   }
 
-  return {platform, appPath, allModels};
+  return {
+    platform,
+    appPath,
+    allModels,
+    testSpec: testSpec && resolveFromE2e(testSpec),
+    vars,
+    deviceArn: optionValue(args, '--device-arn'),
+    devicePool: optionValue(args, '--device-pool'),
+    timeoutMinutes: timeout ? parseInt(timeout, 10) : undefined,
+    runName: optionValue(args, '--name'),
+    artifactsDir: artifactsDir && resolveFromE2e(artifactsDir),
+  };
 }
 
 // Validate required environment variables
@@ -103,7 +162,8 @@ function validateEnvironment(): void {
   }
 }
 
-const {platform, appPath, allModels} = parseArgs();
+const runnerArgs = parseArgs();
+const {platform, appPath, allModels} = runnerArgs;
 
 // Validate environment before proceeding
 validateEnvironment();
@@ -233,7 +293,27 @@ function createTestPackage(): string {
  */
 function prepareTestSpec(targetPlatform: 'ios' | 'android', useAllModels: boolean): string {
   const packageDir = path.join(__dirname, '..');
-  const originalPath = path.join(packageDir, `testspec-${targetPlatform}.yml`);
+  const originalPath =
+    runnerArgs.testSpec || path.join(packageDir, `testspec-${targetPlatform}.yml`);
+
+  const varKeys = Object.keys(runnerArgs.vars);
+  if (varKeys.length > 0) {
+    let templated = fs.readFileSync(originalPath, 'utf8');
+    for (const key of varKeys) {
+      templated = templated.split(`__${key}__`).join(runnerArgs.vars[key]);
+    }
+    const leftover = templated.match(/__[A-Z][A-Z0-9_]*__/g);
+    if (leftover) {
+      throw new Error(`Unset test spec variables: ${[...new Set(leftover)].join(', ')}`);
+    }
+    const tempPath = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'df-testspec-')),
+      path.basename(originalPath),
+    );
+    fs.writeFileSync(tempPath, templated);
+    console.log(`Test spec with variables: ${tempPath}`);
+    return tempPath;
+  }
 
   if (!useAllModels) {
     return originalPath;
@@ -265,6 +345,10 @@ function prepareTestSpec(targetPlatform: 'ios' | 'android', useAllModels: boolea
  * 4. First available pool
  */
 async function getDevicePoolArn(targetPlatform: 'ios' | 'android'): Promise<string> {
+  if (runnerArgs.devicePool) {
+    console.log(`Using device pool from --device-pool: ${runnerArgs.devicePool}`);
+    return runnerArgs.devicePool;
+  }
   // Check for explicit device pool ARN in environment
   const envPoolArn = targetPlatform === 'ios' ? DEVICE_POOL_ARN_IOS : DEVICE_POOL_ARN_ANDROID;
   if (envPoolArn) {
@@ -408,7 +492,8 @@ async function downloadArtifacts(runArn: string, outputDir: string): Promise<voi
           }
 
           // Determine file extension from artifact name or type
-          const artifactName = artifact.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          // Several artifacts share a name (e.g. Syslog), so prefix the type.
+          const artifactName = `${artifact.type}-${artifact.name}`.replace(/[^a-zA-Z0-9.-]/g, '_');
           const extension = artifact.extension || '';
           const filename = extension ? `${artifactName}.${extension}` : artifactName;
           const destPath = path.join(typeDir, filename);
@@ -558,8 +643,20 @@ async function main(): Promise<void> {
       `testspec-${platform}.yml`,
     );
 
-    // Get device pool
-    const devicePoolArn = await getDevicePoolArn(platform);
+    // One named device, or a device pool
+    const devices = runnerArgs.deviceArn
+      ? {
+          deviceSelectionConfiguration: {
+            filters: [
+              {attribute: 'ARN' as const, operator: 'IN' as const, values: [runnerArgs.deviceArn]},
+            ],
+            maxDevices: 1,
+          },
+        }
+      : {devicePoolArn: await getDevicePoolArn(platform)};
+    if (runnerArgs.deviceArn) {
+      console.log(`Using device: ${runnerArgs.deviceArn}`);
+    }
 
     // Schedule test run with custom environment mode
     console.log('\nScheduling test run...');
@@ -567,15 +664,15 @@ async function main(): Promise<void> {
       new ScheduleRunCommand({
         projectArn: PROJECT_ARN,
         appArn,
-        devicePoolArn,
-        name: `PocketPal E2E - ${platform}${allModels ? ' (all models)' : ''} - ${new Date().toISOString()}`,
+        ...devices,
+        name: `PocketPal E2E - ${platform}${allModels ? ' (all models)' : ''}${runnerArgs.runName ? ` - ${runnerArgs.runName}` : ''} - ${new Date().toISOString()}`,
         test: {
           type: 'APPIUM_NODE',
           testPackageArn,
           testSpecArn, // Required for custom environment mode
         },
         executionConfiguration: {
-          jobTimeoutMinutes: allModels ? 120 : 60, // More time for all models
+          jobTimeoutMinutes: runnerArgs.timeoutMinutes ?? (allModels ? 120 : 60),
         },
       }),
     );
@@ -589,7 +686,8 @@ async function main(): Promise<void> {
     const finalRun = await waitForRunComplete(runArn);
 
     // Download artifacts (JUnit XML, screenshots, logs)
-    const artifactsDir = path.join(__dirname, '..', 'device-farm-artifacts');
+    const artifactsDir =
+      runnerArgs.artifactsDir || path.join(__dirname, '..', 'device-farm-artifacts');
     await downloadArtifacts(runArn, artifactsDir);
 
     // Print results
