@@ -239,9 +239,11 @@ describe('VoiceSetupSheet', () => {
     runInAction(() => {
       tts.currentVoice = voice;
     });
-    const {getByTestId, getByText, queryByTestId} = renderSheet();
+    const {getByTestId, getByText, queryByTestId, queryByText} = renderSheet();
 
     expect(getByText(strings.voiceRowChoose)).toBeTruthy();
+    expect(getByText('Choose a voice for spoken replies.')).toBeTruthy();
+    expect(queryByText(/can't speak in voice mode/i)).toBeNull();
     expect(queryByTestId('voice-setup-continue')).toBeNull();
     fireEvent.press(getByTestId('voice-setup-choose-voice'));
     expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
