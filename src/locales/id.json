@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "Menggunakan bawaan server (tidak dilaporkan)",
       "resetToServerDefault": "Bawaan server: {{value}} · Atur Ulang",
       "resetToServerDefaultAccessibilityLabel": "Atur ulang {{name}} ke bawaan server, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Tindakan lainnya",
+      "openMenuAction": "Buka menu pesan"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Salin",
+        "copyAsMarkdown": "Salin sebagai Markdown",
+        "copyImageUrl": "Salin URL gambar",
+        "copyImageUrls": "Salin {{count}} URL gambar"
+      },
+      "accessibility": {
+        "bulletPoint": "Butir daftar",
+        "nestedBulletPoint": "Butir daftar bertingkat",
+        "orderedItem": "Butir daftar {{n}}",
+        "nestedOrderedItem": "Butir daftar bertingkat {{n}}",
+        "quote": "Kutipan blok",
+        "nestedQuote": "Kutipan blok bertingkat",
+        "tableRow": "Baris {{n}}: {{content}}",
+        "rotorHeadings": "Judul",
+        "rotorLinks": "Tautan",
+        "rotorImages": "Gambar"
+      }
     }
   },
   "palsScreen": {
@@ -1610,7 +1634,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Cepat memulai dan ringan di RAM. Hanya bahasa Inggris.",
     "enginePhononCredit": "Model dan suara oleh Gradium (Apache-2.0), dibangun di atas Mimi dari Kyutai.",
-    "engineTierNatural": "bahasa Inggris alami"
+    "engineTierNatural": "bahasa Inggris alami",
+    "systemNeedsInternet": "Perlu internet",
+    "systemVoiceNumber": "Suara {{number}}",
+    "systemQualityEnhanced": "Ditingkatkan",
+    "systemVoiceModeHint": "Suara sistem tidak bisa dipakai di mode suara.",
+    "systemOnDeviceSection": "Di ponsel ini",
+    "systemLanguagesLabel": "Bahasa",
+    "systemGetMoreVoices": "Dapatkan suara lain",
+    "systemNoVoicesForLanguage": "Belum ada suara bahasa {{language}} di ponsel ini.",
+    "systemIosSettingsHint": "Tambahkan suara di Pengaturan > Aksesibilitas > Konten Terucap > Suara.",
+    "systemLanguageSheetTitle": "Bahasa suara",
+    "systemLanguageSearchPlaceholder": "Cari bahasa"
   },
   "htmlPreview": {
     "defaultTitle": "Pratinjau",
