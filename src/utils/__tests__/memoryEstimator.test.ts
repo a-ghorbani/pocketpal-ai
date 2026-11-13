@@ -316,6 +316,72 @@ describe('memoryEstimator', () => {
       );
       expect(a).toBe(b);
     });
+
+    describe('embedded MTP draft', () => {
+      // Qwen3.5-0.8B (unsloth/Qwen3.5-0.8B-MTP-GGUF). With n_ctx 2048 and
+      // n_ubatch 512, llama.rn 0.13 reserves 4.00 MiB of KV and 974.95 MiB of
+      // compute for the MTP draft context.
+      const mtpModel = {
+        ...baseModel,
+        ggufMetadata: {
+          architecture: 'qwen35',
+          n_layers: 25,
+          n_embd: 1024,
+          n_head: 8,
+          n_head_kv: 2,
+          n_vocab: 248320,
+          n_embd_head_k: 256,
+          n_embd_head_v: 256,
+          nextn_predict_layers: 1,
+        },
+      } as Model;
+      const speculative = {...contextSettings, speculativeEnabled: true};
+
+      it('adds the MTP draft KV cache and compute buffer when speculative is on', () => {
+        const off = getModelMemoryRequirement(
+          mtpModel,
+          undefined,
+          contextSettings,
+        );
+        const on = getModelMemoryRequirement(mtpModel, undefined, speculative);
+
+        const {n_ctx, n_ubatch} = contextSettings;
+        const draftKv = 2 * (1 * n_ctx * 256 * 2 * 2.0);
+        const draftCompute = 2 * (248320 + 1024) * n_ubatch * 4;
+        expect(draftKv / 1024 ** 2).toBe(4);
+        expect(draftCompute / 1024 ** 2).toBeCloseTo(974.95, -1);
+        expect(on).toBeCloseTo(off + (draftKv + draftCompute) * 1.1, 0);
+      });
+
+      it('adds nothing when a paired draft replaces the embedded one', () => {
+        const draftModel = {size: 100 * 1e6} as Model;
+        const offWithPaired = getModelMemoryRequirement(
+          mtpModel,
+          undefined,
+          contextSettings,
+          draftModel,
+        );
+        const onWithPaired = getModelMemoryRequirement(
+          mtpModel,
+          undefined,
+          speculative,
+          draftModel,
+        );
+
+        expect(onWithPaired).toBe(offWithPaired);
+      });
+
+      it('adds nothing for a model without MTP layers', () => {
+        const plain = {
+          ...mtpModel,
+          ggufMetadata: {...mtpModel.ggufMetadata!, nextn_predict_layers: 0},
+        } as Model;
+
+        expect(getModelMemoryRequirement(plain, undefined, speculative)).toBe(
+          getModelMemoryRequirement(plain, undefined, contextSettings),
+        );
+      });
+    });
   });
 
   describe('state checkpoint budget', () => {

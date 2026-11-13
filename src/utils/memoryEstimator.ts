@@ -1,5 +1,6 @@
 import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
 import type {Tier} from '../services/deviceRules/types';
+import {isMTPCapable} from './mtp';
 
 // Guards against corrupted metadata persisted by older app versions.
 function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
@@ -122,6 +123,29 @@ export function getModelMemoryRequirement(
     const kvCacheSize = calculateKVCacheMemory(metadata, contextSettings);
     const computeBuffer = calculateComputeBuffer(metadata, contextSettings);
 
+    // An embedded MTP draft gets its own context at the first completion: a
+    // KV cache for the MTP layers, and a compute buffer that llama.cpp
+    // reserves at about twice the target's once speculation starts.
+    let embeddedDraftSize = 0;
+    if (
+      contextSettings.speculativeEnabled &&
+      !draftModel &&
+      isMTPCapable(model)
+    ) {
+      embeddedDraftSize =
+        calculateKVCacheMemory(
+          {...metadata, n_layers: Number(metadata.nextn_predict_layers)},
+          {
+            ...contextSettings,
+            cache_type_k: (contextSettings.spec_draft_cache_type_k ||
+              'f16') as CacheType,
+            cache_type_v: (contextSettings.spec_draft_cache_type_v ||
+              'f16') as CacheType,
+          },
+        ) +
+        2 * computeBuffer;
+    }
+
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
     const checkpointBytes =
       Number(metadata.sliding_window) > 0
@@ -130,7 +154,7 @@ export function getModelMemoryRequirement(
     const totalMemory =
       baseMemory * RUNTIME_OVERHEAD +
       mmProjSize * RUNTIME_OVERHEAD +
-      (draftSize + draftKvCacheSize) * RUNTIME_OVERHEAD +
+      (draftSize + draftKvCacheSize + embeddedDraftSize) * RUNTIME_OVERHEAD +
       checkpointBytes;
 
     return totalMemory;
