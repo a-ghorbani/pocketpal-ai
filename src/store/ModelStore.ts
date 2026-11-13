@@ -1949,19 +1949,24 @@ class ModelStore {
         return;
       }
 
-      // Default vocab sizes by architecture (matches Python memory_estimator.py)
+      // Default vocab sizes by architecture (matches Python memory_estimator.py).
+      // Read from each architecture's own tokenizer: an entry missing here is
+      // not a rounding error, because the compute buffer scales with the vocab.
       const ARCH_DEFAULT_VOCAB: Record<string, number> = {
         llama: 128256,
         gemma2: 256000,
+        gemma3: 262144,
         gemma3n: 262144,
         qwen2: 151936,
         qwen3: 151936,
+        qwen35: 248320,
         lfm2: 65536,
         phi3: 32064,
         mistral: 32000,
         deepseek2: 102400,
         clip: 49408, // CLIP models have smaller vocab
       };
+      const FALLBACK_VOCAB = 128000;
 
       // Get the architecture to determine the correct key prefix
       const architecture: string =
@@ -1999,10 +2004,20 @@ class ModelStore {
 
       // Extract optional fields with fallbacks (matches Python ModelInfo.__post_init__)
       const n_head_kv = getArchValue('attention.head_count_kv', n_head); // fallback to n_head
-      const n_vocab =
-        getArchValue('vocab_size') ||
-        ARCH_DEFAULT_VOCAB[architecture] ||
-        128000;
+      // Neither Gemma 3 nor Qwen3.5 writes <arch>.vocab_size, so an
+      // architecture that is also absent from the table above silently falls
+      // back to a vocab that is too small, and the estimate comes out low.
+      // Say so, rather than leaving the next architecture to be found the hard
+      // way by a model that loads and then fails to allocate.
+      const ggufVocab = getArchValue('vocab_size');
+      const archDefaultVocab = ARCH_DEFAULT_VOCAB[architecture];
+      const n_vocab = ggufVocab || archDefaultVocab || FALLBACK_VOCAB;
+      if (!ggufVocab && !archDefaultVocab) {
+        console.warn(
+          `[ModelStore] No vocab size for architecture "${architecture}"; ` +
+            `estimating with ${FALLBACK_VOCAB}, which may understate memory.`,
+        );
+      }
 
       // Derive head dimensions if not present (matches Python)
       const n_embd_head_k =
