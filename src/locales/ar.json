@@ -246,6 +246,39 @@
       "signInAgain": "يُرجى تسجيل الدخول مجددًا",
       "creatorSupport": "‎لحذف حسابات صنّاع المحتوى، يُرجى التواصل مع فريق الدعم: {{contact}}",
       "failed": "تعذّر الحذف، حاول مجددًا"
+    },
+    "localApiServer": {
+      "title": "خادم API محلي",
+      "enable": "أتِح النموذج المُحمَّل",
+      "enableDescription": "يتيح للتطبيقات الأخرى استخدام النموذج المُحمَّل عبر واجهة API متوافقة مع OpenAI. تنتظر الطلبات دورها في الصف مع محادثاتك.",
+      "starting": "جارٍ البدء…",
+      "url": "عنوان URL للخادم",
+      "copyUrl": "نسخ عنوان URL",
+      "servedModel": "النموذج المُتاح: {{model}}",
+      "noModel": "لا يوجد نموذج مُحمَّل. ستفشل الطلبات إلى أن تُحمّل نموذجًا.",
+      "port": "المنفذ",
+      "portInvalid": "استخدم منفذًا بين 1024 و65535",
+      "lan": "السماح للأجهزة الأخرى على الشبكة",
+      "lanWarning": "يمكن الوصول إلى الخادم من كل شبكة يتصل بها هذا الهاتف: Wi-Fi وبيانات الجوال ونقطة الاتصال وVPN. عيّن مفتاح API لتحديد من يمكنه استخدامه.",
+      "notOnWifi": "لا يوجد اتصال بشبكة Wi-Fi، لذا لن يظهر عنوان URL على الشبكة.",
+      "apiKey": "مفتاح API",
+      "apiKeySet": "يجب أن ترسل الطلبات هذا المفتاح",
+      "apiKeyNotSet": "لا يوجد مفتاح: أي تطبيق يمكنه الوصول إلى الخادم يستطيع استخدامه، باستثناء صفحات المتصفح.",
+      "setApiKey": "تعيين المفتاح",
+      "clearApiKey": "مسح المفتاح",
+      "apiKeyPlaceholder": "أدخل مفتاح API",
+      "stopToEdit": "أوقف الخادم لتغيير هذه الإعدادات.",
+      "lockedHint": "ميزة Plus. يفتح التفاصيل.",
+      "teaserTitle": "خادم API المحلي ميزة في Plus",
+      "teaserBody": "اسمح للتطبيقات الأخرى باستخدام النموذج المُحمَّل على هذا الهاتف.",
+      "teaserGetPlus": "احصل على Plus",
+      "teaserNotNow": "ليس الآن",
+      "errors": {
+        "portInUse": "المنفذ {{port}} مستخدم بالفعل. أوقف الخادم واختر منفذًا آخر.",
+        "listenFailed": "تعذّر بدء تشغيل الخادم. أوقفه ثم شغّله مرة أخرى، أو اختر منفذًا آخر.",
+        "stoppedListening": "توقف الخادم بشكل غير متوقع. أوقفه ثم شغّله مرة أخرى.",
+        "keyUnavailable": "تعذّر قراءة مفتاح API. افتح قفل هاتفك، ثم أوقف الخادم وشغّله مرة أخرى."
+      }
     }
   },
   "memory": {
@@ -486,6 +519,12 @@
         "memoryWarningButton": "عرض تفاصيل تحذير الذاكرة",
         "integrityWarningButton": "عرض تفاصيل تحذير السلامة",
         "memoryWarningSnackbar": "إشعار تحذير الذاكرة"
+      },
+      "projectorOffer": {
+        "rowTitle": "تحتاج الرؤية إلى نموذج العرض",
+        "download": "تنزيل",
+        "downloading": "جارٍ تنزيل نموذج العرض · {{progress}}%",
+        "a11yWithSize": "تنزيل نموذج العرض، {{size}}"
       }
     },
     "modelSettings": {
@@ -1087,6 +1126,30 @@
       "importPals": "‏استيراد الرفاق",
       "importSuccess": "تم استيراد {{count}} رفيق بنجاح.",
       "importError": "تعذّر استيراد الرفاق. يرجى التحقق من تنسيق الملف."
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "مزيد من الإجراءات",
+      "openMenuAction": "فتح قائمة الرسالة"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "نسخ",
+        "copyAsMarkdown": "نسخ بصيغة Markdown",
+        "copyImageUrl": "نسخ عنوان URL للصورة",
+        "copyImageUrls": "نسخ عناوين URL للصور ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "نقطة تعداد",
+        "nestedBulletPoint": "نقطة تعداد متداخلة",
+        "orderedItem": "عنصر القائمة {{n}}",
+        "nestedOrderedItem": "عنصر قائمة متداخلة {{n}}",
+        "quote": "اقتباس",
+        "nestedQuote": "اقتباس متداخل",
+        "tableRow": "الصف {{n}}: {{content}}",
+        "rotorHeadings": "العناوين",
+        "rotorLinks": "الروابط",
+        "rotorImages": "الصور"
+      }
     }
   },
   "palsScreen": {
@@ -1579,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "سريع في البدء وخفيف على ذاكرة RAM. بالإنجليزية فقط.",
     "enginePhononCredit": "النموذج والأصوات من Gradium (Apache-2.0)، مبنية على Mimi من Kyutai.",
-    "engineTierNatural": "إنجليزية طبيعية"
+    "engineTierNatural": "إنجليزية طبيعية",
+    "systemNeedsInternet": "يتطلب إنترنت",
+    "systemVoiceNumber": "صوت {{number}}",
+    "systemQualityEnhanced": "مُحسَّن",
+    "systemVoiceModeHint": "أصوات النظام لا تعمل في الوضع الصوتي.",
+    "systemOnDeviceSection": "على هذا الهاتف",
+    "systemLanguagesLabel": "اللغات",
+    "systemGetMoreVoices": "احصل على مزيد من الأصوات",
+    "systemNoVoicesForLanguage": "لا توجد أصوات {{language}} على هذا الهاتف بعد.",
+    "systemIosSettingsHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > المحتوى المنطوق > الأصوات.",
+    "systemLanguageSheetTitle": "لغة الصوت",
+    "systemLanguageSearchPlaceholder": "البحث في اللغات"
   },
   "onboarding": {
     "back": "رجوع",
@@ -1705,7 +1779,7 @@
     "errorPermissionBlocked": "الوصول إلى الميكروفون محظور. فعّله من الإعدادات.",
     "errorTranscribeFailed": "تعذّر تحويل الكلام إلى نص — حاول مرة أخرى.",
     "errorNotInstalled": "نزّل نموذجًا صوتيًا لاستخدام الإدخال الصوتي.",
-    "errorInsufficientMemory": "يحتاج نموذج الدردشة هذا والإدخال الصوت إلى ذاكرة أكبر مما يمتلكه هذا الهاتف. جرّب نموذجًا أصغر.",
+    "errorInsufficientMemory": "يحتاج نموذج الدردشة هذا والإدخال الصوتي إلى ذاكرة أكبر مما يمتلكه هذا الهاتف. جرّب نموذجًا أصغر.",
     "errorMicUnavailable": "الميكروفون لا يستجيب. حاول مرة أخرى، أو انتقل إلى نموذج دردشة أصغر.",
     "errorTranscriptPartial": "تعذّر تحويل جزء من كلامك إلى نص.",
     "openSettingsLabel": "فتح الإعدادات",
@@ -1720,9 +1794,9 @@
     "tierHintLargeTurbo": "بطيء جدًا على معظم الهواتف",
     "useCta": "استخدام",
     "inUseLabel": "قيد الاستخدام",
-    "modelSectionHelper": "يُستخدم للإدخال الصوتي والتحكم الصوتي دون استخدام اليدين.",
+    "modelSectionHelper": "يُستخدم للإدخال الصوتي والمحادثة الصوتية دون استخدام اليدين.",
     "memoryAlertTitle": "مساحة الذاكرة محدودة",
-    "memoryAlertBody": "يتطلب الإدخال الصوتي ذاكرة إضافية إلي جانب نموذج الدردشة هذا. وقد يصبح التطبيق بطيئًا جدًا، أو قد يُغلق.",
+    "memoryAlertBody": "يتطلب الإدخال الصوتي ذاكرة إضافية إلى جانب نموذج الدردشة هذا. وقد يصبح التطبيق بطيئًا جدًا، أو قد يُغلق.",
     "memoryAlertTryAnyway": "حاول على أي حال"
   },
   "plus": {

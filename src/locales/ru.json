@@ -771,6 +771,30 @@
       "usingServerDefaultUnreported": "Используется значение сервера по умолчанию (не сообщается)",
       "resetToServerDefault": "Значение сервера по умолчанию: {{value}} · Сбросить",
       "resetToServerDefaultAccessibilityLabel": "Сброс {{name}} к значениям сервера по умолчанию, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Другие действия",
+      "openMenuAction": "Открыть меню сообщения"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Копировать",
+        "copyAsMarkdown": "Копировать как Markdown",
+        "copyImageUrl": "Копировать URL изображения",
+        "copyImageUrls": "Копировать URL изображений ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "Пункт списка",
+        "nestedBulletPoint": "Вложенный пункт списка",
+        "orderedItem": "Элемент списка {{n}}",
+        "nestedOrderedItem": "Вложенный элемент списка {{n}}",
+        "quote": "Цитата",
+        "nestedQuote": "Вложенная цитата",
+        "tableRow": "Строка {{n}}: {{content}}",
+        "rotorHeadings": "Заголовки",
+        "rotorLinks": "Ссылки",
+        "rotorImages": "Изображения"
+      }
     }
   },
   "feedback": {
@@ -974,6 +998,12 @@
         "memoryWarningButton": "Показать детали предупреждения о памяти",
         "integrityWarningButton": "Показать детали предупреждения о целостности",
         "memoryWarningSnackbar": "Уведомление о нехватке памяти"
+      },
+      "projectorOffer": {
+        "rowTitle": "Для зрения нужна проекционная модель",
+        "download": "Загрузить",
+        "downloading": "Загрузка проекционной модели · {{progress}}%",
+        "a11yWithSize": "Загрузить проекционную модель, {{size}}"
       }
     },
     "modelSettings": {
@@ -1292,6 +1322,39 @@
       "signInAgain": "Войдите в аккаунт ещё раз",
       "creatorSupport": "Аккаунты создателей удаляются нашей службой поддержки: {{contact}}",
       "failed": "Не удалось удалить, попробуйте ещё раз"
+    },
+    "localApiServer": {
+      "title": "Локальный API-сервер",
+      "enable": "Открыть доступ к загруженной модели",
+      "enableDescription": "Другие приложения смогут использовать загруженную модель через API, совместимый с OpenAI. Запросы встают в очередь вместе с вашими чатами.",
+      "starting": "Запуск…",
+      "url": "URL сервера",
+      "copyUrl": "Копировать URL",
+      "servedModel": "Доступна модель {{model}}",
+      "noModel": "Модель не загружена. Запросы будут возвращать ошибку, пока вы её не загрузите.",
+      "port": "Порт",
+      "portInvalid": "Укажите порт от 1024 до 65535",
+      "lan": "Разрешить доступ другим устройствам в сети",
+      "lanWarning": "Сервер доступен в любой сети, к которой подключён этот телефон: Wi-Fi, мобильный интернет, точка доступа и VPN. Установите API-ключ, чтобы ограничить, кто может им пользоваться.",
+      "notOnWifi": "Телефон не подключён к Wi-Fi, поэтому URL для сети не показан.",
+      "apiKey": "API-ключ",
+      "apiKeySet": "В запросах нужно передавать этот ключ",
+      "apiKeyNotSet": "Ключ не установлен: сервером может пользоваться любое приложение, у которого есть к нему доступ, кроме страниц в браузере.",
+      "setApiKey": "Установить ключ",
+      "clearApiKey": "Очистить ключ",
+      "apiKeyPlaceholder": "Введите API-ключ",
+      "stopToEdit": "Чтобы изменить эти настройки, выключите сервер.",
+      "lockedHint": "Функция Plus. Откроются подробности.",
+      "teaserTitle": "Локальный API-сервер — функция Plus",
+      "teaserBody": "Другие приложения смогут работать с моделью, загруженной на этом телефоне.",
+      "teaserGetPlus": "Получить Plus",
+      "teaserNotNow": "Не сейчас",
+      "errors": {
+        "portInUse": "Порт {{port}} уже занят. Выключите сервер и выберите другой порт.",
+        "listenFailed": "Не удалось запустить сервер. Выключите и снова включите его или выберите другой порт.",
+        "stoppedListening": "Сервер неожиданно остановился. Выключите и снова включите его.",
+        "keyUnavailable": "Не удалось прочитать API-ключ. Разблокируйте телефон, затем выключите и снова включите сервер."
+      }
     }
   },
   "storage": {
@@ -1571,7 +1634,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Быстрый запуск, мало ОЗУ. Только английский.",
     "enginePhononCredit": "Модель и голоса от Gradium (Apache-2.0), на основе Mimi от Kyutai.",
-    "engineTierNatural": "естественный английский"
+    "engineTierNatural": "естественный английский",
+    "systemNeedsInternet": "Нужен интернет",
+    "systemVoiceNumber": "Голос {{number}}",
+    "systemQualityEnhanced": "Улучшенный",
+    "systemVoiceModeHint": "Системные голоса в голосовом режиме не работают.",
+    "systemOnDeviceSection": "На этом телефоне",
+    "systemLanguagesLabel": "Языки",
+    "systemGetMoreVoices": "Добавить голоса",
+    "systemNoVoicesForLanguage": "Для языка {{language}} на этом телефоне пока нет голосов.",
+    "systemIosSettingsHint": "Добавьте голоса в разделе Настройки > Универсальный доступ > Устный контент > Голоса.",
+    "systemLanguageSheetTitle": "Язык голоса",
+    "systemLanguageSearchPlaceholder": "Поиск языков"
   },
   "htmlPreview": {
     "defaultTitle": "Предпросмотр",
