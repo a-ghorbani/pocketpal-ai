@@ -18,12 +18,15 @@ export const VOICE_CLAUSE_FIRST_CHUNK_ENGINES: ReadonlySet<EngineId> = new Set([
 ]);
 
 /**
- * Word cap on a clause first chunk, by device tier. A tier left out keeps
+ * Word cap on a clause first chunk, by device tier. An unresolved tier keeps
  * the speech library's default of 12.
  */
-export const VOICE_FIRST_CHUNK_MAX_WORDS: Readonly<
-  Partial<Record<Tier, number>>
-> = {flagship: 20, high: 16, mid: 16};
+export const VOICE_FIRST_CHUNK_MAX_WORDS: Readonly<Record<Tier, number>> = {
+  flagship: 24,
+  high: 20,
+  mid: 16,
+  low: 12,
+};
 
 /** Silence after speech that ends an utterance (ms). */
 export const VOICE_ENDPOINT_HANG_MS = 600;

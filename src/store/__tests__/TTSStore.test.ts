@@ -800,7 +800,7 @@ describe('TTSStore', () => {
       expect(handle!.opts).toEqual(
         expect.objectContaining({
           firstChunk: 'clause',
-          firstChunkMaxWords: 20,
+          firstChunkMaxWords: 24,
           language: 'na',
           onProgress: expect.any(Function),
         }),
@@ -988,11 +988,18 @@ describe('TTSStore', () => {
       ['Supertonic', SUPERTONIC_VOICE],
     ])('%s', (_name, voice) => {
       it.each([
-        ['flagship', 20],
-        ['high', 16],
+        ['ios', 'flagship', 24],
+        ['ios', 'high', 20],
+        ['ios', 'mid', 16],
+        ['ios', 'low', 12],
+        ['android', 'flagship', 24],
+        ['android', 'high', 20],
+        ['android', 'mid', 16],
+        ['android', 'low', 12],
       ] as const)(
-        'caps a clause first chunk on %s at %i words',
-        async (tier, words) => {
+        'caps a clause first chunk on %s tier %s at %i words',
+        async (os, tier, words) => {
+          Platform.OS = os;
           modelStore.deviceTier = tier;
 
           const {opts} = await openVoiceReply(voice);
@@ -1007,26 +1014,7 @@ describe('TTSStore', () => {
         },
       );
 
-      it.each(['ios', 'android'] as const)(
-        'caps a clause first chunk on mid at 16 words on %s',
-        async os => {
-          Platform.OS = os;
-          modelStore.deviceTier = 'mid';
-
-          const {opts} = await openVoiceReply(voice);
-
-          expect(opts).toEqual(
-            expect.objectContaining({
-              firstChunk: 'clause',
-              firstChunkMaxWords: 16,
-            }),
-          );
-        },
-      );
-
       it.each([
-        ['low', true],
-        ['low', null],
         [null, true],
         [null, false],
         [null, null],
@@ -1066,7 +1054,7 @@ describe('TTSStore', () => {
       );
     });
 
-    it('reads the tier again for each reply, keeping the cap of an open one', async () => {
+    it('reads the tier again at each stream open and does not change earlier options', async () => {
       modelStore.deviceTier = 'high';
       const {store} = await openVoiceReply(KOKORO_VOICE, 'msg-1');
       const first = lastOpts(KOKORO_VOICE);
@@ -1075,11 +1063,15 @@ describe('TTSStore', () => {
       store.onAssistantMessageStart('msg-2');
       const second = lastOpts(KOKORO_VOICE);
 
-      expect(first.firstChunkMaxWords).toBe(16);
-      expect(second.firstChunkMaxWords).toBe(20);
+      expect(first.firstChunkMaxWords).toBe(20);
+      expect(second.firstChunkMaxWords).toBe(24);
     });
 
-    it('holds only positive integer caps', () => {
+    it('holds a positive integer cap for every tier', () => {
+      const tiers = ['flagship', 'high', 'mid', 'low'] as const;
+      expect(Object.keys(VOICE_FIRST_CHUNK_MAX_WORDS).sort()).toEqual(
+        [...tiers].sort(),
+      );
       for (const words of Object.values(VOICE_FIRST_CHUNK_MAX_WORDS)) {
         expect(Number.isInteger(words)).toBe(true);
         expect(words).toBeGreaterThanOrEqual(1);
@@ -1097,7 +1089,7 @@ describe('TTSStore', () => {
 
       expect(opens.slice(-2)).toEqual([
         expect.stringMatching(
-          /tts\.open voice=true engine=supertonic first=clause maxWords=20$/,
+          /tts\.open voice=true engine=supertonic first=clause maxWords=24$/,
         ),
         expect.stringMatching(
           /tts\.open voice=true engine=phonon first=sentence maxWords=undefined$/,
