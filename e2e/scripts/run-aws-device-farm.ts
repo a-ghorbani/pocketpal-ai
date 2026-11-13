@@ -32,6 +32,7 @@
  *   --timeout <minutes>   per-device job timeout (default 60, 120 with --all-models)
  *   --name <label>        run name suffix
  *   --artifacts-dir <dir> where artifacts are saved (default device-farm-artifacts)
+ *   --dry-run             print the resolved run and exit, with no AWS call
  */
 
 import {config} from 'dotenv';
@@ -81,6 +82,7 @@ interface RunnerArgs {
   timeoutMinutes?: number;
   runName?: string;
   artifactsDir?: string;
+  dryRun: boolean;
 }
 
 function optionValue(args: string[], flag: string): string | undefined {
@@ -136,6 +138,7 @@ function parseArgs(): RunnerArgs {
     timeoutMinutes: timeout ? parseInt(timeout, 10) : undefined,
     runName: optionValue(args, '--name'),
     artifactsDir: artifactsDir && resolveFromE2e(artifactsDir),
+    dryRun: args.includes('--dry-run'),
   };
 }
 
@@ -164,6 +167,13 @@ function validateEnvironment(): void {
 
 const runnerArgs = parseArgs();
 const {platform, appPath, allModels} = runnerArgs;
+
+if (runnerArgs.dryRun) {
+  console.log(JSON.stringify({...runnerArgs, appExists: fs.existsSync(appPath)}, null, 2));
+  const spec = prepareTestSpec(platform, allModels);
+  console.log(`--- test spec to upload (${spec}) ---\n${fs.readFileSync(spec, 'utf8')}`);
+  process.exit(0);
+}
 
 // Validate environment before proceeding
 validateEnvironment();
@@ -297,7 +307,8 @@ function prepareTestSpec(targetPlatform: 'ios' | 'android', useAllModels: boolea
     runnerArgs.testSpec || path.join(packageDir, `testspec-${targetPlatform}.yml`);
 
   const varKeys = Object.keys(runnerArgs.vars);
-  if (varKeys.length > 0) {
+  const placeholder = /__[A-Z][A-Z0-9_]*__/;
+  if (varKeys.length > 0 || placeholder.test(fs.readFileSync(originalPath, 'utf8'))) {
     let templated = fs.readFileSync(originalPath, 'utf8');
     for (const key of varKeys) {
       templated = templated.split(`__${key}__`).join(runnerArgs.vars[key]);
