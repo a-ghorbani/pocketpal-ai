@@ -85,12 +85,27 @@ describe('shouldShowPlayButton', () => {
     ).toBe(false);
   });
 
-  it('is false for single-word messages', () => {
-    expect(shouldShowPlayButton(makeAssistantMsg({text: 'Hi'}))).toBe(false);
+  it('is true for single-word messages', () => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text: 'Hi'}))).toBe(true);
   });
 
   it('is false for empty / whitespace messages', () => {
     expect(shouldShowPlayButton(makeAssistantMsg({text: '   '}))).toBe(false);
+  });
+
+  it.each([
+    ['empty text', ''],
+    ['line breaks and tabs', '\n\t'],
+    ['an ideographic space', '\u3000'],
+  ])('is false for %s', (_, text) => {
+    expect(shouldShowPlayButton(makeAssistantMsg({text}))).toBe(false);
+    expect(shouldShowPlayButton(makeTurn([{content: text}]))).toBe(false);
+  });
+
+  it('is false for an assistant turn whose steps carry no visible text', () => {
+    expect(
+      shouldShowPlayButton(makeTurn([{content: ''}, {content: ' \n '}])),
+    ).toBe(false);
   });
 
   it('is false for a text reply while streaming without a final completionResult', () => {
@@ -119,6 +134,78 @@ describe('shouldShowPlayButton', () => {
     expect(shouldShowPlayButton(makeTurn([{content: 'All done here'}]))).toBe(
       true,
     );
+  });
+
+  describe('replies in scripts written without spaces', () => {
+    const chineseReply =
+      '长城是中国古代的军事防御工程，长达万余公里，见证了中国悠久的历史和丰富的文化。';
+    const japaneseReply = '空が青いのは、太陽の光が大気で散乱するからです。';
+
+    it.each([
+      ['Chinese', chineseReply],
+      ['Japanese', japaneseReply],
+    ])('is true for a finished one-paragraph %s text reply', (_, reply) => {
+      expect(
+        shouldShowPlayButton(
+          makeAssistantMsg({
+            text: reply,
+            metadata: {completionResult: {content: reply}},
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it.each([
+      ['Chinese', chineseReply],
+      ['Japanese', japaneseReply],
+    ])('is true for a finished one-paragraph %s assistant turn', (_, reply) => {
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
+
+    it('is true for a spaced Korean reply', () => {
+      expect(
+        shouldShowPlayButton(
+          makeTurn([{content: '하늘이 파란 이유는 레일리 산란 때문입니다.'}]),
+        ),
+      ).toBe(true);
+    });
+
+    it('is true for a one-word Korean reply', () => {
+      expect(shouldShowPlayButton(makeTurn([{content: '감사합니다.'}]))).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('replies of any length in any script', () => {
+    it.each([
+      [
+        'a Thai sentence without spaces',
+        'ท้องฟ้าเป็นสีฟ้าเพราะแสงอาทิตย์กระเจิงในชั้นบรรยากาศ',
+      ],
+      ['a Lao reply', 'ຂອບໃຈ'],
+      ['a Khmer reply', 'អរគុណ'],
+      ['a Myanmar reply', 'ကျေးဇူးတင်ပါတယ်'],
+      ['one Han character', '好'],
+      ['one Han character with punctuation', '好。'],
+      ['one kana character', 'ね'],
+      ['one English word', 'Hello'],
+      ['several English words', 'Hello there friend'],
+      ['mixed Latin and Chinese', 'OK，好的。'],
+      ['CJK punctuation only', '。。。'],
+      ['one emoji', '👍'],
+      ['two emoji', '👍🙂'],
+    ])('is true for %s, as text and as an assistant turn', (_, reply) => {
+      expect(
+        shouldShowPlayButton(
+          makeAssistantMsg({
+            text: reply,
+            metadata: {completionResult: {content: reply}},
+          }),
+        ),
+      ).toBe(true);
+      expect(shouldShowPlayButton(makeTurn([{content: reply}]))).toBe(true);
+    });
   });
 });
 

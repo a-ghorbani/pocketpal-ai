@@ -1,5 +1,7 @@
 import {Alert, AppState, Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import {onAudioInterruption} from '@pocketpalai/react-native-speech';
+import {runInAction} from 'mobx';
 
 // Mock persistence BEFORE importing the store
 jest.mock('mobx-persist-store', () => ({
@@ -185,6 +187,20 @@ jest.mock('../../services/tts', () => {
     ensureVoiceFile: (voice: unknown) => mockEnsureVoiceFile(voice),
   };
 });
+
+const mockHoldSpeechService = jest.fn().mockResolvedValue(undefined);
+const mockReleaseSpeechService = jest.fn();
+const speechServiceStopListeners: Array<() => void> = [];
+jest.mock('../../services/tts/speechService', () => ({
+  holdSpeechService: (copy: unknown) => mockHoldSpeechService(copy),
+  releaseSpeechService: () => mockReleaseSpeechService(),
+  onSpeechServiceStop: (listener: () => void) => {
+    speechServiceStopListeners.push(listener);
+    return () => {};
+  },
+}));
+const tapNotificationStop = () =>
+  speechServiceStopListeners[speechServiceStopListeners.length - 1]();
 
 // Import after mocks
 import {TTSStore} from '../TTSStore';
@@ -459,6 +475,29 @@ describe('TTSStore', () => {
     await store.init();
     return store;
   };
+
+  describe('saved system voice', () => {
+    const SAVED_NETWORK_VOICE: Voice = {
+      id: 'en-us-x-sfg-network',
+      name: '⁨English⁩ (US) · Voice 2 · sfg',
+      engine: 'system',
+      language: 'en-US',
+      requiresNetwork: true,
+    };
+
+    it('survives init with no neural engine installed and reads the next reply', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(SAVED_NETWORK_VOICE);
+
+      await store.init();
+
+      expect(store.currentVoice).toEqual(SAVED_NETWORK_VOICE);
+      expect(mockEnsureVoiceFile).not.toHaveBeenCalled();
+      await store.play('msg-1', 'hello');
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SAVED_NETWORK_VOICE);
+    });
+  });
 
   describe('play() state machine', () => {
     it('resolves engine via currentVoice and invokes engine.play()', async () => {
@@ -1294,6 +1333,483 @@ describe('TTSStore', () => {
       await flush();
 
       expect(mockSystemStop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('speech service (Android)', () => {
+    const platform = Platform.OS;
+    let finishPlay: () => void;
+
+    const startPlaying = async (store: TTSStore) => {
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>(resolve => (finishPlay = resolve)),
+      );
+      const played = store.play('msg-1', 'hello');
+      await flush();
+      return {played};
+    };
+
+    const backgroundHandler = () =>
+      appStateHandlers[appStateHandlers.length - 1];
+
+    beforeEach(() => {
+      Platform.OS = 'android';
+    });
+
+    afterEach(() => {
+      Platform.OS = platform;
+    });
+
+    it('is wanted while chat speech plays, not while idle', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      expect(store.speechServiceWanted).toBe(false);
+
+      const {played} = await startPlaying(store);
+      expect(store.playbackState.mode).toBe('playing');
+      expect(store.speechServiceWanted).toBe(true);
+
+      finishPlay();
+      await played;
+      expect(store.speechServiceWanted).toBe(false);
+    });
+
+    it('is not wanted while a voice reply plays', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(store.playbackState.mode).toBe('streaming');
+      expect(store.speechServiceWanted).toBe(false);
+    });
+
+    it('is never wanted off Android', async () => {
+      Platform.OS = 'ios';
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+
+      const {played} = await startPlaying(store);
+
+      expect(store.playbackState.mode).toBe('playing');
+      expect(store.speechServiceWanted).toBe(false);
+      expect(mockHoldSpeechService).not.toHaveBeenCalled();
+      finishPlay();
+      await played;
+    });
+
+    it('holds the service with the localized copy while speaking, releases it after', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+
+      const {played} = await startPlaying(store);
+      expect(mockHoldSpeechService).toHaveBeenCalledTimes(1);
+      expect(mockHoldSpeechService).toHaveBeenCalledWith({
+        title: 'PocketPal is speaking',
+        stopLabel: 'Stop',
+        channelName: 'Speech',
+      });
+      expect(mockReleaseSpeechService).not.toHaveBeenCalled();
+
+      finishPlay();
+      await played;
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps speaking and the engine loaded when the app goes to the background', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const releaseSpy = jest
+        .spyOn(ttsRuntime, 'release')
+        .mockResolvedValue(undefined);
+      const {played} = await startPlaying(store);
+      mockSystemStop.mockClear();
+
+      backgroundHandler()('background');
+      await flush();
+
+      expect(store.playbackState.mode).toBe('playing');
+      expect(mockSystemStop).not.toHaveBeenCalled();
+      expect(releaseSpy).not.toHaveBeenCalled();
+      finishPlay();
+      await played;
+      releaseSpy.mockRestore();
+    });
+
+    it('notification Stop stops chat speech like the in-app Stop', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      tapNotificationStop();
+      await flush();
+
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+      expect(store.autoSpeakEnabled).toBe(true);
+    });
+
+    it('notification Stop is ignored while a voice reply speaks', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+      store.onAssistantMessageStart('msg-1');
+
+      tapNotificationStop();
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+    });
+
+    it('notification Stop does nothing when nothing speaks', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      mockSystemStop.mockClear();
+
+      tapNotificationStop();
+      await flush();
+
+      expect(mockSystemStop).not.toHaveBeenCalled();
+    });
+
+    const interruptAudio = (type: 'began' | 'ended') => {
+      const calls = (onAudioInterruption as jest.Mock).mock.calls;
+      calls[calls.length - 1][0]({type});
+    };
+
+    it('an audio interruption ends chat speech without resuming it', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+
+      interruptAudio('ended');
+      await flush();
+      expect(store.playbackState.mode).toBe('idle');
+    });
+
+    it('an audio interruption leaves a voice reply to voice mode', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+    });
+
+    it('an audio interruption changes nothing off Android', async () => {
+      Platform.OS = 'ios';
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('began');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+    });
+
+    it('an interruption that only ends leaves chat speech playing', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+
+      interruptAudio('ended');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('streaming');
+      expect(mockReleaseSpeechService).not.toHaveBeenCalled();
+      await store.stop();
+    });
+
+    it('releases the service when the engine fails mid-speech', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      let fail: (err: Error) => void = () => {};
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>((_, reject) => (fail = reject)),
+      );
+      const played = store.play('msg-1', 'hello');
+      await flush();
+      expect(mockHoldSpeechService).toHaveBeenCalledTimes(1);
+
+      fail(new Error('engine crashed'));
+      await played;
+
+      expect(store.playbackState.mode).toBe('idle');
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+    });
+
+    it('releases the service when the chat changes mid-speech', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+      expect(mockHoldSpeechService).toHaveBeenCalledTimes(1);
+
+      runInAction(() => {
+        (chatSessionStore as any).activeSessionId = 'session-other-id';
+      });
+      await flush();
+
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(mockReleaseSpeechService).toHaveBeenCalledTimes(1);
+    });
+
+    it('a start that never settles does not hold up speech', async () => {
+      mockHoldSpeechService.mockReturnValueOnce(new Promise(() => {}));
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+
+      const {played} = await startPlaying(store);
+
+      expect(mockHoldSpeechService).toHaveBeenCalledTimes(1);
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
+      finishPlay();
+      await played;
+      expect(store.playbackState.mode).toBe('idle');
+    });
+
+    it('still stops and releases a voice reply when the app goes to the background', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setVoiceOutputActive(true);
+      const releaseSpy = jest
+        .spyOn(ttsRuntime, 'release')
+        .mockResolvedValue(undefined);
+      store.onAssistantMessageStart('msg-1');
+
+      backgroundHandler()('background');
+      await flush();
+
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(releaseSpy).toHaveBeenCalled();
+      expect(mockHoldSpeechService).not.toHaveBeenCalled();
+      releaseSpy.mockRestore();
+    });
+  });
+
+  describe('engine release when speech ends in the background (Android)', () => {
+    const platform = Platform.OS;
+    const appState = AppState.currentState;
+    let releaseSpy: jest.SpyInstance;
+
+    const setAppState = (next: 'active' | 'background') => {
+      (AppState as any).currentState = next;
+      appStateHandlers[appStateHandlers.length - 1](next);
+    };
+
+    const deferred = () => {
+      let resolve = () => {};
+      const promise = new Promise<void>(r => (resolve = r));
+      return {promise, resolve};
+    };
+
+    beforeEach(() => {
+      Platform.OS = 'android';
+      releaseSpy = jest.spyOn(ttsRuntime, 'release').mockResolvedValue();
+    });
+
+    afterEach(() => {
+      Platform.OS = platform;
+      (AppState as any).currentState = appState;
+      releaseSpy.mockRestore();
+    });
+
+    it('releases once speech that kept playing in the background ends', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const play = deferred();
+      mockSystemPlay.mockImplementationOnce(() => play.promise);
+      const played = store.play('msg-1', 'hello');
+      await flush();
+
+      setAppState('background');
+      await flush();
+      expect(releaseSpy).not.toHaveBeenCalled();
+
+      play.resolve();
+      await played;
+      await flush();
+      expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not release when speech ends with the app in front', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const play = deferred();
+      mockSystemPlay.mockImplementationOnce(() => play.promise);
+      const played = store.play('msg-1', 'hello');
+      await flush();
+      setAppState('background');
+      setAppState('active');
+
+      play.resolve();
+      await played;
+      await flush();
+      expect(releaseSpy).not.toHaveBeenCalled();
+    });
+
+    it('releases a stream that opened in the background once it completes', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      setAppState('background');
+      await flush();
+      releaseSpy.mockClear();
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', 'Hello.');
+      await flush();
+      expect(releaseSpy).not.toHaveBeenCalled();
+
+      store.onAssistantMessageComplete('msg-1', 'Hello.');
+      await flush();
+      expect(lastSystemHandle!.finalize).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for a slow stream cancel before releasing', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+      const cancel = deferred();
+      lastSystemHandle!.cancel.mockImplementationOnce(() => cancel.promise);
+      setAppState('background');
+      await flush();
+
+      const stopped = store.stop('notification');
+      await flush();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(releaseSpy).not.toHaveBeenCalled();
+
+      cancel.resolve();
+      await stopped;
+      await flush();
+      expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('a later, faster stop does not cut short an earlier stream cancel', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+      const cancel = deferred();
+      lastSystemHandle!.cancel.mockImplementationOnce(() => cancel.promise);
+      setAppState('background');
+      await flush();
+
+      const slow = store.stop('notification');
+      store.onAssistantMessageStart('msg-2');
+      await store.stop('notification');
+      await flush();
+      expect(store.playbackState.mode).toBe('idle');
+      expect(releaseSpy).not.toHaveBeenCalled();
+
+      cancel.resolve();
+      await slow;
+      await flush();
+      expect(releaseSpy).toHaveBeenCalled();
+    });
+
+    it('does not release a newer playback that started while a stop was cancelling', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+      const cancel = deferred();
+      lastSystemHandle!.cancel.mockImplementationOnce(() => cancel.promise);
+      setAppState('background');
+      await flush();
+
+      const stopped = store.stop('notification');
+      store.onAssistantMessageStart('msg-2');
+      cancel.resolve();
+      await stopped;
+      await flush();
+
+      expect(store.playbackState.mode).toBe('streaming');
+      expect(releaseSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not release when the app returns to the front while a stop is still cancelling', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
+      const cancel = deferred();
+      lastSystemHandle!.cancel.mockImplementationOnce(() => cancel.promise);
+      setAppState('background');
+      await flush();
+
+      const stopped = store.stop('notification');
+      await flush();
+      setAppState('active');
+      cancel.resolve();
+      await stopped;
+      await flush();
+
+      expect(store.playbackState.mode).toBe('idle');
+      expect(releaseSpy).not.toHaveBeenCalled();
+    });
+
+    it('logs a failed release once speech ends in the background', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const failure = new Error('release failed');
+      releaseSpy.mockRejectedValueOnce(failure);
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      const play = deferred();
+      mockSystemPlay.mockImplementationOnce(() => play.promise);
+      const played = store.play('msg-1', 'hello');
+      await flush();
+      setAppState('background');
+
+      play.resolve();
+      await played;
+      await flush();
+
+      expect(releaseSpy).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        '[TTSStore] background release failed:',
+        failure,
+      );
+      warn.mockRestore();
+    });
+
+    it('never releases from this rule off Android', async () => {
+      Platform.OS = 'ios';
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      (AppState as any).currentState = 'background';
+
+      await store.play('msg-1', 'hello');
+      await flush();
+
+      expect(releaseSpy).not.toHaveBeenCalled();
     });
   });
 
