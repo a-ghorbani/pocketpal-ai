@@ -11,6 +11,13 @@ export const createStyles = (theme: Theme) =>
       padding: 16,
       paddingBottom: 100,
     },
+    quantRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
     divider: {
       marginVertical: 12,
     },
