@@ -771,6 +771,30 @@
       "usingServerDefaultUnreported": "使用伺服器預設值（未回報）",
       "resetToServerDefault": "伺服器預設值：{{value}} · 重置",
       "resetToServerDefaultAccessibilityLabel": "將 {{name}} 重置為伺服器預設值，{{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "更多操作",
+      "openMenuAction": "開啟訊息選單"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "複製",
+        "copyAsMarkdown": "複製為 Markdown",
+        "copyImageUrl": "複製圖片網址",
+        "copyImageUrls": "複製 {{count}} 個圖片網址"
+      },
+      "accessibility": {
+        "bulletPoint": "項目符號",
+        "nestedBulletPoint": "巢狀項目符號",
+        "orderedItem": "列表項目 {{n}}",
+        "nestedOrderedItem": "巢狀列表項目 {{n}}",
+        "quote": "引述",
+        "nestedQuote": "巢狀引述",
+        "tableRow": "第 {{n}} 列：{{content}}",
+        "rotorHeadings": "標題",
+        "rotorLinks": "連結",
+        "rotorImages": "圖片"
+      }
     }
   },
   "feedback": {
@@ -1610,7 +1634,18 @@
     "enginePhononTagline": "啟動快速且記憶體佔用低。僅支援英文。",
     "enginePhononCredit": "模型與語音由 Gradium 提供（採用 Apache-2.0 授權），建構於 Kyutai 的 Mimi 之上。",
     "engineTierNatural": "自然英語",
-    "engineChipPhonon": "Phonon"
+    "engineChipPhonon": "Phonon",
+    "systemNeedsInternet": "需要網路",
+    "systemVoiceNumber": "語音 {{number}}",
+    "systemQualityEnhanced": "增強",
+    "systemVoiceModeHint": "系統語音無法在語音模式中朗讀。",
+    "systemOnDeviceSection": "這台手機上",
+    "systemLanguagesLabel": "語言",
+    "systemGetMoreVoices": "取得更多語音",
+    "systemNoVoicesForLanguage": "這台手機上還沒有{{language}}語音。",
+    "systemIosSettingsHint": "請在「設定 > 輔助使用 > 朗讀內容 > 語音」中新增語音。",
+    "systemLanguageSheetTitle": "語音語言",
+    "systemLanguageSearchPlaceholder": "搜尋語言"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
