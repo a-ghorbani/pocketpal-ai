@@ -2470,10 +2470,10 @@
   resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech-phonon/-/react-native-speech-phonon-0.2.2.tgz#50fc11daa70424c39772ed3275834009fd38a53e"
   integrity sha512-rXW59X0LWMBQCR5If0QyG5jqYUXxnaAlU/i8VCNcex/Q1UHQHHz75veRyDG56pQ502S+ziLgUI7n2t2q9e58BQ==
 
-"@pocketpalai/react-native-speech@2.11.1":
-  version "2.11.1"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.11.1.tgz#55e1e0276c2d8d9161753224673f778bbecd4c52"
-  integrity sha512-xC00wYSTVKNopVnOHjArE/lysPQzZ9oHPmLgY4P+4VxovianvcY4TetM8kdqRsuXyKu+JkIC0pPveQkGgEgXpw==
+"@pocketpalai/react-native-speech@2.11.3":
+  version "2.11.3"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.11.3.tgz#42658b72ff7b7be7698fb136fb63114b0b520828"
+  integrity sha512-msd+8VUwjjaXIxGSW6EHFRyXkzHO2/TiONLk7Il1f03cbetovYNm9bLtYDLvRIk9wEoFTKTC4csB2J+/hWSONw==
   dependencies:
     phonemize "^1.1.0"
 
