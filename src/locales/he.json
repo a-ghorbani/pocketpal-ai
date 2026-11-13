@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "שימוש בברירת המחדל של השרת (לא מדווח)",
       "resetToServerDefault": "ברירת המחדל של השרת: {{value}} · איפוס",
       "resetToServerDefaultAccessibilityLabel": "אפס את {{name}} לברירת המחדל של השרת, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "פעולות נוספות",
+      "openMenuAction": "פתיחת תפריט ההודעה"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "העתק",
+        "copyAsMarkdown": "העתק כ-Markdown",
+        "copyImageUrl": "העתק URL של תמונה",
+        "copyImageUrls": "העתק {{count}} כתובות URL של תמונות"
+      },
+      "accessibility": {
+        "bulletPoint": "תבליט",
+        "nestedBulletPoint": "תבליט מקונן",
+        "orderedItem": "פריט ברשימה {{n}}",
+        "nestedOrderedItem": "פריט ברשימה מקוננת {{n}}",
+        "quote": "ציטוט",
+        "nestedQuote": "ציטוט מקונן",
+        "tableRow": "שורה {{n}}: {{content}}",
+        "rotorHeadings": "כותרות",
+        "rotorLinks": "קישורים",
+        "rotorImages": "תמונות"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "מהיר להפעלה וחסכוני בזיכרון RAM. אנגלית בלבד.",
     "enginePhononCredit": "המודל והקולות מאת Gradium (Apache-2.0), מבוסס על Mimi של Kyutai.",
-    "engineTierNatural": "אנגלית טבעית"
+    "engineTierNatural": "אנגלית טבעית",
+    "systemNeedsInternet": "דורש אינטרנט",
+    "systemVoiceNumber": "קול {{number}}",
+    "systemQualityEnhanced": "משופר",
+    "systemVoiceModeHint": "קולות מערכת לא עובדים במצב הקולי.",
+    "systemOnDeviceSection": "בטלפון הזה",
+    "systemLanguagesLabel": "שפות",
+    "systemGetMoreVoices": "הורד קולות נוספים",
+    "systemNoVoicesForLanguage": "עדיין אין קולות בשפה {{language}} בטלפון הזה.",
+    "systemIosSettingsHint": "הוסף קולות בהגדרות > נגישות > תוכן מדובר > קולות.",
+    "systemLanguageSheetTitle": "שפת הקול",
+    "systemLanguageSearchPlaceholder": "חפש שפות"
   },
   "onboarding": {
     "back": "חזרה",
