@@ -79,9 +79,6 @@ export interface Engine {
    * Initialize the underlying native engine. Called by `ttsRuntime` when
    * this engine becomes the active one. Idempotent at the runtime level
    * (the runtime won't call it twice without a `release` in between).
-   *
-   * System engine implements as a no-op — OS-native TTS does not require
-   * setup.
    */
   loadInto(): Promise<void>;
   /**

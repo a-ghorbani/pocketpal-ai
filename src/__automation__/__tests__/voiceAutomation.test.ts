@@ -114,6 +114,31 @@ describe('runVoiceCommand', () => {
     },
   );
 
+  it.each(['memory::tight', 'memory::wont-fit'] as const)(
+    'with a system voice, %s sizes the chat model with no voice share',
+    async cmd => {
+      Platform.OS = 'android';
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8e9);
+      runInAction(() => {
+        (ttsStore as any).currentVoice = {
+          id: 'en-gb-x-gba-local',
+          name: 'Voice 1',
+          engine: 'system',
+        };
+      });
+      await runVoiceCommand(cmd);
+
+      const fit = voiceMemoryFit({
+        memory: await readDeviceMemory(modelStore),
+        chatBytes: modelStore.loadedModelBytes ?? 0,
+        sttTier: asrStore.selectedTier,
+        ttsBytes: TTS_ENGINE_RUNTIME_BYTES.system,
+      });
+      expect(fit.status).toBe(cmd === 'memory::tight' ? 'tight' : 'wont_fit');
+      expect(fit.breakdown.rows.map(r => r.kind)).toEqual(['chat', 'stt']);
+    },
+  );
+
   it.each(['android', 'ios'] as const)(
     'on %s, memory::wont-fit sizes the models past total RAM',
     async os => {

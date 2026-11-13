@@ -46,8 +46,7 @@ export type KokoroProgressCallback = (progress: number) => void;
  *
  * CPU-only execution is forced (`executionProviders: ['cpu']`) across all
  * three neural engines for consistent battery/thermal behavior and easier
- * QA. The library default on iOS would otherwise include CoreML; we keep
- * it bare CPU for now.
+ * QA: the library default on Android would add xnnpack.
  */
 export class KokoroEngine implements NeuralEngine {
   readonly id = 'kokoro' as const;

@@ -69,11 +69,27 @@ describe('engineRegistry', () => {
     expect(getEngine('kitten')).toBe(getEngine('kitten'));
   });
 
-  it('every neural engine has its own runtime size for the voice mode memory fit', () => {
-    const neural = getAllEngines().filter(e => e.id !== 'system');
+  it('every engine has an entry in the voice mode memory fit table', () => {
     expect(Object.keys(TTS_ENGINE_RUNTIME_BYTES).sort()).toEqual(
-      neural.map(e => e.id).sort(),
+      getAllEngines()
+        .map(e => e.id)
+        .sort(),
     );
     expect(TTS_ENGINE_RUNTIME_BYTES.phonon).toBe(200 * 1024 * 1024);
   });
+
+  it.each(['android', 'ios'] as const)(
+    'on %s a system voice adds no memory row',
+    os => {
+      let systemBytes: unknown;
+      jest.isolateModules(() => {
+        Object.defineProperty(require('react-native').Platform, 'OS', {
+          configurable: true,
+          get: () => os,
+        });
+        systemBytes = require('../constants').TTS_ENGINE_RUNTIME_BYTES.system;
+      });
+      expect(systemBytes).toBeNull();
+    },
+  );
 });

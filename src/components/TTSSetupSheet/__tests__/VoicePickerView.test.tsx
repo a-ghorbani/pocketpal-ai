@@ -243,13 +243,11 @@ describe('VoicePickerView', () => {
       (Speech.getAvailableVoices as jest.Mock).mockResolvedValue([]);
     });
 
-    it('opens with the voice-mode hint and the Languages field above the first band', async () => {
-      const {getByText, getByTestId, getAllByTestId, queryByText} =
+    it('opens with the Languages field above the first band and no voice-mode note', async () => {
+      const {getByTestId, getAllByTestId, queryByText} =
         await openSystemGroup();
 
-      expect(
-        getByText(l10n.en.voiceAndSpeech.systemVoiceModeHint),
-      ).toBeTruthy();
+      expect(queryByText(/voice mode/i)).toBeNull();
       const field = getByTestId('tts-system-language-button');
       expect(field.props.accessibilityLabel).toBe(
         'Languages: \u2068English\u2069',

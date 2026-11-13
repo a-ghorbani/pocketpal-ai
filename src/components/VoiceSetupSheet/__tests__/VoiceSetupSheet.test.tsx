@@ -230,22 +230,59 @@ describe('VoiceSetupSheet', () => {
   });
 
   it.each([
-    ['the system voice', {id: 's', name: 'Samantha', engine: 'system'}],
     ['no voice', null],
     [
       'an unsupported Phonon voice',
       {id: 'Zoey', name: 'Zoey', engine: 'phonon'},
     ],
-  ])('with %s, offers to choose a neural voice', (_case, voice) => {
+  ])('with %s, offers to choose a voice', (_case, voice) => {
     runInAction(() => {
       tts.currentVoice = voice;
     });
-    const {getByTestId, getByText, queryByTestId} = renderSheet();
+    const {getByTestId, getByText, queryByTestId, queryByText} = renderSheet();
 
-    expect(getByText(strings.voiceRowMissing)).toBeTruthy();
+    expect(getByText(strings.voiceRowChoose)).toBeTruthy();
+    expect(getByText('Choose a voice for spoken replies.')).toBeTruthy();
+    expect(queryByText(/can't speak in voice mode/i)).toBeNull();
     expect(queryByTestId('voice-setup-continue')).toBeNull();
     fireEvent.press(getByTestId('voice-setup-choose-voice'));
     expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a system voice: ready, with Continue', async () => {
+    runInAction(() => {
+      tts.currentVoice = {id: 's', name: 'Samantha', engine: 'system'};
+    });
+    const {getByTestId, queryByTestId, findByText} = renderSheet();
+
+    expect(getByTestId('voice-setup-continue')).toBeTruthy();
+    expect(queryByTestId('voice-setup-choose-voice')).toBeNull();
+    expect(await findByText('Samantha · ready')).toBeTruthy();
+    expect(queryByTestId('voice-setup-voice-network')).toBeNull();
+  });
+
+  it('labels a system voice that needs internet', async () => {
+    runInAction(() => {
+      tts.currentVoice = {
+        id: 'en-us-x-sfg-network',
+        name: 'Voice 2',
+        engine: 'system',
+        requiresNetwork: true,
+      };
+    });
+    const {getByTestId, findByText} = renderSheet();
+
+    expect(await findByText('Voice 2 · ready')).toBeTruthy();
+    expect(getByTestId('voice-setup-voice-network')).toHaveTextContent(
+      l10n.en.voiceAndSpeech.systemNeedsInternet,
+    );
+  });
+
+  it('shows no network label for a neural voice', async () => {
+    const {queryByTestId, findByText} = renderSheet();
+
+    expect(await findByText('Sarah · ready')).toBeTruthy();
+    expect(queryByTestId('voice-setup-voice-network')).toBeNull();
   });
 
   it('accepts a Phonon voice on a device that supports it', async () => {
@@ -413,14 +450,14 @@ describe('VoiceSetupSheet', () => {
       expect(onDone).not.toHaveBeenCalled();
     });
 
-    it('does not check the disk without a neural voice', async () => {
+    it('does not check the disk without a voice', async () => {
       runInAction(() => {
-        tts.currentVoice = {id: 's', name: 'Samantha', engine: 'system'};
+        tts.currentVoice = null;
       });
       const view = renderSheet();
       await act(async () => {});
 
-      expect(voiceStatus(view)).toHaveTextContent(strings.voiceRowMissing);
+      expect(voiceStatus(view)).toHaveTextContent(strings.voiceRowChoose);
       expect(hasVoiceFile).not.toHaveBeenCalled();
     });
 

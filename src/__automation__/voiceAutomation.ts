@@ -115,15 +115,13 @@ async function forceMemoryBand(wontFit: boolean): Promise<void> {
   }
   const budget = memoryBudget(memory);
   const stt = ASR_TIERS[asrStore.selectedTier].runtimeBytes;
-  const engine = ttsStore.currentVoice?.engine;
-  const tts =
-    engine && engine !== 'system'
-      ? TTS_ENGINE_RUNTIME_BYTES[engine]
-      : TTS_ENGINE_RUNTIME_BYTES.supertonic;
+  const engine = ttsStore.currentVoice?.engine ?? 'supertonic';
+  const tts = TTS_ENGINE_RUNTIME_BYTES[engine] ?? 0;
+  const pastBudget = Math.max(tts / 2, 1);
   runInAction(() => {
     modelStore.loadedModelBytes = wontFit
       ? memory.totalBytes - stt + 1
-      : budget - stt - tts / 2;
+      : budget + pastBudget - stt - tts;
   });
 }
 

@@ -415,8 +415,8 @@ class VoiceModeController {
   /**
    * A call, alarm or Siri took the audio session: stop the mic and any turn,
    * and show the mic as off until `ended`, a cloud tap, the app becoming
-   * active, or unmute. `ended` may never come (Android only holds focus while
-   * a chunk plays; iOS skips it after Siri and often after a call), and the
+   * active, or unmute. `ended` may never come (Android holds focus only while
+   * speech plays; iOS skips it after Siri and often after a call), and the
    * session holding it can last minutes, so no watchdog runs meanwhile.
    */
   onAudioInterruption({type}: AudioInterruptionProps): void {
