@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "Використовується значення сервера за замовчуванням (не вказано)",
       "resetToServerDefault": "Типове значення сервера: {{value}} · Скинути",
       "resetToServerDefaultAccessibilityLabel": "Скинути {{name}} до значення сервера за замовчуванням, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Інші дії",
+      "openMenuAction": "Відкрити меню повідомлення"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Копіювати",
+        "copyAsMarkdown": "Копіювати як Markdown",
+        "copyImageUrl": "Копіювати URL зображення",
+        "copyImageUrls": "Копіювати URL зображень ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "Пункт списку",
+        "nestedBulletPoint": "Вкладений пункт списку",
+        "orderedItem": "Пункт списку {{n}}",
+        "nestedOrderedItem": "Вкладений пункт списку {{n}}",
+        "quote": "Цитата",
+        "nestedQuote": "Вкладена цитата",
+        "tableRow": "Рядок {{n}}: {{content}}",
+        "rotorHeadings": "Заголовки",
+        "rotorLinks": "Посилання",
+        "rotorImages": "Зображення"
+      }
     }
   },
   "palsScreen": {
@@ -1610,7 +1634,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Швидко запускається та не вимагає багато оперативної пам’яті. Тільки англійською мовою.",
     "enginePhononCredit": "Модель та голоси від Gradium (Apache-2.0), створені на основі Mimi від Kyutai.",
-    "engineTierNatural": "природна англійська"
+    "engineTierNatural": "природна англійська",
+    "systemNeedsInternet": "Потрібен інтернет",
+    "systemVoiceNumber": "Голос {{number}}",
+    "systemQualityEnhanced": "Покращений",
+    "systemVoiceModeHint": "Системні голоси не можуть говорити в голосовому режимі.",
+    "systemOnDeviceSection": "На цьому телефоні",
+    "systemLanguagesLabel": "Мови",
+    "systemGetMoreVoices": "Отримати більше голосів",
+    "systemNoVoicesForLanguage": "Голосів для мови {{language}} на цьому телефоні ще немає.",
+    "systemIosSettingsHint": "Додайте голоси в Налаштування > Доступність > Усний контент > Голоси.",
+    "systemLanguageSheetTitle": "Мова голосу",
+    "systemLanguageSearchPlaceholder": "Пошук мов"
   },
   "htmlPreview": {
     "defaultTitle": "Попередній перегляд",
