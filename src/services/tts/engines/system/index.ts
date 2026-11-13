@@ -1,4 +1,3 @@
-import {Platform} from 'react-native';
 import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {l10n} from '../../../../locales';
@@ -29,15 +28,10 @@ export class SystemEngine implements Engine {
    * engine; switching back to a neural engine triggers its own loadInto.
    *
    * Android OS speech takes audio focus, and so gets call and alarm
-   * interruptions, only with `ducking`. iOS gets interruptions without it,
-   * and `ducking` there adds a pause between sentences.
+   * interruptions, only with `ducking`.
    */
   async loadInto(): Promise<void> {
-    await Speech.initialize(
-      Platform.OS === 'android'
-        ? {engine: TTSEngine.OS_NATIVE, ducking: true}
-        : {engine: TTSEngine.OS_NATIVE},
-    );
+    await Speech.initialize({engine: TTSEngine.OS_NATIVE, ducking: true});
   }
 
   /**

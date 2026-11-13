@@ -55,28 +55,20 @@ describe('SystemEngine.loadInto', () => {
     Platform.OS = originalOS;
   });
 
-  it('initialises the OS engine with ducking on Android', async () => {
-    Platform.OS = 'android';
+  it.each(['android', 'ios'] as const)(
+    'on %s, initialises the OS engine with ducking and no silentMode',
+    async os => {
+      Platform.OS = os;
 
-    await new SystemEngine().loadInto();
+      await new SystemEngine().loadInto();
 
-    expect(Speech.initialize).toHaveBeenCalledTimes(1);
-    expect(Speech.initialize).toHaveBeenCalledWith({
-      engine: TTSEngine.OS_NATIVE,
-      ducking: true,
-    });
-  });
-
-  it('initialises the OS engine without ducking or silentMode on iOS', async () => {
-    Platform.OS = 'ios';
-
-    await new SystemEngine().loadInto();
-
-    expect(Speech.initialize).toHaveBeenCalledTimes(1);
-    expect(Speech.initialize).toHaveBeenCalledWith({
-      engine: TTSEngine.OS_NATIVE,
-    });
-  });
+      expect(Speech.initialize).toHaveBeenCalledTimes(1);
+      expect(Speech.initialize).toHaveBeenCalledWith({
+        engine: TTSEngine.OS_NATIVE,
+        ducking: true,
+      });
+    },
+  );
 });
 
 describe('SystemEngine.play', () => {
