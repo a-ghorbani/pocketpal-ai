@@ -717,6 +717,10 @@ async function main(): Promise<void> {
       console.log(`  Skipped: ${finalRun.counters.skipped}`);
     }
 
+    if (finalRun.deviceMinutes) {
+      console.log(`\nDevice minutes: ${JSON.stringify(finalRun.deviceMinutes)}`);
+    }
+
     console.log('='.repeat(50) + '\n');
 
     if (finalRun.result !== 'PASSED') {
