@@ -250,15 +250,15 @@
     "localApiServer": {
       "title": "Servidor de API local",
       "enable": "Disponibilizar o modelo carregado",
-      "enableDescription": "Permite que outros apps usem o modelo carregado por uma API compatível com OpenAI. As requisições entram na fila junto com seus chats.",
+      "enableDescription": "Permite que outros apps usem o modelo carregado por meio de uma API compatível com OpenAI. As requisições entram na fila junto com seus chats.",
       "starting": "Iniciando…",
       "url": "URL do servidor",
       "copyUrl": "Copiar URL",
       "servedModel": "Disponibilizando {{model}}",
       "noModel": "Nenhum modelo carregado. As requisições vão falhar até você carregar um.",
       "port": "Porta",
-      "portInvalid": "Use uma porta entre 1024 e 65535",
-      "lan": "Permitir outros dispositivos na rede",
+      "portInvalid": "Use uma porta de 1024 a 65535",
+      "lan": "Permitir acesso de outros dispositivos da rede",
       "lanWarning": "O servidor fica acessível em todas as redes em que este celular estiver: Wi-Fi, dados móveis, ponto de acesso e VPN. Defina uma chave de API para limitar quem pode usá-lo.",
       "notOnWifi": "O celular não está conectado ao Wi-Fi, então não há URL de rede para mostrar.",
       "apiKey": "Chave de API",
@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "Usando o padrão do servidor (não informado)",
       "resetToServerDefault": "Padrão do servidor: {{value}} · Redefinir",
       "resetToServerDefaultAccessibilityLabel": "Redefinir {{name}} para o padrão do servidor, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Mais ações",
+      "openMenuAction": "Abrir menu da mensagem"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Copiar",
+        "copyAsMarkdown": "Copiar como Markdown",
+        "copyImageUrl": "Copiar URL da imagem",
+        "copyImageUrls": "Copiar {{count}} URLs de imagens"
+      },
+      "accessibility": {
+        "bulletPoint": "Item com marcador",
+        "nestedBulletPoint": "Item com marcador aninhado",
+        "orderedItem": "Item de lista {{n}}",
+        "nestedOrderedItem": "Item de lista aninhado {{n}}",
+        "quote": "Citação",
+        "nestedQuote": "Citação aninhada",
+        "tableRow": "Linha {{n}}: {{content}}",
+        "rotorHeadings": "Títulos",
+        "rotorLinks": "Links",
+        "rotorImages": "Imagens"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Início rápido e pouco uso de RAM. Apenas em inglês.",
     "enginePhononCredit": "Modelo e vozes da Gradium (Apache-2.0), construídos sobre o Mimi da Kyutai.",
-    "engineTierNatural": "inglês natural"
+    "engineTierNatural": "inglês natural",
+    "systemNeedsInternet": "Precisa de internet",
+    "systemVoiceNumber": "Voz {{number}}",
+    "systemQualityEnhanced": "Aprimorada",
+    "systemVoiceModeHint": "As vozes do sistema não funcionam no modo de voz.",
+    "systemOnDeviceSection": "Neste celular",
+    "systemLanguagesLabel": "Idiomas",
+    "systemGetMoreVoices": "Obter mais vozes",
+    "systemNoVoicesForLanguage": "Ainda não há vozes em {{language}} neste celular.",
+    "systemIosSettingsHint": "Adicione vozes em Ajustes > Acessibilidade > Conteúdo Falado > Vozes.",
+    "systemLanguageSheetTitle": "Idioma da voz",
+    "systemLanguageSearchPlaceholder": "Pesquisar idiomas"
   },
   "onboarding": {
     "back": "Voltar",
