@@ -771,6 +771,30 @@
       "usingServerDefaultUnreported": "서버 기본값 사용 중 (값 알 수 없음)",
       "resetToServerDefault": "서버 기본값: {{value}} · 재설정",
       "resetToServerDefaultAccessibilityLabel": "{{name}} 설정을 서버 기본값 {{value}}(으)로 재설정"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "추가 작업",
+      "openMenuAction": "메시지 메뉴 열기"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "복사",
+        "copyAsMarkdown": "Markdown으로 복사",
+        "copyImageUrl": "이미지 URL 복사",
+        "copyImageUrls": "이미지 URL {{count}}개 복사"
+      },
+      "accessibility": {
+        "bulletPoint": "목록 항목",
+        "nestedBulletPoint": "중첩 목록 항목",
+        "orderedItem": "목록 항목 {{n}}",
+        "nestedOrderedItem": "중첩 목록 항목 {{n}}",
+        "quote": "인용 블록",
+        "nestedQuote": "중첩 인용 블록",
+        "tableRow": "{{n}}행: {{content}}",
+        "rotorHeadings": "제목",
+        "rotorLinks": "링크",
+        "rotorImages": "이미지"
+      }
     }
   },
   "feedback": {
@@ -1610,7 +1634,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "빠른 구동 속도. 적은 RAM 사용. 영어만 지원.",
     "enginePhononCredit": "모델과 음성은 Gradium 제작 (Apache-2.0), Kyutai의 Mimi 기반.",
-    "engineTierNatural": "자연스러운 영어"
+    "engineTierNatural": "자연스러운 영어",
+    "systemNeedsInternet": "인터넷 필요",
+    "systemVoiceNumber": "음성 {{number}}",
+    "systemQualityEnhanced": "향상됨",
+    "systemVoiceModeHint": "시스템 음성은 음성 모드에서 사용할 수 없습니다.",
+    "systemOnDeviceSection": "이 휴대폰에 설치됨",
+    "systemLanguagesLabel": "언어",
+    "systemGetMoreVoices": "음성 더 받기",
+    "systemNoVoicesForLanguage": "이 휴대폰에 아직 {{language}} 음성이 없습니다.",
+    "systemIosSettingsHint": "설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성에서 새 음성을 추가할 수 있습니다.",
+    "systemLanguageSheetTitle": "음성 언어",
+    "systemLanguageSearchPlaceholder": "언어 검색"
   },
   "htmlPreview": {
     "defaultTitle": "미리보기",
