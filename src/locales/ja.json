@@ -249,7 +249,7 @@
     },
     "localApiServer": {
       "title": "ローカルAPIサーバー",
-      "enable": "読み込み済みのモデルを公開",
+      "enable": "読み込み済みのモデルを他のアプリに公開",
       "enableDescription": "OpenAI互換のAPIを通じて、他のアプリが読み込み済みのモデルを使えるようになります。リクエストはチャットと同じ順番待ちの列に並びます。",
       "starting": "起動中…",
       "url": "サーバーURL",
@@ -259,7 +259,7 @@
       "port": "ポート",
       "portInvalid": "1024〜65535のポートを指定してください",
       "lan": "ネットワーク上の他のデバイスからの接続を許可",
-      "lanWarning": "このスマホがつながっているすべてのネットワーク（Wi-Fi、モバイルデータ通信、テザリング、VPN）からサーバーに接続できます。使える相手を制限するには、APIキーを設定してください。",
+      "lanWarning": "このスマホがつながっているすべてのネットワーク（Wi-Fi、モバイルデータ通信、テザリング、VPN）から、誰でもサーバーに接続できます。使える相手を制限するには、APIキーを設定してください。",
       "notOnWifi": "Wi-Fiに接続していないため、ネットワーク用のURLは表示されません。",
       "apiKey": "APIキー",
       "apiKeySet": "リクエストにはこのキーが必要です",
@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "サーバーのデフォルトを使用中（値は未報告）",
       "resetToServerDefault": "サーバーのデフォルト: {{value}} · リセット",
       "resetToServerDefaultAccessibilityLabel": "{{name}}をサーバーのデフォルト（{{value}}）にリセット"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "その他の操作",
+      "openMenuAction": "メッセージメニューを開く"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "コピー",
+        "copyAsMarkdown": "Markdownとしてコピー",
+        "copyImageUrl": "画像URLをコピー",
+        "copyImageUrls": "{{count}}件の画像URLをコピー"
+      },
+      "accessibility": {
+        "bulletPoint": "箇条書き項目",
+        "nestedBulletPoint": "入れ子の箇条書き項目",
+        "orderedItem": "リスト項目{{n}}",
+        "nestedOrderedItem": "入れ子のリスト項目{{n}}",
+        "quote": "引用ブロック",
+        "nestedQuote": "入れ子の引用ブロック",
+        "tableRow": "{{n}}行目：{{content}}",
+        "rotorHeadings": "見出し",
+        "rotorLinks": "リンク",
+        "rotorImages": "画像"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "起動が速くRAM使用量も少なめ。英語のみ対応。",
     "enginePhononCredit": "モデルと音声はGradium製（Apache-2.0）。KyutaiのMimiを基盤としています。",
-    "engineTierNatural": "自然な英語"
+    "engineTierNatural": "自然な英語",
+    "systemNeedsInternet": "インターネットが必要",
+    "systemVoiceNumber": "音声{{number}}",
+    "systemQualityEnhanced": "強化",
+    "systemVoiceModeHint": "システム音声は音声モードでは使用できません。",
+    "systemOnDeviceSection": "このデバイス内",
+    "systemLanguagesLabel": "言語",
+    "systemGetMoreVoices": "音声を追加",
+    "systemNoVoicesForLanguage": "このデバイスにはまだ{{language}}の音声がありません。",
+    "systemIosSettingsHint": "「設定 > アクセシビリティ > 読み上げコンテンツ > 声」で音声を追加できます。",
+    "systemLanguageSheetTitle": "音声の言語",
+    "systemLanguageSearchPlaceholder": "言語を検索"
   },
   "onboarding": {
     "back": "戻る",
