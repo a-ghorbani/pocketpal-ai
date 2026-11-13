@@ -1,2 +1,5 @@
 # Verbatim server captures: reformatting would make them hand-authored.
 jest/fixtures/router-wire/
+
+# Bundled copies of the device-rules repo: kept byte-identical to upstream.
+src/store/bundledDeviceRules/

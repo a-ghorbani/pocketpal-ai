@@ -244,6 +244,26 @@ export function createErrorState(
 /**
  * Helper function to create a multimodal warning state
  */
+export function createDocumentWarning(message: string): ErrorState {
+  return {
+    code: 'storage',
+    message,
+    context: 'chat',
+    recoverable: false,
+    severity: 'warning',
+  };
+}
+
+export function createChatWarning(message: string): ErrorState {
+  return {
+    code: 'unknown',
+    message,
+    context: 'chat',
+    recoverable: false,
+    severity: 'warning',
+  };
+}
+
 export function createMultimodalWarning(
   message: string,
   context: ErrorState['context'] = 'chat',

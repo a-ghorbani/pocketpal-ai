@@ -129,13 +129,14 @@ function addUserSites(text: string): void {
 }
 
 /**
- * Run-start seed, the single definition of trusted sources: sites from
- * user-written text, and URLs from this session's persisted search hits and
- * read_url `links`. Never assistant text, tool arguments or any `summary`.
- * Parameters are structural so chat code can pass its own message shapes.
+ * Run-start seed, the single definition of trusted sources: sites from what
+ * the user typed, and URLs from this session's persisted search hits and
+ * read_url `links`. Never assistant text, tool arguments, attached document
+ * text or any `summary`. Parameters are structural so chat code can pass its
+ * own message shapes.
  */
 export function seedReadUrlAllowlist(
-  assembledMessages: Array<{role: string; content?: unknown}>,
+  userTexts: string[],
   sessionRows: Array<{
     type?: string;
     steps?: Array<{
@@ -147,19 +148,8 @@ export function seedReadUrlAllowlist(
   }>,
 ): void {
   resetReadUrlAllowlist();
-  for (const msg of assembledMessages) {
-    if (msg.role !== 'user') {
-      continue;
-    }
-    if (typeof msg.content === 'string') {
-      addUserSites(msg.content);
-    } else if (Array.isArray(msg.content)) {
-      for (const part of msg.content) {
-        if (part?.type === 'text' && typeof part.text === 'string') {
-          addUserSites(part.text);
-        }
-      }
-    }
+  for (const text of userTexts) {
+    addUserSites(text);
   }
   for (const row of sessionRows) {
     if (row.type !== 'assistant_turn') {

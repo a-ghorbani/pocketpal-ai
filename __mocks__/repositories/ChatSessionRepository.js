@@ -11,6 +11,10 @@ class ChatSessionRepository {
     return false; // Mock: no migration needed
   }
 
+  async getReferencedDocumentIds() {
+    return new Set();
+  }
+
   // Get all sessions grouped by date
   async getAllSessions() {
     return []; // Mock: return empty array

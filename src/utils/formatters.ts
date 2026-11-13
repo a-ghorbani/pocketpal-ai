@@ -40,32 +40,28 @@ export const formatBytes = (
   return parseFloat(value.toFixed(fractionDigits)) + ' ' + units[multiple];
 };
 
+const NUMBER_UNITS = [
+  {size: 1_000, suffix: 'k'},
+  {size: 1_000_000, suffix: 'm'},
+  {size: 1_000_000_000, suffix: 'b'},
+];
+
 export function formatNumber(
   num: number,
   fractionDigits = 2,
   uppercase = false,
   withSpace = false,
 ): string {
-  const space = withSpace ? ' ' : '';
-
   if (num < 1000) {
     return num.toString();
-  } else if (num < 1_000_000) {
-    const suffix = uppercase ? 'K' : 'k';
-    return `${(num / 1_000)
-      .toFixed(fractionDigits)
-      .replace(/\.?0+$/, '')}${space}${suffix}`;
-  } else if (num < 1_000_000_000) {
-    const suffix = uppercase ? 'M' : 'm';
-    return `${(num / 1_000_000)
-      .toFixed(fractionDigits)
-      .replace(/\.?0+$/, '')}${space}${suffix}`;
-  } else {
-    const suffix = uppercase ? 'B' : 'b';
-    return `${(num / 1_000_000_000)
-      .toFixed(fractionDigits)
-      .replace(/\.?0+$/, '')}${space}${suffix}`;
   }
+  const scaled = (size: number) =>
+    parseFloat((num / size).toFixed(fractionDigits));
+  const unit =
+    NUMBER_UNITS.find(({size}) => scaled(size) < 1000) ??
+    NUMBER_UNITS[NUMBER_UNITS.length - 1];
+  const suffix = uppercase ? unit.suffix.toUpperCase() : unit.suffix;
+  return `${scaled(unit.size)}${withSpace ? ' ' : ''}${suffix}`;
 }
 
 /** Returns formatted date used as a divider between different days in the chat history */

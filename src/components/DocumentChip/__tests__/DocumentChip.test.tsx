@@ -1,0 +1,206 @@
+import React from 'react';
+
+import {fireEvent, render} from '../../../../jest/test-utils';
+
+import {DocumentChip, formatTokenCount} from '../DocumentChip';
+import type {DocumentRef} from '../../../services/documents/types';
+
+const pdf: DocumentRef = {
+  id: 'doc-1',
+  name: 'report.pdf',
+  kind: 'pdf',
+  byteSize: 100,
+  pageCount: 12,
+  charCount: 12400,
+  tokenEstimate: 3100,
+};
+
+describe('DocumentChip', () => {
+  it('shows name, pages and the estimated tokens', () => {
+    const {getByText} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} />,
+    );
+    expect(getByText('report.pdf')).toBeTruthy();
+    expect(getByText('12 pages · ~3.1k tokens')).toBeTruthy();
+  });
+
+  it('prefers the exact count when present', () => {
+    const {getByText} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={{...pdf, tokenCount: {modelId: 'm', n: 2900}}}
+      />,
+    );
+    expect(getByText('12 pages · ~2.9k tokens')).toBeTruthy();
+  });
+
+  it('shows the chosen range', () => {
+    const {getByText} = render(
+      <DocumentChip
+        name="x.pdf"
+        documentRef={{
+          ...pdf,
+          pageCount: 40,
+          pageRange: {from: 3, to: 5},
+          tokenEstimate: 1400,
+        }}
+      />,
+    );
+    expect(getByText('p. 3–5 of 40 · ~1.4k tokens')).toBeTruthy();
+  });
+
+  it('asks for pages when a range is needed', () => {
+    const {getByText} = render(
+      <DocumentChip
+        name="big.pdf"
+        status="needs_range"
+        documentRef={{...pdf, pageCount: 1200}}
+      />,
+    );
+    expect(getByText('1200 pages · choose pages')).toBeTruthy();
+  });
+
+  it('shows progress while importing', () => {
+    const {getByTestId, queryByTestId} = render(
+      <DocumentChip name="a.pdf" status="importing" />,
+    );
+    expect(getByTestId('document-chip-progress')).toBeTruthy();
+    expect(queryByTestId('document-chip-details')).toBeNull();
+  });
+
+  it('offers remove only when a handler is given', () => {
+    const onRemove = jest.fn();
+    const {getByTestId, rerender, queryByTestId} = render(
+      <DocumentChip name="a.pdf" documentRef={pdf} onRemove={onRemove} />,
+    );
+    fireEvent.press(getByTestId('document-chip-remove'));
+    expect(onRemove).toHaveBeenCalled();
+    rerender(<DocumentChip name="a.pdf" documentRef={pdf} />);
+    expect(queryByTestId('document-chip-remove')).toBeNull();
+  });
+
+  it('formats small and large counts', () => {
+    expect(formatTokenCount(950)).toBe('950');
+    expect(formatTokenCount(20480)).toBe('20.5k');
+  });
+
+  it('drops a trailing zero and rolls over to millions', () => {
+    expect(formatTokenCount(2000)).toBe('2k');
+    expect(formatTokenCount(999960)).toBe('1m');
+    expect(formatTokenCount(1250000)).toBe('1.3m');
+  });
+
+  it('says in full with the token count', () => {
+    const {getByText, getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} mode="full" />,
+    );
+    expect(getByText('12 pages · in full · ~3.1k tokens')).toBeTruthy();
+    expect(getByTestId('document-chip').props.accessibilityLabel).toContain(
+      'in full',
+    );
+  });
+
+  it('says searched without a token count', () => {
+    const {getByText, getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} mode="searched" />,
+    );
+    expect(getByText('12 pages · searched')).toBeTruthy();
+    expect(getByTestId('document-chip').props.accessibilityLabel).toContain(
+      'searched',
+    );
+  });
+
+  it('offers Search instead when given', () => {
+    const onSearchInstead = jest.fn();
+    const {getByTestId} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onSearchInstead={onSearchInstead}
+      />,
+    );
+    fireEvent.press(getByTestId('document-chip-search-instead'));
+    expect(onSearchInstead).toHaveBeenCalled();
+  });
+
+  it('wraps the details instead of cutting them when Search instead is shown', () => {
+    const {getByTestId} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onSearchInstead={jest.fn()}
+      />,
+    );
+    expect(getByTestId('document-chip-details').props.numberOfLines).toBe(2);
+    expect(getByTestId('document-chip-text')).toContainElement(
+      getByTestId('document-chip-search-instead'),
+    );
+  });
+
+  it('exposes remove and search-instead as accessibility actions', () => {
+    const onPress = jest.fn();
+    const onRemove = jest.fn();
+    const onSearchInstead = jest.fn();
+    const {getByTestId, rerender} = render(
+      <DocumentChip
+        name="report.pdf"
+        documentRef={pdf}
+        mode="full"
+        onPress={onPress}
+        onRemove={onRemove}
+        onSearchInstead={onSearchInstead}
+      />,
+    );
+    const chip = getByTestId('document-chip');
+    expect(chip.props.accessibilityActions).toEqual([
+      {name: 'activate'},
+      {name: 'remove', label: 'Remove report.pdf'},
+      {name: 'searchInstead', label: 'Search instead'},
+    ]);
+    for (const actionName of ['activate', 'remove', 'searchInstead']) {
+      fireEvent(chip, 'accessibilityAction', {nativeEvent: {actionName}});
+    }
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onSearchInstead).toHaveBeenCalledTimes(1);
+
+    rerender(<DocumentChip name="report.pdf" documentRef={pdf} />);
+    expect(
+      getByTestId('document-chip').props.accessibilityActions ?? [],
+    ).toEqual([]);
+  });
+
+  it('announces a remove-only chip as enabled without a button role', () => {
+    const textDoc = {...pdf, kind: 'text' as const, pageCount: undefined};
+    const {getByTestId} = render(
+      <DocumentChip
+        name="notes.md"
+        documentRef={textDoc}
+        onRemove={jest.fn()}
+      />,
+    );
+    const chip = getByTestId('document-chip');
+    expect(chip.props.accessibilityState?.disabled).toBeFalsy();
+    expect(chip.props.accessibilityRole).toBeUndefined();
+  });
+
+  it('announces an importing chip as busy', () => {
+    const {getByTestId} = render(
+      <DocumentChip name="a.pdf" status="importing" onRemove={jest.fn()} />,
+    );
+    expect(getByTestId('document-chip').props.accessibilityState?.busy).toBe(
+      true,
+    );
+  });
+
+  it('stays disabled when it has no actions', () => {
+    const {getByTestId} = render(
+      <DocumentChip name="report.pdf" documentRef={pdf} />,
+    );
+    expect(
+      getByTestId('document-chip').props.accessibilityState?.disabled,
+    ).toBe(true);
+  });
+});

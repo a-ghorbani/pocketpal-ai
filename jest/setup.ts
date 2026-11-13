@@ -113,6 +113,13 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
   },
 }));
 
+jest.mock('../src/specs/NativePdfText', () => ({
+  __esModule: true,
+  default: {
+    extractPages: jest.fn(() => Promise.resolve({pageCount: 0, pages: []})),
+  },
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const inset = {top: 0, right: 0, bottom: 0, left: 0};
   return {
@@ -176,7 +183,8 @@ jest.mock('../src/services/downloads', () => ({
 }));
 
 jest.mock('uuid', () => ({
-  v4: () => 'mock-uuid-12345' + Math.random(),
+  ...jest.requireActual('uuid'),
+  v4: () => require('crypto').randomUUID(),
 }));
 
 jest.mock('../src/repositories/ChatSessionRepository', () => ({

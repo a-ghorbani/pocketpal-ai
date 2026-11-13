@@ -20,6 +20,11 @@ describe('formatNumber', () => {
     expect(formatNumber(1500)).toBe('1.5k');
     expect(formatNumber(1500000)).toBe('1.5m');
   });
+
+  it('moves to the next unit when rounding reaches a thousand', () => {
+    expect(formatNumber(999960, 1)).toBe('1m');
+    expect(formatNumber(999999999, 2)).toBe('1b');
+  });
 });
 
 describe('getDisplayNameFromFilename', () => {

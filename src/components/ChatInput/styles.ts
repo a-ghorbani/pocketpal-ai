@@ -180,6 +180,17 @@ export const createStyles = ({
     imageScrollContent: {
       paddingHorizontal: 4,
     },
+    documentRow: {
+      flexGrow: 0,
+      paddingTop: 12,
+      paddingHorizontal: 12,
+    },
+    documentRowEditMode: {
+      marginTop: 28,
+    },
+    documentRowContent: {
+      gap: 8,
+    },
     imageContainer: {
       marginHorizontal: 4,
       position: 'relative',

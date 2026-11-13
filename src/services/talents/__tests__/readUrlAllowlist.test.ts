@@ -211,7 +211,7 @@ describe('readUrlAllowlist', () => {
         ['a.com|b.com', 'https://b.com/'],
         ['see http://192.168.1.10.', 'http://192.168.1.10/status'],
       ])('seeds the named host from user text %j', (userText, request) => {
-        seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+        seedReadUrlAllowlist([userText], []);
         expect(matchReadUrl(request)).not.toBeNull();
       });
 
@@ -223,7 +223,7 @@ describe('readUrlAllowlist', () => {
       ])(
         'seeds a file name the user typed as a host %j',
         (userText, request) => {
-          seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+          seedReadUrlAllowlist([userText], []);
           expect(matchReadUrl(request)).not.toBeNull();
         },
       );
@@ -231,7 +231,7 @@ describe('readUrlAllowlist', () => {
       it.each(['https://a.com/x(evil.com)', 'https://a.com/?q=日本evil.com'])(
         'accepts the residual that a host after a bracket or non-ASCII text in a user URL seeds %j',
         userText => {
-          seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+          seedReadUrlAllowlist([userText], []);
           expect(matchReadUrl('https://evil.com/')).not.toBeNull();
         },
       );
@@ -285,12 +285,12 @@ describe('readUrlAllowlist', () => {
         ['https://a.com?to=evil.com', 'https://evil.com/'],
         ['a.com#x=evil.com', 'https://evil.com/'],
       ])('seeds no site from user text %j', (userText, probe) => {
-        seedReadUrlAllowlist([{role: 'user', content: userText}], []);
+        seedReadUrlAllowlist([userText], []);
         expect(matchReadUrl(probe)).toBeNull();
       });
 
       it('never returns credentials on a user site', () => {
-        seedReadUrlAllowlist([{role: 'user', content: 'web-site.com'}], []);
+        seedReadUrlAllowlist(['web-site.com'], []);
         expect(matchReadUrl('https://web-site.com/')).not.toBeNull();
         expect(matchReadUrl('https://u:p@web-site.com/')).toBeNull();
         expect(matchReadUrl('https://u@web-site.com/')).toBeNull();
@@ -330,34 +330,14 @@ describe('readUrlAllowlist', () => {
   });
 
   describe('seedReadUrlAllowlist', () => {
-    it('seeds sites from user text, including multimodal text parts', () => {
+    it('seeds sites from every typed user text', () => {
       seedReadUrlAllowlist(
-        [
-          {role: 'user', content: 'read https://a.com/doc'},
-          {
-            role: 'user',
-            content: [{type: 'text', text: 'and https://b.com/page'}],
-          },
-        ],
+        ['read https://a.com/doc', 'and https://b.com/page'],
         [],
       );
       expect(isReadUrlAllowed('https://a.com/doc')).toBe(true);
       expect(isReadUrlAllowed('https://b.com/page')).toBe(true);
       expect(isReadUrlAllowed('https://a.com/other')).toBe(true);
-    });
-
-    it('never seeds from assistant or tool message text', () => {
-      seedReadUrlAllowlist(
-        [
-          {role: 'assistant', content: 'see https://laundered.com/x'},
-          {role: 'tool', content: 'page body says https://evil.com/y'},
-          {role: 'system', content: 'https://sys.com/z'},
-        ],
-        [],
-      );
-      expect(isReadUrlAllowed('https://laundered.com/x')).toBe(false);
-      expect(isReadUrlAllowed('https://evil.com/y')).toBe(false);
-      expect(isReadUrlAllowed('https://sys.com/z')).toBe(false);
     });
 
     it("seeds structured search-hit URLs from the session's persisted turns", () => {
@@ -388,10 +368,7 @@ describe('readUrlAllowlist', () => {
     });
 
     it('seeds nothing from a long run of dots', async () => {
-      seedReadUrlAllowlist(
-        [{role: 'user', content: '.'.repeat(50000) + 'x'}],
-        [],
-      );
+      seedReadUrlAllowlist(['.'.repeat(50000) + 'x'], []);
       // A synchronous overrun only trips the timeout once a timer can fire.
       await new Promise(resolve => setTimeout(resolve, 0));
       expect(matchReadUrl('https://x/')).toBeNull();
@@ -399,7 +376,7 @@ describe('readUrlAllowlist', () => {
 
     it('replaces the previous run entirely (reset semantics)', () => {
       allowReadUrls(['https://stale.com/old']);
-      seedReadUrlAllowlist([{role: 'user', content: 'https://new.com/n'}], []);
+      seedReadUrlAllowlist(['https://new.com/n'], []);
       expect(isReadUrlAllowed('https://stale.com/old')).toBe(false);
       expect(isReadUrlAllowed('https://new.com/n')).toBe(true);
     });

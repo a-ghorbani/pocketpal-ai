@@ -49,8 +49,33 @@ export const types = {
   xlsx: 'org.openxmlformats.spreadsheetml.sheet',
 };
 
+export const keepLocalCopy = jest.fn(({files}) =>
+  Promise.resolve(
+    files.map(file => ({
+      status: 'success',
+      sourceUri: file.uri,
+      localUri: `file:///path/to/caches/staging-uuid/${encodeURIComponent(
+        file.fileName,
+      )}`,
+    })),
+  ),
+);
+
+export const errorCodes = Object.freeze({
+  OPERATION_CANCELED: 'OPERATION_CANCELED',
+  IN_PROGRESS: 'ASYNC_OP_IN_PROGRESS',
+  UNABLE_TO_OPEN_FILE_TYPE: 'UNABLE_TO_OPEN_FILE_TYPE',
+});
+
+export const isErrorWithCode = jest.fn(
+  error => !!error && typeof error.code === 'string',
+);
+
 const DocumentPicker = {
   pick,
+  keepLocalCopy,
+  errorCodes,
+  isErrorWithCode,
   pickMultiple,
   pickDirectory,
   pickSingle,

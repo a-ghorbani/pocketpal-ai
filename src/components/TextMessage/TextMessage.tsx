@@ -21,6 +21,8 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {DocumentChip} from '../DocumentChip';
+import {modeOf} from '../../services/documents/render';
 
 import {AgentStep, MessageType} from '../../utils/types';
 import {
@@ -106,6 +108,7 @@ export const TextMessage = ({
     imagePreviewModal,
     imagePreviewCloseButton,
     imagePreviewContent,
+    documentsContainer,
   } = styles({
     message,
     theme,
@@ -115,6 +118,7 @@ export const TextMessage = ({
   // Extract imageUris from the message if available
   const imageUris = (message as any).imageUris || [];
   const hasImages = imageUris && imageUris.length > 0;
+  const documents = (!step && (message as MessageType.Text).documents) || [];
 
   const handleEmailPress = (email: string) => {
     try {
@@ -204,6 +208,21 @@ export const TextMessage = ({
     );
   };
 
+  const renderDocuments = () =>
+    documents.length > 0 ? (
+      <View style={documentsContainer}>
+        {documents.map(documentRef => (
+          <DocumentChip
+            key={documentRef.id}
+            name={typeof documentRef.name === 'string' ? documentRef.name : ''}
+            documentRef={documentRef}
+            mode={modeOf(documentRef)}
+            testID="message-document-chip"
+          />
+        ))}
+      </View>
+    ) : null;
+
   // Render image preview modal
   const renderImagePreview = () => {
     if (selectedImageIndex === null) {
@@ -246,6 +265,9 @@ export const TextMessage = ({
 
   return (
     <>
+      {linkPreviewEligible && documents.length > 0 ? (
+        <View style={textContainer}>{renderDocuments()}</View>
+      ) : null}
       {linkPreviewEligible ? (
         <LinkPreview
           containerStyle={{
@@ -278,6 +300,7 @@ export const TextMessage = ({
 
           {/* Render images above the text — legacy Text path only. */}
           {!step && renderImages()}
+          {renderDocuments()}
 
           <MarkdownView
             markdownText={visibleText.trim()}

@@ -340,7 +340,12 @@ describe('chat export -> import round trip', () => {
     const imported = await openSession(created[0].id);
 
     const allowedUrls = (messages: MessageType.Any[]) => {
-      seedReadUrlAllowlist(convertToChatMessages(messages), messages);
+      seedReadUrlAllowlist(
+        messages.flatMap(m =>
+          m.type === 'text' && m.author.id !== ASSISTANT ? [m.text] : [],
+        ),
+        messages,
+      );
       return extractUrls(json).filter(isReadUrlAllowed);
     };
     const searchHits = toolTurnSteps[0].toolOutcomes!.flatMap(o =>

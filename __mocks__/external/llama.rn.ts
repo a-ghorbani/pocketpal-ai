@@ -39,6 +39,7 @@ class MockLlamaContext {
   });
   initMultimodal = jest.fn().mockResolvedValue(true);
   isMultimodalEnabled = jest.fn().mockResolvedValue(false);
+  tokenize = jest.fn().mockResolvedValue({tokens: [], has_media: false});
   // Add other methods if needed.
 }
 

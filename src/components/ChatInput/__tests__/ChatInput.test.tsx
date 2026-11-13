@@ -313,7 +313,7 @@ describe('input', () => {
       </UserContext.Provider>,
     );
 
-    const plusButton = getByLabelText('Add image');
+    const plusButton = getByLabelText('Add attachment');
     expect(plusButton).toBeDefined();
   });
 
@@ -332,7 +332,7 @@ describe('input', () => {
       </UserContext.Provider>,
     );
 
-    const plusButton = queryByLabelText('Add image');
+    const plusButton = queryByLabelText('Add attachment');
     expect(plusButton).toBeNull();
   });
 
@@ -352,7 +352,7 @@ describe('input', () => {
       </UserContext.Provider>,
     );
 
-    const plusButton = getByLabelText('Add image');
+    const plusButton = getByLabelText('Add attachment');
     expect(plusButton).toBeTruthy();
     expect(plusButton.props.accessibilityState.disabled).toBe(false);
   });
@@ -574,7 +574,7 @@ describe('input', () => {
     }
   });
 
-  it('disables plus button when vision is not enabled', () => {
+  it('keeps the plus button enabled when vision is not enabled', () => {
     expect.assertions(1);
     const onSendPress = jest.fn();
     const {getByLabelText} = render(
@@ -590,8 +590,8 @@ describe('input', () => {
       </UserContext.Provider>,
     );
 
-    const plusButton = getByLabelText('Add image');
-    expect(plusButton.props.accessibilityState.disabled).toBe(true);
+    const plusButton = getByLabelText('Add attachment');
+    expect(plusButton.props.accessibilityState.disabled).toBe(false);
   });
 
   it('enables plus button when vision is enabled', () => {
@@ -610,7 +610,7 @@ describe('input', () => {
       </UserContext.Provider>,
     );
 
-    const plusButton = getByLabelText('Add image');
+    const plusButton = getByLabelText('Add attachment');
     expect(plusButton.props.accessibilityState.disabled).toBe(false);
   });
 
@@ -688,7 +688,7 @@ describe('input', () => {
         </UserContext.Provider>,
       );
 
-      const plusButton = getByLabelText('Add image');
+      const plusButton = getByLabelText('Add attachment');
       fireEvent.press(plusButton);
 
       // Menu should be visible after pressing plus button
@@ -715,7 +715,7 @@ describe('input', () => {
         </UserContext.Provider>,
       );
 
-      const plusButton = getByLabelText('Add image');
+      const plusButton = getByLabelText('Add attachment');
       fireEvent.press(plusButton);
 
       // Since testing the menu interaction is complex, let's test that the camera function works
@@ -745,7 +745,7 @@ describe('input', () => {
         </UserContext.Provider>,
       );
 
-      const plusButton = getByLabelText('Add image');
+      const plusButton = getByLabelText('Add attachment');
       fireEvent.press(plusButton);
 
       // Test that the component renders correctly even when camera errors are configured
@@ -770,7 +770,7 @@ describe('input', () => {
     const pressCameraMenuItem = async (
       screen: ReturnType<typeof renderWithImageUpload>,
     ) => {
-      fireEvent.press(screen.getByLabelText('Add image'));
+      fireEvent.press(screen.getByLabelText('Add attachment'));
       fireEvent.press(await screen.findByText(l10n.en.camera.takePhoto));
     };
 
@@ -877,7 +877,7 @@ describe('input', () => {
         </UserContext.Provider>,
       );
 
-      const plusButton = getByLabelText('Add image');
+      const plusButton = getByLabelText('Add attachment');
       fireEvent.press(plusButton);
 
       // Test that the component renders correctly with image library functionality
@@ -951,6 +951,32 @@ describe('input', () => {
       expect(onCancelEdit).not.toHaveBeenCalled(); // Should not be called on render
     });
 
+    it('does not call onCancelEdit when edit mode ends', () => {
+      const onCancelEdit = jest.fn();
+      runInAction(() => {
+        chatSessionStore.isEditMode = true;
+      });
+      const element = () => (
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress: jest.fn(),
+              onCancelEdit,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>
+      );
+      const {rerender} = render(element());
+
+      runInAction(() => {
+        chatSessionStore.isEditMode = false;
+      });
+      rerender(element());
+
+      expect(onCancelEdit).not.toHaveBeenCalled();
+    });
+
     it('calls onCancelEdit when cancel button is pressed', () => {
       const onSendPress = jest.fn();
       const onCancelEdit = jest.fn();
@@ -973,7 +999,7 @@ describe('input', () => {
       );
 
       // Find and press the cancel button in the edit bar
-      const cancelButton = getByTestId('icon-button');
+      const cancelButton = getByTestId('edit-bar-cancel');
       fireEvent.press(cancelButton);
 
       expect(onCancelEdit).toHaveBeenCalledTimes(1);
@@ -1222,6 +1248,29 @@ describe('native text clear', () => {
     expect(clear).toHaveBeenCalledTimes(1);
   });
 
+  it('hands a parent that owns the text the native clear', () => {
+    const nativeClearRef = {current: null as (() => void) | null};
+    renderInput({textInputProps: {value: 'sent'}, nativeClearRef});
+    expect(clear).not.toHaveBeenCalled();
+
+    nativeClearRef.current?.();
+
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the native text of a controlled composer whose send is held back', () => {
+    const onSendPress = jest.fn();
+    const {getByLabelText} = renderInput({
+      onSendPress,
+      textInputProps: {value: 'held back'},
+    });
+    fireEvent.press(
+      getByLabelText(l10n.en.components.sendButton.accessibilityLabel),
+    );
+    expect(onSendPress).toHaveBeenCalledTimes(1);
+    expect(clear).not.toHaveBeenCalled();
+  });
+
   it('keeps the native text when the send is blocked without a model', () => {
     runInAction(() => {
       modelStore.activeModelId = undefined;
@@ -1238,7 +1287,7 @@ describe('native text clear', () => {
     });
     const onCancelEdit = jest.fn();
     const {getByTestId} = renderInput({onCancelEdit});
-    fireEvent.press(getByTestId('icon-button'));
+    fireEvent.press(getByTestId('edit-bar-cancel'));
     expect(onCancelEdit).toHaveBeenCalledTimes(1);
     expect(clear).toHaveBeenCalledTimes(1);
   });

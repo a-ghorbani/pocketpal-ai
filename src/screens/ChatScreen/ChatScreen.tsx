@@ -80,7 +80,7 @@ export const ChatScreen: React.FC = observer(() => {
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
 
-  const {handleSendPress, handleStopPress} = useChatSession(
+  const {handleSendPress, handleStopPress, evaluateSendBudget} = useChatSession(
     currentMessageInfo,
     user,
     assistant,
@@ -314,6 +314,7 @@ export const ChatScreen: React.FC = observer(() => {
           messages={chatSessionStore.currentSessionMessages}
           activePal={activePal}
           onSendPress={handleSendPress}
+          evaluateSendBudget={evaluateSendBudget}
           onStopPress={handleStopPress}
           onPalSettingsSelect={handleOpenPalSheet}
           user={user}
