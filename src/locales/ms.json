@@ -249,15 +249,15 @@
     },
     "localApiServer": {
       "title": "Pelayan API tempatan",
-      "enable": "Sajikan model yang dimuat",
-      "enableDescription": "Biarkan aplikasi lain menggunakan model yang dimuat melalui API serasi OpenAI. Permintaan akan menunggu giliran bersama sembang anda.",
+      "enable": "Sediakan model yang dimuat untuk aplikasi lain",
+      "enableDescription": "Membenarkan aplikasi lain menggunakan model yang dimuat melalui API serasi OpenAI. Permintaan akan menunggu giliran bersama sembang anda.",
       "starting": "Memulakan…",
       "url": "URL Pelayan",
       "copyUrl": "Salin URL",
-      "servedModel": "Menyajikan {{model}}",
-      "noModel": "Tiada model dimuat. Permintaan akan gagal sehingga anda memuat satu model.",
+      "servedModel": "Menyediakan {{model}}",
+      "noModel": "Tiada model dimuat. Permintaan akan gagal sehingga anda memuatkan satu model.",
       "port": "Port",
-      "portInvalid": "Guna port antara 1024 hingga 65535",
+      "portInvalid": "Gunakan port dari 1024 hingga 65535",
       "lan": "Benarkan peranti lain dalam rangkaian",
       "lanWarning": "Pelayan ini boleh dicapai melalui setiap rangkaian yang digunakan telefon ini: Wi-Fi, data mudah alih, hotspot dan VPN. Tetapkan kunci API untuk mengehadkan siapa yang boleh menggunakannya.",
       "notOnWifi": "Tiada sambungan Wi-Fi, jadi URL rangkaian tidak dipaparkan.",
@@ -268,15 +268,15 @@
       "clearApiKey": "Kosongkan Kunci",
       "apiKeyPlaceholder": "Masukkan kunci API",
       "stopToEdit": "Matikan pelayan untuk menukar tetapan ini.",
-      "lockedHint": "Ciri Plus. Buka butiran.",
+      "lockedHint": "Ciri Plus. Membuka butiran.",
       "teaserTitle": "Pelayan API tempatan ialah ciri Plus",
-      "teaserBody": "Biarkan aplikasi lain menggunakan model yang dimuat pada telefon ini.",
+      "teaserBody": "Benarkan aplikasi lain menggunakan model yang dimuat pada telefon ini.",
       "teaserGetPlus": "Dapatkan Plus",
       "teaserNotNow": "Bukan sekarang",
       "errors": {
         "portInUse": "Port {{port}} sedang digunakan. Matikan pelayan dan pilih port lain.",
         "listenFailed": "Pelayan tidak dapat dimulakan. Matikan dan hidupkannya semula, atau pilih port lain.",
-        "stoppedListening": "Pelayan berhenti secara tiba-tiba. Matikan dan hidupkannya semula.",
+        "stoppedListening": "Pelayan berhenti secara tidak dijangka. Matikan dan hidupkannya semula.",
         "keyUnavailable": "Tidak dapat membaca kunci API. Buka kunci telefon anda, kemudian matikan pelayan dan hidupkannya semula."
       }
     }
@@ -491,7 +491,7 @@
         "memoryWarningSnackbar": "Notifikasi amaran memori"
       },
       "projectorOffer": {
-        "rowTitle": "Penglihatan memerlukan model unjuran",
+        "rowTitle": "Penglihatan memerlukan model unjurannya",
         "download": "Muat Turun",
         "downloading": "Memuat turun model unjuran · {{progress}}%",
         "a11yWithSize": "Muat turun model unjuran, {{size}}"
@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "Menggunakan lalai pelayan (tidak dilaporkan)",
       "resetToServerDefault": "Lalai pelayan: {{value}} · Tetap Semula",
       "resetToServerDefaultAccessibilityLabel": "Tetapkan semula {{name}} kepada lalai pelayan, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Tindakan lain",
+      "openMenuAction": "Buka menu mesej"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Salin",
+        "copyAsMarkdown": "Salin sebagai Markdown",
+        "copyImageUrl": "Salin URL imej",
+        "copyImageUrls": "Salin {{count}} URL imej"
+      },
+      "accessibility": {
+        "bulletPoint": "Titik bulet",
+        "nestedBulletPoint": "Titik bulet bersarang",
+        "orderedItem": "Item senarai {{n}}",
+        "nestedOrderedItem": "Item senarai bersarang {{n}}",
+        "quote": "Petikan blok",
+        "nestedQuote": "Petikan blok bersarang",
+        "tableRow": "Baris {{n}}: {{content}}",
+        "rotorHeadings": "Tajuk",
+        "rotorLinks": "Pautan",
+        "rotorImages": "Imej"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Pantas dimulakan dan ringan penggunaan RAM. Bahasa Inggeris sahaja.",
     "enginePhononCredit": "Model dan suara oleh Gradium (Apache-2.0), dibina di atas Mimi daripada Kyutai.",
-    "engineTierNatural": "bahasa Inggeris semula jadi"
+    "engineTierNatural": "bahasa Inggeris semula jadi",
+    "systemNeedsInternet": "Perlu internet",
+    "systemVoiceNumber": "Suara {{number}}",
+    "systemQualityEnhanced": "Dipertingkat",
+    "systemVoiceModeHint": "Suara sistem tidak boleh bercakap dalam mod suara.",
+    "systemOnDeviceSection": "Pada telefon ini",
+    "systemLanguagesLabel": "Bahasa",
+    "systemGetMoreVoices": "Dapatkan lebih banyak suara",
+    "systemNoVoicesForLanguage": "Belum ada suara {{language}} pada telefon ini.",
+    "systemIosSettingsHint": "Tambah suara dalam Settings > Accessibility > Spoken Content > Voices.",
+    "systemLanguageSheetTitle": "Bahasa suara",
+    "systemLanguageSearchPlaceholder": "Cari bahasa"
   },
   "onboarding": {
     "back": "Kembali",
