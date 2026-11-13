@@ -250,16 +250,16 @@
     "localApiServer": {
       "title": "سرور API محلی",
       "enable": "ارائه مدل بارگذاری‌شده",
-      "enableDescription": "به برنامه‌های دیگر اجازه می‌دهد از مدل بارگذاری‌شده با یک API سازگار با OpenAI استفاده کنند. درخواست‌ها در همان صف چت‌های شما نوبت می‌گیرند.",
+      "enableDescription": "به برنامه‌های دیگر اجازه می‌دهد از طریق یک API سازگار با OpenAI از مدل بارگذاری‌شده استفاده کنند. درخواست‌ها با چت‌های شما در یک صف قرار می‌گیرند.",
       "starting": "در حال راه‌اندازی…",
       "url": "آدرس سرور",
       "copyUrl": "کپی آدرس",
       "servedModel": "در حال ارائه {{model}}",
       "noModel": "هیچ مدلی بارگذاری نشده. تا مدلی را بارگذاری نکنید، درخواست‌ها با خطا برمی‌گردند.",
       "port": "پورت",
-      "portInvalid": "پورتی بین 1024 تا 65535 وارد کنید",
+      "portInvalid": "پورتی در بازه 1024 تا 65535 وارد کنید",
       "lan": "اجازه دسترسی برای دستگاه‌های دیگر شبکه",
-      "lanWarning": "سرور روی همه شبکه‌هایی که این گوشی به آن‌ها وصل است در دسترس است: Wi-Fi، داده تلفن همراه، هات‌اسپات و VPN. برای محدود کردن اینکه چه کسی می‌تواند از آن استفاده کند، یک کلید API تنظیم کنید.",
+      "lanWarning": "سرور روی هر شبکه‌ای که این گوشی به آن وصل باشد در دسترس است: Wi-Fi، داده تلفن همراه، هات‌اسپات و VPN. برای محدود کردن دسترسی، یک کلید API تنظیم کنید.",
       "notOnWifi": "به Wi-Fi وصل نیستید، پس آدرس شبکه نمایش داده نمی‌شود.",
       "apiKey": "کلید API",
       "apiKeySet": "درخواست‌ها باید این کلید را ارسال کنند",
@@ -1126,6 +1126,30 @@
       "usingServerDefaultUnreported": "استفاده از پیش‌فرض سرور (گزارش نشده)",
       "resetToServerDefault": "پیش‌فرض سرور: {{value}} · بازنشانی",
       "resetToServerDefaultAccessibilityLabel": "بازنشانی {{name}} به پیش‌فرض سرور، {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "گزینه‌های بیشتر",
+      "openMenuAction": "باز کردن منوی پیام"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "کپی",
+        "copyAsMarkdown": "کپی به‌صورت Markdown",
+        "copyImageUrl": "کپی آدرس تصویر",
+        "copyImageUrls": "کپی آدرس‌های {{count}} تصویر"
+      },
+      "accessibility": {
+        "bulletPoint": "مورد فهرست",
+        "nestedBulletPoint": "مورد فهرست تودرتو",
+        "orderedItem": "مورد فهرست {{n}}",
+        "nestedOrderedItem": "مورد فهرست تودرتو {{n}}",
+        "quote": "نقل‌قول",
+        "nestedQuote": "نقل‌قول تودرتو",
+        "tableRow": "ردیف {{n}}: {{content}}",
+        "rotorHeadings": "سرتیترها",
+        "rotorLinks": "لینک‌ها",
+        "rotorImages": "تصاویر"
+      }
     }
   },
   "palsScreen": {
@@ -1610,7 +1634,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "شروع سریع و مصرف کم RAM. فقط انگلیسی.",
     "enginePhononCredit": "مدل و صداها از Gradium (Apache-2.0)، بر پایه Mimi از Kyutai.",
-    "engineTierNatural": "انگلیسی طبیعی"
+    "engineTierNatural": "انگلیسی طبیعی",
+    "systemNeedsInternet": "نیاز به اینترنت",
+    "systemVoiceNumber": "صدای {{number}}",
+    "systemQualityEnhanced": "بهبودیافته",
+    "systemVoiceModeHint": "صداهای سیستمی در حالت صوتی نمی‌توانند صحبت کنند.",
+    "systemOnDeviceSection": "روی این گوشی",
+    "systemLanguagesLabel": "زبان‌ها",
+    "systemGetMoreVoices": "دریافت صداهای بیشتر",
+    "systemNoVoicesForLanguage": "هنوز هیچ صدای {{language}} روی این گوشی نیست.",
+    "systemIosSettingsHint": "صداها را از مسیر Settings > Accessibility > Spoken Content > Voices اضافه کنید.",
+    "systemLanguageSheetTitle": "زبان صدا",
+    "systemLanguageSearchPlaceholder": "جستجوی زبان‌ها"
   },
   "htmlPreview": {
     "defaultTitle": "پیش‌نمایش",
