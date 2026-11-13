@@ -1126,6 +1126,30 @@
       "importPals": "‏استيراد الرفاق",
       "importSuccess": "تم استيراد {{count}} رفيق بنجاح.",
       "importError": "تعذّر استيراد الرفاق. يرجى التحقق من تنسيق الملف."
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "مزيد من الإجراءات",
+      "openMenuAction": "فتح قائمة الرسالة"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "نسخ",
+        "copyAsMarkdown": "نسخ بصيغة Markdown",
+        "copyImageUrl": "نسخ عنوان URL للصورة",
+        "copyImageUrls": "نسخ عناوين URL للصور ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "نقطة تعداد",
+        "nestedBulletPoint": "نقطة تعداد متداخلة",
+        "orderedItem": "عنصر القائمة {{n}}",
+        "nestedOrderedItem": "عنصر قائمة متداخلة {{n}}",
+        "quote": "اقتباس",
+        "nestedQuote": "اقتباس متداخل",
+        "tableRow": "الصف {{n}}: {{content}}",
+        "rotorHeadings": "العناوين",
+        "rotorLinks": "الروابط",
+        "rotorImages": "الصور"
+      }
     }
   },
   "palsScreen": {
@@ -1618,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "سريع في البدء وخفيف على ذاكرة RAM. بالإنجليزية فقط.",
     "enginePhononCredit": "النموذج والأصوات من Gradium (Apache-2.0)، مبنية على Mimi من Kyutai.",
-    "engineTierNatural": "إنجليزية طبيعية"
+    "engineTierNatural": "إنجليزية طبيعية",
+    "systemNeedsInternet": "يتطلب إنترنت",
+    "systemVoiceNumber": "صوت {{number}}",
+    "systemQualityEnhanced": "مُحسَّن",
+    "systemVoiceModeHint": "أصوات النظام لا تعمل في الوضع الصوتي.",
+    "systemOnDeviceSection": "على هذا الهاتف",
+    "systemLanguagesLabel": "اللغات",
+    "systemGetMoreVoices": "احصل على مزيد من الأصوات",
+    "systemNoVoicesForLanguage": "لا توجد أصوات {{language}} على هذا الهاتف بعد.",
+    "systemIosSettingsHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > المحتوى المنطوق > الأصوات.",
+    "systemLanguageSheetTitle": "لغة الصوت",
+    "systemLanguageSearchPlaceholder": "البحث في اللغات"
   },
   "onboarding": {
     "back": "رجوع",
