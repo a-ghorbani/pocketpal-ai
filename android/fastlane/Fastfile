@@ -1,17 +1,18 @@
 default_platform :android
 
 platform :android do
-  desc "Build the Android release APK and AAB"
-  lane :build_android_release do
-    android_dir = File.expand_path('..', Dir.pwd)
-
-    # Create google-services.json from GitHub secret
+  private_lane :write_google_services do
     File.write(
-      File.join(android_dir, "app/google-services.json"),
+      File.join(File.expand_path('..', Dir.pwd), "app/google-services.json"),
       ENV["GOOGLE_SERVICES_JSON"]
     )
+  end
 
-    # Build APK for GitHub Release.
+  desc "Build the Android release APK for the GitHub Release"
+  lane :build_android_apk do
+    android_dir = File.expand_path('..', Dir.pwd)
+    write_google_services
+
     # flavor: "prod" is MANDATORY — task: "assemble" is a gradle meta-task
     # that, post-flavor, would build both prodRelease AND e2eRelease
     # (variantFilter kills e2eRelease but the meta-task would still run
@@ -33,6 +34,12 @@ platform :android do
         "android.injected.signing.key.password" => ENV["KEY_PASSWORD"]
       }
     )
+  end
+
+  desc "Build the Android release AAB for Google Play"
+  lane :build_android_aab do
+    android_dir = File.expand_path('..', Dir.pwd)
+    write_google_services
 
     # Build Bundle for Play Store (same reasoning — pin to prod flavor).
     gradle(
