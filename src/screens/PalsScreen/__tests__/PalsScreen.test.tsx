@@ -655,6 +655,28 @@ describe('PalsScreen', () => {
       expect(purchaseStore.restore).toHaveBeenCalled();
     });
 
+    describe('in a non-store build', () => {
+      beforeEach(() => {
+        (global as any).__PLUS_STORE_GATE__ = false;
+      });
+
+      afterEach(() => {
+        (global as any).__PLUS_STORE_GATE__ = true;
+      });
+
+      it('hides the restore row when billing is ready', () => {
+        runInAction(() => {
+          purchaseStore.availability = 'ready';
+        });
+        const {queryByTestId} = render(<PalsScreen />, {
+          withNavigation: true,
+          withSafeArea: true,
+          withBottomSheetProvider: true,
+        });
+        expect(queryByTestId('restore-purchases-row')).toBeNull();
+      });
+    });
+
     it.each(['initializing', 'unavailable'])(
       'hides the restore row while billing is %s',
       availability => {

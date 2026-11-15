@@ -210,3 +210,37 @@ describe('PurchasesCard', () => {
     );
   });
 });
+
+describe('PurchasesCard in a non-store build', () => {
+  beforeEach(() => {
+    (global as any).__PLUS_STORE_GATE__ = false;
+    (authService as any).isAuthenticated = false;
+    runInAction(() => {
+      (purchaseStore as any).reset();
+      purchaseStore.availability = 'ready';
+    });
+  });
+
+  afterEach(() => {
+    (global as any).__PLUS_STORE_GATE__ = true;
+  });
+
+  it('hides Settings › Purchases and its Restore button when billing is ready', () => {
+    const {queryByTestId} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    expect(queryByTestId('purchases-card')).toBeNull();
+    expect(queryByTestId('settings-restore-purchases')).toBeNull();
+  });
+
+  it('hides Settings › Purchases with store-owned records while billing is unavailable', () => {
+    runInAction(() => {
+      purchaseStore.availability = 'unavailable';
+      (purchaseStore as any).needsLink = true;
+      purchaseStore.linkConflict = true;
+    });
+    setRecords(rec('a', 'active'), rec('b', 'held_invalid'));
+    const {queryByTestId} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    expect(queryByTestId('purchases-card')).toBeNull();
+    expect(queryByTestId('purchase-row-a')).toBeNull();
+    expect(queryByTestId('settings-link-purchases')).toBeNull();
+  });
+});

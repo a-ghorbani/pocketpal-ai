@@ -48,6 +48,7 @@ import {
 
 // Services and stores
 import {authService, syncService} from '../../services';
+import {isStoreBuild} from '../../services/plus/gate';
 import {palStore, purchaseStore, Pal} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
@@ -324,7 +325,7 @@ export const PalsScreen: React.FC = observer(() => {
   );
 
   const restoreRow =
-    purchaseStore.availability === 'ready' ? (
+    isStoreBuild() && purchaseStore.availability === 'ready' ? (
       <Button
         testID="restore-purchases-row"
         mode="text"
