@@ -220,6 +220,31 @@ test('a model report at the root alone is left as written', () => {
   }
 });
 
+test('a truncated or non-list model report is left out of the merge', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-test-'));
+  try {
+    const runs: Record<string, string> = {
+      'model-a': JSON.stringify([{model: 'model-a'}]),
+      'model-b': '[{"model":"model-b"',
+      'model-c': JSON.stringify({model: 'model-c'}),
+    };
+    for (const [model, content] of Object.entries(runs)) {
+      fs.mkdirSync(path.join(dir, model));
+      fs.writeFileSync(
+        path.join(dir, model, 'all-models-report.json'),
+        content,
+      );
+    }
+    mergeModelReports(dir);
+    const merged = JSON.parse(
+      fs.readFileSync(path.join(dir, 'all-models-report.json'), 'utf8'),
+    );
+    assert.deepEqual(merged, [{model: 'model-a'}]);
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
+
 // The runner is driven as a CLI with only `npx wdio` stubbed. The stub writes
 // where wdio would: JUnit to DEVICEFARM_LOG_DIR (the junit reporter's
 // outputDir) and a screenshot to DEVICEFARM_SCREENSHOT_PATH.
@@ -423,6 +448,57 @@ test('local mode keeps each run under --report-dir', {timeout: 300000}, () => {
     }
   }
 });
+
+test(
+  'local mode reports under e2e/reports even with DEVICEFARM_LOG_DIR set',
+  {timeout: 300000},
+  () => {
+    const before = reportDirEntries();
+    const dfLog = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-df-log-'));
+    let tmp = '';
+    try {
+      const run = runRunner(
+        [
+          '--platform',
+          'android',
+          '--each-model',
+          '--mode',
+          'local',
+          '--skip-build',
+        ],
+        {DEVICEFARM_LOG_DIR: dfLog},
+      );
+      tmp = run.tmp;
+      assert.equal(
+        run.result.status,
+        0,
+        run.result.stderr || run.result.stdout,
+      );
+      assert.ok(run.calls.length > 1, 'expected one wdio run per model');
+      const created = [...reportDirEntries()].filter(e => !before.has(e));
+      assert.equal(created.length, 1, `new report dirs: ${created}`);
+      const reportDir = path.join(REPORTS_DIR, created[0]);
+      for (const call of run.calls) {
+        assert.ok(isInside(call.logDir, reportDir), call.logDir);
+      }
+      assert.ok(fs.existsSync(path.join(reportDir, 'junit-results.xml')));
+      assert.deepEqual(listFiles(dfLog), []);
+    } finally {
+      for (const entry of reportDirEntries()) {
+        if (!before.has(entry)) {
+          fs.rmSync(path.join(REPORTS_DIR, entry), {
+            recursive: true,
+            force: true,
+          });
+        }
+      }
+      fs.rmSync(dfLog, {recursive: true, force: true});
+      if (tmp) {
+        fs.rmSync(tmp, {recursive: true, force: true});
+      }
+    }
+  },
+);
 
 test(
   'device-farm mode keeps each run under an explicit --report-dir',
