@@ -1647,7 +1647,8 @@
     "systemLanguageSearchPlaceholder": "搜索语言",
     "speakingNotificationTitle": "PocketPal 正在朗读",
     "speakingNotificationStop": "停止",
-    "speakingNotificationChannel": "朗读"
+    "speakingNotificationChannel": "朗读",
+    "systemIosReadAndSpeakHint": "添加语音：设置 > 辅助功能 > 阅读与朗读 > 声音。"
   },
   "htmlPreview": {
     "defaultTitle": "预览",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "继续免费打字",
     "voiceRowFileMissing": "{{voice}} 还没有下载，点击“继续”即可下载。",
     "voiceRowFileFailed": "无法下载 {{voice}}，请连接网络后重试。",
-    "memoryNeededOfTotal": "{{needed}}，这部手机共 {{total}}"
+    "memoryNeededOfTotal": "{{needed}}，这部手机共 {{total}}",
+    "voiceRowChoose": "选择用于朗读回复的语音。"
   }
 }
