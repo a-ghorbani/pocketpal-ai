@@ -1652,7 +1652,10 @@
     "systemNoVoicesForLanguage": "لا توجد أصوات {{language}} على هذا الهاتف بعد.",
     "systemIosSettingsHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > المحتوى المنطوق > الأصوات.",
     "systemLanguageSheetTitle": "لغة الصوت",
-    "systemLanguageSearchPlaceholder": "البحث في اللغات"
+    "systemLanguageSearchPlaceholder": "البحث في اللغات",
+    "speakingNotificationTitle": "PocketPal يتحدّث",
+    "speakingNotificationStop": "إيقاف",
+    "speakingNotificationChannel": "الكلام"
   },
   "onboarding": {
     "back": "رجوع",
@@ -1888,7 +1891,7 @@
     "memoryTightTitle": "الذاكرة محدودة",
     "memoryTightBody": "يُبقي الوضع الصوتي ثلاثة نماذج محمّلة في الوقت نفسه. قد يكون ذلك بطيئًا على هذا الهاتف، أو قد يُغلق التطبيق.",
     "memoryWontFitTitle": "الذاكرة غير كافية",
-    "memoryWontFitBody": "لا تتسع الذاكرة للتعرّف على الكلام مع نموذج الدردشة هذا. اختر نموذجًا أصغر لاستخدام الوضع الصوتي.",
+    "memoryWontFitBody": "تحتاج هذه النماذج إلى ذاكرة أكبر مما يمتلكه هذا الهاتف. اختر نموذجًا أصغر لاستخدام الوضع الصوتي.",
     "memoryChatRow": "نموذج الدردشة · {{name}}",
     "memorySttRowModel": "التعرّف على الكلام · Whisper {{tier}}",
     "memoryVoiceRow": "الصوت · {{name}}",
