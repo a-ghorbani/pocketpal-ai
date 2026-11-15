@@ -1644,7 +1644,10 @@
     "systemNoVoicesForLanguage": "Belum ada suara bahasa {{language}} di ponsel ini.",
     "systemIosSettingsHint": "Tambahkan suara di Pengaturan > Aksesibilitas > Konten Terucap > Suara.",
     "systemLanguageSheetTitle": "Bahasa suara",
-    "systemLanguageSearchPlaceholder": "Cari bahasa"
+    "systemLanguageSearchPlaceholder": "Cari bahasa",
+    "speakingNotificationTitle": "PocketPal sedang berbicara",
+    "speakingNotificationStop": "Hentikan",
+    "speakingNotificationChannel": "Ucapan"
   },
   "htmlPreview": {
     "defaultTitle": "Pratinjau",
@@ -1778,7 +1781,7 @@
     "errorPermissionBlocked": "Akses mikrofon diblokir. Aktifkan di Pengaturan.",
     "errorTranscribeFailed": "Tidak dapat mentranskripsikan — silakan coba lagi.",
     "errorNotInstalled": "Unduh model suara untuk menggunakan input suara.",
-    "errorInsufficientMemory": "Memori tidak cukup untuk input suara dengan model obrolan ini. Coba model yang lebih kecil.",
+    "errorInsufficientMemory": "Model obrolan ini dan input suara memerlukan lebih banyak memori daripada yang tersedia di ponsel ini. Coba model yang lebih kecil.",
     "errorMicUnavailable": "Mikrofon tidak merespons. Coba lagi, atau ganti ke model obrolan yang lebih kecil.",
     "errorTranscriptPartial": "Sebagian dikte Anda tidak dapat ditranskripsikan.",
     "openSettingsLabel": "Buka Pengaturan",
@@ -1888,7 +1891,7 @@
     "memoryTightTitle": "Memori terbatas",
     "memoryTightBody": "Mode suara memuat tiga model sekaligus. Di ponsel ini bisa jadi lambat, atau aplikasi bisa tertutup.",
     "memoryWontFitTitle": "Memori tidak cukup",
-    "memoryWontFitBody": "Pengenalan ucapan tidak akan muat bersama model obrolan ini. Pilih model yang lebih kecil untuk memakai mode suara.",
+    "memoryWontFitBody": "Model-model ini memerlukan lebih banyak memori daripada yang tersedia di ponsel ini. Pilih model yang lebih kecil untuk memakai mode suara.",
     "memoryChatRow": "Model obrolan · {{name}}",
     "memorySttRowModel": "Pengenalan ucapan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
