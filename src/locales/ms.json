@@ -1652,7 +1652,10 @@
     "systemNoVoicesForLanguage": "Belum ada suara {{language}} pada telefon ini.",
     "systemIosSettingsHint": "Tambah suara dalam Settings > Accessibility > Spoken Content > Voices.",
     "systemLanguageSheetTitle": "Bahasa suara",
-    "systemLanguageSearchPlaceholder": "Cari bahasa"
+    "systemLanguageSearchPlaceholder": "Cari bahasa",
+    "speakingNotificationTitle": "PocketPal sedang bercakap",
+    "speakingNotificationStop": "Hentikan",
+    "speakingNotificationChannel": "Pertuturan"
   },
   "onboarding": {
     "back": "Kembali",
@@ -1778,7 +1781,7 @@
     "errorPermissionBlocked": "Capaian mikrofon disekat. Dayakannya dalam Tetapan.",
     "errorTranscribeFailed": "Tidak dapat menukar kepada teks — sila cuba lagi.",
     "errorNotInstalled": "Muat turun model suara untuk menggunakan input suara.",
-    "errorInsufficientMemory": "Memori tidak mencukupi untuk input suara dengan model sembang ini. Cuba model yang lebih kecil.",
+    "errorInsufficientMemory": "Model sembang ini dan input suara memerlukan lebih banyak memori daripada yang ada pada telefon ini. Cuba model yang lebih kecil.",
     "errorMicUnavailable": "Mikrofon tidak bertindak balas. Cuba lagi, atau tukar ke model sembang yang lebih kecil.",
     "errorTranscriptPartial": "Sebahagian pertuturan anda tidak dapat ditukar kepada teks.",
     "openSettingsLabel": "Buka Tetapan",
@@ -1888,7 +1891,7 @@
     "memoryTightTitle": "Memori terhad",
     "memoryTightBody": "Mod suara memuatkan tiga model serentak. Pada telefon ini ia mungkin perlahan, atau aplikasi mungkin ditutup.",
     "memoryWontFitTitle": "Memori tidak mencukupi",
-    "memoryWontFitBody": "Pengecaman pertuturan tidak dapat dimuatkan bersama model sembang ini. Pilih model yang lebih kecil untuk menggunakan mod suara.",
+    "memoryWontFitBody": "Model-model ini memerlukan lebih banyak memori daripada yang ada pada telefon ini. Pilih model yang lebih kecil untuk menggunakan mod suara.",
     "memoryChatRow": "Model sembang · {{name}}",
     "memorySttRowModel": "Pengecaman pertuturan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
