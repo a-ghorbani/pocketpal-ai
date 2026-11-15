@@ -771,6 +771,30 @@
       "usingServerDefaultUnreported": "使用伺服器預設值（未回報）",
       "resetToServerDefault": "伺服器預設值：{{value}} · 重置",
       "resetToServerDefaultAccessibilityLabel": "將 {{name}} 重置為伺服器預設值，{{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "更多操作",
+      "openMenuAction": "開啟訊息選單"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "複製",
+        "copyAsMarkdown": "複製為 Markdown",
+        "copyImageUrl": "複製圖片網址",
+        "copyImageUrls": "複製 {{count}} 個圖片網址"
+      },
+      "accessibility": {
+        "bulletPoint": "項目符號",
+        "nestedBulletPoint": "巢狀項目符號",
+        "orderedItem": "列表項目 {{n}}",
+        "nestedOrderedItem": "巢狀列表項目 {{n}}",
+        "quote": "引述",
+        "nestedQuote": "巢狀引述",
+        "tableRow": "第 {{n}} 列：{{content}}",
+        "rotorHeadings": "標題",
+        "rotorLinks": "連結",
+        "rotorImages": "圖片"
+      }
     }
   },
   "feedback": {
@@ -974,6 +998,12 @@
         "memoryWarningButton": "顯示記憶體警告細節",
         "integrityWarningButton": "顯示完整性警告細節",
         "memoryWarningSnackbar": "記憶體警告通知"
+      },
+      "projectorOffer": {
+        "rowTitle": "視覺功能需要投影模型",
+        "download": "下載",
+        "downloading": "正在下載投影模型 · {{progress}}%",
+        "a11yWithSize": "下載投影模型，{{size}}"
       }
     },
     "modelSettings": {
@@ -1292,6 +1322,39 @@
       "signInAgain": "請重新登入",
       "creatorSupport": "創作者帳號將由我們的支援團隊刪除：{{contact}}",
       "failed": "無法刪除，請再試一次"
+    },
+    "localApiServer": {
+      "title": "本地 API 伺服器",
+      "enable": "對外提供已載入的模型",
+      "enableDescription": "讓其他應用程式透過 OpenAI 相容 API 使用已載入的模型。請求會和您的對話一起排隊，依序處理。",
+      "starting": "正在啟動…",
+      "url": "伺服器網址",
+      "copyUrl": "複製網址",
+      "servedModel": "正在對外提供 {{model}}",
+      "noModel": "尚未載入模型。載入模型前，所有請求都會失敗。",
+      "port": "連接埠",
+      "portInvalid": "請使用 1024 到 65535 之間的連接埠",
+      "lan": "允許網路上的其他裝置連線",
+      "lanWarning": "這台手機連上的每個網路都能存取此伺服器：Wi-Fi、行動數據、熱點和 VPN。請設定 API 金鑰，限制誰可以使用。",
+      "notOnWifi": "目前未連上 Wi-Fi，因此不會顯示區域網路的網址。",
+      "apiKey": "API 金鑰",
+      "apiKeySet": "請求必須附上這組金鑰",
+      "apiKeyNotSet": "未設定金鑰：除了瀏覽器頁面以外，任何連得上此伺服器的應用程式都能使用它。",
+      "setApiKey": "設定金鑰",
+      "clearApiKey": "清除金鑰",
+      "apiKeyPlaceholder": "輸入 API 金鑰",
+      "stopToEdit": "請先關閉伺服器，才能變更這些設定。",
+      "lockedHint": "Plus 功能。開啟詳細說明。",
+      "teaserTitle": "本地 API 伺服器是 Plus 功能",
+      "teaserBody": "讓其他應用程式使用這台手機上已載入的模型。",
+      "teaserGetPlus": "取得 Plus",
+      "teaserNotNow": "現在不用",
+      "errors": {
+        "portInUse": "連接埠 {{port}} 已被使用。請關閉伺服器，並改用其他連接埠。",
+        "listenFailed": "伺服器無法啟動。請將它關閉再開啟，或改用其他連接埠。",
+        "stoppedListening": "伺服器意外停止。請將它關閉再開啟。",
+        "keyUnavailable": "無法讀取 API 金鑰。請解鎖手機，然後將伺服器關閉再開啟。"
+      }
     }
   },
   "storage": {
@@ -1571,7 +1634,18 @@
     "enginePhononTagline": "啟動快速且記憶體佔用低。僅支援英文。",
     "enginePhononCredit": "模型與語音由 Gradium 提供（採用 Apache-2.0 授權），建構於 Kyutai 的 Mimi 之上。",
     "engineTierNatural": "自然英語",
-    "engineChipPhonon": "Phonon"
+    "engineChipPhonon": "Phonon",
+    "systemNeedsInternet": "需要網路",
+    "systemVoiceNumber": "語音 {{number}}",
+    "systemQualityEnhanced": "增強",
+    "systemVoiceModeHint": "系統語音無法在語音模式中朗讀。",
+    "systemOnDeviceSection": "這台手機上",
+    "systemLanguagesLabel": "語言",
+    "systemGetMoreVoices": "取得更多語音",
+    "systemNoVoicesForLanguage": "這台手機上還沒有{{language}}語音。",
+    "systemIosSettingsHint": "請在「設定 > 輔助使用 > 朗讀內容 > 語音」中新增語音。",
+    "systemLanguageSheetTitle": "語音語言",
+    "systemLanguageSearchPlaceholder": "搜尋語言"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",

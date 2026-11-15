@@ -246,6 +246,39 @@
       "signInAgain": "אנא התחבר שוב",
       "creatorSupport": "חשבונות יוצרים נמחקים על ידי צוות התמיכה שלנו: {{contact}}",
       "failed": "המחיקה נכשלה, נסה שוב"
+    },
+    "localApiServer": {
+      "title": "שרת API מקומי",
+      "enable": "אפשר גישה למודל הטעון",
+      "enableDescription": "מאפשר לאפליקציות אחרות להשתמש במודל הטעון דרך API תואם OpenAI. הבקשות ממתינות בתור יחד עם הצ'אטים שלך.",
+      "starting": "מתחיל…",
+      "url": "כתובת השרת",
+      "copyUrl": "העתק URL",
+      "servedModel": "מגיש את {{model}}",
+      "noModel": "אין מודל טעון. הבקשות ייכשלו עד שתטען מודל.",
+      "port": "פורט",
+      "portInvalid": "בחר פורט בין 1024 ל-65535",
+      "lan": "אפשר חיבור ממכשירים אחרים ברשת",
+      "lanWarning": "השרת נגיש בכל רשת שהטלפון מחובר אליה: Wi-Fi, נתונים סלולריים, נקודה חמה ו-VPN. הגדר מפתח API כדי להגביל מי יכול להשתמש בו.",
+      "notOnWifi": "אין חיבור Wi-Fi, ולכן לא מוצגת כתובת ברשת.",
+      "apiKey": "מפתח API",
+      "apiKeySet": "כל בקשה חייבת לכלול את המפתח הזה",
+      "apiKeyNotSet": "אין מפתח: כל אפליקציה שמצליחה להגיע לשרת יכולה להשתמש בו, חוץ מדפים בדפדפן.",
+      "setApiKey": "הגדר מפתח",
+      "clearApiKey": "מחק מפתח",
+      "apiKeyPlaceholder": "הזן מפתח API",
+      "stopToEdit": "כבה את השרת כדי לשנות את ההגדרות האלה.",
+      "lockedHint": "תכונת Plus. פתיחת פרטים.",
+      "teaserTitle": "שרת API מקומי הוא תכונת Plus",
+      "teaserBody": "תן לאפליקציות אחרות להשתמש במודל שטעון בטלפון הזה.",
+      "teaserGetPlus": "קבל את Plus",
+      "teaserNotNow": "לא עכשיו",
+      "errors": {
+        "portInUse": "פורט {{port}} כבר בשימוש. כבה את השרת ובחר פורט אחר.",
+        "listenFailed": "לא הצלחנו להפעיל את השרת. כבה והפעל אותו שוב, או בחר פורט אחר.",
+        "stoppedListening": "השרת נעצר באופן לא צפוי. כבה והפעל אותו שוב.",
+        "keyUnavailable": "לא הצלחנו לקרוא את מפתח ה-API. שחרר את נעילת הטלפון, ואז כבה והפעל את השרת שוב."
+      }
     }
   },
   "memory": {
@@ -456,6 +489,12 @@
         "memoryWarningButton": "הצג פרטי אזהרת זיכרון",
         "integrityWarningButton": "הצג פרטי אזהרת תקינות",
         "memoryWarningSnackbar": "הודעת אזהרת זיכרון"
+      },
+      "projectorOffer": {
+        "rowTitle": "לראייה נדרש מודל שכבת התאמה",
+        "download": "הורדה",
+        "downloading": "מוריד מודל שכבת התאמה · {{progress}}%",
+        "a11yWithSize": "הורד מודל שכבת התאמה, {{size}}"
       }
     },
     "modelSettings": {
@@ -1087,6 +1126,30 @@
       "usingServerDefaultUnreported": "שימוש בברירת המחדל של השרת (לא מדווח)",
       "resetToServerDefault": "ברירת המחדל של השרת: {{value}} · איפוס",
       "resetToServerDefaultAccessibilityLabel": "אפס את {{name}} לברירת המחדל של השרת, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "פעולות נוספות",
+      "openMenuAction": "פתיחת תפריט ההודעה"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "העתק",
+        "copyAsMarkdown": "העתק כ-Markdown",
+        "copyImageUrl": "העתק URL של תמונה",
+        "copyImageUrls": "העתק {{count}} כתובות URL של תמונות"
+      },
+      "accessibility": {
+        "bulletPoint": "תבליט",
+        "nestedBulletPoint": "תבליט מקונן",
+        "orderedItem": "פריט ברשימה {{n}}",
+        "nestedOrderedItem": "פריט ברשימה מקוננת {{n}}",
+        "quote": "ציטוט",
+        "nestedQuote": "ציטוט מקונן",
+        "tableRow": "שורה {{n}}: {{content}}",
+        "rotorHeadings": "כותרות",
+        "rotorLinks": "קישורים",
+        "rotorImages": "תמונות"
+      }
     }
   },
   "palsScreen": {
@@ -1579,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "מהיר להפעלה וחסכוני בזיכרון RAM. אנגלית בלבד.",
     "enginePhononCredit": "המודל והקולות מאת Gradium (Apache-2.0), מבוסס על Mimi של Kyutai.",
-    "engineTierNatural": "אנגלית טבעית"
+    "engineTierNatural": "אנגלית טבעית",
+    "systemNeedsInternet": "דורש אינטרנט",
+    "systemVoiceNumber": "קול {{number}}",
+    "systemQualityEnhanced": "משופר",
+    "systemVoiceModeHint": "קולות מערכת לא עובדים במצב הקולי.",
+    "systemOnDeviceSection": "בטלפון הזה",
+    "systemLanguagesLabel": "שפות",
+    "systemGetMoreVoices": "הורד קולות נוספים",
+    "systemNoVoicesForLanguage": "עדיין אין קולות בשפה {{language}} בטלפון הזה.",
+    "systemIosSettingsHint": "הוסף קולות בהגדרות > נגישות > תוכן מדובר > קולות.",
+    "systemLanguageSheetTitle": "שפת הקול",
+    "systemLanguageSearchPlaceholder": "חפש שפות"
   },
   "onboarding": {
     "back": "חזרה",

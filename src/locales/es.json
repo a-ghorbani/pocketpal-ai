@@ -246,6 +246,39 @@
       "signInAgain": "Vuelve a iniciar sesión",
       "creatorSupport": "Las cuentas de creador las elimina nuestro equipo de soporte: {{contact}}",
       "failed": "No se pudo eliminar, inténtalo de nuevo"
+    },
+    "localApiServer": {
+      "title": "Servidor de API local",
+      "enable": "Servir el modelo cargado",
+      "enableDescription": "Permite que otras aplicaciones usen el modelo cargado a través de una API compatible con OpenAI. Las solicitudes esperan su turno junto con tus chats.",
+      "starting": "Iniciando…",
+      "url": "URL del servidor",
+      "copyUrl": "Copiar URL",
+      "servedModel": "Sirviendo {{model}}",
+      "noModel": "No hay ningún modelo cargado. Las solicitudes fallarán hasta que cargues uno.",
+      "port": "Puerto",
+      "portInvalid": "Usa un puerto entre 1024 y 65535",
+      "lan": "Permitir el acceso desde otros dispositivos de la red",
+      "lanWarning": "Se puede acceder al servidor desde cualquier red a la que esté conectado este teléfono: Wi-Fi, datos móviles, punto de acceso y VPN. Establece una clave de API para limitar quién puede usarlo.",
+      "notOnWifi": "No estás conectado a una red Wi-Fi, así que no se muestra ninguna URL de red.",
+      "apiKey": "Clave de API",
+      "apiKeySet": "Las solicitudes deben enviar esta clave",
+      "apiKeyNotSet": "Sin clave: cualquier aplicación que pueda acceder al servidor puede usarlo, excepto las páginas del navegador.",
+      "setApiKey": "Establecer clave",
+      "clearApiKey": "Borrar clave",
+      "apiKeyPlaceholder": "Introduce una clave de API",
+      "stopToEdit": "Desactiva el servidor para cambiar estos ajustes.",
+      "lockedHint": "Función Plus. Abre los detalles.",
+      "teaserTitle": "El servidor de API local es una función Plus",
+      "teaserBody": "Deja que otras aplicaciones usen el modelo cargado en este teléfono.",
+      "teaserGetPlus": "Obtener Plus",
+      "teaserNotNow": "Ahora no",
+      "errors": {
+        "portInUse": "El puerto {{port}} ya está en uso. Desactiva el servidor y elige otro puerto.",
+        "listenFailed": "No se ha podido iniciar el servidor. Desactívalo y vuelve a activarlo, o elige otro puerto.",
+        "stoppedListening": "El servidor se ha detenido de forma inesperada. Desactívalo y vuelve a activarlo.",
+        "keyUnavailable": "No se ha podido leer la clave de API. Desbloquea el teléfono; después, desactiva el servidor y vuelve a activarlo."
+      }
     }
   },
   "memory": {
@@ -465,6 +498,12 @@
         "downloadProjectionModel": "Descargar modelo de proyección",
         "viewModelCardOnHuggingFace": "Ver ficha del modelo en Hugging Face",
         "draftOnlyReason": "Modelo exclusivo para borrador. Selecciónalo en Ajustes → Decodificación especulativa."
+      },
+      "projectorOffer": {
+        "rowTitle": "La visión necesita su modelo de proyección",
+        "download": "Descargar",
+        "downloading": "Descargando el modelo de proyección · {{progress}}%",
+        "a11yWithSize": "Descargar el modelo de proyección, {{size}}"
       }
     },
     "modelSettings": {
@@ -1087,6 +1126,30 @@
       "usingServerDefaultUnreported": "Usando el valor predeterminado del servidor (no indicado)",
       "resetToServerDefault": "Predeterminado del servidor: {{value}} · Restablecer",
       "resetToServerDefaultAccessibilityLabel": "Restablecer {{name}} al valor predeterminado del servidor, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Más acciones",
+      "openMenuAction": "Abrir el menú del mensaje"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Copiar",
+        "copyAsMarkdown": "Copiar como Markdown",
+        "copyImageUrl": "Copiar URL de la imagen",
+        "copyImageUrls": "Copiar {{count}} URL de imágenes"
+      },
+      "accessibility": {
+        "bulletPoint": "Viñeta",
+        "nestedBulletPoint": "Viñeta anidada",
+        "orderedItem": "Elemento de lista {{n}}",
+        "nestedOrderedItem": "Elemento de lista anidada {{n}}",
+        "quote": "Cita",
+        "nestedQuote": "Cita anidada",
+        "tableRow": "Fila {{n}}: {{content}}",
+        "rotorHeadings": "Encabezados",
+        "rotorLinks": "Enlaces",
+        "rotorImages": "Imágenes"
+      }
     }
   },
   "palsScreen": {
@@ -1579,7 +1642,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Inicio rápido y poco consumo de RAM. Solo en inglés.",
     "enginePhononCredit": "Modelo y voces de Gradium (Apache-2.0), basados en Mimi de Kyutai.",
-    "engineTierNatural": "inglés natural"
+    "engineTierNatural": "inglés natural",
+    "systemNeedsInternet": "Necesita internet",
+    "systemVoiceNumber": "Voz {{number}}",
+    "systemQualityEnhanced": "Mejorada",
+    "systemVoiceModeHint": "Las voces del sistema no pueden hablar en el modo de voz.",
+    "systemOnDeviceSection": "En este teléfono",
+    "systemLanguagesLabel": "Idiomas",
+    "systemGetMoreVoices": "Obtener más voces",
+    "systemNoVoicesForLanguage": "Este teléfono todavía no tiene voces en {{language}}.",
+    "systemIosSettingsHint": "Añade voces en Ajustes > Accesibilidad > Contenido leído > Voces.",
+    "systemLanguageSheetTitle": "Idioma de la voz",
+    "systemLanguageSearchPlaceholder": "Buscar idiomas"
   },
   "onboarding": {
     "back": "Atrás",
