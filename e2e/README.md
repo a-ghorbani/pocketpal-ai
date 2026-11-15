@@ -176,7 +176,7 @@ yarn e2e --list-models
 | `--mode` | `local`, `device-farm` | `local` | Execution mode (switches wdio config) |
 | `--skip-build` | _(flag)_ | builds by default | Skip app builds, reuse existing |
 | `--dry-run` | _(flag)_ | off | Print what would run without executing |
-| `--report-dir` | path | auto-timestamped | Override report output directory |
+| `--report-dir` | path | `$DEVICEFARM_LOG_DIR` in device-farm mode when set, else auto-timestamped | Override report output directory |
 | `--list-models` | _(flag)_ | off | List all available models and exit |
 
 ### Direct WDIO Commands

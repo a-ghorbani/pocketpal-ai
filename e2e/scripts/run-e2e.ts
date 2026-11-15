@@ -166,7 +166,8 @@ OPTIONS:
   --skip-build             Skip app build step
   --dry-run                Print matched targets and commands without executing
   --list-models            List all available models
-  --report-dir <path>      Custom report directory (default: e2e/reports/<timestamp>)
+  --report-dir <path>      Custom report directory (default: $DEVICEFARM_LOG_DIR in
+                           device-farm mode when set, else e2e/reports/<timestamp>)
   --appium-port <n>        Base Appium port (default: 4723, or E2E_BASE_APPIUM_PORT).
                            Per-device runs increment from this. Use a free port
                            when another E2E run already holds the default.
@@ -1159,7 +1160,10 @@ async function main(): Promise<void> {
     .toISOString()
     .replace(/[:.]/g, '-')
     .replace('Z', '');
-  const reportDir = args.reportDir || path.join(REPORTS_DIR, timestamp);
+  const reportDir =
+    args.reportDir ||
+    (args.mode === 'device-farm' && process.env.DEVICEFARM_LOG_DIR) ||
+    path.join(REPORTS_DIR, timestamp);
 
   // Resolve platforms
   const platforms: Array<'ios' | 'android'> =

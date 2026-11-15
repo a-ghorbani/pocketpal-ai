@@ -374,3 +374,45 @@ test('local mode keeps each run under --report-dir', {timeout: 300000}, () => {
     }
   }
 });
+
+test(
+  'device-farm mode keeps each run under an explicit --report-dir',
+  {timeout: 300000},
+  () => {
+    const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-dir-'));
+    const dfLog = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-df-log-'));
+    let tmp = '';
+    try {
+      const run = runRunner(
+        [
+          '--platform',
+          'android',
+          '--each-model',
+          '--mode',
+          'device-farm',
+          '--report-dir',
+          reportDir,
+        ],
+        {DEVICEFARM_LOG_DIR: dfLog},
+      );
+      tmp = run.tmp;
+      assert.equal(
+        run.result.status,
+        0,
+        run.result.stderr || run.result.stdout,
+      );
+      assert.ok(run.calls.length > 1, 'expected one wdio run per model');
+      for (const call of run.calls) {
+        assert.ok(isInside(call.logDir, reportDir), call.logDir);
+      }
+      assert.ok(fs.existsSync(path.join(reportDir, 'junit-results.xml')));
+      assert.deepEqual(listFiles(dfLog), []);
+    } finally {
+      fs.rmSync(reportDir, {recursive: true, force: true});
+      fs.rmSync(dfLog, {recursive: true, force: true});
+      if (tmp) {
+        fs.rmSync(tmp, {recursive: true, force: true});
+      }
+    }
+  },
+);
