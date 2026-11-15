@@ -465,3 +465,43 @@ test(
     }
   },
 );
+
+// `--spec all` hands wdio no --spec, so it runs the config's default specs.
+// The subpath is ESM-only; a string specifier keeps tsc from resolving it.
+const WDIO_CONFIG_NODE: string = '@wdio/config/node';
+
+test('diagnostics specs run only when named', async () => {
+  const {ConfigParser}: typeof import('@wdio/config/build/node') = await import(
+    WDIO_CONFIG_NODE
+  );
+  const probe = 'specs/diagnostics/metal-load.spec.ts';
+  for (const conf of [
+    'wdio.android.conf.ts',
+    'wdio.ios.conf.ts',
+    'wdio.android.local.conf.ts',
+    'wdio.ios.local.conf.ts',
+  ]) {
+    const byDefault = new ConfigParser(path.join(E2E_DIR, conf));
+    await byDefault.initialize();
+    const defaultSpecs = byDefault.getSpecs().flat();
+    assert.ok(defaultSpecs.some(s => s.endsWith('specs/quick-smoke.spec.ts')));
+    assert.ok(
+      defaultSpecs.some(s => s.includes('specs/features/')),
+      `${conf} lost the feature specs`,
+    );
+    assert.ok(
+      !defaultSpecs.some(s => s.includes('specs/diagnostics/')),
+      `${conf} runs diagnostics specs by default`,
+    );
+
+    const named = new ConfigParser(path.join(E2E_DIR, conf));
+    await named.initialize({spec: [path.join(E2E_DIR, probe)]});
+    assert.deepEqual(
+      named
+        .getSpecs()
+        .flat()
+        .map(s => path.relative(E2E_DIR, new URL(s).pathname)),
+      [probe],
+    );
+  }
+});
