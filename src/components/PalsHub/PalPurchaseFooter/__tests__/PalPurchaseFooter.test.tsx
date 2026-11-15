@@ -690,9 +690,13 @@ describe('PalPurchaseFooter in a non-store build', () => {
     expect(queryByTestId('purchase-signin-link')).toBeNull();
     expect(queryByTestId('purchase-license-notice')).toBeNull();
     expect(getByText('Story Pal')).toBeTruthy();
-    expect(getByTestId('purchase-store-only')).toHaveTextContent(
+    const line = getByTestId('purchase-store-only');
+    expect(line).toHaveTextContent(
       'Available in the Google Play / App Store version',
     );
+    expect(line.props.accessibilityLiveRegion).toBeUndefined();
+    expect(line.props.accessibilityRole).toBeUndefined();
+    expect(line.props.onPress).toBeUndefined();
   });
 
   it('keeps Open for a Pal the user already owns', () => {
@@ -718,15 +722,21 @@ describe('PalPurchaseFooter in a non-store build', () => {
     },
   );
 
-  it('shows the store-only line for a Pal sold only in the other store', () => {
-    (Platform as any).OS = 'android';
-    purchasable();
-    const {getByTestId, queryByTestId} = setup({
-      pal: {...pal, iap_enabled: {ios: true, android: false}},
-    });
-    expect(getByTestId('purchase-store-only')).toBeTruthy();
-    expect(queryByTestId('buy-button')).toBeNull();
-  });
+  it.each([
+    ['android', {ios: true, android: false}],
+    ['ios', {ios: false, android: true}],
+  ])(
+    'shows the store-only line on %s for a Pal sold only in the other store',
+    (os, iapEnabled) => {
+      (Platform as any).OS = os;
+      purchasable();
+      const {getByTestId, queryByTestId} = setup({
+        pal: {...pal, iap_enabled: iapEnabled},
+      });
+      expect(getByTestId('purchase-store-only')).toBeTruthy();
+      expect(queryByTestId('buy-button')).toBeNull();
+    },
+  );
 
   it.each([
     ['not marked', undefined],
