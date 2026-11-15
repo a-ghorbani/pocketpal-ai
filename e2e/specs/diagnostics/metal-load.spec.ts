@@ -14,8 +14,13 @@
  *
  * Output (OUTPUT_DIR, which is the Device Farm customer-artifacts dir there):
  *   metal-load-report.json   outcome, stage timings, device and app facts
- *   metal-load-syslog.txt    device syslog captured by Appium for the session
- *   metal-load-syslog-ggml.txt  the llama/ggml/Metal/jetsam lines of it
+ *   metal-load-syslog.txt    the whole device syslog for the session. Appium
+ *                            keeps only the last 10,000 lines between reads, so
+ *                            the spec drains it every few seconds and at each
+ *                            stage, and appends here.
+ *   metal-load-syslog-app.txt  lines from the PocketPal process, plus kernel,
+ *                            jetsam, ReportCrash and RunningBoard lines that
+ *                            name it (Release builds do not log ggml to syslog)
  *   metal-load-crash-<n>.ips crash and JetsamEvent reports written in-session
  *   metal-load-memory.json   memory snapshots, when the container is readable
  */
@@ -54,8 +59,14 @@ const REPLY_TIMEOUT_MS = 3 * 60 * 1000;
 // ReportCrash writes the .ips (and JetsamEvent) a few seconds after the exit.
 const CRASH_REPORT_SETTLE_MS = 45 * 1000;
 
-const GGML_LINE =
-  /ggml|llama|rnllama|metal|MTL|AGX|GPU|jetsam|memorystatus|ReportCrash|PocketPal|EXC_|SIGABRT|SIGKILL|abort/i;
+// Appium's syslog buffer holds 10,000 lines (about 12 s during a load on an
+// iPhone 13 Pro), and each read empties it.
+const SYSLOG_BUFFER_LINES = 10000;
+const SYSLOG_DRAIN_INTERVAL_MS = 3000;
+const APP_PROCESS_LINE = /\bPocketPal(\([^)]*\))?\[\d+\]/;
+const SYSTEM_PROCESS_LINE =
+  /\b(kernel|ReportCrash|runningboardd|RunningBoard|jetsam|memorystatus|osanalyticshelper|SpringBoard|backboardd)\b/i;
+const NAMES_APP = /PocketPal|ai\.pocketpal/;
 
 type Outcome =
   | 'replied'
@@ -76,6 +87,9 @@ interface Report {
   app?: unknown;
   platformVersion?: unknown;
   crashReports: string[];
+  /** Appium crash reports: a count, or 'unknown' when it cannot collect them. */
+  appiumCrashReports?: number | 'unknown';
+  syslog: {lines: number; appLines: number; drains: number; gaps: string[]};
   memorySnapshots?: unknown;
 }
 
@@ -85,6 +99,7 @@ const report: Report = {
   stage: 'start',
   marks: {},
   crashReports: [],
+  syslog: {lines: 0, appLines: 0, drains: 0, gaps: []},
 };
 
 function ensureDir(dir: string): void {
@@ -245,6 +260,7 @@ async function downloadModel(): Promise<void> {
   await models.waitForReady();
   await waitForModelDownloaded(FILE, DOWNLOAD_TIMEOUT_MS);
   mark('download_done');
+  await stageDrain('downloaded');
 }
 
 /**
@@ -332,26 +348,77 @@ async function snapshot(label: string): Promise<void> {
   }
 }
 
-async function collectLogs(): Promise<void> {
-  ensureDir(OUTPUT_DIR);
+let drainChain: Promise<void> = Promise.resolve();
+let drainLoop: Promise<void> | null = null;
+let draining = false;
+
+function appendLines(file: string, lines: string[]): void {
+  if (lines.length > 0) {
+    fs.appendFileSync(path.join(OUTPUT_DIR, file), lines.join('\n') + '\n');
+  }
+}
+
+async function readSyslogOnce(label: string): Promise<void> {
   try {
     const entries = (await driver.getLogs('syslog')) as Array<{
       message: string;
     }>;
     const lines = entries.map(e => e.message);
-    fs.writeFileSync(
-      path.join(OUTPUT_DIR, 'metal-load-syslog.txt'),
-      lines.join('\n'),
+    ensureDir(OUTPUT_DIR);
+    appendLines('metal-load-syslog.txt', lines);
+    const appLines = lines.filter(
+      l =>
+        APP_PROCESS_LINE.test(l) ||
+        (SYSTEM_PROCESS_LINE.test(l) && NAMES_APP.test(l)),
     );
-    fs.writeFileSync(
-      path.join(OUTPUT_DIR, 'metal-load-syslog-ggml.txt'),
-      lines.filter(l => GGML_LINE.test(l)).join('\n'),
-    );
-    mark('syslog_lines', lines.length);
+    appendLines('metal-load-syslog-app.txt', appLines);
+    report.syslog.drains++;
+    report.syslog.lines += lines.length;
+    report.syslog.appLines += appLines.length;
+    if (lines.length >= SYSLOG_BUFFER_LINES) {
+      // The buffer was full, so older lines were dropped before this read.
+      report.syslog.gaps.push(label);
+    }
   } catch (e) {
-    mark('syslog_failed', (e as Error).message);
+    mark(`syslog_failed_${label}`, (e as Error).message);
   }
+}
+
+/** Read the syslog buffer now; reads are serialized so lines stay in order. */
+function drainSyslog(label: string): Promise<void> {
+  drainChain = drainChain.then(() => readSyslogOnce(label));
+  return drainChain;
+}
+
+function startSyslogDrain(): void {
+  draining = true;
+  drainLoop = (async () => {
+    while (draining) {
+      await drainSyslog('periodic');
+      await new Promise(r => setTimeout(r, SYSLOG_DRAIN_INTERVAL_MS));
+    }
+  })();
+}
+
+async function stopSyslogDrain(): Promise<void> {
+  draining = false;
+  await drainLoop;
+}
+
+async function stageDrain(label: string): Promise<void> {
+  await drainSyslog(label);
+  mark(`syslog_at_${label}`, report.syslog.lines);
+}
+
+async function collectLogs(): Promise<void> {
+  ensureDir(OUTPUT_DIR);
+  await drainSyslog('final');
   try {
+    // On a real device Appium needs pyidevice on the host for this, and
+    // without it returns an empty list rather than an error (Device Farm's
+    // Tahoe host logged "pyidevice tool is not present in PATH"). An empty
+    // result is therefore not "no crash": the test spec's devicectl
+    // post_test step is the crash and Jetsam source.
     const crashes = (await driver.getLogs('crashlog')) as Array<{
       message: string;
     }>;
@@ -360,10 +427,12 @@ async function collectLogs(): Promise<void> {
       fs.writeFileSync(path.join(OUTPUT_DIR, name), c.message);
       report.crashReports.push(name);
     });
-    mark('crash_reports', crashes.length);
+    report.appiumCrashReports = crashes.length > 0 ? crashes.length : 'unknown';
   } catch (e) {
+    report.appiumCrashReports = 'unknown';
     mark('crashlog_failed', (e as Error).message);
   }
+  mark('crash_reports', report.appiumCrashReports);
   try {
     // App container read; works only when the installed signature allows it.
     const b64 = (await driver.execute('mobile: pullFile', {
@@ -397,12 +466,17 @@ describe('Metal load probe', function () {
       build: app.CFBundleVersion,
     };
     writeReport();
+    await stageDrain('installed');
+    startSyslogDrain();
   });
 
   after(async () => {
     if (report.outcome?.startsWith('app_exited')) {
+      // Keep draining: the kernel, RunningBoard and ReportCrash lines about
+      // the exit arrive during this wait.
       await browser.pause(CRASH_REPORT_SETTLE_MS);
     }
+    await stopSyslogDrain();
     await collectLogs();
   });
 
@@ -412,6 +486,7 @@ describe('Metal load probe', function () {
     } catch (e) {
       report.error = (e as Error).message;
       if (await appIsGone()) {
+        await stageDrain('app_exit');
         report.outcome =
           report.stage === 'reply'
             ? 'app_exited_during_reply'
@@ -451,11 +526,13 @@ async function probe(): Promise<void> {
   await card.waitForDisplayed({timeout: 20000});
   const loadBtn = card.$(Selectors.modelCard.loadButtonElement);
   await loadBtn.waitForDisplayed({timeout: 15000});
+  await stageDrain('before_load');
   await loadBtn.click();
   mark('load_tap');
   await dismissPerformanceWarningIfPresent();
   const loaded = await waitForLoadOrExit();
   mark('load_result', loaded);
+  await stageDrain(loaded === 'exited' ? 'app_exit' : 'load_result');
   if (loaded === 'exited') {
     report.outcome = 'app_exited_during_load';
     return;
@@ -473,9 +550,11 @@ async function probe(): Promise<void> {
   const replied = await waitForReplyOrExit();
   if (replied === 'exited') {
     report.outcome = 'app_exited_during_reply';
+    await stageDrain('app_exit');
     return;
   }
   report.outcome = 'replied';
+  await stageDrain('replied');
   await snapshot('after_reply');
   await shot('replied');
 }
