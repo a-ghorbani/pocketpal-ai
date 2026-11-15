@@ -230,4 +230,17 @@ describe('PurchasesCard in a non-store build', () => {
     expect(queryByTestId('purchases-card')).toBeNull();
     expect(queryByTestId('settings-restore-purchases')).toBeNull();
   });
+
+  it('hides Settings › Purchases with store-owned records while billing is unavailable', () => {
+    runInAction(() => {
+      purchaseStore.availability = 'unavailable';
+      (purchaseStore as any).needsLink = true;
+      purchaseStore.linkConflict = true;
+    });
+    setRecords(rec('a', 'active'), rec('b', 'held_invalid'));
+    const {queryByTestId} = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    expect(queryByTestId('purchases-card')).toBeNull();
+    expect(queryByTestId('purchase-row-a')).toBeNull();
+    expect(queryByTestId('settings-link-purchases')).toBeNull();
+  });
 });
