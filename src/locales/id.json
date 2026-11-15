@@ -1647,7 +1647,8 @@
     "systemLanguageSearchPlaceholder": "Cari bahasa",
     "speakingNotificationTitle": "PocketPal sedang berbicara",
     "speakingNotificationStop": "Hentikan",
-    "speakingNotificationChannel": "Ucapan"
+    "speakingNotificationChannel": "Ucapan",
+    "systemIosReadAndSpeakHint": "Tambahkan suara di Pengaturan > Aksesibilitas > Baca & Ucapkan > Suara."
   },
   "htmlPreview": {
     "defaultTitle": "Pratinjau",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "Tetap mengetik, gratis",
     "voiceRowFileMissing": "{{voice}} belum diunduh. Ketuk Lanjutkan untuk mengunduhnya.",
     "voiceRowFileFailed": "Tidak dapat mengunduh {{voice}}. Sambungkan ke internet dan coba lagi.",
-    "memoryNeededOfTotal": "{{needed}} dari {{total}} di ponsel ini"
+    "memoryNeededOfTotal": "{{needed}} dari {{total}} di ponsel ini",
+    "voiceRowChoose": "Pilih suara untuk balasan yang dibacakan."
   }
 }
