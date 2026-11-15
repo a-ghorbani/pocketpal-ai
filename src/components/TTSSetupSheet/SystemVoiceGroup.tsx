@@ -9,7 +9,6 @@ import {
   ChevronRightIcon,
   CloudIcon,
   DownloadIcon,
-  MicrophoneOffIcon,
   SettingsIcon,
 } from '../../assets/icons';
 import {useTheme} from '../../hooks';
@@ -147,12 +146,6 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
 
     return (
       <>
-        <View style={[styles.engineGroupBody, styles.systemHintRow]}>
-          <MicrophoneOffIcon width={14} height={14} stroke={muted} />
-          <Text style={[styles.engineGroupHintText, styles.systemHintText]}>
-            {copy.systemVoiceModeHint}
-          </Text>
-        </View>
         {voices.length > 0 ? (
           <>
             <View style={styles.engineGroupBody}>

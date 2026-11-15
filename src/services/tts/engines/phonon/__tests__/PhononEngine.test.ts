@@ -452,6 +452,7 @@ describe('PhononEngine', () => {
           modelPath: ANDROID_DIR,
           language: 'en',
           voicesMetadataPath: `${ANDROID_DIR}/voices.jsonl`,
+          ducking: true,
         }),
       );
     });
@@ -464,6 +465,7 @@ describe('PhononEngine', () => {
         engine: 'phonon',
         modelPath: IOS_BUNDLE_DIR,
         language: 'en',
+        ducking: true,
       });
       expect(config).not.toHaveProperty('voicesMetadataPath');
     });

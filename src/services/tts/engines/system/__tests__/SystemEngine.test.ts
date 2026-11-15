@@ -1,4 +1,5 @@
-import Speech from '@pocketpalai/react-native-speech';
+import {Platform} from 'react-native';
+import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {SystemEngine} from '..';
 import {ttsRuntime} from '../../../runtime';
@@ -23,9 +24,57 @@ const flush = async () => {
   }
 };
 
+const deferredStream = () => {
+  let settle: {resolve: () => void; reject: (e: Error) => void} = {
+    resolve: () => {},
+    reject: () => {},
+  };
+  const stream = {
+    append: jest.fn(),
+    finalize: jest.fn(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          settle = {resolve, reject};
+        }),
+    ),
+    cancel: jest.fn().mockResolvedValue(undefined),
+    onProgress: jest.fn(() => jest.fn()),
+  };
+  (Speech.createSpeechStream as jest.Mock).mockImplementationOnce(() => stream);
+  return {stream, settle: () => settle};
+};
+
+describe('SystemEngine.loadInto', () => {
+  const originalOS = Platform.OS;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    Platform.OS = originalOS;
+  });
+
+  it.each(['android', 'ios'] as const)(
+    'on %s, initialises the OS engine with ducking and no silentMode',
+    async os => {
+      Platform.OS = os;
+
+      await new SystemEngine().loadInto();
+
+      expect(Speech.initialize).toHaveBeenCalledTimes(1);
+      expect(Speech.initialize).toHaveBeenCalledWith({
+        engine: TTSEngine.OS_NATIVE,
+        ducking: true,
+      });
+    },
+  );
+});
+
 describe('SystemEngine.play', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    __resetCreatedStreams();
     ttsRuntime._resetForTests();
   });
 
@@ -39,8 +88,46 @@ describe('SystemEngine.play', () => {
       language: 'en-US',
     });
 
-    expect(Speech.speak).toHaveBeenCalledWith('hello', 'en-us-x-gone-local');
+    expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+      'en-us-x-gone-local',
+      expect.anything(),
+    );
     expect(Speech.getAvailableVoices).not.toHaveBeenCalled();
+  });
+
+  it('appends the whole text once to a one-shot stream, never Speech.speak', async () => {
+    await new SystemEngine().play('One. Two. Three.', VOICE);
+
+    const [stream] = __getCreatedStreams();
+    expect(stream!.append).toHaveBeenCalledTimes(1);
+    expect(stream!.append).toHaveBeenCalledWith('One. Two. Three.');
+    expect(stream!.finalize).toHaveBeenCalledTimes(1);
+    expect(Speech.speak).not.toHaveBeenCalled();
+  });
+
+  it('resolves only when the stream finalize resolves (end of audio)', async () => {
+    const {stream, settle} = deferredStream();
+    let done = false;
+    const playing = new SystemEngine().play('Hi.', VOICE).then(() => {
+      done = true;
+    });
+    await flush();
+
+    expect(stream.finalize).toHaveBeenCalledTimes(1);
+    expect(done).toBe(false);
+
+    settle().resolve();
+    await playing;
+    expect(done).toBe(true);
+  });
+
+  it('rejects when the stream finalize rejects', async () => {
+    const {settle} = deferredStream();
+    const playing = new SystemEngine().play('Hi.', VOICE);
+    await flush();
+
+    settle().reject(new Error('queue failed'));
+    await expect(playing).rejects.toThrow('queue failed');
   });
 });
 
@@ -123,5 +210,21 @@ describe('SystemEngine streaming', () => {
   it('cancel() is safe with no prior appends', async () => {
     const handle = new SystemEngine().playStreaming(VOICE);
     await expect(handle.cancel()).resolves.toBeUndefined();
+  });
+
+  it('playStreaming forwards stream options to the lib stream', async () => {
+    const onProgress = jest.fn();
+    new SystemEngine().playStreaming(VOICE, undefined, {
+      firstChunk: 'clause',
+      onProgress,
+    });
+    await flush();
+
+    expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+      VOICE.id,
+      expect.objectContaining({targetChars: 300, firstChunk: 'clause'}),
+    );
+    const [stream] = __getCreatedStreams();
+    expect(stream!.onProgress).toHaveBeenCalledWith(onProgress);
   });
 });
