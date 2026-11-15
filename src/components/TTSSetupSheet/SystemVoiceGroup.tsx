@@ -184,7 +184,9 @@ export const SystemVoiceGroup: React.FC<SystemVoiceGroupProps> = observer(
             <View style={[styles.engineGroupBody, styles.systemHintRow]}>
               <SettingsIcon width={14} height={14} stroke={muted} />
               <Text style={[styles.engineGroupHintText, styles.systemHintText]}>
-                {copy.systemIosSettingsHint}
+                {parseInt(Platform.Version as string, 10) >= 26
+                  ? copy.systemIosReadAndSpeakHint
+                  : copy.systemIosSettingsHint}
               </Text>
             </View>
           )}
