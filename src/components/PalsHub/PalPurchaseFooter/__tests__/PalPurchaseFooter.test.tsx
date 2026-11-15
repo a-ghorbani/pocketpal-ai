@@ -678,10 +678,15 @@ describe('PalPurchaseFooter in a non-store build', () => {
 
   it('shows no Buy and no store price for a purchasable paid Pal', () => {
     purchasable();
-    const {queryByTestId, queryByText} = setup();
+    const {getByTestId, getByText, queryByTestId, queryByText} = setup();
     expect(queryByTestId('buy-button')).toBeNull();
     expect(queryByText('4,99 €')).toBeNull();
     expect(queryByTestId('purchase-signin-link')).toBeNull();
+    expect(queryByTestId('purchase-license-notice')).toBeNull();
+    expect(getByText('Story Pal')).toBeTruthy();
+    expect(getByTestId('purchase-store-only')).toHaveTextContent(
+      'Available in the Google Play / App Store version',
+    );
   });
 
   it('keeps Open for a Pal the user already owns', () => {

@@ -10,6 +10,7 @@ import {t} from '../../../locales';
 import {L10nContext} from '../../../utils';
 import {authService} from '../../../services';
 import {ACCOUNT_LINK_ENABLED} from '../../../services/iap/accountLink';
+import {isStoreBuild} from '../../../services/plus/gate';
 import {palStore, purchaseStore} from '../../../store';
 import type {PalsHubPal} from '../../../types/palshub';
 import type {PendingUpdate} from '../../../store/PurchaseStore';
@@ -157,6 +158,12 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       </>
     );
 
+    const soldInAStore =
+      pal.iap_enabled?.ios === true || pal.iap_enabled?.android === true;
+    const buySlot = isStoreBuild()
+      ? canBuy && buyButton
+      : soldInAStore && status(copy.storeOnly, 'purchase-store-only');
+
     const offerLink =
       ACCOUNT_LINK_ENABLED &&
       !signedIn &&
@@ -294,7 +301,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
           return (
             <>
               {status(copy.invalid, 'purchase-invalid')}
-              {canBuy && buyButton}
+              {buySlot}
             </>
           );
         case 'restore_needed':
@@ -334,10 +341,7 @@ export const PalPurchaseFooter: React.FC<PalPurchaseFooterProps> = observer(
       if (phase === 'paying') {
         return progress('purchase-paying');
       }
-      if (canBuy) {
-        return buyButton;
-      }
-      return null;
+      return buySlot || null;
     };
 
     const body = renderBody();
