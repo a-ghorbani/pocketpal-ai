@@ -19,6 +19,7 @@ import {test} from 'node:test';
 
 import {
   classifyCleanRun,
+  mergeModelReports,
   parseJunitSuites,
   readRunJunitCounts,
 } from '../run-e2e';
@@ -177,6 +178,48 @@ test('a run ignores a merged junit-results.xml left in its report dir', () => {
   }
 });
 
+test('per-run model reports merge into one at the report root', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-test-'));
+  try {
+    for (const model of ['model-a', 'model-b']) {
+      fs.mkdirSync(path.join(dir, model));
+      fs.writeFileSync(
+        path.join(dir, model, 'all-models-report.json'),
+        JSON.stringify([{model}]),
+      );
+    }
+    fs.writeFileSync(
+      path.join(dir, 'all-models-report.json'),
+      JSON.stringify([{model: 'stale'}]),
+    );
+    mergeModelReports(dir);
+    const merged = JSON.parse(
+      fs.readFileSync(path.join(dir, 'all-models-report.json'), 'utf8'),
+    );
+    assert.deepEqual(merged.map((r: {model: string}) => r.model).sort(), [
+      'model-a',
+      'model-b',
+    ]);
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
+
+test('a model report at the root alone is left as written', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-test-'));
+  try {
+    const content = JSON.stringify([{model: 'only'}]);
+    fs.writeFileSync(path.join(dir, 'all-models-report.json'), content);
+    mergeModelReports(dir);
+    assert.equal(
+      fs.readFileSync(path.join(dir, 'all-models-report.json'), 'utf8'),
+      content,
+    );
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
+
 // The runner is driven as a CLI with only `npx wdio` stubbed. The stub writes
 // where wdio would: JUnit to DEVICEFARM_LOG_DIR (the junit reporter's
 // outputDir) and a screenshot to DEVICEFARM_SCREENSHOT_PATH.
@@ -200,6 +243,7 @@ cat > "$DEVICEFARM_LOG_DIR/junit-$model.xml" <<'XML'
   </testsuite>
 </testsuites>
 XML
+printf '[{"model":"%s"}]' "$model" > "$DEVICEFARM_LOG_DIR/all-models-report.json"
 : > "$DEVICEFARM_SCREENSHOT_PATH/$model.png"
 `;
 
@@ -315,8 +359,13 @@ test(
         junit.length >= run.calls.length,
         `expected per-run JUnit under ${dfLog}, found ${junit.length}`,
       );
-      // post_test prints $DEVICEFARM_LOG_DIR/junit-results.xml.
+      // post_test prints $DEVICEFARM_LOG_DIR/junit-results.xml and
+      // $DEVICEFARM_LOG_DIR/all-models-report.json.
       assert.ok(fs.existsSync(path.join(dfLog, 'junit-results.xml')));
+      const modelReport = JSON.parse(
+        fs.readFileSync(path.join(dfLog, 'all-models-report.json'), 'utf8'),
+      );
+      assert.equal(modelReport.length, run.calls.length);
       assert.equal(
         delivered.filter(f => f.endsWith('.png')).length,
         run.calls.length,

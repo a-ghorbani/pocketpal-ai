@@ -644,7 +644,7 @@ function getRunLabel(
   return parts.join(' / ');
 }
 
-function findJunitFiles(dir: string): string[] {
+function findFiles(dir: string, matches: (name: string) => boolean): string[] {
   const results: string[] = [];
 
   try {
@@ -652,11 +652,8 @@ function findJunitFiles(dir: string): string[] {
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        results.push(...findJunitFiles(fullPath));
-      } else if (
-        entry.name.startsWith('junit-') &&
-        entry.name.endsWith('.xml')
-      ) {
+        results.push(...findFiles(fullPath, matches));
+      } else if (matches(entry.name)) {
         results.push(fullPath);
       }
     }
@@ -665,6 +662,13 @@ function findJunitFiles(dir: string): string[] {
   }
 
   return results;
+}
+
+function findJunitFiles(dir: string): string[] {
+  return findFiles(
+    dir,
+    name => name.startsWith('junit-') && name.endsWith('.xml'),
+  );
 }
 
 function runSingleTest(opts: {
@@ -932,8 +936,31 @@ interface ModelReport {
   success: boolean;
 }
 
+const MODEL_REPORT_FILE = 'all-models-report.json';
+
+export function mergeModelReports(reportDir: string): void {
+  const mergedPath = path.join(reportDir, MODEL_REPORT_FILE);
+  const runReports = findFiles(
+    reportDir,
+    name => name === MODEL_REPORT_FILE,
+  ).filter(file => file !== mergedPath);
+  if (runReports.length === 0) {
+    return;
+  }
+
+  const merged = runReports.flatMap(file => {
+    try {
+      const reports: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return Array.isArray(reports) ? (reports as ModelReport[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  fs.writeFileSync(mergedPath, JSON.stringify(merged, null, 2));
+}
+
 function printModelReports(reportDir: string): void {
-  const reportPath = path.join(reportDir, 'all-models-report.json');
+  const reportPath = path.join(reportDir, MODEL_REPORT_FILE);
   if (!fs.existsSync(reportPath)) {
     return;
   }
@@ -1259,6 +1286,7 @@ async function main(): Promise<void> {
 
   // Print results
   printSummary(results);
+  mergeModelReports(reportDir);
   printModelReports(reportDir);
   mergeJUnitReports(reportDir);
   writeSummary(reportDir, args, results, gitInfo, timestamp);
