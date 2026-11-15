@@ -1655,7 +1655,8 @@
     "systemLanguageSearchPlaceholder": "חפש שפות",
     "speakingNotificationTitle": "PocketPal מדבר",
     "speakingNotificationStop": "עצור",
-    "speakingNotificationChannel": "דיבור"
+    "speakingNotificationChannel": "דיבור",
+    "systemIosReadAndSpeakHint": "הוסף קולות בהגדרות > נגישות > קריאה ודיבור > קולות."
   },
   "onboarding": {
     "back": "חזרה",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "המשך להקליד, בחינם",
     "voiceRowFileMissing": "{{voice}} עוד לא הורד. הקש על \"המשך\" כדי להוריד אותו.",
     "voiceRowFileFailed": "לא הצלחנו להוריד את {{voice}}. התחבר לאינטרנט ונסה שוב.",
-    "memoryNeededOfTotal": "{{needed}} מתוך {{total}} בטלפון הזה"
+    "memoryNeededOfTotal": "{{needed}} מתוך {{total}} בטלפון הזה",
+    "voiceRowChoose": "בחר קול להקראת התשובות."
   }
 }
