@@ -41,9 +41,14 @@ import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
-import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {
+  VOICE_CLAUSE_FIRST_CHUNK_ENGINES,
+  VOICE_FIRST_CHUNK_HOLD_MS,
+  VOICE_FIRST_CHUNK_MAX_WORDS,
+} from '../services/voice/constants';
 import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
+import {modelStore} from './ModelStore';
 import {uiStore} from './UIStore';
 
 /**
@@ -830,7 +835,7 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
-    const voiceOpts = this.openVoiceStream(messageId);
+    const voiceOpts = this.openVoiceStream(messageId, voice.engine);
     const engine = getEngine(voice.engine);
     let engineHandle: StreamingHandle;
     if (voice.engine === 'supertonic') {
@@ -855,10 +860,18 @@ export class TTSStore {
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
-    vtrace('tts.open', {voice: !!voiceOpts, engine: voice.engine});
+    vtrace('tts.open', {
+      voice: !!voiceOpts,
+      engine: voice.engine,
+      first: voiceOpts?.firstChunk,
+      maxWords: voiceOpts?.firstChunkMaxWords,
+    });
   }
 
-  private openVoiceStream(messageId: string): StreamOptions | undefined {
+  private openVoiceStream(
+    messageId: string,
+    engine: EngineId,
+  ): StreamOptions | undefined {
     if (!this.voiceOutputActive) {
       this.voiceStream = null;
       return undefined;
@@ -878,9 +891,17 @@ export class TTSStore {
       );
     }
     this.voiceStream = stream;
+    const onProgress = (event: StreamProgressEvent) =>
+      this.onVoiceProgress(messageId, event);
+    if (!VOICE_CLAUSE_FIRST_CHUNK_ENGINES.has(engine)) {
+      return {firstChunk: 'sentence', onProgress};
+    }
+    const tier = modelStore.deviceTier;
+    const maxWords = tier ? VOICE_FIRST_CHUNK_MAX_WORDS[tier] : undefined;
     return {
       firstChunk: 'clause',
-      onProgress: event => this.onVoiceProgress(messageId, event),
+      ...(maxWords ? {firstChunkMaxWords: maxWords} : {}),
+      onProgress,
     };
   }
 
