@@ -1647,7 +1647,8 @@
     "systemLanguageSearchPlaceholder": "搜尋語言",
     "speakingNotificationTitle": "PocketPal 正在朗讀",
     "speakingNotificationStop": "停止",
-    "speakingNotificationChannel": "朗讀"
+    "speakingNotificationChannel": "朗讀",
+    "systemIosReadAndSpeakHint": "請在「設定 > 輔助使用 > 閱讀與朗讀 > 聲音」中新增語音。"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
@@ -1907,6 +1908,7 @@
     "memorySttRowModel": "語音辨識 · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} 尚未下載。繼續將會下載它。",
     "voiceRowFileFailed": "無法下載{{voice}}。連接網路並重試。",
-    "memoryNeededOfTotal": "此手機所需量：{{needed}} / {{total}}"
+    "memoryNeededOfTotal": "此手機所需量：{{needed}} / {{total}}",
+    "voiceRowChoose": "選擇用於朗讀回覆的語音。"
   }
 }
