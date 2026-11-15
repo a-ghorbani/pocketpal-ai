@@ -252,15 +252,15 @@
       "enable": "开放已加载的模型",
       "enableDescription": "让其他应用通过 OpenAI 兼容的 API 使用已加载的模型。请求会和您的聊天一起排队，依次处理。",
       "starting": "正在启动…",
-      "url": "服务器URL",
-      "copyUrl": "复制URL",
+      "url": "服务器 URL",
+      "copyUrl": "复制 URL",
       "servedModel": "正在提供 {{model}}",
       "noModel": "尚未加载模型，在加载之前请求都会失败。",
       "port": "端口",
       "portInvalid": "请使用 1024 到 65535 之间的端口",
       "lan": "允许网络上的其他设备访问",
       "lanWarning": "这部手机连接的每个网络都能访问此服务器：Wi-Fi、移动数据、热点和 VPN。设置 API 密钥可以限制谁能使用它。",
-      "notOnWifi": "当前未连接 Wi-Fi，因此不显示网络URL。",
+      "notOnWifi": "当前未连接 Wi-Fi，因此不显示网络 URL。",
       "apiKey": "API 密钥",
       "apiKeySet": "请求必须带上此密钥",
       "apiKeyNotSet": "未设置密钥：除浏览器页面外，任何能访问此服务器的应用都能使用它。",
@@ -1135,8 +1135,8 @@
       "selectionMenu": {
         "copy": "复制",
         "copyAsMarkdown": "复制为 Markdown",
-        "copyImageUrl": "复制图片URL",
-        "copyImageUrls": "复制 {{count}} 个图片URL"
+        "copyImageUrl": "复制图片 URL",
+        "copyImageUrls": "复制 {{count}} 个图片 URL"
       },
       "accessibility": {
         "bulletPoint": "项目符号",
@@ -1644,7 +1644,10 @@
     "systemNoVoicesForLanguage": "这部手机上还没有{{language}}语音。",
     "systemIosSettingsHint": "添加语音：设置 > 辅助功能 > 朗读内容 > 声音。",
     "systemLanguageSheetTitle": "语音语言",
-    "systemLanguageSearchPlaceholder": "搜索语言"
+    "systemLanguageSearchPlaceholder": "搜索语言",
+    "speakingNotificationTitle": "PocketPal 正在朗读",
+    "speakingNotificationStop": "停止",
+    "speakingNotificationChannel": "朗读"
   },
   "htmlPreview": {
     "defaultTitle": "预览",
@@ -1778,7 +1781,7 @@
     "errorPermissionBlocked": "麦克风权限已被禁用，请在“设置”中开启。",
     "errorTranscribeFailed": "转写失败，请重试。",
     "errorNotInstalled": "请先下载语音模型，才能使用语音输入。",
-    "errorInsufficientMemory": "内存不足，无法在当前聊天模型下使用语音输入，请试试更小的模型。",
+    "errorInsufficientMemory": "此聊天模型和语音输入所需的内存超出了这部手机的容量。请试试更小的模型。",
     "errorMicUnavailable": "麦克风没有响应，请重试，或换用更小的聊天模型。",
     "errorTranscriptPartial": "部分语音内容未能转写。",
     "openSettingsLabel": "打开设置",
@@ -1840,7 +1843,7 @@
       "subtitleTwo": "{{first}}、{{second}}",
       "subtitleMore": "{{first}}、{{second}}等"
     },
-    "optIn": "关闭",
+    "optIn": "已关闭",
     "optInNote": "在这部手机上已关闭。如果您够大胆，可以在设置中打开。",
     "offInSettingsNote": "已在设置中关闭。",
     "chatStaysFree": "Plus 是可选的，聊天始终免费。",
@@ -1888,7 +1891,7 @@
     "memoryTightTitle": "内存紧张",
     "memoryTightBody": "语音模式会同时加载三个模型。在这部手机上可能会很慢，App 也可能闪退。",
     "memoryWontFitTitle": "内存不足",
-    "memoryWontFitBody": "语音识别无法与当前聊天模型一起装入内存。请选择更小的模型以使用语音模式。",
+    "memoryWontFitBody": "这些模型所需的内存超出了这部手机的容量。请选择更小的模型以使用语音模式。",
     "memoryChatRow": "聊天模型 · {{name}}",
     "memorySttRowModel": "语音识别 · Whisper {{tier}}",
     "memoryVoiceRow": "语音 · {{name}}",
@@ -1901,9 +1904,9 @@
     "teaserTitle": "语音对话是 Plus 功能",
     "teaserBody": "免提对话，它会朗读回答。",
     "teaserGetPlus": "获取 Plus",
-    "teaserKeepTyping": "继续打字，免费",
+    "teaserKeepTyping": "继续免费打字",
     "voiceRowFileMissing": "{{voice}} 还没有下载，点击“继续”即可下载。",
     "voiceRowFileFailed": "无法下载 {{voice}}，请连接网络后重试。",
-    "memoryNeededOfTotal": "{{needed}} / {{total}}（这部手机）"
+    "memoryNeededOfTotal": "{{needed}}，这部手机共 {{total}}"
   }
 }
