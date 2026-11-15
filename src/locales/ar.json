@@ -1655,7 +1655,8 @@
     "systemLanguageSearchPlaceholder": "البحث في اللغات",
     "speakingNotificationTitle": "PocketPal يتحدّث",
     "speakingNotificationStop": "إيقاف",
-    "speakingNotificationChannel": "الكلام"
+    "speakingNotificationChannel": "الكلام",
+    "systemIosReadAndSpeakHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > القراءة والنطق > الأصوات."
   },
   "onboarding": {
     "back": "رجوع",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "تابع الكتابة مجانًا",
     "voiceRowFileMissing": "{{voice}} لم يُنزَّل بعد. اضغط «متابعة» لتنزيله.",
     "voiceRowFileFailed": "تعذّر تنزيل {{voice}}. اتصل بالإنترنت وحاول مرة أخرى.",
-    "memoryNeededOfTotal": "{{needed}} من {{total}} على هذا الهاتف"
+    "memoryNeededOfTotal": "{{needed}} من {{total}} على هذا الهاتف",
+    "voiceRowChoose": "اختر صوتًا لقراءة الردود بصوت عالٍ."
   }
 }
