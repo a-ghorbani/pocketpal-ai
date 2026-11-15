@@ -1644,7 +1644,10 @@
     "systemNoVoicesForLanguage": "Голосів для мови {{language}} на цьому телефоні ще немає.",
     "systemIosSettingsHint": "Додайте голоси в Налаштування > Доступність > Усний контент > Голоси.",
     "systemLanguageSheetTitle": "Мова голосу",
-    "systemLanguageSearchPlaceholder": "Пошук мов"
+    "systemLanguageSearchPlaceholder": "Пошук мов",
+    "speakingNotificationTitle": "PocketPal говорить",
+    "speakingNotificationStop": "Зупинити",
+    "speakingNotificationChannel": "Мовлення"
   },
   "htmlPreview": {
     "defaultTitle": "Попередній перегляд",
