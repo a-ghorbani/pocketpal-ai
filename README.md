@@ -265,7 +265,7 @@ Versions are pinned in [`package.json`](package.json); the highlights:
 | UI | React Native Paper `5.15.3`, React Navigation |
 | State | MobX `6` (`mobx`, `mobx-react`, `mobx-persist-store`) |
 | Persistence | WatermelonDB (chat history), AsyncStorage (settings), Keychain (secrets) |
-| LLM | `llama.rn` `0.13.0-rc.9` → llama.cpp b11960 · GGUF |
+| LLM | `llama.rn` `0.13.0-rc.11` → llama.cpp b12292 · GGUF |
 | ASR | `whisper.rn` `0.7.4` → whisper.cpp · GGML; mic via `@fugood/react-native-audio-pcm-stream` `1.1.4` |
 | TTS | `@pocketpalai/react-native-speech` `2.8.2` + `onnxruntime-react-native` `^1.23.2` · ONNX; `@pocketpalai/react-native-speech-phonon` `0.1.3` |
 | Tooling | Yarn 1 (Classic), ESLint, Prettier, Jest, Husky + Commitlint |
