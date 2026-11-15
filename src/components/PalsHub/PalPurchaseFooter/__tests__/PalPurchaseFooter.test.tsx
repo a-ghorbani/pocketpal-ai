@@ -662,6 +662,10 @@ describe('PalPurchaseFooter', () => {
 });
 
 describe('PalPurchaseFooter in a non-store build', () => {
+  const originalOS = Platform.OS;
+  const isOwned = purchaseStore.isOwned as jest.Mock;
+  const isOwnedImpl = isOwned.getMockImplementation();
+
   beforeEach(() => {
     (global as any).__PLUS_STORE_GATE__ = false;
     mockAccountLinkEnabled = true;
@@ -674,6 +678,8 @@ describe('PalPurchaseFooter in a non-store build', () => {
 
   afterEach(() => {
     (global as any).__PLUS_STORE_GATE__ = true;
+    (Platform as any).OS = originalOS;
+    isOwned.mockImplementation(isOwnedImpl);
   });
 
   it('shows no Buy and no store price for a purchasable paid Pal', () => {
@@ -698,5 +704,104 @@ describe('PalPurchaseFooter in a non-store build', () => {
     const {getByTestId, queryByTestId} = setup();
     expect(getByTestId('owned-button')).toHaveTextContent('Open');
     expect(queryByTestId('buy-button')).toBeNull();
+  });
+
+  it.each(['unavailable', 'initializing'] as const)(
+    'shows the store-only line while billing is %s',
+    availability => {
+      runInAction(() => {
+        purchaseStore.availability = availability;
+      });
+      const {getByTestId} = setup();
+      expect(getByTestId('pal-purchase-footer')).toHaveTextContent(/Story Pal/);
+      expect(getByTestId('purchase-store-only')).toBeTruthy();
+    },
+  );
+
+  it('shows the store-only line for a Pal sold only in the other store', () => {
+    (Platform as any).OS = 'android';
+    purchasable();
+    const {getByTestId, queryByTestId} = setup({
+      pal: {...pal, iap_enabled: {ios: true, android: false}},
+    });
+    expect(getByTestId('purchase-store-only')).toBeTruthy();
+    expect(queryByTestId('buy-button')).toBeNull();
+  });
+
+  it.each([
+    ['not marked', undefined],
+    ['marked in neither store', {ios: false, android: false}],
+  ])('renders no footer for a Pal %s as sold', (_label, iapEnabled) => {
+    purchasable();
+    const {queryByTestId} = setup({pal: {...pal, iap_enabled: iapEnabled}});
+    expect(queryByTestId('pal-purchase-footer')).toBeNull();
+  });
+
+  it.each([
+    ['granted', 'purchase-installing'],
+    ['pending_payment', 'purchase-pending'],
+    ['unlocking', 'purchase-retry-button'],
+    ['unfulfillable', 'purchase-unfulfillable'],
+    ['held_invalid', 'purchase-restore-button'],
+  ] as const)('shows the %s record as in a store build', (status, testID) => {
+    purchasable();
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record(status);
+    });
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId(testID)).toBeTruthy();
+    expect(queryByTestId('purchase-store-only')).toBeNull();
+  });
+
+  it('keeps Restore when the store account has no entitlement', () => {
+    runInAction(() => {
+      setPhase('pal-1', 'restore_needed');
+    });
+    const {getByTestId, queryByTestId} = setup();
+    fireEvent.press(getByTestId('purchase-restore-button'));
+    expect(purchaseStore.restore).toHaveBeenCalled();
+    expect(queryByTestId('purchase-store-only')).toBeNull();
+  });
+
+  it('shows the invalid-proof message with the store-only line', () => {
+    purchasable();
+    runInAction(() => {
+      setPhase('pal-1', 'invalid');
+    });
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('purchase-invalid')).toBeTruthy();
+    expect(getByTestId('purchase-store-only')).toBeTruthy();
+    expect(queryByTestId('buy-button')).toBeNull();
+  });
+
+  it.each([
+    [
+      'in the signed-in library or installed before',
+      () => isOwned.mockReturnValue(true),
+      pal,
+    ],
+    ['by the listing', () => {}, {...pal, is_owned: true}],
+  ])('shows Install for a Pal owned %s', (_label, own, shown) => {
+    purchasable();
+    own();
+    const {getByTestId, queryByTestId} = setup({pal: shown});
+    expect(getByTestId('owned-button')).toHaveTextContent('Install');
+    expect(queryByTestId('purchase-store-only')).toBeNull();
+  });
+
+  it('keeps the creator update prompt beside Open', () => {
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('active', {
+        pendingUpdate: {
+          pal: {...pal, title: 'Story Pal 2'},
+          content: {},
+          contentVersion: version(4),
+        },
+      });
+      palStore.pals = [localPal];
+    });
+    const {getByTestId} = setup();
+    expect(getByTestId('owned-button')).toHaveTextContent('Open');
+    expect(getByTestId('pal-update-button')).toBeTruthy();
   });
 });
