@@ -1655,7 +1655,8 @@
     "systemLanguageSearchPlaceholder": "Pesquisar idiomas",
     "speakingNotificationTitle": "O PocketPal está a falar",
     "speakingNotificationStop": "Parar",
-    "speakingNotificationChannel": "Fala"
+    "speakingNotificationChannel": "Fala",
+    "systemIosReadAndSpeakHint": "Adicione vozes em Definições > Acessibilidade > Ler e falar > Vozes."
   },
   "onboarding": {
     "back": "Voltar",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "Continuar a escrever, grátis",
     "voiceRowFileMissing": "{{voice}} ainda não está descarregada. Toque em Continuar para a obter.",
     "voiceRowFileFailed": "Não foi possível descarregar {{voice}}. Ligue-se à internet e tente novamente.",
-    "memoryNeededOfTotal": "{{needed}} de {{total}} neste telemóvel"
+    "memoryNeededOfTotal": "{{needed}} de {{total}} neste telemóvel",
+    "voiceRowChoose": "Escolha uma voz para as respostas faladas."
   }
 }
