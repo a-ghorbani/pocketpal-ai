@@ -1147,7 +1147,7 @@
         "nestedQuote": "Citação em bloco aninhada",
         "tableRow": "Linha {{n}}: {{content}}",
         "rotorHeadings": "Títulos",
-        "rotorLinks": "Links",
+        "rotorLinks": "Ligações",
         "rotorImages": "Imagens"
       }
     }
@@ -1646,14 +1646,16 @@
     "systemNeedsInternet": "Requer internet",
     "systemVoiceNumber": "Voz {{number}}",
     "systemQualityEnhanced": "Melhorada",
-    "systemVoiceModeHint": "As vozes do sistema não funcionam no modo de voz.",
     "systemOnDeviceSection": "Neste telemóvel",
     "systemLanguagesLabel": "Idiomas",
     "systemGetMoreVoices": "Obter mais vozes",
     "systemNoVoicesForLanguage": "Ainda não há vozes em {{language}} neste telemóvel.",
     "systemIosSettingsHint": "Adicione vozes em Definições > Acessibilidade > Conteúdo Falado > Vozes.",
     "systemLanguageSheetTitle": "Idioma da voz",
-    "systemLanguageSearchPlaceholder": "Pesquisar idiomas"
+    "systemLanguageSearchPlaceholder": "Pesquisar idiomas",
+    "speakingNotificationTitle": "O PocketPal está a falar",
+    "speakingNotificationStop": "Parar",
+    "speakingNotificationChannel": "Fala"
   },
   "onboarding": {
     "back": "Voltar",
@@ -1779,7 +1781,7 @@
     "errorPermissionBlocked": "O acesso ao microfone está bloqueado. Ative-o nas Definições.",
     "errorTranscribeFailed": "Não foi possível transcrever — tente novamente.",
     "errorNotInstalled": "Descarregue um modelo de voz para usar a entrada de voz.",
-    "errorInsufficientMemory": "Não há memória suficiente para a entrada de voz com este modelo de chat. Experimente um modelo mais pequeno.",
+    "errorInsufficientMemory": "Este modelo de chat e a entrada de voz precisam de mais memória do que a que este telemóvel tem. Experimente um modelo mais pequeno.",
     "errorMicUnavailable": "O microfone não está a responder. Tente novamente ou mude para um modelo de chat mais pequeno.",
     "errorTranscriptPartial": "Não foi possível transcrever parte do seu ditado.",
     "openSettingsLabel": "Abrir Definições",
@@ -1882,7 +1884,6 @@
     "installedLabel": "Instalado",
     "voiceRowTitle": "Voz",
     "voiceRowReady": "{{voice}} · pronta",
-    "voiceRowMissing": "Escolha uma voz natural. A voz do sistema não funciona no modo de voz.",
     "chooseVoiceCta": "Escolher uma voz",
     "micNote": "A seguir, vamos pedir acesso ao microfone.",
     "micDenied": "O modo de voz precisa de acesso ao microfone.",
@@ -1890,7 +1891,7 @@
     "memoryTightTitle": "Memória limitada",
     "memoryTightBody": "O modo de voz mantém três modelos carregados ao mesmo tempo. Neste telemóvel, isso pode ser lento ou a app pode fechar-se.",
     "memoryWontFitTitle": "Memória insuficiente",
-    "memoryWontFitBody": "O reconhecimento de fala não cabe na memória juntamente com este modelo de chat. Escolha um modelo mais pequeno para usar o modo de voz.",
+    "memoryWontFitBody": "Estes modelos precisam de mais memória do que a que este telemóvel tem. Escolha um modelo mais pequeno para usar o modo de voz.",
     "memoryChatRow": "Modelo de chat · {{name}}",
     "memorySttRowModel": "Reconhecimento de fala · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",

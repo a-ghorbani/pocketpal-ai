@@ -1701,7 +1701,6 @@
     "installedLabel": "Kurulu",
     "voiceRowTitle": "Ses",
     "voiceRowReady": "{{voice}} · hazır",
-    "voiceRowMissing": "Doğal bir ses seçin. Sistem sesi, ses kipinde konuşamaz.",
     "voiceRowFileMissing": "{{voice}} henüz indirilmedi. Devam ettiğinizde indirilir.",
     "voiceRowFileFailed": "{{voice}} indirilemedi. İnternete bağlanıp tekrar deneyin.",
     "chooseVoiceCta": "Bir ses seçin",
