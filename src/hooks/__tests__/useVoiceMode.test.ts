@@ -382,12 +382,6 @@ describe('useVoiceMode', () => {
           asrStore.downloadStates.base = 'not_installed';
         },
       ],
-      [
-        'the voice is the system voice',
-        () => {
-          tts.currentVoice = {id: 's', name: 's', engine: 'system'};
-        },
-      ],
       ['there is no voice', () => (tts.currentVoice = null)],
       [
         'the voice is Phonon on a device that does not support it',
@@ -406,6 +400,36 @@ describe('useVoiceMode', () => {
       await enter();
 
       expect(hook.result.current.sheet).toEqual({kind: 'setup'});
+      expect(engine.prepare).not.toHaveBeenCalled();
+    });
+
+    it('enters with a system voice', async () => {
+      runInAction(() => {
+        tts.currentVoice = {id: 's', name: 's', engine: 'system'};
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      expect(hook.result.current.sheet).toBeNull();
+      expect(engine.prepare).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts no voice row in the memory sheet for a system voice', async () => {
+      runInAction(() => {
+        tts.currentVoice = {id: 's', name: 's', engine: 'system'};
+        model.loadedModelBytes =
+          5e9 * ASR_IOS_CEILING_SHARE - ASR_TIERS.base.runtimeBytes + 1;
+      });
+      const {enter, hook, engine} = renderVoiceMode();
+
+      await enter();
+
+      const sheet = hook.result.current.sheet;
+      expect(sheet).toMatchObject({kind: 'memory', fit: {status: 'tight'}});
+      expect(
+        sheet?.kind === 'memory' && sheet.fit.breakdown.rows.map(r => r.kind),
+      ).toEqual(['chat', 'stt']);
       expect(engine.prepare).not.toHaveBeenCalled();
     });
 

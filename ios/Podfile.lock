@@ -2413,7 +2413,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeech (2.10.0):
+  - RNSpeech (2.11.4):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2435,7 +2435,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeechPhonon (0.2.1):
+  - RNSpeechPhonon (0.2.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3178,7 +3178,7 @@ SPEC CHECKSUMS:
   React-viewtransitionnativemodule: 5170118f502bedac6bba2799bc3e8a5f73e94d38
   React-webperformancenativemodule: dda24c58337e22a47172749161b177bdc1733178
   ReactAppDependencyProvider: 3949ea6b2df0d96295128aae79f068cb6c5f81dc
-  ReactCodegen: ace3a7c5e1e7138e163488719387e556fcb02dea
+  ReactCodegen: 87664bdb7dd28f7549706c4b0f754c6fd50a6fd0
   ReactCommon: 749169e12aa3461a3df3656a00e48dbe0456b2d6
   ReactNativeDependencies: 94c922c39e0e6150ee9ad05e2ca1946e0ef55783
   ReactNativeEnrichedMarkdown: bb08c676c95f17b01b4d8b4a6487bbc887755369
@@ -3200,8 +3200,8 @@ SPEC CHECKSUMS:
   RNReanimated: 61460cb633e8f22b3049882003d193ee86a3897a
   RNScreens: 4bac14b997bcf160be0a967bfdae27956847f289
   RNShare: 765191a3c96beb2955ed961643db333b1ddf257a
-  RNSpeech: 94b8f12f37d2990d14662e8aacadfe54c6130799
-  RNSpeechPhonon: 729cf2f08fb62d49cd212f3069177eb2cdac4b59
+  RNSpeech: 28c1ba2b95f8a88adfe5eed429e842d62599cf5a
+  RNSpeechPhonon: 44cb2cc6f32fc1922828e288836736fb8903ee3f
   RNSVG: ea960a71afc1707bd14dead3ec578763321f7096
   RNVectorIcons: c7cd45980aad8bbd77a47b906f62957c9494dcb6
   RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e

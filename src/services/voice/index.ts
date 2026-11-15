@@ -14,5 +14,4 @@ export {
   isVoiceModeVoice,
   isVoiceModeVoiceReady,
 } from './readiness';
-export type {NeuralVoice} from './readiness';
 export {voiceModeDeviceSupported} from './deviceGate';

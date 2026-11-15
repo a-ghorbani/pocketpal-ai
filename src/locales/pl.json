@@ -246,6 +246,39 @@
       "signInAgain": "Zaloguj się ponownie",
       "creatorSupport": "Konta twórców usuwa nasz zespół pomocy: {{contact}}",
       "failed": "Nie udało się usunąć, spróbuj ponownie"
+    },
+    "localApiServer": {
+      "title": "Lokalny serwer API",
+      "enable": "Udostępniaj załadowany model",
+      "enableDescription": "Pozwala innym aplikacjom korzystać z załadowanego modelu przez API zgodne z OpenAI. Żądania czekają w kolejce razem z Twoimi czatami.",
+      "starting": "Uruchamianie…",
+      "url": "URL serwera",
+      "copyUrl": "Skopiuj URL",
+      "servedModel": "Udostępniany model: {{model}}",
+      "noModel": "Nie załadowano żadnego modelu. Żądania będą kończyć się błędem, dopóki go nie załadujesz.",
+      "port": "Port",
+      "portInvalid": "Użyj portu z zakresu od 1024 do 65535",
+      "lan": "Zezwalaj na dostęp z innych urządzeń w sieci",
+      "lanWarning": "Serwer jest dostępny w każdej sieci, z którą ten telefon jest połączony: Wi-Fi, dane mobilne, hotspot i VPN. Ustaw klucz API, aby ograniczyć, kto może z niego korzystać.",
+      "notOnWifi": "Brak połączenia z Wi-Fi, więc adres URL w sieci lokalnej nie jest wyświetlany.",
+      "apiKey": "Klucz API",
+      "apiKeySet": "Żądania muszą zawierać ten klucz",
+      "apiKeyNotSet": "Bez klucza: z serwera może korzystać każda aplikacja, która może się z nim połączyć — z wyjątkiem stron w przeglądarce.",
+      "setApiKey": "Ustaw klucz",
+      "clearApiKey": "Wyczyść klucz",
+      "apiKeyPlaceholder": "Wprowadź klucz API",
+      "stopToEdit": "Aby zmienić te ustawienia, wyłącz serwer.",
+      "lockedHint": "Funkcja Plus. Otwiera szczegóły.",
+      "teaserTitle": "Lokalny serwer API to funkcja Plus",
+      "teaserBody": "Pozwól innym aplikacjom korzystać z modelu załadowanego na tym telefonie.",
+      "teaserGetPlus": "Kup Plus",
+      "teaserNotNow": "Nie teraz",
+      "errors": {
+        "portInUse": "Port {{port}} jest już zajęty. Wyłącz serwer i wybierz inny port.",
+        "listenFailed": "Nie udało się uruchomić serwera. Wyłącz go i włącz ponownie albo wybierz inny port.",
+        "stoppedListening": "Serwer nieoczekiwanie się zatrzymał. Wyłącz go i włącz ponownie.",
+        "keyUnavailable": "Nie udało się odczytać klucza API. Odblokuj telefon, a potem wyłącz i ponownie włącz serwer."
+      }
     }
   },
   "models": {
@@ -431,6 +464,12 @@
         "memoryWarningButton": "Pokaż szczegóły ostrzeżenia dotyczącego pamięci",
         "integrityWarningButton": "Pokaż szczegóły ostrzeżenia dotyczącego integralności",
         "memoryWarningSnackbar": "Powiadomienie o ostrzeżeniu dotyczącym pamięci"
+      },
+      "projectorOffer": {
+        "rowTitle": "Wizja wymaga własnego modelu projekcyjnego",
+        "download": "Pobierz",
+        "downloading": "Pobieranie modelu projekcyjnego · {{progress}}%",
+        "a11yWithSize": "Pobierz model projekcyjny, {{size}}"
       }
     },
     "modelSettings": {
@@ -1061,6 +1100,30 @@
       "usingServerDefaultUnreported": "Używana jest domyślna wartość serwera (nie podano jej)",
       "resetToServerDefault": "Domyślna wartość serwera: {{value}} · Zresetuj",
       "resetToServerDefaultAccessibilityLabel": "Zresetuj {{name}} do domyślnej wartości serwera, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Więcej opcji",
+      "openMenuAction": "Otwórz menu wiadomości"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Kopiuj",
+        "copyAsMarkdown": "Kopiuj jako Markdown",
+        "copyImageUrl": "Kopiuj URL obrazu",
+        "copyImageUrls": "Kopiuj URL obrazów ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "Punkt listy",
+        "nestedBulletPoint": "Zagnieżdżony punkt listy",
+        "orderedItem": "Element listy {{n}}",
+        "nestedOrderedItem": "Zagnieżdżony element listy {{n}}",
+        "quote": "Cytat blokowy",
+        "nestedQuote": "Zagnieżdżony cytat blokowy",
+        "tableRow": "Wiersz {{n}}: {{content}}",
+        "rotorHeadings": "Nagłówki",
+        "rotorLinks": "Linki",
+        "rotorImages": "Obrazy"
+      }
     }
   },
   "palsScreen": {
@@ -1468,7 +1531,18 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Szybki start. Zużywa mało pamięci RAM. Tylko język angielski.",
     "enginePhononCredit": "Model i głosy autorstwa Gradium (Apache-2.0), oparte na Mimi firmy Kyutai.",
-    "engineTierNatural": "naturalny angielski"
+    "engineTierNatural": "naturalny angielski",
+    "systemNeedsInternet": "Wymaga internetu",
+    "systemVoiceNumber": "Głos {{number}}",
+    "systemQualityEnhanced": "Ulepszona",
+    "systemVoiceModeHint": "Głosy systemowe nie działają w trybie głosowym.",
+    "systemOnDeviceSection": "Na tym telefonie",
+    "systemLanguagesLabel": "Języki",
+    "systemGetMoreVoices": "Pobierz więcej głosów",
+    "systemNoVoicesForLanguage": "{{language}}: na tym telefonie nie ma jeszcze żadnych głosów.",
+    "systemIosSettingsHint": "Dodaj głosy w sekcji Ustawienia > Dostępność > Treść mówiona > Głosy.",
+    "systemLanguageSheetTitle": "Język głosu",
+    "systemLanguageSearchPlaceholder": "Szukaj języków"
   },
   "onboarding": {
     "screen5": {

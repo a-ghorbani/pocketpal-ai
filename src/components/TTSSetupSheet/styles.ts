@@ -184,6 +184,21 @@ export const createStyles = (theme: Theme) =>
     heroPreviewButton: {
       margin: 0,
     },
+    heroNetworkStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: theme.colors.surface,
+    },
+    heroNetworkStripText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      fontWeight: '600',
+      marginLeft: 6,
+    },
     heroQualityBlock: {
       marginTop: 14,
       paddingHorizontal: 2,
@@ -241,6 +256,111 @@ export const createStyles = (theme: Theme) =>
     },
     voiceRowNameSelected: {
       fontWeight: '700',
+    },
+
+    // System voice group (used by SystemVoiceGroup)
+    systemBand: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.surfaceVariant,
+      paddingHorizontal: 14,
+      minHeight: 34,
+      marginTop: 8,
+    },
+    systemBandTitle: {
+      color: theme.colors.onSurface,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    systemSubHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingTop: 10,
+      paddingBottom: 2,
+    },
+    systemSubHeaderText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    systemIconGap: {
+      marginLeft: 4,
+    },
+    systemBandCount: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      fontVariant: ['tabular-nums'],
+    },
+    systemHintRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    systemHintText: {
+      flex: 1,
+      marginLeft: 6,
+    },
+    systemFieldLabel: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    systemField: {
+      marginTop: 6,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.surface,
+    },
+    systemFieldInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 48,
+      paddingHorizontal: 14,
+    },
+    systemFieldText: {
+      flex: 1,
+      color: theme.colors.onSurface,
+      fontSize: 15,
+    },
+    systemEmptyLanguage: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: 6,
+      minHeight: 52,
+    },
+    systemEmptyLanguageText: {
+      flex: 1,
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 13,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+    },
+    systemFooter: {
+      marginTop: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.outlineVariant,
+    },
+    systemAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 48,
+      paddingHorizontal: 14,
+    },
+    systemActionLabel: {
+      flex: 1,
+      color: theme.colors.primary,
+      fontSize: 15,
+      fontWeight: '600',
+      paddingHorizontal: 12,
+    },
+    systemActionButton: {
+      minHeight: 48,
     },
 
     voicesEmptyHint: {

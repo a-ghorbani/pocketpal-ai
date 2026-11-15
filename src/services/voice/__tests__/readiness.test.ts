@@ -3,7 +3,7 @@ import {runInAction} from 'mobx';
 import {ttsStore} from '../../../store';
 import {hasVoiceFile} from '../../tts/voiceFiles';
 import type {Voice} from '../../tts/types';
-import {isVoiceModeVoiceReady} from '../readiness';
+import {isVoiceModeVoice, isVoiceModeVoiceReady} from '../readiness';
 
 jest.mock('../../tts/voiceFiles', () => ({
   hasVoiceFile: jest.fn(),
@@ -33,11 +33,13 @@ describe('isVoiceModeVoiceReady', () => {
     await expect(isVoiceModeVoiceReady(bella)).resolves.toBe(false);
   });
 
-  it.each([
-    ['no voice', null],
-    ['the system voice', system],
-  ])('is false for %s without checking the disk', async (_label, voice) => {
-    await expect(isVoiceModeVoiceReady(voice)).resolves.toBe(false);
+  it('is true for a system voice', async () => {
+    await expect(isVoiceModeVoiceReady(system)).resolves.toBe(true);
+    expect(isVoiceModeVoice(system)).toBe(true);
+  });
+
+  it('is false for no voice without checking the disk', async () => {
+    await expect(isVoiceModeVoiceReady(null)).resolves.toBe(false);
     expect(hasVoiceFile).not.toHaveBeenCalled();
   });
 

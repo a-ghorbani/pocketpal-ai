@@ -1,9 +1,10 @@
-import {AppState, AppStateStatus} from 'react-native';
+import {AppState, AppStateStatus, Platform} from 'react-native';
 
 import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
+import {onAudioInterruption} from '@pocketpalai/react-native-speech';
 import type {
   StreamProgressEvent,
   SupertonicLanguage,
@@ -32,12 +33,23 @@ import type {
   Voice,
 } from '../services/tts';
 import {
+  holdSpeechService,
+  onSpeechServiceStop,
+  releaseSpeechService,
+} from '../services/tts/speechService';
+import {
   ThinkingStripper,
   pickThinkingPlaceholder,
 } from '../services/tts/thinkingStripper';
-import {VOICE_FIRST_CHUNK_HOLD_MS} from '../services/voice/constants';
+import {
+  VOICE_CLAUSE_FIRST_CHUNK_ENGINES,
+  VOICE_FIRST_CHUNK_HOLD_MS,
+  VOICE_FIRST_CHUNK_MAX_WORDS,
+} from '../services/voice/constants';
 import {vtrace} from '../utils/voiceTrace';
 import {chatSessionStore} from './ChatSessionStore';
+import {modelStore} from './ModelStore';
+import {uiStore} from './UIStore';
 
 /**
  * Discriminated union describing what the store is currently doing.
@@ -142,6 +154,8 @@ export class TTSStore {
   /** Message id of the last voice reply whose speech failed. */
   voiceStreamFailed: string | null = null;
   private voiceStream: VoiceStream | null = null;
+  /** Settles once every `stop()` started so far has finished cancelling. */
+  private stopsSettled: Promise<void> = Promise.resolve();
 
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
@@ -204,9 +218,12 @@ export class TTSStore {
   private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
-    makeAutoObservable<TTSStore, 'holdFirstChunk' | 'voiceStream'>(
+    makeAutoObservable<
+      TTSStore,
+      'holdFirstChunk' | 'voiceStream' | 'stopsSettled'
+    >(
       this,
-      {holdFirstChunk: false, voiceStream: false},
+      {holdFirstChunk: false, voiceStream: false, stopsSettled: false},
       {autoBind: true},
     );
     makePersistable(this, {
@@ -294,6 +311,43 @@ export class TTSStore {
       this.handleAppStateChange,
     );
 
+    reaction(
+      () => this.speechServiceWanted,
+      wanted => {
+        if (wanted) {
+          const copy = uiStore.l10n.voiceAndSpeech;
+          holdSpeechService({
+            title: copy.speakingNotificationTitle,
+            stopLabel: copy.speakingNotificationStop,
+            channelName: copy.speakingNotificationChannel,
+          });
+        } else {
+          releaseSpeechService();
+        }
+      },
+    );
+
+    onSpeechServiceStop(() => {
+      if (this.speechServiceWanted) {
+        this.stop('notification');
+      }
+    });
+
+    onAudioInterruption(({type}) => {
+      if (type === 'began' && this.speechServiceWanted) {
+        this.stop('interruption');
+      }
+    });
+
+    reaction(
+      () => this.playbackState.mode === 'idle',
+      idle => {
+        if (idle) {
+          this.releaseIdleInBackground();
+        }
+      },
+    );
+
     this.sessionReactionDispose = reaction(
       () => chatSessionStore.activeSessionId,
       () => {
@@ -320,7 +374,7 @@ export class TTSStore {
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (nextAppState === 'background') {
+    if (nextAppState === 'background' && !this.speechServiceWanted) {
       // Stop in-flight audio AND release the active engine's native
       // resources (200-450 MB depending on engine). Re-init is lazy on
       // the next play after foreground.
@@ -334,6 +388,38 @@ export class TTSStore {
         });
     }
   };
+
+  /**
+   * Speech kept playing in the background holds its engine until it ends.
+   * The release waits for stops still cancelling: releasing under a stream
+   * leaves its finalize hanging.
+   */
+  private releaseIdleInBackground(): void {
+    const inBackground = () =>
+      Platform.OS === 'android' && AppState.currentState === 'background';
+    this.stopsSettled
+      .then(() => {
+        if (this.playbackState.mode === 'idle' && inBackground()) {
+          return ttsRuntime.release();
+        }
+      })
+      .catch(err => {
+        console.warn('[TTSStore] background release failed:', err);
+      });
+  }
+
+  /**
+   * Whether Android should keep PocketPal in the foreground for its speech,
+   * which then also keeps playing in the background. Voice replies are left
+   * out: voice mode ends when the app leaves the screen.
+   */
+  get speechServiceWanted(): boolean {
+    return (
+      Platform.OS === 'android' &&
+      this.playbackState.mode !== 'idle' &&
+      !this.voiceOutputActive
+    );
+  }
 
   /** Whether the next assistant reply opens a speech stream. */
   get streamsReplies(): boolean {
@@ -572,26 +658,35 @@ export class TTSStore {
     const state = this.playbackState;
     const voice = this.currentVoice;
     vtrace('tts.stop', {by, mode: state.mode});
-    runInAction(() => {
-      this.playbackState = {mode: 'idle'};
-    });
-    this.streamStripper = null;
-    this.streamPlaceholderEmitted = false;
-    this.clearVoiceHold();
-    if (state.mode === 'streaming') {
-      try {
-        await state.handle.cancel();
-      } catch (err) {
-        console.warn('[TTSStore] streaming cancel failed:', err);
+    let settle = () => {};
+    const settled = new Promise<void>(resolve => (settle = resolve));
+    this.stopsSettled = Promise.all([this.stopsSettled, settled]).then(
+      () => undefined,
+    );
+    try {
+      runInAction(() => {
+        this.playbackState = {mode: 'idle'};
+      });
+      this.streamStripper = null;
+      this.streamPlaceholderEmitted = false;
+      this.clearVoiceHold();
+      if (state.mode === 'streaming') {
+        try {
+          await state.handle.cancel();
+        } catch (err) {
+          console.warn('[TTSStore] streaming cancel failed:', err);
+        }
+        return;
       }
-      return;
-    }
-    if (voice) {
-      try {
-        await getEngine(voice.engine).stop();
-      } catch (err) {
-        console.warn('[TTSStore] stop failed:', err);
+      if (voice) {
+        try {
+          await getEngine(voice.engine).stop();
+        } catch (err) {
+          console.warn('[TTSStore] stop failed:', err);
+        }
       }
+    } finally {
+      settle();
     }
   }
 
@@ -740,7 +835,7 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
-    const voiceOpts = this.openVoiceStream(messageId);
+    const voiceOpts = this.openVoiceStream(messageId, voice.engine);
     const engine = getEngine(voice.engine);
     let engineHandle: StreamingHandle;
     if (voice.engine === 'supertonic') {
@@ -765,10 +860,18 @@ export class TTSStore {
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
-    vtrace('tts.open', {voice: !!voiceOpts, engine: voice.engine});
+    vtrace('tts.open', {
+      voice: !!voiceOpts,
+      engine: voice.engine,
+      first: voiceOpts?.firstChunk,
+      maxWords: voiceOpts?.firstChunkMaxWords,
+    });
   }
 
-  private openVoiceStream(messageId: string): StreamOptions | undefined {
+  private openVoiceStream(
+    messageId: string,
+    engine: EngineId,
+  ): StreamOptions | undefined {
     if (!this.voiceOutputActive) {
       this.voiceStream = null;
       return undefined;
@@ -788,9 +891,17 @@ export class TTSStore {
       );
     }
     this.voiceStream = stream;
+    const onProgress = (event: StreamProgressEvent) =>
+      this.onVoiceProgress(messageId, event);
+    if (!VOICE_CLAUSE_FIRST_CHUNK_ENGINES.has(engine)) {
+      return {firstChunk: 'sentence', onProgress};
+    }
+    const tier = modelStore.deviceTier;
+    const maxWords = tier ? VOICE_FIRST_CHUNK_MAX_WORDS[tier] : undefined;
     return {
       firstChunk: 'clause',
-      onProgress: event => this.onVoiceProgress(messageId, event),
+      ...(maxWords ? {firstChunkMaxWords: maxWords} : {}),
+      onProgress,
     };
   }
 

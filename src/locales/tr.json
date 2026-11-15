@@ -30,12 +30,1847 @@
     "ok": "Tamam",
     "close": "Kapat",
     "clear": "Tümünü Temizle",
-    "gallery": "Sergi",
-    "noResults": "Sonuç yok"
+    "gallery": "Galeri",
+    "noResults": "Sonuç yok",
+    "downloadETA": "Tahmini süre"
   },
   "settings": {
     "modelInitializationSettings": "Model Başlatma Ayarları",
     "metal": "Metal",
-    "openCLDescription": "Adreno GPU’lar için ekran kartı hızlandırma. Komut satırı işleme daha hızlıdır, ancak içerik üretimi her zaman daha hızlı olmayabilir."
+    "openCLDescription": "Adreno GPU'lar için GPU hızlandırması. İstem işleme daha hızlıdır, ancak üretim her zaman daha hızlı olmayabilir.",
+    "metalDescription": "Apple'ın donanım hızlandırmalı API'si.",
+    "metalRequiresNewerIOS": "Metal hızlandırması iOS 18 veya üstünü gerektirir. Bu özelliği kullanmak için cihazınızı güncelleyin.",
+    "openCL": "OpenCL (Deneysel)",
+    "openCLNotAvailable": "OpenCL bu cihazda kullanılamıyor. i8mm ve dotprod CPU özelliklerine sahip bir Adreno GPU gerekir.",
+    "openCLMissingCPUFeatures": "OpenCL, i8mm ve dotprod CPU özelliklerini gerektirir; bu cihazda bu özellikler yok.",
+    "openCLQuantizationNote": "Not: Saf Q4_0 nicelenmiş modeller OpenCL ile en iyi sonucu verir.",
+    "openCLDocsLink": "Ayrıntılar için llama.cpp OpenCL belgelerine bakın.",
+    "layersOnGPU": "GPU'daki katman sayısı: {{gpuLayers}}",
+    "deviceSelection": "Aygıt Seçimi",
+    "deviceSelectionIOS": "Aygıt (Metal)",
+    "deviceSelectionIOSDescription": "Metal GPU veya yalnızca CPU kipini seçin",
+    "deviceSelectionAndroidDescription": "İşlem aygıtını seçin (CPU, GPU veya Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "Yalnızca CPU - Donanım hızlandırıcı bulunamadı",
+    "contextSize": "Bağlam Boyutu",
+    "contextSizePlaceholder": "Bağlam boyutunu girin (en az {{minContextSize}})",
+    "invalidContextSizeError": "Geçerli bir sayı girin (en az {{minContextSize}})",
+    "modelReloadNotice": "Değişikliklerin etkili olması için modelin yeniden yüklenmesi gerekir.",
+    "advancedSettings": "Gelişmiş Ayarlar",
+    "batchSize": "Yığın Boyutu",
+    "batchSizeDescription": "Yığın boyutu: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "etkin",
+    "physicalBatchSize": "Fiziksel Yığın Boyutu",
+    "physicalBatchSizeDescription": "Fiziksel yığın boyutu: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "CPU İş Parçacıkları",
+    "cpuThreadsDescription": "Kullanılabilir {{maxThreads}} iş parçacığından {{threads}} tanesi kullanılıyor",
+    "imageMaxTokens": "Görsel İçin En Fazla Token",
+    "imageMaxTokensDescription": "Görsel işleme için en fazla token sayısı: {{tokens}}{{effectiveTokens}} (düşük = daha hızlı, daha az ayrıntı)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "Daha hızlı işleme için Flash Attention'ı etkinleştirin",
+    "flashAttentionIOSDescription": "Bellek dostu attention (Metal'de kendiliğinden etkin)",
+    "flashAttentionAndroidDescription": "OpenCL ile durum kaydetme/yükleme için kapalı olmalıdır",
+    "flashAttentionAuto": "Otomatik",
+    "flashAttentionOn": "Açık",
+    "flashAttentionOff": "Kapalı",
+    "keyCacheType": "Key Önbellek Türü",
+    "keyCacheTypeDescription": "Key hesaplaması için önbellek türünü seçin",
+    "keyCacheTypeDisabledDescription": "Önbellek türünü değiştirmek için Flash Attention'ı etkinleştirin",
+    "valueCacheType": "Value Önbellek Türü",
+    "valueCacheTypeDescription": "Value hesaplaması için önbellek türünü seçin",
+    "valueCacheTypeDisabledDescription": "Önbellek türünü değiştirmek için Flash Attention'ı etkinleştirin",
+    "memorySettings": "Bellek Ayarları",
+    "useMlock": "Bellek Kilidi Kullan",
+    "useMlockDescription": "Sistemi, modeli takas etmek veya sıkıştırmak yerine RAM'de tutmaya zorlar",
+    "useMmap": "Bellek Eşleme",
+    "useMmapDescription": "Modelin daha hızlı yüklenmesi için belleğe eşlenmiş dosyalar kullanılır",
+    "useMmapTrue": "Etkin",
+    "useMmapFalse": "Devre dışı",
+    "useMmapTrueDescription": "Daha hızlı yükleme için bellek eşlemeyi her zaman kullan",
+    "useMmapFalseDescription": "Ağırlık yeniden paketleme açıkken bellek kullanımının iki katına çıkmaması için devre dışı bırakılması önerilir",
+    "weightRepacking": "Ağırlık Yeniden Paketlemeyi Etkinleştir",
+    "weightRepackingDescription": "Bellek eşleme kapalıyken çok az bellek maliyetiyle daha hızlı istem işleme sağlar. Token üretimi etkilenmez.",
+    "speculativeDecoding": "Spekülatif Kod Çözme",
+    "speculativeDecodingDescription": "Token tahmin etmek ve üretimi hızlandırmak için küçük bir taslak model (veya gömülü bir MTP modeli) kullanır. Deneysel.",
+    "speculativeNotMTPCapable": "Etkin model spekülatif kod çözmeyi desteklemiyor ve eşleştirilmiş uyumlu bir taslak model yok; bu yüzden bu model için kapalı kalır ve hiçbir etkisi olmaz. Destekleyen modellerde kendiliğinden uygulanır.",
+    "speculativeDraftModel": "Taslak Model",
+    "speculativeDraftModelDescription": "Etkin model için token taslağı üretir.",
+    "speculativeDraftModelNone": "Yok (gömülü MTP)",
+    "speculativeDraftModelIgnoredOverridden": "Etkin model kendi taslak modeliyle geliyor, bu yüzden bu seçim yok sayılıyor.",
+    "speculativeDraftModelIgnoredIncompatible": "Bu taslak model etkin modelle uyumlu değil, bu yüzden yok sayılıyor.",
+    "speculativeDraftModelIgnoredNotCapable": "Bu model taslak katmanları içermiyor, bu yüzden taslak model olarak kullanılamaz.",
+    "speculativeDraftKeyCacheType": "Taslak Key Önbellek Türü",
+    "speculativeDraftValueCacheType": "Taslak Value Önbellek Türü",
+    "speculativeDraftNGpuLayers": "Taslak GPU Katmanları",
+    "speculativeDraftNGpuLayersDescription": "GPU'ya aktarılacak taslak model katmanı sayısı.",
+    "speculativeDraftCacheTypeInactiveDescription": "Spekülatif kod çözme çalışmaya başladığında geçerli olur.",
+    "ttsAvailability": "Metin okuma",
+    "ttsAvailabilityDescription": "Asistanın yanıtlarını sesli okur.",
+    "ttsAvailabilityLowMemoryWarning": "Cihazınızın belleği az — bu özellik güvenilir çalışmayabilir.",
+    "modelLoadingSettings": "Model Yükleme Ayarları",
+    "autoOffloadLoad": "Otomatik Bellekten Çıkarma/Yükleme",
+    "autoOffloadLoadDescription": "Uygulama arka plandayken modeli bellekten çıkarır.",
+    "autoNavigateToChat": "Sohbete Otomatik Geç",
+    "autoNavigateToChatDescription": "Yükleme başladığında sohbete geçer.",
+    "appSettings": "Uygulama Ayarları",
+    "language": "Dil",
+    "languageSheetTitle": "Dil",
+    "languageSearchPlaceholder": "Dil ara",
+    "darkMode": "Koyu Tema",
+    "displayMemoryUsage": "Bellek Kullanımını Göster",
+    "displayMemoryUsageDescription": "Bellek kullanımını sohbet sayfasında gösterir.",
+    "exportOptions": "Dışa Aktarma Seçenekleri",
+    "exportLegacyChats": "Eski Sohbetleri Dışa Aktar",
+    "exportLegacyChatsDescription": "Taşıma başarısız olduysa veya eski sohbet oturumlarını kurtarmanız gerekiyorsa bunu kullanın.",
+    "exportButton": "Dışa aktar",
+    "importChats": "Sohbet Oturumlarını İçe Aktar",
+    "importChatsDescription": "Sohbet oturumlarını (dışa aktarılmış) bir JSON dosyasından içe aktarın.",
+    "importButton": "İçe aktar",
+    "importSuccess": "{{count}} sohbet oturumu başarıyla içe aktarıldı.",
+    "importError": "Sohbet oturumları içe aktarılamadı. Lütfen dosya biçimini denetleyin.",
+    "internetSearch": {
+      "title": "İnternette Arama",
+      "description": "Pal'lerin kendi araçlarıyla web'de arama yapmasına izin verin. Kendi API anahtarınızı kullanın — PocketPal anahtarlarınızı tutmaz ve sorgularınızı yönlendirmez.",
+      "providerLabel": "Arama sağlayıcısı",
+      "providerGated": "Yakında",
+      "keyLabel": "API anahtarı",
+      "keyIsSet": "{{provider}} için anahtar ayarlandı.",
+      "keyNotSet": "{{provider}} için anahtar ayarlanmadı.",
+      "keyOptional": "{{provider}} için anahtar gerekmiyor. Daha yüksek sınırlar için bir anahtar ekleyebilirsiniz.",
+      "setKeyButton": "Anahtarı Ayarla",
+      "updateKeyButton": "Anahtarı Güncelle",
+      "clearKeyButton": "Anahtarı Temizle",
+      "keyInputPlaceholder": "{{provider}} API anahtarınızı yapıştırın",
+      "keyUpdateError": "Anahtar güncellenemedi. Lütfen tekrar deneyin.",
+      "showKeyAccessibilityLabel": "API anahtarını göster",
+      "hideKeyAccessibilityLabel": "API anahtarını gizle",
+      "resultCountLabel": "Arama başına sonuç sayısı",
+      "resultCountDescription": "Daha az sonuç, modelin bağlamında daha çok yer bırakır.",
+      "consentTitle": "Aramalar cihazınızdan çıkar",
+      "consentDescription": "Bir Pal web'de arama yaptığında, sorgunuz internet üzerinden seçtiğiniz sağlayıcıya gönderilir. Bir Pal bir sayfayı okuduğunda, seçtiğiniz sağlayıcının kendi okuyucusu yoksa URL ve sayfa içeriği öntanımlı bir okuyucu hizmetine (r.jina.ai) gönderilebilir. Anahtarlar ve sorgular hiçbir zaman PocketPal'a gönderilmez.",
+      "consentAccept": "Anladım",
+      "consentRequired": "Anahtar ayarlamak ve aramayı etkinleştirmek için yukarıdaki bilgilendirmeyi kabul edin.",
+      "consentGivenTitle": "Web'de arama etkin",
+      "consentGivenDescription": "Sorgular ve sayfa okumaları, yukarıda açıklandığı gibi cihazınızdan çıkabilir.",
+      "consentRevoke": "Geri al"
+    },
+    "apiSettingsTitle": "API Ayarları",
+    "huggingFaceTokenLabel": "Hugging Face Belirteci",
+    "tokenIsSetDescription": "Belirteç ayarlandı. Erişimi kısıtlı modeller için gereklidir.",
+    "setTokenDescription": "Hugging Face'teki erişimi kısıtlı modellere ulaşmak için bir belirteç ayarlayın.",
+    "setTokenButton": "Belirteci Ayarla",
+    "useHfTokenLabel": "HF Belirtecini Kullan",
+    "useHfTokenDescription": "API isteklerinde belirteci kullanmak için etkinleştirin. Belirteç kimlik doğrulama sorunlarına yol açıyorsa kapatın.",
+    "cacheStorageTitle": "Önbellek ve Depolama",
+    "clearPalCaches": "Kısayol Önbelleklerini Temizle",
+    "clearPalCachesDescription": "Kısayolları hızlandırmak için tutulan önbellek verilerini temizler. Pal'lerinizi veya sohbet geçmişinizi etkilemez.",
+    "clearCachesButton": "Önbellekleri Temizle",
+    "clearCachesConfirmTitle": "Kısayol önbellekleri temizlensin mi?",
+    "clearCachesConfirmMessage": "Bu işlem önbelleğe alınmış tüm oturum verilerini ({{fileCount}} dosya, {{size}}) temizler. Temizlikten sonraki ilk kullanımda kısayollar daha yavaş olabilir. Pal'lerinizi veya sohbet geçmişinizi etkilemez.",
+    "clearCachesSuccess": "{{count}} önbellek dosyası başarıyla temizlendi.",
+    "clearCachesError": "Önbellekler temizlenemedi. Lütfen tekrar deneyin.",
+    "noCachesToClear": "Temizlenecek önbellek yok.",
+    "serverName": "Sunucu Adı",
+    "serverUrl": "Sunucu URL'si",
+    "serverUrlPlaceholder": "örn. http://192.168.1.100:1234",
+    "scanServerQr": "Sunucu QR kodunu tara",
+    "scanQrPermissionMessage": "Bir sunucunun QR kodunu taramak için kamera erişimine izin verin. Adresi elle de yazabilirsiniz.",
+    "scanQrNotServer": "Bu bir sunucu adresi değil",
+    "scanQrUnavailable": "Burada tarama yapılamıyor. Sunucu adresini elle yazın.",
+    "scanQrNotReady": "Tarayıcı hazırlanıyor. Adresi elle de yazabilirsiniz.",
+    "requestTimeout": "İstek Zaman Aşımı (saniye)",
+    "requestTimeoutPlaceholder": "İsteğe bağlı - öntanımlı için boş bırakın",
+    "requestTimeoutHelp": "Yavaş bir sunucunun yanıtı için en fazla bekleme süresi. Öntanımlı için boş bırakın.",
+    "serverType": "Sunucu Türü",
+    "serverTypeHelp": "Kendiliğinden algılandı; yanlışsa değiştirin.",
+    "apiKey": "API Anahtarı",
+    "apiKeyPlaceholder": "İsteğe bağlı - OpenAI/Groq için gerekli",
+    "apiKeyDescription": "Cihazda güvenli biçimde saklanır.",
+    "remoteModel": "Uzak",
+    "remotePrivacyNotice": "Uzak sunuculara gönderilen iletiler cihazınızdan çıkar. Yalnızca güvendiğiniz sunuculara bağlanın.",
+    "remoteIndicator": "Uzak",
+    "serverUrlRequired": "Sunucu URL'si gerekli",
+    "serverUrlInvalid": "Geçersiz URL biçimi",
+    "serverUrlHttpWarning": "iOS, yerel olmayan sunucular için HTTPS gerektirir. https:// kullanın veya yerel ağ adresi girin.",
+    "addRemoteModel": "Uzak Model Ekle",
+    "yourServers": "Sunucularınız",
+    "orConnectNewServer": "veya yeni sunucuya bağlanın",
+    "selectModel": "Model Seç",
+    "addModel": "Model Ekle",
+    "connected": "Bağlandı",
+    "connectionFailed": "Bağlantı başarısız: {{error}}",
+    "connecting": "Bağlanıyor...",
+    "noModelsAvailable": "Bu sunucuda kullanılabilir model yok.",
+    "alreadyAdded": "Zaten eklendi",
+    "connectedServers": "Bağlı Sunucular",
+    "modelsCount": "{{count}} model",
+    "serverDetails": "Sunucu Ayrıntıları",
+    "modelsUsingServer": "Bu sunucuyu kullanan modeller:",
+    "saveChanges": "Değişiklikleri Kaydet",
+    "removeServer": "Sunucuyu Kaldır",
+    "removeServerMessage": "{{serverName}} ve ona bağlı {{count}} model kaldırılsın mı?",
+    "removeRemoteModel": "{{modelName}} ({{serverName}}) kaldırılsın mı?",
+    "retryConnection": "Tekrar dene",
+    "enterUrlManually": "URL'yi elle gir",
+    "manageServers": "Sunucuları Yönet",
+    "routerModels": {
+      "cancel": "İptal",
+      "unloading": "Bellekten çıkarılıyor…",
+      "stateLoading": "Yükleniyor",
+      "stateLoaded": "Yüklendi",
+      "loadingPercent": "Yükleniyor, yüzde {{percent}}",
+      "unloadModel": "{{model}} modelini bellekten çıkar",
+      "cancelLoadingModel": "{{model}} yüklemesini iptal et",
+      "loadFailed": "Bu model yüklenmedi.",
+      "unloadNotReleased": "Sunucu bu modeli bırakmadı.",
+      "serverUnreachable": "Bu sunucuya ulaşılamadı.",
+      "waitStopped": "Bu model için bekleme durduruldu.",
+      "failureWithServerWords": "{{label}}\n\n“{{message}}”",
+      "dismiss": "Kapat",
+      "unloadBoundTitle": "Bu model bellekten çıkarılsın mı?",
+      "unloadBoundBody": "Bu sohbet onu kullanıyor. Sonraki iletinizi gönderdiğinizde yeniden yüklenir.",
+      "unloadBoundConfirm": "Bellekten çıkar"
+    },
+    "purchases": {
+      "title": "Satın Alımlar",
+      "statusOwned": "Satın alındı",
+      "statusUnlocking": "Kilidi açılıyor",
+      "link": "Diğer cihazlarda kullanmak için oturum açın"
+    },
+    "account": {
+      "title": "Hesap",
+      "deleteAccount": "Hesabı sil",
+      "confirmTitle": "Hesap silinsin mi?",
+      "confirmMessage": "Bu işlem PalsHub hesabınızı ve kitaplığını kalıcı olarak siler. App Store veya Google Play üzerinden satın alınan Pal'ler, mağaza hesabınızla bu cihazda geri yüklenebilir kalır. Satın alma kayıtları yasal gereklilikler nedeniyle anonimleştirilerek saklanır.",
+      "confirmWithoutApple": "Apple ile doğrulanamadı. Hesabınız yine de silinsin mi?",
+      "deleted": "Hesabınız silindi.",
+      "signInAgain": "Lütfen yeniden oturum açın",
+      "creatorSupport": "Üretici hesapları destek ekibimiz tarafından silinir: {{contact}}",
+      "failed": "Silinemedi, tekrar deneyin"
+    },
+    "localApiServer": {
+      "title": "Yerel API sunucusu",
+      "enable": "Yüklü modeli sun",
+      "enableDescription": "Diğer uygulamaların, yüklü modeli OpenAI uyumlu bir API üzerinden kullanmasına izin verir. İstekler sohbetlerinizle aynı sırada beklemeye alınır.",
+      "starting": "Başlatılıyor…",
+      "url": "Sunucu URL'si",
+      "copyUrl": "URL'yi kopyala",
+      "servedModel": "{{model}} sunuluyor",
+      "noModel": "Yüklü model yok. Bir model yükleyene kadar istekler başarısız olur.",
+      "port": "Port",
+      "portInvalid": "1024 ile 65535 arasında bir port kullanın",
+      "lan": "Ağdaki diğer cihazlara izin ver",
+      "lanWarning": "Sunucu, bu telefonun bağlı olduğu her ağdan erişilebilir olur: Wi-Fi, mobil veri, kişisel erişim noktası ve VPN. Kimlerin kullanabileceğini sınırlamak için bir API anahtarı ayarlayın.",
+      "notOnWifi": "Wi-Fi'ye bağlı değil, bu yüzden ağ URL'si gösterilmiyor.",
+      "apiKey": "API anahtarı",
+      "apiKeySet": "İsteklerin bu anahtarı göndermesi gerekir",
+      "apiKeyNotSet": "Anahtar yok: tarayıcı sayfaları dışında, sunucuya ulaşabilen her uygulama onu kullanabilir.",
+      "setApiKey": "Anahtarı ayarla",
+      "clearApiKey": "Anahtarı temizle",
+      "apiKeyPlaceholder": "Bir API anahtarı girin",
+      "stopToEdit": "Bu ayarları değiştirmek için sunucuyu kapatın.",
+      "lockedHint": "Plus özelliği. Ayrıntıları açar.",
+      "teaserTitle": "Yerel API sunucusu bir Plus özelliğidir",
+      "teaserBody": "Diğer uygulamaların bu telefondaki yüklü modeli kullanmasına izin verin.",
+      "teaserGetPlus": "Plus'ı edin",
+      "teaserNotNow": "Şimdi değil",
+      "errors": {
+        "portInUse": "{{port}} portu zaten kullanımda. Sunucuyu kapatıp başka bir port seçin.",
+        "listenFailed": "Sunucu başlatılamadı. Kapatıp yeniden açın veya başka bir port seçin.",
+        "stoppedListening": "Sunucu beklenmedik biçimde durdu. Kapatıp yeniden açın.",
+        "keyUnavailable": "API anahtarı okunamadı. Telefonunuzun kilidini açın, ardından sunucuyu kapatıp yeniden açın."
+      }
+    }
+  },
+  "memory": {
+    "shortWarning": "Bellek Uyarısı",
+    "multimodalWarning": "Bu cihazın çok kipli modeller için yeterli kaynağı olmayabilir.",
+    "memoryTight": "Bellek sınırda",
+    "lowMemory": "Bellek az",
+    "memoryDetailMessage": "Bu model ~{{needed}} bellek istiyor, ancak kullanılabilir bellek ~{{available}} olarak tahmin ediliyor. Uygulamayı kullandıkça tahminler isabetlenir.",
+    "estimatedMemory": "Tahmini bellek: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "Bellek Uyarısı",
+      "memoryWarningMessage": "Bu model kullanılabilir belleği aşabilir, bu da kararsızlığa yol açabilir. Yüklemeye devam edilsin mi?",
+      "multimodalWarningTitle": "Cihaz Performansı Uyarısı",
+      "multimodalWarningMessage": "Bu cihazın çok kipli modeller için yeterli kaynağı olmayabilir. Yükleme kararsızlığa yol açabilir. Yine de devam edilsin mi?",
+      "combinedWarningTitle": "Performans Uyarısı",
+      "combinedWarningMessage": "Bu model kullanılabilir belleği aşabilir ve bu cihazın çok kipli modeller için yeterli kaynağı olmayabilir. Yükleme kararsızlığa yol açabilir. Yine de devam edilsin mi?",
+      "cancel": "İptal",
+      "continue": "Devam et"
+    }
+  },
+  "storage": {
+    "checkFailed": "Depolama alanı denetlenemedi",
+    "lowStorage": "Depolama alanı az! Model {{modelSize}} > {{freeSpace}} boş"
+  },
+  "generation": {
+    "modelNotInitialized": "Model bağlamı başlatılmadı",
+    "failedToGenerate": "Çıktı üretilemedi"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "Dosya zaten var",
+      "fileAlreadyExistsMessage": "Bu adda bir dosya zaten var. Ne yapmak istersiniz?",
+      "replace": "Değiştir",
+      "keepBoth": "İkisini de tut",
+      "copyingModel": "Model dosyası kopyalanıyor...",
+      "copyFailed": "Model dosyası kopyalanamadı"
+    },
+    "labels": {
+      "localModel": "Yerel",
+      "hfModel": "HF",
+      "unknownGroup": "Bilinmiyor",
+      "availableToUse": "Kullanıma Hazır",
+      "availableToDownload": "İndirilebilir",
+      "useAddButtonForMore": "Daha fazla model bulmak için + düğmesini kullanın"
+    },
+    "vision": "Görsel",
+    "mmproj": "Projektör",
+    "multimodal": {
+      "settings": "Çok Kipli Ayarlar",
+      "projectionModels": "Projeksiyon Modelleri",
+      "noCompatibleModels": "Uyumlu projeksiyon modeli bulunamadı",
+      "noProjectionModels": "Kullanılabilir projeksiyon modeli yok",
+      "selected": "Seçili",
+      "select": "Seç",
+      "download": "İndir",
+      "projectionNeededTitle": "Projeksiyon Modeli Gerekli",
+      "projectionNeededMessage": "Bu modelin çok kipli yetenekler için bir projeksiyon modeline ihtiyacı var.",
+      "projectionMissingWarning": "Projeksiyon modeli eksik",
+      "projectionMissingShort": "Projeksiyon eksik",
+      "reloadModelTitle": "Modeli Yeniden Yükle",
+      "reloadModelMessage": "Yeni projeksiyon modelinin uygulanması için modelin yeniden yüklenmesi gerekiyor. Şimdi yeniden yüklemek ister misiniz?",
+      "reload": "Yeniden yükle",
+      "deleteProjectionTitle": "Projeksiyon Modelini Sil",
+      "deleteProjectionMessage": "Bu projeksiyon modelini silmek istediğinizden emin misiniz?",
+      "cannotDeleteTitle": "Silinemiyor",
+      "visionControls": {
+        "enableVision": "Görsel yetenekleri etkinleştir",
+        "disableVision": "Görsel yetenekleri kapat",
+        "visionEnabled": "Görsel yetenekler etkin",
+        "visionDisabled": "Görsel yetenekler kapalı",
+        "textOnlyMode": "Yalnızca metin",
+        "visionMode": "Görsel yetenekler etkin",
+        "downloadWithVision": "Görsel yeteneklerle indir",
+        "downloadTextOnly": "Yalnızca metin olarak indir",
+        "visionToggleDescription": "Görsel işleme yeteneklerini etkinleştirin",
+        "projectionModelSize": "+{{size}} projeksiyon modeli",
+        "visionModeDescription": "Görselleri ve metni işler",
+        "textOnlyModeDescription": "Yalnızca metni işler",
+        "includesVisionCapability": "Görsel yetenek içerir",
+        "requiresProjectionModel": "Önce uyumlu bir projeksiyon modeli indirin"
+      },
+      "cannotDeleteActive": "Bu projeksiyon modeli şu anda etkin.",
+      "cannotDeleteInUse": "Bu projeksiyon modeli, indirilmiş şu LLM modelleri tarafından kullanılıyor:",
+      "dependentModels": "Bağımlı modeller:",
+      "visionWillBeDisabled": "Bu modeller için görsel yetenekler kapatılacak."
+    },
+    "buttons": {
+      "addFromHuggingFace": "Hugging Face'ten ekle",
+      "addLocalModel": "Yerel model ekle",
+      "reset": "Sıfırla"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face Modelleri",
+      "menuTitleDownloaded": "İndirilmiş Modeller",
+      "menuTitleGrouped": "Model Türüne Göre Grupla",
+      "menuTitleReset": "Model Listesini Sıfırla"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Sıfırlamaya Devam Et",
+      "confirmReset": "Sıfırlamayı Onayla"
+    },
+    "chatTemplate": {
+      "label": "Temel Sohbet Şablonu:"
+    },
+    "details": {
+      "title": "Kullanılabilir GGUF Dosyaları"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "Kaldırılamıyor",
+        "modelPreset": "Bu model öntanımlı olarak geliyor.",
+        "downloadedFirst": "Model indirilmiş durumda. Lütfen önce dosyayı silin.",
+        "removeTitle": "Modeli Kaldır",
+        "removeMessage": "Bu modeli listeden kaldırmak istediğinizden emin misiniz?",
+        "removeError": "Model kaldırılamadı.",
+        "alreadyDownloadedTitle": "Model Zaten İndirilmiş",
+        "alreadyDownloadedMessage": "Model zaten indirilmiş durumda.",
+        "deleteTitle": "Modeli Sil",
+        "deleteMessage": "İndirilmiş bu modeli silmek istediğinizden emin misiniz?"
+      },
+      "buttons": {
+        "remove": "Kaldır"
+      },
+      "warnings": {
+        "storage": {
+          "message": "Yeterli depolama alanı yok.",
+          "shortMessage": "Depolama az"
+        },
+        "memory": {
+          "message": "Model boyutu cihazınızın toplam belleğine yakın veya onu aşıyor. Bu beklenmeyen davranışlara yol açabilir."
+        },
+        "legacy": {
+          "message": "Eski niceleme biçimi - model çalışmayabilir.",
+          "shortMessage": "Eski niceleme"
+        },
+        "multiple": "{{count}} uyarı"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "Model bulunamadı",
+      "loadingMore": "Daha fazlası yükleniyor...",
+      "searchPlaceholder": "Hugging Face modellerinde ara",
+      "modelUpdatedLong": "{{time}} önce güncellendi",
+      "modelUpdatedShort": "{{time}} önce",
+      "modelUpdatedJustNowLong": "Az önce güncellendi",
+      "modelUpdatedJustNowShort": "az önce",
+      "errorOccurred": "Modeller yüklenemedi. Lütfen tekrar deneyin.",
+      "filters": {
+        "author": "Yazar",
+        "authorPlaceholder": "Yazara göre süz...",
+        "sortBy": "Sırala",
+        "clearFilters": "Süzgeçleri Temizle",
+        "showFilters": "Süzgeçleri Göster",
+        "hideFilters": "Süzgeçleri Gizle",
+        "sortRelevance": "İlgi düzeyi",
+        "sortDownloads": "İndirme sayısı",
+        "sortRecent": "Son güncellenen",
+        "sortLikes": "En çok beğenilen"
+      }
+    },
+    "hubRun": {
+      "title": "Modeli indir",
+      "resolving": "Model ayrıntıları yükleniyor…",
+      "cancel": "İptal",
+      "retry": "Tekrar dene",
+      "invalidLinkTitle": "Geçersiz bağlantı",
+      "invalidLinkMessage": "Bu Hugging Face bağlantısında model veya dosya eksik ya da geçersiz.",
+      "resolveError": "Model ayrıntıları yüklenemedi. Bağlantınızı denetleyip tekrar deneyin."
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Modeli Sil",
+        "deleteMessage": "İndirilmiş bu modeli silmek istediğinizden emin misiniz?",
+        "removeTitle": "Modeli Kaldır",
+        "removeMessage": "Bu modeli listeden kaldırmak istediğinizden emin misiniz?"
+      },
+      "buttons": {
+        "settings": "Ayarlar",
+        "download": "İndir",
+        "remove": "Kaldır",
+        "load": "Yükle",
+        "offload": "Bellekten çıkar"
+      },
+      "labels": {
+        "skills": "Beceriler: ",
+        "vision": "Görsel",
+        "visionSupported": "Destekliyor",
+        "visionNotSupported": "Desteklemiyor",
+        "visionUnknown": "Bilinmiyor",
+        "capabilities": "yetenekleri.",
+        "modelName": "Model Adı",
+        "contextLength": "Bağlam Uzunluğu",
+        "architecture": "Mimari",
+        "author": "Yazar",
+        "requiresProjectionModel": "Projeksiyon modeli gerektirir",
+        "downloadProjectionModel": "Projeksiyon modelini indir",
+        "viewModelCardOnHuggingFace": "Model kartını Hugging Face'te görüntüle",
+        "draftOnlyReason": "Yalnızca taslak model. Ayarlar → Spekülatif kod çözme altından seçin."
+      },
+      "projectorOffer": {
+        "rowTitle": "Görsel yetenekler için projeksiyon modeli gerekli",
+        "download": "İndir",
+        "downloading": "Projeksiyon modeli indiriliyor · {{progress}}%",
+        "a11yWithSize": "Projeksiyon modelini indir, {{size}}"
+      },
+      "accessibility": {
+        "expandDetails": "Ayrıntıları genişlet",
+        "collapseDetails": "Ayrıntıları daralt",
+        "memoryWarning": "Bellek uyarısı",
+        "integrityWarning": "Bütünlük uyarısı",
+        "downloadProgress": "İndirme durumu",
+        "loadingIndicator": "Yükleniyor",
+        "loadButton": "Modeli yükle",
+        "offloadButton": "Modeli bellekten çıkar",
+        "downloadButton": "Modeli indir",
+        "settingsButton": "Model ayarları",
+        "deleteButton": "Modeli sil",
+        "removeButton": "Modeli kaldır",
+        "expandDetailsButton": "Model ayrıntılarını genişlet",
+        "memoryWarningButton": "Bellek uyarısı ayrıntılarını göster",
+        "integrityWarningButton": "Bütünlük uyarısı ayrıntılarını göster",
+        "memoryWarningSnackbar": "Bellek uyarısı bildirimi"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "Şablon:",
+        "editButton": "Düzenle",
+        "dialogTitle": "Sohbet Şablonunu Düzenle",
+        "note1": "Not: Şablonu değiştirmek BOS, EOS ve sistem istemini etkileyebilir.",
+        "note2": "Nunjucks kullanır. Modelin kendi şablonunu kullanmak için boş bırakın.",
+        "placeholder": "Sohbet şablonunuzu buraya girin...",
+        "closeButton": "Kapat"
+      },
+      "stopWords": {
+        "label": "DURDURMA SÖZCÜKLERİ",
+        "placeholder": "Yeni durdurma sözcüğü ekle"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "addGenerationPrompt": "Üretim İstemi Ekle",
+        "bosTokenPlaceholder": "BOS Token",
+        "eosTokenPlaceholder": "EOS Token",
+        "systemPrompt": "Sistem İstemi"
+      }
+    },
+    "modelDescription": {
+      "size": "Boyut: ",
+      "parameters": "Parametre: ",
+      "separator": " | ",
+      "notAvailable": "Yok"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "Soru yanıtlama",
+      "summarization": "Özetleme",
+      "reasoning": "Akıl yürütme",
+      "roleplay": "Rol yapma",
+      "instructions": "Yönergeleri izleme",
+      "code": "Kod üretme",
+      "math": "Matematik çözme",
+      "multilingual": "Çok dilli",
+      "rewriting": "Yeniden yazma",
+      "creativity": "Yaratıcı yazma",
+      "vision": "Görsel",
+      "mtp": "Spekülatif (MTP)",
+      "mtpDraft": "Spekülatif taslak"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "Yapay zekânın düşünme/akıl yürütme bölümlerini modele gönderilen bağlama dahil eder. Kapatmak bağlamda yer kazandırabilir. Performansı etkileyebilir.",
+    "jinja": "Sohbet biçimlendirmesi için Jinja şablonlamasını etkinleştirir. Etkinleştirildiğinde, güncel modellerle daha iyi uyum için Jinja tabanlı sohbet şablonu işleme kullanılır.",
+    "grammar": "Üretilen metnin belirli bir yapıya veya biçime uymasını sağlamak için belirli dilbilgisi kuralları uygular",
+    "stop": "Metin üretimini durduracak belirli ifadeleri tanımlar",
+    "n_predict": "Üretilecek en fazla token sayısı. Sınırsız için Unlimited, kendiniz değer vermek için Custom seçin.",
+    "n_probs": "Alternatif sözcükler için olasılık puanlarını gösterir.",
+    "top_k": "Sözcük seçeneklerini en olası K taneye sınırlayarak yaratıcılığı denetler. Düşük değerler yanıtları daha odaklı kılar",
+    "top_p": "Yaratıcılık ile tutarlılığı dengeler. Yüksek değerler (1.0'a yakın) daha yaratıcı ama daha az odaklı yanıtlara yol açabilir",
+    "min_p": "Bir token'ın değerlendirmeye alınması için en düşük olasılık. Anlamsız veya bağlam dışı yanıtları azaltmak için olası olmayan sözcükleri ayıklar",
+    "temperature": "Yaratıcılık ile öngörülebilirliği dengeler. Yüksek değerler yanıtları daha yaratıcı ama daha az odaklı kılar",
+    "penalty_last_n": "Yinelenme denetiminde ne kadar geriye bakılacağı. Büyük değerler uzun erimli yinelenmeyi önlemeye yardımcı olur",
+    "penalty_repeat": "Sözcük yinelenmesini caydırır. Yüksek değerler yanıtlarda daha çeşitli bir dil kullanılmasını sağlar",
+    "penalty_freq": "Aşırı kullanılan sözcükleri cezalandırır. Yüksek değerler daha geniş bir sözcük dağarcığını teşvik eder",
+    "penalty_present": "Tema ve fikirlerin yinelenmesini azaltır. Yüksek değerler daha çeşitli içeriği teşvik eder",
+    "mirostat": "Yanıt yaratıcılığı üzerinde ileri düzey denetimi etkinleştirir. Rastgelelik ve tutarlılığın akıllıca, gerçek zamanlı ayarlanması için 1 veya 2 (daha yumuşak) olarak ayarlayın.",
+    "mirostat_tau": "Mirostat için hedef yaratıcılık düzeyini belirler. Yüksek değerler daha çeşitli ve yaratıcı yanıtlara olanak verirken düşük değerler daha odaklı çıktılar sağlar.",
+    "mirostat_eta": "Mirostat'ın yaratıcılığı ne kadar hızlı ayarladığı. Yüksek değerler daha hızlı ayarlama demektir",
+    "dry_multiplier": "DRY (Don't Repeat Yourself) özelliğinin gücü. Yüksek değerler yinelenmeyi güçlü biçimde engeller",
+    "dry_base": "DRY kipinde yinelenme için temel ceza. Yüksek değerler yinelenmeyi önlemede daha saldırgandır",
+    "dry_allowed_length": "DRY cezası devreye girmeden önce kaç sözcüğün yinelenebileceği",
+    "dry_penalty_last_n": "DRY kipinde yinelenme için ne kadar geriye bakılacağı",
+    "dry_sequence_breakers": "DRY kipinde yinelenme denetleyicisini sıfırlayan simgeler",
+    "ignore_eos": "Model durmak istese bile üretmeye devam eder. Daha uzun yanıtları zorlamak için kullanışlıdır",
+    "logit_bias": "Belirli sözcüklerin yanıtta görünme olasılığını etkiler",
+    "seed": "Rastgele sayı üretecinin tohumunu belirler. Yinelenebilir sonuçlar için kullanışlıdır",
+    "xtc_probability": "XTC örnekleyicisiyle token kaldırma olasılığını belirler. 0 devre dışıdır",
+    "xtc_threshold": "XTC örnekleyicisiyle kaldırılacak token'lar için en düşük olasılık eşiğini belirler. (> 0.5 XTC'yi devre dışı bırakır)",
+    "typical_p": "p parametresiyle yerel tipik örneklemeyi etkinleştirir. 1.0 devre dışıdır"
+  },
+  "about": {
+    "screenTitle": "Uygulama Bilgisi",
+    "description": "Dil modellerini doğrudan telefonunuza getiren bir uygulama. llama.cpp ve llama.rn omuzlarında yükseliyor.",
+    "supportProject": "Projeye Destek Olun",
+    "supportProjectDescription": "PocketPal AI'yı kullanmaktan memnunsanız, projeye şu yollarla destek olmayı düşünebilirsiniz:",
+    "githubButton": "GitHub'da yıldız verin",
+    "orBy": "ya da",
+    "versionCopiedTitle": "Sürüm kopyalandı",
+    "versionCopiedDescription": "Sürüm bilgisi panoya kopyalandı",
+    "tour": "Tanıtım",
+    "tourDescription": "PocketPal AI'nın neler sunduğunu görmek için karşılama ekranlarını yeniden oynatın.",
+    "showIntroButton": "Tanıtımı yeniden göster",
+    "privacyPolicy": "Gizlilik Politikası",
+    "termsOfService": "Hizmet Koşulları",
+    "openSourceNotices": "Açık kaynak bildirimleri",
+    "phononNoticesCredit": "Phonon ses modeli ve sesleri Gradium tarafından hazırlanmıştır, Apache-2.0 ile lisanslanmıştır. Kyutai'nin Pocket TTS ve Mimi kodeki üzerine kuruludur."
+  },
+  "feedback": {
+    "title": "Geri Bildirim Gönder",
+    "description": "Sesiniz önemli! PocketPal AI'nın size nasıl yardımcı olduğunu ve onu daha da kullanışlı kılmak için ne yapabileceğimizi anlatın.",
+    "shareThoughtsButton": "Düşüncelerinizi paylaşarak",
+    "useCase": {
+      "label": "PocketPal AI'yı ne için kullanıyorsunuz?",
+      "placeholder": "örn. özetleme, rol yapma vb."
+    },
+    "featureRequests": {
+      "label": "Özellik İsteği",
+      "placeholder": "Hangi özellikleri görmek isterdiniz?"
+    },
+    "generalFeedback": {
+      "label": "Genel Geri Bildirim",
+      "placeholder": "Aklınızdaki diğer düşünceleri paylaşın."
+    },
+    "usageFrequency": {
+      "label": "PocketPal AI'yı ne sıklıkla kullanıyorsunuz? (İsteğe bağlı)",
+      "options": {
+        "daily": "Her gün",
+        "weekly": "Her hafta",
+        "monthly": "Her ay",
+        "rarely": "Nadiren"
+      }
+    },
+    "email": {
+      "label": "İletişim E-postası (İsteğe bağlı)",
+      "placeholder": "E-posta adresiniz"
+    },
+    "submit": "Geri Bildirimi Gönder",
+    "validation": {
+      "required": "Lütfen en azından bir geri bildirim yazın"
+    },
+    "success": "Geri bildiriminiz için teşekkürler!",
+    "error": {
+      "general": "Geri bildirim gönderilirken hata oluştu. Lütfen tekrar deneyin."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "Medya gönder"
+    },
+    "bubble": {
+      "msPerToken": "{{value}} ms/token",
+      "tokensPerSec": "{{value}} token/sn",
+      "promptTokensPerSec": "{{value}} istem token/sn",
+      "cachedTokens": "{{value}} önbellekten",
+      "ttft": "{{value}} ms TTFT",
+      "draftAccepted": "taslak: {{accepted}}/{{total}} ({{pct}}%)",
+      "interrupted": "Kesildi",
+      "truncated": "Kesildi — bağlam dolmuş olabilir"
+    },
+    "exportUtils": {
+      "fileSaved": "Dosya Kaydedildi",
+      "fileSavedMessage": "Dosya, İndirilenler klasörünüze {{filename}} adıyla kaydedildi",
+      "share": "Paylaş",
+      "ok": "Tamam",
+      "shareError": "Paylaşma Hatası",
+      "shareErrorMessage": "Dosya paylaşılamadı. Lütfen tekrar deneyin.",
+      "saveError": "İndirilenler klasörüne kaydedilirken hata oluştu",
+      "saveOptions": "Kaydetme Seçenekleri",
+      "saveOptionsMessage": "Doğrudan İndirilenler klasörüne kaydedilemiyor. Dosyayı paylaşmak ister misiniz?",
+      "cancel": "İptal",
+      "shareContentErrorMessage": "İçerik paylaşılamadı. Lütfen tekrar deneyin.",
+      "exportError": "Dışa Aktarma Hatası",
+      "exportErrorMessage": "Dosya dışa aktarılırken bir hata oluştu. Lütfen tekrar deneyin.",
+      "permissionRequired": "Depolama İzni Gerekli",
+      "permissionMessage": "Dışa aktardığınız dosyayı İndirilenler klasörüne kaydetmek için izne ihtiyacımız var.",
+      "permissionDenied": "İzin Verilmedi",
+      "permissionDeniedMessage": "Depolama izni olmadan dışa aktarma özelliği devre dışı kalır.",
+      "continue": "Devam et"
+    },
+    "thinkingBubble": {
+      "reasoning": "Akıl yürütme"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Araç hazırlanıyor",
+      "buildingPage": "Sayfa oluşturuluyor",
+      "calculating": "Hesaplanıyor",
+      "lookingUpTime": "Saate bakılıyor",
+      "stopping": "Durduruluyor…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} token",
+      "elapsed": "{{seconds}} sn"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "Kullanılabilir Model Yok",
+      "noModelsDescription": "PocketPal ile sohbete başlamak için bir model indirin",
+      "noModelsButton": "Model İndir",
+      "activateModelTitle": "Başlamak için bir model etkinleştirin",
+      "activateModelDescription": "Modeli seçip indirin. İndirdikten sonra modelin yanındaki Yükle düğmesine dokunup sohbete başlayın.",
+      "activateModelButton": "Model Seç",
+      "loading": "Yükleniyor...",
+      "gettingReadyTitle": "{{name}} hazırlanıyor",
+      "gettingReadyDescription": "Pal'iniz sohbete hazır olduğu an haber vereceğiz. Nasıl gittiğini görmek için yukarıdaki şeride dokunun."
+    },
+    "chatInput": {
+      "inputPlaceholder": "İleti",
+      "thinkingToggle": {
+        "enableThinking": "Düşünme kipini etkinleştir",
+        "disableThinking": "Düşünme kipini kapat",
+        "thinkingEnabled": "Düşünme kipi etkin",
+        "thinkingDisabled": "Düşünme kipi kapalı",
+        "thinkText": "Düşün",
+        "cycleEffort": "Akıl yürütme çabası: {{level}}. Çaba düzeyleri arasında geçiş yapmak için iki kez dokunun"
+      }
+    },
+    "contentReportSheet": {
+      "title": "İçeriği Bildir",
+      "privacyNote": "Hiçbir ileti içeriğini veya konuşma ayrıntısını göndermiyoruz. Lütfen karşılaştığınız sorunu açıkça anlatın.",
+      "categoryLabel": "Bildirim Kategorisi",
+      "selectCategory": "Bir kategori seçin",
+      "categories": {
+        "hate": "Nefret söylemi",
+        "sexual": "Cinsel içerik",
+        "selfHarm": "Kendine zarar verme",
+        "violence": "Şiddet",
+        "other": "Diğer"
+      },
+      "descriptionLabel": "Açıklama",
+      "descriptionPlaceholder": "Lütfen bu içerikle ilgili sorunu anlatın...",
+      "includeModelInfo": "Model bilgisini ekle",
+      "includeModelInfoDescription": "İncelememize yardımcı olmak için model adını ve tanımlayıcısını ekleyin",
+      "noActiveModelNote": "Şu anda etkin bir model yok",
+      "submit": "Bildirimi Gönder",
+      "validation": {
+        "title": "Eksik Bilgi",
+        "message": "Lütfen bir kategori seçin ve bir açıklama yazın."
+      },
+      "success": {
+        "title": "Bildirim Gönderildi",
+        "message": "Bildiriminiz için teşekkürler. İnceleyip gereken adımları atacağız."
+      },
+      "error": {
+        "title": "Bildirim Başarısız",
+        "message": "Bildirim gönderilemedi. Lütfen tekrar deneyin."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "Model Yükleme Sorununu Bildir",
+      "privacyNote": "Bu hatayla ilgili ayrıntıları paylaşarak PocketPal'ı iyileştirmemize yardımcı olun. Paylaşılacakları aşağıda inceleyin — eklemek istemediğiniz öğelerin seçimini kaldırabilirsiniz.",
+      "errorMessage": "Hata iletisi",
+      "modelInfo": "Model Bilgisi",
+      "modelName": "Ad",
+      "modelSource": "Kaynak",
+      "modelSize": "Boyut",
+      "contextParams": "Bağlam Parametreleri",
+      "deviceInfo": "Cihaz Bilgisi",
+      "deviceModel": "Cihaz",
+      "osVersion": "İşletim sistemi",
+      "memoryInfo": "Bellek",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "Emülatör",
+      "additionalInfoLabel": "Ek bilgi (isteğe bağlı)",
+      "additionalInfoPlaceholder": "Sorunu anlamamıza yardımcı olabilecek diğer ayrıntılar...",
+      "submit": "Bildirimi Gönder",
+      "success": {
+        "title": "Bildirim Gönderildi",
+        "message": "PocketPal'ı iyileştirmemize yardımcı olduğunuz için teşekkürler. Bildiriminiz bu sorunu gidermemize yardımcı olacak."
+      },
+      "error": {
+        "title": "Bildirim Başarısız",
+        "message": "Bildirim gönderilemedi. Lütfen daha sonra tekrar deneyin."
+      }
+    },
+    "completionSettings": {
+      "serverDefault": "sunucu öntanımlısı",
+      "usingServerDefault": "Sunucu öntanımlısı kullanılıyor: {{value}}",
+      "usingServerDefaultUnreported": "Sunucu öntanımlısı kullanılıyor (bildirilmedi)",
+      "resetToServerDefault": "Sunucu öntanımlısı: {{value}} · Sıfırla",
+      "resetToServerDefaultAccessibilityLabel": "{{name}} ayarını sunucu öntanımlısına sıfırla, {{value}}"
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "Geçersiz Değerler",
+      "invalidNumericValuesMessage": "Geçerli bir sayı olmalı",
+      "pleaseCorrect": "Lütfen şunları düzeltin:",
+      "ok": "Tamam",
+      "saveChanges": "Değişiklikleri Kaydet",
+      "saveAsPreset": "Hazır ayar olarak kaydet",
+      "title_session": "Sohbet Üretim Ayarları (Oturum)",
+      "title_preset": "Sohbet Üretim Ayarları (Hazır ayar)",
+      "resetToSystemDefaults": "Sistem Öntanımlılarına Sıfırla",
+      "resetToPreset": "Hazır Ayara Sıfırla",
+      "applytoPresetAlert": {
+        "title": "Başarılı",
+        "message": "Bu ayarlar bundan sonraki tüm oturumlara uygulanacak"
+      },
+      "palSettings": "Pal Ayarları",
+      "settingsSource": "Ayar Kaynağı"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Üretim Ayarları - {{palName}}",
+      "invalidValues": "Geçersiz Değerler",
+      "invalidNumericValuesMessage": "Geçerli bir sayı olmalı",
+      "pleaseCorrect": "Lütfen şunları düzeltin:",
+      "ok": "Tamam",
+      "error": "Hata",
+      "failedToSave": "Pal ayarları kaydedilemedi",
+      "resetToGlobal": "Genel Öntanımlılara Sıfırla",
+      "resetToSystem": "Sistem Öntanımlılarına Sıfırla",
+      "clearPalSettings": "Pal Ayarlarını Temizle",
+      "customSettingsFor": "{{palName}} için özel ayarlar",
+      "inheritedSettingsFor": "{{palName}} için devralınan ayarlar"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Sohbet"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "Dosya"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Modeller",
+      "palsTab": "Pal'ler",
+      "noPal": "Pal yok",
+      "disablePal": "Etkin Pal'i kapat",
+      "noDescription": "Açıklama yok",
+      "assistantType": "Asistan",
+      "roleplayType": "Rol yapma",
+      "videoType": "Video",
+      "confirmationTitle": "Onay",
+      "modelSwitchMessage": "Bu Pal'in öntanımlı modeli farklı ({{modelName}}). Pal'in öntanımlı modeline geçmek ister misiniz?",
+      "keepButton": "Kalsın",
+      "switchButton": "Geç"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "İndirme Başarısız",
+      "downloadFailedMessage": "Model indirilemedi: {{message}}",
+      "unauthorizedTitle": "Kimlik Doğrulama Başarısız",
+      "unauthorizedMessage": "Hugging Face belirteciniz geçersiz veya süresi dolmuş görünüyor. Lütfen ayarlardan belirtecinizi güncelleyin.",
+      "forbiddenTitle": "Erişim Reddedildi",
+      "forbiddenMessage": "Bu modele erişim izniniz yok. Lütfen şunlardan emin olun:",
+      "forbiddenSteps": [
+        "Belirtecinizin \"read\" izni var",
+        "Bu modele erişim istediniz ve erişim size verildi",
+        "Model sahibi erişim isteğinizi onayladı"
+      ],
+      "getTokenTitle": "Hugging Face Belirteci Alın",
+      "getTokenMessage": "Bu modeli indirmek için bir Hugging Face belirteci gerekiyor.",
+      "getTokenSteps": [
+        "huggingface.co adresine gidip oturum açın",
+        "Settings > Access Tokens bölümüne gidin",
+        "\"read\" erişimli yeni bir belirteç oluşturun",
+        "Belirteci kopyalayıp belirteç alanına yapıştırın"
+      ],
+      "tokenDisabledTitle": "Belirteç Devre Dışı",
+      "tokenDisabledMessage": "Ayarlı bir Hugging Face belirteciniz var, ancak şu anda devre dışı. Bu modeli indirmek için bir belirteç gerekiyor. Devam etmek için belirtecinizi etkinleştirin.",
+      "enableAndRetry": "Etkinleştir ve tekrar dene",
+      "goToSettings": "Ayarlara git",
+      "tryAgain": "Tekrar dene",
+      "viewOnHuggingFace": "Modeli HF'te görüntüle ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Sohbeti Sil",
+      "deleteChatMessage": "Bu sohbeti silmek istediğinizden emin misiniz?",
+      "generationSettings": "Üretim ayarları",
+      "model": "Model",
+      "duplicateChatHistory": "Sohbet geçmişini çoğalt",
+      "makeChatTemporary": "Sohbeti geçici yap",
+      "export": "Dışa/İçe aktar",
+      "exportCurrentSession": "Bu oturumu dışa aktar",
+      "exportCurrentSessionMarkdown": "Markdown olarak dışa aktar",
+      "exportAllSessions": "Tüm oturumları dışa aktar",
+      "exportChatSession": "Sohbet oturumunu dışa aktar",
+      "importSessions": "Oturumları içe aktar"
+    },
+    "hfTokenSheet": {
+      "title": "Hugging Face Belirteci",
+      "description": "Erişimi kısıtlı modellere ulaşmak için gereklidir",
+      "inputLabel": "Kişisel Erişim Belirteci",
+      "inputPlaceholder": "Belirtecinizi buraya yapıştırın",
+      "save": "Belirteci Kaydet",
+      "saved": "Belirteç başarıyla kaydedildi",
+      "reset": "Belirteci Sıfırla",
+      "resetSuccess": "Belirteç başarıyla kaldırıldı",
+      "instructions": "Belirteç nasıl alınır:",
+      "instructionsSteps": [
+        "huggingface.co adresine gidip oturum açın",
+        "Settings > Access Tokens bölümüne gidin",
+        "\"read\" erişimli yeni bir belirteç oluşturun",
+        "Belirteci kopyalayıp aşağıya yapıştırın"
+      ],
+      "getTokenLink": "huggingface.co adresinden belirteç alın ↗",
+      "error": {
+        "saving": "Belirteç kaydedilirken hata oluştu",
+        "missing": "Hugging Face belirteci gerekli",
+        "invalid": "Geçersiz veya süresi dolmuş belirteç",
+        "gatedModelAccess": "Erişimi kısıtlı bu modele erişim reddedildi"
+      },
+      "gatedModelIndicator": "Belirteç gerekli",
+      "tokenRequired": "Bu model bir Hugging Face erişim belirteci gerektiriyor",
+      "searchErrorHint": "Hugging Face API belirteciniz geçersiz veya süresi dolmuş. Aramaya devam etmek için lütfen belirteci kaldırın ya da Ayarlar'dan belirteçle kimlik doğrulamayı kapatın.",
+      "disableAndRetry": "Belirteci kapat ve tekrar dene"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Model Ayarları",
+      "saveChanges": "Değişiklikleri Kaydet",
+      "reasoningSection": "Akıl yürütme",
+      "isReasoningModel": "Akıl yürütme modeli",
+      "isReasoningModelHelp": "Kendiliğinden algılanmamış olsa bile bu model için düşünme denetimini gösterir.",
+      "supportsEffort": "Kademeli çabayı destekler",
+      "effortValues": "Bu modelin desteklediği çaba düzeyleri",
+      "effortLevels": {
+        "minimal": "En az",
+        "low": "Düşük",
+        "medium": "Orta",
+        "high": "Yüksek",
+        "xhigh": "Çok yüksek",
+        "max": "En yüksek"
+      }
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face Modelleri",
+      "menuTitleDownloaded": "İndirilmiş Modeller",
+      "menuTitleGrouped": "Model Türüne Göre Grupla",
+      "menuTitleReset": "Model Listesini Sıfırla"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Sıfırlamaya Devam Et",
+      "confirmReset": "Sıfırlamayı Onayla"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Pal'i Düzenle",
+        "newPal": "Yeni Pal",
+        "newVideoPal": "Yeni Video Pal'i"
+      },
+      "description": "Açıklama",
+      "descriptionPlaceholder": "Pal'iniz için kısa bir açıklama girin",
+      "parameters": "Parametreler",
+      "generationSettings": "Üretim Ayarları",
+      "configureGenerationSettings": "Üretim Ayarlarını Yapılandır",
+      "validation": {
+        "nameRequired": "Ad gerekli",
+        "generatingPromptRequired": "Yapay zekâ istemi kullanılırken üretim istemi gerekli",
+        "promptModelRequired": "Yapay zekâ istemi kullanılırken istem üretme modeli gerekli"
+      },
+      "talents": "Yetenekler",
+      "talentNames": {
+        "render_html": "HTML önizleme",
+        "calculate": "Matematik ifadeleri",
+        "datetime": "Tarih ve saat",
+        "web_search": "Web'de arama",
+        "read_url": "Web sayfası okuma"
+      },
+      "talentDescriptions": {
+        "render_html": "HTML belgelerini sohbet içinde işler",
+        "calculate": "Matematiksel ifadeleri hesaplar",
+        "datetime": "Geçerli tarih ve saati verir",
+        "web_search": "Güncel bilgi için internette arama yapar (Ayarlar'da API anahtarı gerekir)",
+        "read_url": "Bir web sayfasının tüm içeriğini okur (Ayarlar'da API anahtarı gerekir)"
+      },
+      "greeting": {
+        "sectionLabel": "Karşılama",
+        "textLabel": "Karşılama iletisi",
+        "textPlaceholder": "Bu Pal, boş bir sohbette ne söylesin?",
+        "suggestedPromptsLabel": "Önerilen istemler",
+        "addPromptButton": "İstem ekle",
+        "promptPlaceholder": "Etiket için kısa bir istem",
+        "removePromptLabel": "İstemi kaldır"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Asistan Pal'i Oluştur",
+        "edit": "Asistan Pal'ini Düzenle"
+      },
+      "palName": "Pal Adı",
+      "palNamePlaceholder": "Ad",
+      "defaultModel": "Öntanımlı Model",
+      "defaultModelPlaceholder": "Model seçin",
+      "validation": {
+        "generatingPromptRequired": "Üretim istemi gerekli",
+        "promptModelRequired": "İstem üretme modeli gerekli"
+      },
+      "create": "Oluştur"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "Henüz indirilmiş bir modeliniz yok. Lütfen önce bir model indirin.",
+      "downloadAModel": "Model indir",
+      "defaultModelNotDownloaded": "Bu Pal, indirilmesi gereken belirli bir modeli öneriyor; dilerseniz başka bir model de seçebilirsiniz.",
+      "modelNotDownloadedShort": "Model indirilmemiş",
+      "recommendedModel": "Önerilen Model",
+      "cancelDownload": "İndirmeyi iptal et",
+      "download": "İndir"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Rol Yapma Pal'i Oluştur",
+        "edit": "Rol Yapma Pal'ini Düzenle"
+      },
+      "palName": "Pal Adı",
+      "palNamePlaceholder": "Ad",
+      "defaultModel": "Öntanımlı Model",
+      "defaultModelPlaceholder": "Model seçin",
+      "descriptionSection": "Açıklama",
+      "world": "Dünya",
+      "worldPlaceholder": "Fantastik",
+      "location": "Mekân",
+      "locationPlaceholder": "Büyülü Orman",
+      "locationSublabel": "Hikâye nerede geçiyor?",
+      "aiRole": "Yapay Zekânın Rolü",
+      "aiRolePlaceholder": "Eldara, muzip bir orman perisi",
+      "aiRoleSublabel": "Karakterin rolünü belirleyin",
+      "userRole": "Kullanıcı Rolü",
+      "userRolePlaceholder": "Sir Elandor, yiğit bir şövalye",
+      "userRoleSublabel": "Siz kimsiniz?",
+      "situation": "Durum",
+      "situationPlaceholder": "Kurtarma görevi, bir gizemi çözmek",
+      "toneStyle": "Ton/Üslup",
+      "toneStylePlaceholder": "Ciddi",
+      "validation": {
+        "promptModelRequired": "İstem üretme modeli gerekli"
+      },
+      "create": "Oluştur"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Lookie Pal'i Oluştur",
+        "edit": "Lookie Pal'ini Düzenle"
+      },
+      "palName": "Pal Adı",
+      "palNamePlaceholder": "Lookie Pal'iniz için bir ad girin",
+      "visionModel": "Görsel Model",
+      "visionModelPlaceholder": "Bir görsel model seçin",
+      "requiredModelsSection": "Gerekli Modeller",
+      "captureInterval": "Yakalama Aralığı",
+      "captureIntervalHelper": "Kendiliğinden yakalamalar arasındaki süre (milisaniye)",
+      "create": "Oluştur"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Gönder"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "Sistem İstemi",
+      "useAIPrompt": "Sistem istemini üretmek için yapay zekâ kullan",
+      "modelSelector": {
+        "label": "Üretim İçin Model Seçin*",
+        "sublabel": "Önerilen: Llama 3.2 3B veya Qwen3 4B Instruct 2507.",
+        "placeholder": "Model seçin"
+      },
+      "generatingPrompt": {
+        "label": "Amaç ve Bağlam",
+        "placeholder": "Bu Pal için rolü, amacı veya senaryoyu anlatın..."
+      },
+      "buttons": {
+        "loadingModel": "Model yükleniyor...",
+        "stopGenerating": "Üretimi Durdur",
+        "generatePrompt": "Sistem İstemi Üret",
+        "resetParameters": "Parametreleri Sıfırla",
+        "resetTemplate": "Şablonu Sıfırla"
+      },
+      "systemPrompt": {
+        "label": "Sistem İstemi",
+        "sublabel": "Senaryonuza en uygun istemi bulmak için düzenlemekten ve denemekten çekinmeyin",
+        "placeholder": "Yardımcı bir asistansın"
+      },
+      "warnings": {
+        "promptChanged": "Sistem istemi elle değiştirildi"
+      },
+      "generationBusy": "Bir yanıt hâlâ üretiliyor. Bittiğinde tekrar deneyin."
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Sohbet",
+        "models": "Modeller",
+        "pals": "Pal'ler",
+        "benchmark": "Benchmark",
+        "settings": "Ayarlar",
+        "appInfo": "Uygulama Bilgisi",
+        "testCompletion": "Tamamlama Testi"
+      },
+      "deleteChatTitle": "Sohbeti Sil",
+      "deleteChatMessage": "Bu sohbeti silmek istediğinizden emin misiniz?",
+      "select": "Seç",
+      "nSelected": "{{count}} seçili",
+      "selectAll": "Tümünü Seç",
+      "deselectAll": "Seçimi Kaldır",
+      "exportCount": "Dışa aktar ({{count}})",
+      "deleteCount": "Sil ({{count}})",
+      "bulkDeleteTitle": "Sohbet Oturumlarını Sil",
+      "bulkDeleteMessage": "{{count}} sohbet oturumu silinsin mi? Bu işlem geri alınamaz.",
+      "bulkDeleteError": "Sohbet oturumları silinemedi. Lütfen tekrar deneyin.",
+      "exportError": "Sohbet oturumu dışa aktarılamadı. Lütfen tekrar deneyin.",
+      "bulkExportError": "Sohbet oturumları dışa aktarılamadı. Lütfen tekrar deneyin.",
+      "pin": "Sabitle",
+      "unpin": "Sabitlemeyi kaldır",
+      "dateGroups": {
+        "pinned": "Sabitlenenler",
+        "today": "Bugün",
+        "yesterday": "Dün",
+        "thisWeek": "Bu hafta",
+        "lastWeek": "Geçen hafta",
+        "twoWeeksAgo": "2 hafta önce",
+        "threeWeeksAgo": "3 hafta önce",
+        "fourWeeksAgo": "4 hafta önce",
+        "lastMonth": "Geçen ay",
+        "older": "Daha eski"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "Bellek Kullanımı",
+        "used": "Kullanılan: ",
+        "total": "Toplam: ",
+        "usage": "Kullanım: "
+      },
+      "byteSizes": [
+        "Bayt",
+        "KB",
+        "MB",
+        "GB"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "Kopyala",
+        "regenerate": "Yeniden üret",
+        "regenerateWith": "Şununla yeniden üret",
+        "edit": "Düzenle",
+        "reportContent": "İçeriği bildir"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "Tüm Pal'leri dışa aktar",
+      "importPals": "Pal'leri içe aktar",
+      "importSuccess": "{{count}} Pal başarıyla içe aktarıldı.",
+      "importError": "Pal'ler içe aktarılamadı. Lütfen dosya biçimini denetleyin."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "Pal'lerim (yerel)",
+      "myLibrary": "Kitaplığım (palshub.ai)",
+      "discoverPals": "Pal'leri keşfet (palshub.ai)"
+    },
+    "systemPrompt": "Sistem İstemi",
+    "videoAnalysis": "Video Çözümlemesi",
+    "videoAnalysisDescription": "Bu, cihazınızın kamerasından gelen video akışına gerçek zamanlı yorum yapan, video tabanlı bir yapay zekâ asistanıdır.",
+    "captureInterval": "Yakalama Aralığı",
+    "captureIntervalUnit": "ms",
+    "world": "Dünya",
+    "toneStyle": "Ton/Üslup",
+    "aiRole": "Yapay Zekânın Rolü",
+    "userRole": "Benim Rolüm",
+    "prompt": "İstem",
+    "assistant": "Asistan",
+    "roleplay": "Rol yapma",
+    "video": "Video",
+    "deletePal": "Pal'i Sil",
+    "deletePalMessage": "Bu Pal'i silmek istediğinizden emin misiniz?",
+    "missingModel": "Model Eksik",
+    "missingModelMessage": "Bu Pal'in öntanımlı modeli \"{{modelName}}\" kullanılabilir değil. Lütfen düzenleme panelinden indirin veya başka bir model seçin.",
+    "search": "Ara",
+    "profile": "Profil",
+    "signIn": "Oturum Aç",
+    "addPal": "Pal Ekle",
+    "signInToAccessLibrary": "palshub.ai'deki kitaplığınıza erişmek için oturum açın",
+    "signOut": "Oturumu Kapat",
+    "signOutConfirmation": "Oturumu kapatmak istediğinizden emin misiniz?",
+    "signOutError": "Oturum kapatılamadı. Lütfen tekrar deneyin.",
+    "account": "Hesap",
+    "signInToPalsHub": "PalsHub'a Oturum Aç",
+    "signInDescription": "Kitaplığınıza erişin, özel Pal'ler oluşturun ve cihazlar arasında eşitleyin",
+    "searchAllPals": "Tüm Pal'lerde ara...",
+    "deletePalConfirmation": "\"{{palName}}\" Pal'ini silmek istediğinizden emin misiniz?",
+    "filters": {
+      "all": "Tümü",
+      "myPals": "Pal'lerim",
+      "local": "Yerel",
+      "video": "Video",
+      "free": "Ücretsiz",
+      "premium": "Premium"
+    },
+    "labels": {
+      "free": "Ücretsiz",
+      "premium": "Premium",
+      "private": "Özel",
+      "download": "İndir",
+      "getFree": "Ücretsiz edin"
+    },
+    "sortOptions": {
+      "newest": "En yeni",
+      "oldest": "En eski",
+      "rating": "En yüksek puanlı",
+      "popular": "En popüler"
+    },
+    "palDetailSheet": {
+      "by": "yapan:",
+      "unknown": "Bilinmiyor",
+      "rating": "Puan",
+      "reviews": "Değerlendirmeler",
+      "created": "Oluşturulma",
+      "description": "Açıklama",
+      "noDescriptionAvailable": "Açıklama yok.",
+      "categories": "Kategoriler",
+      "tags": "Etiketler",
+      "systemPrompt": "Sistem İstemi",
+      "downloaded": "İndirildi",
+      "success": "Başarılı",
+      "palAddedToCollection": "Pal derlemenize eklendi!",
+      "error": "Hata",
+      "failedToLoadDetails": "Pal ayrıntıları yüklenemedi",
+      "failedToDownload": "Pal indirilemedi",
+      "notAvailable": "Yok"
+    },
+    "purchase": {
+      "buy": "{{price}}",
+      "open": "Aç",
+      "install": "Kur",
+      "pending": "Beklemede",
+      "unlocking": "Kilidi açılıyor",
+      "retry": "Tekrar dene",
+      "supportCode": "Destek kodu: {{code}}",
+      "noLongerAvailable": "Bu Pal artık kullanılamıyor. {{refundLink}}.",
+      "refundLink": "Apple'dan geri ödeme isteyebilirsiniz",
+      "notCompleted": "Bu satın alma tamamlanamadı. Google size geri ödeme yapacak.",
+      "withdrawnRefunding": "Bu Pal yayından çekildi. Geri ödeme için destekle iletişime geçin.",
+      "invalid": "Bu satın almayı doğrulayamadık.",
+      "heldInvalid": "Bu satın almanın kilidini açamadık. Bu kodla destekle iletişime geçin.",
+      "recommendedModel": "Önerilen model",
+      "sampleExchange": "Örnek konuşma",
+      "signInLine": "Zaten sizde mi? Oturum açın",
+      "licenseNotice": "Bu Pal'i kullanmak için bir lisans satın alıyorsunuz.",
+      "termsOfSale": "Satış Koşulları",
+      "appleMediaTerms": "Apple Media Services Koşulları",
+      "linkPrompt": "Diğer cihazlarınızda da kullanmak için oturum açın",
+      "linkSignIn": "Oturum aç",
+      "dismiss": "Şimdi değil",
+      "linkConflict": "Bu satın alımlar başka bir hesaba bağlı.",
+      "restorePurchases": "Satın alımları geri yükle",
+      "badgePending": "Beklemede",
+      "badgeUnlocking": "Kilidi açılıyor",
+      "badgeUpdate": "Güncelleme var",
+      "updatePrompt": "Üreticiden yeni bir sürüm var.",
+      "updatePromptWithNote": "Üreticiden yeni bir sürüm var: {{note}}.",
+      "updateButton": "Güncelle",
+      "updateConfirmText": "Bu işlem, üreticinin değiştirdiği bölümlerdeki düzenlemelerinizin üzerine yazar.",
+      "updateConfirm": "Güncelle",
+      "updateCancel": "İptal",
+      "modelStep": {
+        "download": "İndir · {{size}}",
+        "startChat": "Sohbete başla",
+        "needsMemory": "Bu Pal'in en küçük modeli için en az {{size}} belleğe sahip bir cihaz gerekiyor.",
+        "noModelFits": "Bu cihazın belleği bu Pal için yeterli değil."
+      }
+    }
+  },
+  "validation": {
+    "nameRequired": "Ad gerekli",
+    "systemPromptRequired": "Sistem istemi gerekli",
+    "worldRequired": "Dünya gerekli",
+    "locationRequired": "Mekân gerekli",
+    "aiRoleRequired": "Yapay zekânın rolü gerekli",
+    "userRoleRequired": "Kullanıcı rolü gerekli",
+    "situationRequired": "Durum gerekli",
+    "toneStyleRequired": "Ton/üslup gerekli"
+  },
+  "camera": {
+    "permissionTitle": "Kamera İzni Gerekli",
+    "permissionMessage": "PocketPal'ın görselleri çözümleyebilmesi için kamera erişimine ihtiyacı var",
+    "requestingPermission": "Kamera izni isteniyor...",
+    "noDevice": "Kamera aygıtı bulunamadı",
+    "errorTitle": "Kamera Hatası",
+    "errorMessage": "Fotoğraf çekilirken bir hata oluştu",
+    "flip": "Çevir",
+    "analyzing": "Görsel çözümleniyor...",
+    "startCamera": "Kamerayı Başlat",
+    "stopCamera": "Kamerayı Durdur",
+    "promptPlaceholder": "Bu görsel hakkında ne bilmek istiyorsunuz?",
+    "takePhoto": "Kamera"
+  },
+  "video": {
+    "permissionTitle": "Kamera İzni Gerekli",
+    "permissionMessage": "PocketPal'ın video çözümlemesi için kamera erişimine ihtiyacı var",
+    "requestingPermission": "Kamera izni isteniyor...",
+    "noDevice": "Kamera aygıtı bulunamadı",
+    "errorTitle": "Kamera Hatası",
+    "errorMessage": "Kamerada bir hata oluştu",
+    "flip": "Çevir",
+    "analyzing": "Video çözümleniyor...",
+    "startCamera": "Kamerayı Başlat",
+    "stopCamera": "Kamerayı Durdur",
+    "promptPlaceholder": "Bu video hakkında ne bilmek istiyorsunuz?",
+    "captureInterval": "Yakalama Aralığı",
+    "captureIntervalUnit": "ms",
+    "liveCommentary": "Canlı Yorum",
+    "emptyPlaceholder": {
+      "title": "Lookie'ye hoş geldiniz",
+      "subtitle": "Gizli, Cihaz Üzerinde, Gerçek Zamanlı Video Çözümlemesi",
+      "experimentalNotice": "Bu deneysel bir özelliktir. İsabet seçtiğiniz modele, hız cihazınızın donanımına bağlıdır ve bazı modeller başarısız olabilir.",
+      "howToUse": "Nasıl kullanılır:",
+      "step1": "• Çözümlemeyi yönlendirmek için istemi düzenleyin (isteğe bağlı)",
+      "step2": "• Canlı video çözümlemesini başlatmak için kamera düğmesine dokunun",
+      "step3": "• Kamera etkinken anlık görüntü sıklığını ayarlayın",
+      "step4": "• Normal metin sohbeti için başka bir Pal'e geçin"
+    }
+  },
+  "screenTitles": {
+    "chat": "Sohbet",
+    "models": "Modeller",
+    "pals": "Pal'ler (deneysel)",
+    "benchmark": "Benchmark",
+    "settings": "Ayarlar",
+    "appInfo": "Uygulama Bilgisi",
+    "testCompletion": "Tamamlama Testi"
+  },
+  "chat": {
+    "conversationReset": "Konuşma sıfırlandı!",
+    "modelNotLoaded": "Model yüklenmedi. Lütfen modeli başlatın.",
+    "completionFailed": "Tamamlama başarısız: ",
+    "toolCallTruncated": "Araç çağrısı kesildi — model büyük olasılıkla yer kalmadığı için durdu. Daha büyük bir bağlam veya daha küçük bir istek deneyin.",
+    "speculativeInitFailed": "Bu cihaz, bu model için spekülatif kod çözmeyi başlatamadı — büyük olasılıkla taslak bağlamı için yeterli bellek yok. Ayarlar → Gelişmiş Ayarlar altından Spekülatif kod çözmeyi kapatıp tekrar deneyin.",
+    "loadingModel": "Model yükleniyor ...",
+    "typeYourMessage": "İletinizi buraya yazın",
+    "load": "Yükle",
+    "goToModels": "Modellere git",
+    "readyToChat": "Sohbete hazır mısınız? En son kullanılan modeli yükleyin.",
+    "pleaseLoadModel": "Sohbet etmek için bir model yükleyin.",
+    "multimodalNotEnabled": "Bu model için çok kiplilik etkin değil. Görseller gösterilir ancak yapay zekâ tarafından işlenmez.",
+    "cannotSendWithoutModel": "Önce bir model yükleyin",
+    "toolCompatWarning": "Bu model araç çağırmayı desteklemeyebilir. Sonuçlar güvenilir olmayabilir.",
+    "softCapWarning": "En iyi performans için yeni bir sohbet başlatın.",
+    "contextWarning": "Bu konuşma uzuyor ve yakında yer kalmayabilir.",
+    "contextRemoteHedged": "Bu yanıt kesilmiş olabilir. Yeniden göndermeyi veya isteği kısaltmayı deneyin.",
+    "contextFull": "Konuşmada yer kalmadı. Yeni bir sohbet başlatın veya bağlam boyutunu artırın.",
+    "contextFullRemote": "Konuşmada yer kalmadı. Yeni bir sohbet başlatın.",
+    "contextFullEscalated": "Hâlâ yer yok. Yeni bir sohbet başlatın veya devam etmek için bağlam boyutunu artırın.",
+    "contextFullHeavyTalent": "Konuşmada yer kalmadı — {{talent}} genellikle daha fazlasına ihtiyaç duyar. Yeni bir sohbet başlatın veya bağlam boyutunu artırın.",
+    "contextBannerDismiss": "Kapat",
+    "contextNewChat": "Yeni sohbet",
+    "contextIncrease": "Bağlamı artır",
+    "contextMoreRoom": "Daha fazla yer",
+    "increaseContextTitle": "Bu sohbete daha fazla yer açın",
+    "increaseContextBody": "Yer, modelin çalışma belleğidir — bu sohbetin ne kadarını bir arada akılda tutabildiği. Daha fazla yer, yanıtlar kesilmeden daha uzun sohbetler demektir.",
+    "increaseContextTokensUnit": "token",
+    "increaseContextWordsRam": "~{{words}} sözcük · ≈{{ram}} RAM",
+    "increaseContextFitsChip": "Sığar",
+    "increaseContextTightChip": "Sınırda",
+    "increaseContextWontFitChip": "Sığmaz",
+    "increaseContextFitsStatus": "Bu cihaz için rahat.",
+    "increaseContextFitsUnconstrainedStatus": "Bol RAM var — yalnızca model sınırlıyor.",
+    "increaseContextTightStatus": "~{{tokens}} üzerinde bu cihazın belleği azalabilir ve yavaşlayabilir. Yine de denenebilir.",
+    "increaseContextWontFitStatus": "~{{tokens}} bu cihazın belleğine büyük olasılıkla sığmaz. Daha küçük bir boyut seçin.",
+    "increaseContextModelMax": "{{tokens}} · model üst sınırı",
+    "increaseContextHedge": "Yeniden yükleme birkaç saniye sürer. Sohbetinizden hiçbir şey kaybolmaz.",
+    "increaseContextAdvanced": "Gelişmiş",
+    "increaseContextAdvancedBody": "Bu sohbet için bağlam boyutu: {{from}} → {{to}} token (model üst sınırı {{max}}). Cihaz sınırı bir tahmindir ve daha büyük bağlamlar başarıyla yüklendikçe yükselir.",
+    "increaseContextSliderA11yLabel": "Bağlam boyutu",
+    "increaseContextSliderA11yValue": "{{tokens}} token",
+    "increaseContextConfirmSize": "{{size}} olarak ayarla",
+    "increaseContextReloadingShort": "Yeniden yükleniyor…",
+    "increaseContextNoFitBody": "Bu cihaz, bu model için daha büyük bir bağlamı sığdıramıyor. Devam etmek için yeni bir sohbet başlatın.",
+    "increaseContextCancel": "Şimdi değil",
+    "increaseContextReloading": "Model daha büyük bir bağlamla yeniden yükleniyor…",
+    "increaseContextSuccess": "Bağlam {{target}} token'a çıkarıldı.",
+    "increaseContextFailure": "Bağlam boyutu artırılamadı. Önceki ayarınız geri yüklendi.",
+    "palLoadHint": "Bu Pal, geçerli bağlam boyutunun verdiğinden daha fazla yere ihtiyaç duyuyor.",
+    "generatingPreview": "Önizleme üretiliyor… ({{tokens}} token)",
+    "generatingPreviewPending": "Önizleme üretiliyor…",
+    "toolUsedChip": "{{name}} kullanıldı",
+    "toolErrorBlock": "{{name}} başarısız oldu",
+    "webSearch": {
+      "searched": "Arandı: {{query}}",
+      "noResults": "Sonuç yok",
+      "noResultsFor": "{{query}} için sonuç yok",
+      "resultsCount": "{{count}} sonuç",
+      "resultsCountOne": "1 sonuç",
+      "searchResultsTitle": "Arama sonuçları",
+      "showResultsAccessibilityLabel": "{{query}} için web arama sonuçlarını göster",
+      "openLinkError": "Bu bağlantı açılamadı."
+    },
+    "routerLoading": "Model yükleniyor…",
+    "routerLoadingPercent": "Model yükleniyor · {{percent}}%"
+  },
+  "htmlPreview": {
+    "defaultTitle": "Önizleme",
+    "showPreview": "İşlenmiş önizlemeyi göster",
+    "showCode": "HTML kodunu göster",
+    "copyHtml": "HTML'i kopyala",
+    "closePreview": "Önizlemeyi kapat",
+    "openFullscreen": "Tam ekran aç: {{title}}"
+  },
+  "benchmark": {
+    "title": "Benchmark",
+    "modelSelector": {
+      "prompt": "Model Seç",
+      "noModels": "İndirilmiş model yok"
+    },
+    "buttons": {
+      "advancedSettings": "Gelişmiş Ayarlar",
+      "startTest": "Testi Başlat",
+      "runningTest": "Test çalışıyor...",
+      "clearAll": "Tümünü Temizle",
+      "done": "Tamam",
+      "cancel": "İptal",
+      "delete": "Sil",
+      "share": "Paylaş",
+      "sharing": "Paylaşılıyor...",
+      "viewRawData": "Ham Veriyi Göster",
+      "hideRawData": "Ham Veriyi Gizle"
+    },
+    "messages": {
+      "pleaseSelectModel": "Lütfen önce bir model seçip başlatın",
+      "testWarning": "Not: Test, büyük modellerde 2-5 dakikaya kadar sürebilir ve başladıktan sonra kesilemez.",
+      "keepScreenOpen": "Lütfen bu ekranı açık tutun.",
+      "initializingModel": "Model başlatılıyor...",
+      "modelMaxValue": "(en fazla: {{maxValue}})",
+      "testFailed": "Test çalıştırılamadı. Üretilen yanıtın bitmesini bekleyip tekrar deneyin."
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Gelişmiş Ayarlar",
+        "testProfile": "Test Profili",
+        "customParameters": "Özel Parametreler",
+        "description": "Belirli test senaryoları için benchmark parametrelerini ince ayarlayın."
+      },
+      "deleteResult": {
+        "title": "Sonucu Sil",
+        "message": "Bu benchmark sonucunu silmek istediğinizden emin misiniz?"
+      },
+      "clearAllResults": {
+        "title": "Tüm Sonuçları Temizle",
+        "message": "Tüm benchmark sonuçlarını silmek istediğinizden emin misiniz?"
+      },
+      "shareResults": {
+        "title": "Benchmark Sonuçlarını Paylaş",
+        "sharedDataTitle": "Paylaşılan veriler şunları içerir:",
+        "deviceAndModelInfo": "• Cihaz donanımı ve model bilgisi",
+        "performanceMetrics": "• Performans ölçümleri",
+        "dontShowAgain": "Bu iletiyi bir daha gösterme"
+      }
+    },
+    "sections": {
+      "testResults": "Test Sonuçları"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "parametre"
+      },
+      "config": {
+        "title": "Benchmark Yapılandırması",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Yin: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Model Ayarları",
+        "context": "Bağlam: {{context}}",
+        "batch": "Yığın: {{batch}}",
+        "ubatch": "UYığın: {{ubatch}}",
+        "cpuThreads": "CPU İş Parçacıkları: {{threads}}",
+        "gpuLayers": "GPU Katmanları: {{layers}}",
+        "device": "Aygıt: {{device}}",
+        "flashAttentionEnabled": "Flash Attention Etkin",
+        "flashAttentionDisabled": "Flash Attention Kapalı",
+        "cacheTypes": "Önbellek Türleri: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "İstem İşleme",
+        "tokenGeneration": "Token Üretimi",
+        "totalTime": "Toplam Süre",
+        "peakMemory": "En Yüksek Bellek",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ Şuraya paylaşıldı:",
+        "leaderboardLink": "AI Phone Leaderboard ↗",
+        "cannotShare": "Paylaşılamaz",
+        "cannotShareTooltip": "Yerel model sonuçları paylaşılamaz",
+        "submitButton": "Liderlik Tablosuna Gönder",
+        "viewLeaderboard": "Liderlik tablosunu görüntüle ↗"
+      },
+      "errors": {
+        "networkRetry": "Bağlantıyı denetleyip tekrar deneyin",
+        "appCheckRetry": "Göndermeyi tekrar dene",
+        "serverRetry": "Daha sonra tekrar deneyin",
+        "genericRetry": "Tekrar dene",
+        "failedToSubmit": "Benchmark gönderilemedi"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Cihaz Bilgisi",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} çekirdek • {{memory}}",
+      "sections": {
+        "basicInfo": "Temel Bilgiler",
+        "cpuDetails": "CPU Ayrıntıları",
+        "gpuDetails": "GPU Ayrıntıları",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "Uygulama Bilgisi"
+      },
+      "fields": {
+        "architecture": "Mimari",
+        "totalMemory": "Toplam Bellek",
+        "deviceId": "Cihaz Kimliği",
+        "cpuCores": "CPU Çekirdekleri",
+        "cpuModel": "CPU Modeli",
+        "chipset": "Yonga Kümesi",
+        "instructions": "Komut Kümeleri",
+        "version": "Sürüm",
+        "gpuType": "GPU Türü",
+        "gpuRenderer": "İşleyici",
+        "gpuVendor": "Üretici",
+        "metalSupport": "Metal Desteği",
+        "openclSupport": "OpenCL Desteği",
+        "openclRequirement": "i8mm ve dotprod gerektirir"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "Beklenmeyen bir hata oluştu",
+    "hfAuthenticationError": "Hugging Face kimlik doğrulama hatası: Belirteç eksik veya geçersiz",
+    "hfAuthenticationErrorSearch": "Hugging Face kimlik doğrulama hatası: Geçersiz belirteç",
+    "authenticationError": "Kimlik doğrulama hatası: Belirteç eksik veya geçersiz",
+    "hfAuthorizationError": "Hugging Face yetkilendirme hatası: Bu kaynağa erişim izni yok",
+    "authorizationError": "Yetkilendirme hatası: Bu kaynağa erişim izni yok",
+    "hfServerError": "Hugging Face sunucu hatası: API sunucusunda sorun var",
+    "serverError": "Sunucu hatası: API sunucusunda sorun var",
+    "hfNetworkTimeout": "Ağ zaman aşımı: Hugging Face'e yapılan istek çok uzun sürdü",
+    "networkTimeout": "Ağ zaman aşımı: İstek çok uzun sürdü",
+    "hfNetworkError": "Ağ hatası: Hugging Face API'sine bağlanılamadı",
+    "networkError": "Ağ hatası: API'ye bağlanılamadı",
+    "downloadSetupFailedTitle": "İndirme Hazırlığı Başarısız",
+    "downloadSetupFailedMessage": "Model indirmeye hazırlanamadı: {{message}}",
+    "cameraErrorTitle": "Kamera Hatası",
+    "cameraErrorMessage": "Fotoğraf çekilemedi",
+    "galleryErrorTitle": "Galeri Hatası",
+    "galleryErrorMessage": "Görseller seçilemedi"
+  },
+  "simulator": {
+    "cameraNotAvailable": "Simülatörde kamera kullanılamaz. Lütfen fiziksel bir cihaz kullanın."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Ses ve Konuşma",
+    "voiceRowTitle": "Ses",
+    "notSet": "Ayarlanmadı",
+    "previewButton": "Önizle",
+    "stopPreviewButton": "Önizlemeyi durdur",
+    "voicesTitle": "Sesler",
+    "voicesEmptyHint": "Kurup kullanmak için herhangi bir sese dokunun. Ya da bir sistem sesi seçin — onlar her zaman kullanılabilir.",
+    "supertonicStepsLabel": "Kalite (difüzyon adımı)",
+    "supertonicLanguageLabel": "Dil",
+    "supertonicLanguageAuto": "Otomatik",
+    "supertonicLanguageSheetTitle": "Dil",
+    "supertonicLanguageSearchPlaceholder": "Dil ara",
+    "supertonicLanguageNames": {
+      "ar": "Arapça",
+      "bg": "Bulgarca",
+      "hr": "Hırvatça",
+      "cs": "Çekçe",
+      "da": "Danca",
+      "nl": "Felemenkçe",
+      "en": "İngilizce",
+      "et": "Estonca",
+      "fi": "Fince",
+      "fr": "Fransızca",
+      "de": "Almanca",
+      "el": "Yunanca",
+      "hi": "Hintçe",
+      "hu": "Macarca",
+      "id": "Endonezce",
+      "it": "İtalyanca",
+      "ja": "Japonca",
+      "ko": "Korece",
+      "lv": "Letonca",
+      "lt": "Litvanca",
+      "pl": "Lehçe",
+      "pt": "Portekizce",
+      "ro": "Romence",
+      "ru": "Rusça",
+      "sk": "Slovakça",
+      "sl": "Slovence",
+      "es": "İspanyolca",
+      "sv": "İsveççe",
+      "tr": "Türkçe",
+      "uk": "Ukraynaca",
+      "vi": "Vietnamca"
+    },
+    "toggleAutoSpeakLabel": "Otomatik okumayı aç/kapat",
+    "openSettingsLabel": "Metin okuma ayarları",
+    "playMessageLabel": "İletiyi oynat",
+    "stopMessageLabel": "İletiyi durdur",
+    "autoSpeakLabel": "Yanıtları otomatik oku",
+    "autoSpeakDescription": "Yeni yanıtlar geldikçe sesli okur.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipPhonon": "Phonon",
+    "engineChipSystem": "Sistem",
+    "stepsCount": "{{steps}} adım",
+    "engineKittenTagline": "En az yer kaplar. Güvenilir. Eski cihazlarda en iyisi.",
+    "engineKokoroTagline": "En yüksek kalite. Başlaması yavaş. Bazı sesler her cihazda çalışmayabilir.",
+    "engineSupertonicTagline": "En hızlı başlar. Daha fazla RAM kullanır. Ara sıra sözcük atlayabilir.",
+    "enginePhononTagline": "Hızlı başlar ve RAM dostudur. Yalnızca İngilizce.",
+    "enginePhononCredit": "Model ve sesler Gradium tarafından (Apache-2.0), Kyutai'nin Mimi kodeki üzerine kurulu.",
+    "engineSystemTagline": "İşletim sisteminin yerleşik sesleri. Her zaman kullanılabilir, kurulum gerekmez.",
+    "engineSystemTitleIos": "iOS Sesleri",
+    "engineSystemTitleAndroid": "Android Sesleri",
+    "engineSystemTier": "her zaman kullanılabilir",
+    "engineTierLightest": "en hafif",
+    "engineTierBestQuality": "en iyi kalite",
+    "engineTierFastestStart": "en hızlı başlangıç",
+    "engineTierNatural": "doğal İngilizce",
+    "engineSpecsLine": "{{voices}} ses  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} ses",
+    "engineRemoveTitle": "{{engineTitle}} kaldırılsın mı?",
+    "engineRemoveBody": "Bu cihazda ~{{sizeMb}} MB yer açar.",
+    "engineRemoveCancel": "İptal",
+    "engineRemoveConfirm": "Kaldır",
+    "engineInstallCta": "Kur · {{sizeMb}} MB",
+    "engineDownloadingLabel": "İndiriliyor…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "Tekrar dene",
+    "voicesEmptyState": "Ses bulunamadı.",
+    "kokoroDeviceNote": "Bazı sesler her cihazda çalışmayabilir.",
+    "insufficientStorage": "Yeterli yer yok — bu motoru kurmak için {{requiredMb}} MB boşaltın ({{freeMb}} MB kullanılabilir)."
+  },
+  "voiceInput": {
+    "micLabel": "Dikte et",
+    "recordingLabel": "Kaydediliyor",
+    "stopLabel": "Durdur ve yazıya çevir",
+    "cancelLabel": "Sesli girişi iptal et",
+    "transcribingLabel": "Yazıya çevriliyor…",
+    "setupLabel": "Sesli girişi ayarla",
+    "setupSheetTitle": "Sesli girişi ayarla",
+    "setupSheetBody": "Tek bir hızlı indirme, ardından çevrimdışı dikte edebilirsiniz.",
+    "settingTitle": "Sesli giriş",
+    "settingDescription": "Dikte etmek için sohbetteki mikrofona dokunun; konuşma cihazınızda yazıya çevrilir.",
+    "unsupportedDeviceHelper": "Bu cihaz önerilen donanımın altında. Sesli giriş büyük olasılıkla yavaş olacak veya başarısız olabilir.",
+    "spokenLanguageLabel": "Konuşma dili",
+    "spokenLanguageAuto": "Kendiliğinden algıla",
+    "spokenLanguageDetected": "Kendiliğinden algılandı: {{language}}",
+    "resetLanguageCta": "Sıfırla",
+    "recordingLanguageAuto": "Dil: otomatik",
+    "recordingLanguage": "Dil: {{code}} (sıfırlamak için dokunun)",
+    "waitingForChatLabel": "Yanıt bittikten sonra yazıya çevrilecek…",
+    "tierNameBase": "Base",
+    "tierNameSmall": "Small",
+    "tierNameLargeTurbo": "Large Turbo",
+    "tierHintBase": "Öntanımlı, hızlı",
+    "tierHintSmall": "Daha isabetli, daha yavaş. Diğer diller için daha iyi",
+    "tierHintLargeTurbo": "Çoğu telefonda çok yavaş",
+    "tierSizeLabel": "{{sizeMb}} MB",
+    "installCta": "İndir",
+    "downloadingLabel": "İndiriliyor…",
+    "retryCta": "Tekrar dene",
+    "removeCta": "Kaldır",
+    "useCta": "Kullan",
+    "inUseLabel": "Kullanımda",
+    "modelSectionHelper": "Sesli giriş ve eller serbest ses tarafından kullanılır.",
+    "errorPermissionDenied": "Sesli giriş için mikrofon erişimi gerekiyor.",
+    "errorPermissionBlocked": "Mikrofon erişimi engellenmiş. Ayarlar'dan etkinleştirin.",
+    "errorTranscribeFailed": "Yazıya çevrilemedi — lütfen tekrar deneyin.",
+    "errorNotInstalled": "Sesli girişi kullanmak için bir ses modeli indirin.",
+    "errorInsufficientMemory": "Bu sohbet modeli ile sesli giriş, bu telefonun belleğinden fazlasını istiyor. Daha küçük bir model deneyin.",
+    "memoryAlertTitle": "Bellek sınırda",
+    "memoryAlertBody": "Sesli giriş, bu sohbet modelinin yanında ek bellek istiyor. Çok yavaşlayabilir veya uygulama kapanabilir.",
+    "memoryAlertTryAnyway": "Yine de dene",
+    "errorMicUnavailable": "Mikrofon yanıt vermiyor. Tekrar deneyin veya daha küçük bir sohbet modeline geçin.",
+    "errorTranscriptPartial": "Dikte ettiğinizin bir bölümü yazıya çevrilemedi.",
+    "openSettingsLabel": "Ayarları aç",
+    "insufficientStorage": "Yeterli yer yok — bu modeli kurmak için {{requiredMb}} MB boşaltın ({{freeMb}} MB kullanılabilir)."
+  },
+  "voiceMode": {
+    "settingTitle": "Eller serbest ses",
+    "settingDescription": "Sohbette modelle konuşun ve yanıtlarını dinleyin.",
+    "unsupportedDeviceHelper": "Bu telefonda yavaş olabilir.",
+    "startingTitle": "Başlatılıyor",
+    "startingHint": "Konuşma tanıma ve ses yükleniyor. İlk seferde biraz daha uzun sürebilir.",
+    "startFailed": "Ses kipi başlatılamadı. Tekrar deneyin.",
+    "micFailed": "Mikrofon kullanılamadı, bu yüzden ses kipi sona erdi.",
+    "listeningTitle": "Dinliyor",
+    "listeningHint": "Bitirdiğinizde durun ya da göndermek için buluta dokunun",
+    "thinkingTitle": "Düşünüyor",
+    "thinkingHint": "İptal etmek için buluta dokunun",
+    "speakingTitle": "Konuşuyor",
+    "speakingHint": "Sözünü kesmek için buluta dokunun",
+    "mutedTitle": "Mikrofon kapalı",
+    "mutedHint": "Yeniden konuşmak için mikrofona dokunun",
+    "errorTranscribe": "Anlayamadık. Tekrar deneyin.",
+    "errorReply": "Yanıt alınamadı. Tekrar deneyin.",
+    "errorSpeech": "Yanıt sesli okunamadı.",
+    "pullDownHint": "Sohbeti görmek için aşağı çekin",
+    "showChatLabel": "Sohbeti göster",
+    "swipeUpHint": "Ses görünümü için yukarı kaydırın",
+    "cloudLabel": "Ses kipi bulutu",
+    "openViewLabel": "Ses görünümünü aç",
+    "micSwitchLabel": "Mikrofon",
+    "endLabel": "Ses kipini bitir",
+    "setupTitle": "Ses kipini ayarla",
+    "setupBody": "Çevrimdışı konuşabilmeniz için telefonunuzda iki küçük model çalışır.",
+    "sttRowTitle": "Konuşma tanıma",
+    "sttRowModel": "Whisper {{tier}} · {{size}}",
+    "sttProgress": "{{done}} / {{total}}",
+    "sttDownloadFailed": "İndirme başarısız. Tekrar deneyin.",
+    "installedLabel": "Kurulu",
+    "voiceRowTitle": "Ses",
+    "voiceRowReady": "{{voice}} · hazır",
+    "voiceRowMissing": "Doğal bir ses seçin. Sistem sesi, ses kipinde konuşamaz.",
+    "voiceRowFileMissing": "{{voice}} henüz indirilmedi. Devam ettiğinizde indirilir.",
+    "voiceRowFileFailed": "{{voice}} indirilemedi. İnternete bağlanıp tekrar deneyin.",
+    "chooseVoiceCta": "Bir ses seçin",
+    "micNote": "Sırada mikrofon erişimi isteyeceğiz.",
+    "micDenied": "Ses kipi için mikrofon erişimi gerekiyor.",
+    "continueCta": "Devam et",
+    "memoryTightTitle": "Bellek sınırda",
+    "memoryTightBody": "Ses kipi aynı anda üç modeli yüklü tutar. Bu telefonda yavaş olabilir veya uygulama kapanabilir.",
+    "memoryWontFitTitle": "Bellek yetersiz",
+    "memoryWontFitBody": "Bu modeller, bu telefonun belleğinden fazlasını istiyor. Ses kipini kullanmak için daha küçük bir model seçin.",
+    "memoryChatRow": "Sohbet modeli · {{name}}",
+    "memorySttRowModel": "Konuşma tanıma · Whisper {{tier}}",
+    "memoryVoiceRow": "Ses · {{name}}",
+    "memoryNeeded": "Gereken",
+    "memoryNeededOfTotal": "Bu telefondaki {{total}} belleğin {{needed}} kadarı",
+    "continueAnywayCta": "Yine de devam et",
+    "chooseSmallerModelCta": "Daha küçük bir model seç",
+    "startLabel": "Ses kipini başlat",
+    "startLockedLabel": "Eller serbest ses, PocketPal Plus",
+    "startLockedHint": "Kısa bir önizleme açar. Yazmak ve dikte etmek ücretsiz kalır.",
+    "teaserTitle": "Sesli konuşma bir Plus özelliğidir",
+    "teaserBody": "Eller serbest konuşun. Sesli yanıt verir.",
+    "teaserGetPlus": "Plus'ı edin",
+    "teaserKeepTyping": "Yazmaya devam et, ücretsiz"
+  },
+  "onboarding": {
+    "back": "Geri",
+    "skip": "Atla",
+    "skipForNow": "Şimdilik atla",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "Pal'lerinizle tanışın.",
+      "titleAccent": "Pal'lerinizle",
+      "body": "Telefonunuzun içinde yaşayan küçük, akıllı arkadaşlar.\nHadi kurulumu yapalım - bir dakikanızı alacak.",
+      "cta": "Beni gezdir",
+      "eyebrow": "PocketPal'a hoş geldiniz"
+    },
+    "screen2": {
+      "title": "Her zaman,\nher yerde.",
+      "body": "Pal'leriniz telefonunuzun içinde yaşar.\nİnternet yok, çekim yok - uçakta, şebeke dışında, en ücra köyde bile çalışırlar.",
+      "highlight": "İnternet yok, çekim yok",
+      "cta": "Sonraki",
+      "eyebrow": "Fikir",
+      "titleAccent": "Her zaman,"
+    },
+    "screen3": {
+      "title": "Daha küçük,\nama sizin.",
+      "titleAccent": "Daha küçük,",
+      "body": "Telefonunuzdaki Pal'ler hızlı ve gizlidir - ama Bulut yapay zekâsından daha hafiftir. Her şeyi bilen bir kâhin değil, cebinizdeki bir yol arkadaşı olarak düşünün.",
+      "highlight": "hızlı ve gizlidir",
+      "cta": "Anladım",
+      "eyebrow": "Küçük bir hatırlatma"
+    },
+    "screen4": {
+      "title": "Hiçbir şey telefonunuzdan çıkmaz.",
+      "titleAccent": "çıkmaz",
+      "body": "Hesap yok. Bulut yok. Takip yok. Konuşmalarınız size ait kalır.",
+      "highlight": "Hesap yok. Bulut yok. Takip yok.",
+      "cta": "Başlayalım",
+      "eyebrow": "Gizlilik sözümüz"
+    },
+    "screen5": {
+      "title": "Pal'iniz ne işe yarasın?",
+      "body": "Nelerden konuşmak istediğinizi seçin - telefonunuza uygun bir Pal bulalım.",
+      "topic": {
+        "smartchat": "Akıllı Sohbet",
+        "coding": "Kodlama",
+        "education": "Eğitim",
+        "roleplay": "Rol Yapma",
+        "creative_writing": "Yaratıcı Yazma",
+        "else": "Başka bir şey mi arıyorsunuz?"
+      },
+      "topicDescription": {
+        "smartchat": "Günlük hayatta dost canlısı bir yol arkadaşı",
+        "coding": "Kod yaz, hata ayıkla, açıkla",
+        "education": "Öğren, açıkla, kendini sına",
+        "roleplay": "Karakterler, senaryolar",
+        "creative_writing": "Öyküler, fikirler, taslaklar",
+        "else": "Tüm Pal'lere daha sonra uygulamadan göz atın"
+      }
+    },
+    "screen6": {
+      "cta": "{{name}} indir",
+      "ctaTemplate": "{{name}} indir ({{size}})",
+      "useTemplate": "{{name}} kullan",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB boş",
+      "recommended": "Önerilen",
+      "downloaded": "İndirildi",
+      "modelTier": {
+        "quick": "Hızlı",
+        "balanced": "Dengeli",
+        "best": "En iyi"
+      },
+      "subtitleTemplate": "{{name}}, telefonunuzdaki küçük bir yapay zekâ modeliyle düşünür - uygun olanı seçin.",
+      "pal": {
+        "pip": {
+          "body": "Size tam uygun bir Pal bulduk - günlük hayatta dost canlısı bir yol arkadaşı. Pek çok iş için yeterince akıllı, her telefon için yeterince hafif."
+        },
+        "codie": {
+          "body": "Codie ile tanışın — yerel eş programcınız. Kodu okur, kod yazar, çetrefilli yerleri telefonunuzdan hiç çıkmadan açıklar."
+        },
+        "sage": {
+          "body": "Sage sabırlı ve meraklıdır; fikirleri adım adım sizinle birlikte düşünür. Cebinizde taşıdığınız bir çalışma arkadaşı."
+        },
+        "echo": {
+          "body": "Echo çok yönlü bir rol yapma arkadaşı — karakterinden çıkmaz, sahneleri resmeder, hikâyeniz nereye giderse peşinden gelir."
+        },
+        "muse": {
+          "body": "Muse yazmanıza yardım eder. İfadeler önerir, ritmi bulur ve üslubunuzu bozmaz."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} indiriliyor",
+    "titleByModel": "{{name}} indiriliyor",
+    "extraInProgress": "+{{count}} tane daha sürüyor",
+    "failedTitle": "İndirme tamamlanmadı",
+    "retry": "Tekrar dene"
+  },
+  "plus": {
+    "eyebrow": "PocketPal Plus",
+    "headline": "Yerel yapay zekâyı daha ileri taşıyın.",
+    "subline": "Plus, PocketPal'ı ücretsiz ve açık kaynak tutuyor. Ek özellikler bizim teşekkürümüz.",
+    "unsupportedSubline": "Plus özellikleri bu telefonda henüz çalışmıyor. Yine de PocketPal'a destek olabilirsiniz.",
+    "thanksHeadline": "PocketPal'ı yaşattığınız için teşekkürler.",
+    "thanksSubline": "Plus bu cihazda etkin.",
+    "features": {
+      "handsFreeVoice": "Eller serbest ses",
+      "localApiServer": "Yerel API sunucusu"
+    },
+    "ready": "Hazır",
+    "needsRam": "{{gb}} GB RAM gerekir",
+    "comingSoon": "Yakında",
+    "optIn": "Kapalı",
+    "optInNote": "Bu telefonda kapalı. Cesaretiniz varsa Ayarlar'dan açın.",
+    "offInSettingsNote": "Ayarlar'dan kapatıldı.",
+    "speedLine": "Hız, telefonunuza ve modele bağlıdır.",
+    "inDevelopment": "Geliştirme aşamasındaki özellikler değişebilir veya hiç yayınlanmayabilir.",
+    "chatStaysFree": "Plus isteğe bağlıdır. Sohbet etmek ücretsiz kalır.",
+    "priceCaption": "Size uygun geleni ödeyin. Her tutar aynı özelliklerin kilidini açar.",
+    "buyError": "Satın alma gerçekleşmedi. Tekrar deneyin.",
+    "getPlus": "Plus'ı edin · {{price}}",
+    "getPlusAnyway": "Yine de Plus'ı edin · {{price}}",
+    "chooseAmount": "Bir tutar seçin",
+    "loading": "Yükleniyor",
+    "pending": "Beklemede",
+    "pendingTitle": "Mağazanın ödemenizi onaylaması bekleniyor.",
+    "pendingBody": "Onaylandığında Plus kendiliğinden etkinleşir. Bu ekranı kapatabilirsiniz.",
+    "unavailableTitle": "Satın alma şu anda kullanılamıyor.",
+    "unavailableBody": "Mağazaya ulaşılamadı. Daha sonra tekrar deneyin veya geçmiş bir satın alımı geri yükleyin.",
+    "done": "Tamam",
+    "oneTimePurchase": "Tek seferlik satın alma",
+    "restore": "Geri yükle",
+    "openSource": "Açık kaynak ↗",
+    "licence": "Plus'ı kullanmak için tek seferlik lisans satın alımı.",
+    "terms": "Koşullar",
+    "appleMediaTerms": "Apple Media Services Koşulları",
+    "noPurchaseFound": "Plus satın alımı bulunamadı.",
+    "restoreFailed": "Mağazaya ulaşılamadı. Tekrar deneyin.",
+    "sidebar": {
+      "title": "PocketPal Plus",
+      "unlocked": "Etkin",
+      "subtitleOne": "{{first}}",
+      "subtitleTwo": "{{first}}, {{second}}",
+      "subtitleMore": "{{first}}, {{second}} ve daha fazlası"
+    }
   }
 }

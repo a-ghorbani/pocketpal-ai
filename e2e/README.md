@@ -176,7 +176,7 @@ yarn e2e --list-models
 | `--mode` | `local`, `device-farm` | `local` | Execution mode (switches wdio config) |
 | `--skip-build` | _(flag)_ | builds by default | Skip app builds, reuse existing |
 | `--dry-run` | _(flag)_ | off | Print what would run without executing |
-| `--report-dir` | path | auto-timestamped | Override report output directory |
+| `--report-dir` | path | `$DEVICEFARM_LOG_DIR` in device-farm mode when set, else auto-timestamped | Override report output directory |
 | `--list-models` | _(flag)_ | off | List all available models and exit |
 
 ### Direct WDIO Commands
@@ -266,6 +266,8 @@ e2e/
 │   ├── quick-smoke.spec.ts       # Core smoke test (model download + chat)
 │   ├── load-stress.spec.ts       # Load/unload cycle crash repro
 │   ├── diagnostic.spec.ts        # Page source dumper for debugging
+│   ├── diagnostics/              # Device probes; run only when named with --spec
+│   │   └── metal-load.spec.ts    # iOS Metal model-load probe (testspec-ios-metal-load.yml)
 │   └── features/                 # Feature-level tests
 │       ├── thinking.spec.ts      # Thinking toggle + reasoning bubble
 │       └── language.spec.ts      # Language switching UI validation

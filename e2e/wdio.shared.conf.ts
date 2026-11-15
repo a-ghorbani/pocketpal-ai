@@ -13,7 +13,8 @@ export const SCREENSHOT_DIR =
 
 export const config: Options.Testrunner = {
   runner: 'local',
-  specs: ['./specs/**/*.spec.ts'],
+  // specs/diagnostics/ is left out: those specs run only when named with --spec.
+  specs: ['./specs/*.spec.ts', './specs/features/**/*.spec.ts'],
   exclude: [],
   maxInstances: 1,
 
