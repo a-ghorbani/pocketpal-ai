@@ -1644,7 +1644,10 @@
     "systemNoVoicesForLanguage": "Для языка {{language}} на этом телефоне пока нет голосов.",
     "systemIosSettingsHint": "Добавьте голоса в разделе Настройки > Универсальный доступ > Устный контент > Голоса.",
     "systemLanguageSheetTitle": "Язык голоса",
-    "systemLanguageSearchPlaceholder": "Поиск языков"
+    "systemLanguageSearchPlaceholder": "Поиск языков",
+    "speakingNotificationTitle": "PocketPal говорит",
+    "speakingNotificationStop": "Остановить",
+    "speakingNotificationChannel": "Речь"
   },
   "htmlPreview": {
     "defaultTitle": "Предпросмотр",
@@ -1778,7 +1781,7 @@
     "errorPermissionBlocked": "Доступ к микрофону заблокирован. Включите его в настройках.",
     "errorTranscribeFailed": "Не удалось распознать речь – попробуйте ещё раз.",
     "errorNotInstalled": "Загрузите голосовую модель, чтобы пользоваться голосовым вводом.",
-    "errorInsufficientMemory": "Недостаточно памяти для голосового ввода с этой моделью чата. Попробуйте модель поменьше.",
+    "errorInsufficientMemory": "Этой модели чата и голосовому вводу нужно больше памяти, чем есть на этом телефоне. Попробуйте модель поменьше.",
     "errorMicUnavailable": "Микрофон не отвечает. Попробуйте снова или выберите модель чата поменьше.",
     "errorTranscriptPartial": "Часть вашей речи не удалось распознать.",
     "openSettingsLabel": "Открыть настройки",
@@ -1888,7 +1891,7 @@
     "memoryTightTitle": "Память на пределе",
     "memoryTightBody": "В голосовом режиме одновременно загружены три модели. На этом телефоне это может работать медленно, а приложение может закрыться.",
     "memoryWontFitTitle": "Недостаточно памяти",
-    "memoryWontFitBody": "Распознавание речи не поместится в памяти вместе с этой моделью чата. Выберите модель поменьше, чтобы пользоваться голосовым режимом.",
+    "memoryWontFitBody": "Этим моделям нужно больше памяти, чем есть на этом телефоне. Выберите модель поменьше, чтобы пользоваться голосовым режимом.",
     "memoryChatRow": "Модель чата · {{name}}",
     "memorySttRowModel": "Распознавание речи · Whisper {{tier}}",
     "memoryVoiceRow": "Голос · {{name}}",
