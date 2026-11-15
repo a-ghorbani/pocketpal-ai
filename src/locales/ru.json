@@ -1647,7 +1647,8 @@
     "systemLanguageSearchPlaceholder": "Поиск языков",
     "speakingNotificationTitle": "PocketPal говорит",
     "speakingNotificationStop": "Остановить",
-    "speakingNotificationChannel": "Речь"
+    "speakingNotificationChannel": "Речь",
+    "systemIosReadAndSpeakHint": "Добавьте голоса в разделе Настройки > Универсальный доступ > Чтение вслух > Голоса."
   },
   "htmlPreview": {
     "defaultTitle": "Предпросмотр",
@@ -1907,6 +1908,7 @@
     "teaserKeepTyping": "Продолжить писать, бесплатно",
     "voiceRowFileMissing": "{{voice}} ещё не загружен. Нажмите Продолжить – и мы его загрузим.",
     "voiceRowFileFailed": "Не удалось загрузить {{voice}}. Подключитесь к интернету и попробуйте ещё раз.",
-    "memoryNeededOfTotal": "{{needed}} из {{total}} на этом телефоне"
+    "memoryNeededOfTotal": "{{needed}} из {{total}} на этом телефоне",
+    "voiceRowChoose": "Выберите голос для озвучивания ответов."
   }
 }
