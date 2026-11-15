@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {test} from 'node:test';
 
 import {
@@ -173,5 +174,203 @@ test('a run ignores a merged junit-results.xml left in its report dir', () => {
     assert.equal(classifyCleanRun(counts), 'skipped');
   } finally {
     fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
+
+// The runner is driven as a CLI with only `npx wdio` stubbed. The stub writes
+// where wdio would: JUnit to DEVICEFARM_LOG_DIR (the junit reporter's
+// outputDir) and a screenshot to DEVICEFARM_SCREENSHOT_PATH.
+const E2E_DIR = path.join(__dirname, '..', '..');
+const REPORTS_DIR = path.join(E2E_DIR, 'reports');
+const TS_NODE = path.join(E2E_DIR, 'node_modules', '.bin', 'ts-node');
+
+const WDIO_STUB = `#!/bin/sh
+if [ "$1" != "wdio" ]; then
+  echo "unexpected npx call: $*" >&2
+  exit 127
+fi
+printf '%s\\t%s\\n' "$DEVICEFARM_LOG_DIR" "$DEVICEFARM_SCREENSHOT_PATH" >> "$STUB_WDIO_RECORD"
+mkdir -p "$DEVICEFARM_LOG_DIR" "$DEVICEFARM_SCREENSHOT_PATH"
+model=$(printf '%s' "\${TEST_MODELS:-unknown}" | sed 's/[^a-zA-Z0-9.-]/-/g')
+cat > "$DEVICEFARM_LOG_DIR/junit-$model.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="1" failures="0" errors="0" skipped="0">
+  <testsuite name="Quick Smoke" tests="1" failures="0" errors="0" skipped="0">
+    <testcase classname="Quick Smoke" name="replies" time="1"/>
+  </testsuite>
+</testsuites>
+XML
+: > "$DEVICEFARM_SCREENSHOT_PATH/$model.png"
+`;
+
+interface WdioCall {
+  logDir: string;
+  screenshotDir: string;
+}
+
+function runRunner(args: string[], env: Record<string, string | undefined>) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-cli-'));
+  const binDir = path.join(tmp, 'bin');
+  fs.mkdirSync(binDir);
+  fs.writeFileSync(path.join(binDir, 'npx'), WDIO_STUB, {mode: 0o755});
+  const record = path.join(tmp, 'wdio-calls.tsv');
+
+  const childEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && !key.startsWith('DEVICEFARM_')) {
+      childEnv[key] = value;
+    }
+  }
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== undefined) {
+      childEnv[key] = value;
+    }
+  }
+  childEnv.PATH = `${binDir}${path.delimiter}${process.env.PATH ?? ''}`;
+  childEnv.STUB_WDIO_RECORD = record;
+
+  const result = spawnSync(TS_NODE, ['scripts/run-e2e.ts', ...args], {
+    cwd: E2E_DIR,
+    env: childEnv,
+    encoding: 'utf8',
+    timeout: 240000,
+  });
+  const calls: WdioCall[] = fs.existsSync(record)
+    ? fs
+        .readFileSync(record, 'utf8')
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map(line => {
+          const [logDir, screenshotDir] = line.split('\t');
+          return {logDir, screenshotDir};
+        })
+    : [];
+  return {tmp, result, calls};
+}
+
+function listFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  return fs
+    .readdirSync(dir, {recursive: true, withFileTypes: true})
+    .filter(entry => entry.isFile())
+    .map(entry => path.join(entry.parentPath, entry.name));
+}
+
+function isInside(file: string, dir: string): boolean {
+  const rel = path.relative(dir, file);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+function reportDirEntries(): Set<string> {
+  return new Set(fs.existsSync(REPORTS_DIR) ? fs.readdirSync(REPORTS_DIR) : []);
+}
+
+test(
+  'device-farm mode writes each run under Device Farm DEVICEFARM_LOG_DIR',
+  {timeout: 300000},
+  () => {
+    const before = reportDirEntries();
+    const dfRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-df-'));
+    const dfLog = path.join(dfRoot, 'log');
+    const dfShots = path.join(dfRoot, 'screenshots');
+    fs.mkdirSync(dfLog);
+    fs.mkdirSync(dfShots);
+    let tmp = '';
+    try {
+      // The default testspecs' test command.
+      const run = runRunner(
+        ['--platform', 'android', '--each-model', '--mode', 'device-farm'],
+        {DEVICEFARM_LOG_DIR: dfLog, DEVICEFARM_SCREENSHOT_PATH: dfShots},
+      );
+      tmp = run.tmp;
+      assert.equal(
+        run.result.status,
+        0,
+        run.result.stderr || run.result.stdout,
+      );
+      assert.ok(run.calls.length > 1, 'expected one wdio run per model');
+
+      for (const call of run.calls) {
+        assert.ok(
+          isInside(call.logDir, dfLog),
+          `wdio got DEVICEFARM_LOG_DIR=${call.logDir}, outside ${dfLog}`,
+        );
+        assert.ok(
+          isInside(call.screenshotDir, dfLog) ||
+            isInside(call.screenshotDir, dfShots) ||
+            call.screenshotDir === dfShots,
+          `wdio got DEVICEFARM_SCREENSHOT_PATH=${call.screenshotDir}, outside Device Farm's artifact dirs`,
+        );
+      }
+      // readRunJunitCounts reads one run's dir, so runs must not share one.
+      const runDirs = new Set(run.calls.map(call => call.logDir));
+      assert.equal(runDirs.size, run.calls.length);
+
+      const delivered = listFiles(dfLog).concat(listFiles(dfShots));
+      const junit = delivered.filter(f => /junit-.+\.xml$/.test(f));
+      assert.ok(
+        junit.length >= run.calls.length,
+        `expected per-run JUnit under ${dfLog}, found ${junit.length}`,
+      );
+      // post_test prints $DEVICEFARM_LOG_DIR/junit-results.xml.
+      assert.ok(fs.existsSync(path.join(dfLog, 'junit-results.xml')));
+      assert.equal(
+        delivered.filter(f => f.endsWith('.png')).length,
+        run.calls.length,
+      );
+    } finally {
+      for (const entry of reportDirEntries()) {
+        if (!before.has(entry)) {
+          fs.rmSync(path.join(REPORTS_DIR, entry), {
+            recursive: true,
+            force: true,
+          });
+        }
+      }
+      fs.rmSync(dfRoot, {recursive: true, force: true});
+      if (tmp) {
+        fs.rmSync(tmp, {recursive: true, force: true});
+      }
+    }
+  },
+);
+
+test('local mode keeps each run under --report-dir', {timeout: 300000}, () => {
+  const reportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'run-e2e-local-'));
+  let tmp = '';
+  try {
+    const run = runRunner(
+      [
+        '--platform',
+        'android',
+        '--each-model',
+        '--mode',
+        'local',
+        '--skip-build',
+        '--report-dir',
+        reportDir,
+      ],
+      {},
+    );
+    tmp = run.tmp;
+    assert.equal(run.result.status, 0, run.result.stderr || run.result.stdout);
+    assert.ok(run.calls.length > 1, 'expected one wdio run per model');
+    for (const call of run.calls) {
+      assert.ok(isInside(call.logDir, reportDir), call.logDir);
+      assert.ok(isInside(call.screenshotDir, reportDir), call.screenshotDir);
+    }
+    assert.equal(
+      new Set(run.calls.map(call => call.logDir)).size,
+      run.calls.length,
+    );
+    assert.ok(fs.existsSync(path.join(reportDir, 'junit-results.xml')));
+  } finally {
+    fs.rmSync(reportDir, {recursive: true, force: true});
+    if (tmp) {
+      fs.rmSync(tmp, {recursive: true, force: true});
+    }
   }
 });
