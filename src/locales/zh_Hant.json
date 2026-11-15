@@ -1644,7 +1644,10 @@
     "systemNoVoicesForLanguage": "這台手機上還沒有{{language}}語音。",
     "systemIosSettingsHint": "請在「設定 > 輔助使用 > 朗讀內容 > 語音」中新增語音。",
     "systemLanguageSheetTitle": "語音語言",
-    "systemLanguageSearchPlaceholder": "搜尋語言"
+    "systemLanguageSearchPlaceholder": "搜尋語言",
+    "speakingNotificationTitle": "PocketPal 正在朗讀",
+    "speakingNotificationStop": "停止",
+    "speakingNotificationChannel": "朗讀"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
