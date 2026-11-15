@@ -660,3 +660,38 @@ describe('PalPurchaseFooter', () => {
     });
   });
 });
+
+describe('PalPurchaseFooter in a non-store build', () => {
+  beforeEach(() => {
+    (global as any).__PLUS_STORE_GATE__ = false;
+    mockAccountLinkEnabled = true;
+    (authService as any).isAuthenticated = false;
+    runInAction(() => {
+      (purchaseStore as any).reset();
+      palStore.pals = [];
+    });
+  });
+
+  afterEach(() => {
+    (global as any).__PLUS_STORE_GATE__ = true;
+  });
+
+  it('shows no Buy and no store price for a purchasable paid Pal', () => {
+    purchasable();
+    const {queryByTestId, queryByText} = setup();
+    expect(queryByTestId('buy-button')).toBeNull();
+    expect(queryByText('4,99 €')).toBeNull();
+    expect(queryByTestId('purchase-signin-link')).toBeNull();
+  });
+
+  it('keeps Open for a Pal the user already owns', () => {
+    purchasable();
+    runInAction(() => {
+      purchaseStore.records['pal-1'] = record('active');
+      palStore.pals = [localPal];
+    });
+    const {getByTestId, queryByTestId} = setup();
+    expect(getByTestId('owned-button')).toHaveTextContent('Open');
+    expect(queryByTestId('buy-button')).toBeNull();
+  });
+});
