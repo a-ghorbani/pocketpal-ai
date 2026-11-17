@@ -106,6 +106,12 @@ describe('SpeechDetector', () => {
     ).toBe(ASR_CHUNK_BYTES / 2);
   });
 
+  it('does not count a short first chunk below the ceiling as speech', () => {
+    expect(
+      new SpeechDetector().push(frame(-45, ASR_CHUNK_BYTES / 2)).speechBytes,
+    ).toBe(0);
+  });
+
   it('takes the first frame for room unless it reaches the ceiling', () => {
     expect(new SpeechDetector().push(frame(-45)).speechBytes).toBe(0);
     expect(new SpeechDetector().push(frame(-40)).speechBytes).toBe(

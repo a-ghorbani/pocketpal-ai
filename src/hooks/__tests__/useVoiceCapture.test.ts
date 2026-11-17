@@ -589,6 +589,17 @@ describe('useVoiceCapture', () => {
       expect(asrStore.setError).not.toHaveBeenCalled();
     });
 
+    it('says so after exactly one second of audio', async () => {
+      const {result} = await startRecording();
+
+      feed(quietRoomPcm().subarray(0, 1000 * 32));
+      await stop(result);
+
+      await waitFor(() =>
+        expect(asrStore.setError).toHaveBeenCalledWith('no_speech'),
+      );
+    });
+
     it('counts the audio of each capture on its own', async () => {
       const {result} = await startRecording();
       feed(quietRoomPcm());

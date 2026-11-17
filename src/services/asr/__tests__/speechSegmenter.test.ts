@@ -115,6 +115,23 @@ describe('SpeechSegmenter', () => {
     expect(segmenter.flush()).toBeNull();
   });
 
+  it('counts only the speech frames of a longer chunk', () => {
+    const halfSpeech = () => {
+      const bytes = new Uint8Array(2 * CHUNK_MS * BYTES_PER_MS);
+      bytes.set(speech(), 0);
+      bytes.set(silence(), CHUNK_MS * BYTES_PER_MS);
+      return bytes;
+    };
+    const short = new SpeechSegmenter(() => {});
+    const enough = new SpeechSegmenter(() => {});
+
+    push(short, halfSpeech, ASR_MIN_SPEECH_MS - CHUNK_MS);
+    push(enough, halfSpeech, ASR_MIN_SPEECH_MS);
+
+    expect(short.flush()).toBeNull();
+    expect(enough.flush()?.length).toBe(2 * ASR_MIN_SPEECH_MS * BYTES_PER_MS);
+  });
+
   it('cuts long speech without a pause at the segment cap', () => {
     const segments: Uint8Array[] = [];
     const segmenter = new SpeechSegmenter(s => segments.push(s));
