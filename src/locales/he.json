@@ -1267,7 +1267,8 @@
         "startChat": "פתח צ'אט",
         "needsMemory": "Pal זה דורש מכשיר עם {{size}} זיכרון לפחות עבור המודל הקטן ביותר שלו.",
         "noModelFits": "למכשיר הזה אין מספיק זיכרון עבור Pal זה."
-      }
+      },
+      "storeOnly": "זמין רק בגרסת Google Play / App Store של האפליקציה"
     }
   },
   "validation": {
