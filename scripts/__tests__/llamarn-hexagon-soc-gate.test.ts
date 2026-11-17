@@ -168,3 +168,103 @@ describe('Hexagon and Adreno detection gate the hexagon_opencl library', () => {
     }).toEqual({hexagon: true, adreno: true});
   });
 });
+
+const QUALCOMM_PHONE: BuildFields = {
+  SOC_MANUFACTURER: 'QTI',
+  HARDWARE: 'qcom',
+  BOARD: 'acme',
+  MANUFACTURER: 'ACME',
+  BRAND: 'ACME',
+  MODEL: 'X1',
+  SDK_INT: 36,
+};
+const PHONES: Record<string, BuildFields> = {
+  'a Qualcomm hint': QUALCOMM_PHONE,
+  'no Qualcomm hint': {...QUALCOMM_PHONE, HARDWARE: 'acme'},
+};
+const NO_HINT_PHONE = PHONES['no Qualcomm hint'];
+
+describe('the SoC name gate', () => {
+  it.each([
+    ['SM8450', 'no Qualcomm hint'],
+    ['SM8550', 'no Qualcomm hint'],
+    ['SM8635', 'no Qualcomm hint'],
+    ['SM8650', 'no Qualcomm hint'],
+    ['SM8650-AC', 'no Qualcomm hint'],
+    ['SM8750', 'no Qualcomm hint'],
+    ['SM8845', 'no Qualcomm hint'],
+    ['SM8850', 'no Qualcomm hint'],
+    ['SM8550P', 'no Qualcomm hint'],
+    ['SM8750P', 'no Qualcomm hint'],
+    ['SM8850P', 'no Qualcomm hint'],
+    ['SM8999', 'a Qualcomm hint'],
+    ['SM8999P', 'a Qualcomm hint'],
+  ])('accepts %s with %s', (soc, hint) => {
+    const build = {...PHONES[hint], SOC_MODEL: soc};
+    expect({
+      hexagon: isHexagonSupported(build),
+      adreno: hasAdrenoGpuHint(build),
+    }).toEqual({hexagon: true, adreno: true});
+  });
+
+  it.each([
+    ['SM7675', 'a Qualcomm hint', true],
+    ['SM7675P', 'a Qualcomm hint', true],
+    ['SM6475P', 'a Qualcomm hint', true],
+    ['SM7675P', 'no Qualcomm hint', false],
+    ['SM88501', 'a Qualcomm hint', true],
+    ['SM88501', 'no Qualcomm hint', false],
+    ['SM8850PA', 'a Qualcomm hint', true],
+    ['SM8850PA', 'no Qualcomm hint', false],
+    ['SM8999', 'no Qualcomm hint', true],
+    ['SM8999P', 'no Qualcomm hint', true],
+    ['MT6899', 'no Qualcomm hint', false],
+    ['Tensor G4', 'no Qualcomm hint', false],
+    ['s5e9945', 'no Qualcomm hint', false],
+    ['', 'no Qualcomm hint', false],
+  ])(
+    'rejects "%s" for Hexagon with %s (Adreno hint: %s)',
+    (soc, hint, adreno) => {
+      const build = {...PHONES[hint], SOC_MODEL: soc};
+      expect({
+        hexagon: isHexagonSupported(build),
+        adreno: hasAdrenoGpuHint(build),
+      }).toEqual({hexagon: false, adreno});
+    },
+  );
+
+  it.each([
+    [
+      'Galaxy S23',
+      {
+        SOC_MODEL: 'SM8550',
+        SOC_MANUFACTURER: 'QTI',
+        HARDWARE: 'qcom',
+        BOARD: 'kalama',
+        MANUFACTURER: 'samsung',
+        BRAND: 'samsung',
+        MODEL: 'SM-S911B',
+        SDK_INT: 36,
+      },
+      true,
+    ],
+    ['POCO F8 Ultra', {...NO_HINT_PHONE, SOC_MODEL: 'SM8850'}, true],
+    [
+      'OnePlus 6',
+      {
+        HARDWARE: 'qcom',
+        BOARD: 'sdm845',
+        MANUFACTURER: 'OnePlus',
+        BRAND: 'OnePlus',
+        MODEL: 'ONEPLUS-A6003',
+        SDK_INT: 29,
+      },
+      false,
+    ],
+  ])('keeps the %s result', (_phone, build: BuildFields, hexagon) => {
+    expect({
+      hexagon: isHexagonSupported(build),
+      adreno: hasAdrenoGpuHint(build),
+    }).toEqual({hexagon, adreno: true});
+  });
+});
