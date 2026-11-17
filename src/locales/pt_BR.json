@@ -1267,7 +1267,8 @@
         "startChat": "Iniciar chat",
         "needsMemory": "Este Pal precisa de um dispositivo com pelo menos {{size}} de memória para o menor modelo dele.",
         "noModelFits": "Este dispositivo não tem memória suficiente para este Pal."
-      }
+      },
+      "storeOnly": "Disponível na versão do app para Google Play / App Store"
     }
   },
   "validation": {
