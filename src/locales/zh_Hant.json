@@ -1549,7 +1549,8 @@
         "startChat": "開始對話",
         "needsMemory": "此 Pal 需要至少 {{size}} 的記憶體才能執行其最小模型。",
         "noModelFits": "此裝置的記憶體不足以執行此 Pal。"
-      }
+      },
+      "storeOnly": "僅在 Google Play / App Store 版應用程式中可用"
     }
   },
   "voiceAndSpeech": {
