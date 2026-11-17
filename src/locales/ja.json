@@ -1267,7 +1267,8 @@
         "startChat": "チャットを開始",
         "needsMemory": "このPalの最小モデルを動かすには、{{size}}以上のメモリを搭載したデバイスが必要です。",
         "noModelFits": "このデバイスにはこのPalを動かすのに十分なメモリがありません。"
-      }
+      },
+      "storeOnly": "Google Play / App Store版のアプリでのみご利用いただけます"
     }
   },
   "validation": {
