@@ -191,6 +191,21 @@ describe('SpeechSegmenter', () => {
       expect(segmentsOf(signal)).toHaveLength(0);
     });
 
+    it('does not add up quiet knocks after a loud segment was cut', () => {
+      const sentence = overQuietRoom(speechAt(-30));
+      const knock = roomAt(steadyRoomPcm(), -50, 150);
+      const signal = joined(
+        quietRoom(1000),
+        ...Array.from(
+          {length: Math.ceil(ASR_MIN_SEGMENT_MS / msOf(toPcm(sentence)))},
+          () => sentence,
+        ),
+        mixed(mixed(quietRoom(5000), knock, 1000), knock, 2150),
+      );
+
+      expect(segmentsOf(signal)).toHaveLength(1);
+    });
+
     it.each([-30, -48])(
       'keeps a short first word at %d dBFS with the sentence after its pause',
       dbfs => {

@@ -92,6 +92,20 @@ describe('SpeechDetector', () => {
     }
   });
 
+  it('counts a louder room as speech for under 1.5 s, then as room', () => {
+    const detector = new SpeechDetector();
+    speechMs(detector, -70, 1500);
+
+    expect(speechMs(detector, -50, 1400)).toBe(1400);
+    expect(speechMs(detector, -50, 10_000)).toBe(0);
+  });
+
+  it('counts a short first chunk at the ceiling as speech', () => {
+    expect(
+      new SpeechDetector().push(frame(-38, ASR_CHUNK_BYTES / 2)).speechBytes,
+    ).toBe(ASR_CHUNK_BYTES / 2);
+  });
+
   it('takes the first frame for room unless it reaches the ceiling', () => {
     expect(new SpeechDetector().push(frame(-45)).speechBytes).toBe(0);
     expect(new SpeechDetector().push(frame(-40)).speechBytes).toBe(
