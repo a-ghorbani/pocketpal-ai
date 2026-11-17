@@ -1,7 +1,7 @@
 import {fromByteArray} from 'base64-js';
 import {when} from 'mobx';
 
-import {whisperAsrEngine} from '../asr';
+import {energyVad, int16PcmToFloat32, whisperAsrEngine} from '../asr';
 import type {AsrTier, AsrTranscript} from '../asr';
 import {getEngine, ttsRuntime} from '../tts';
 import {asrStore, chatSessionStore, ttsStore} from '../../store';
@@ -93,6 +93,15 @@ export class CascadeVoiceEngine implements VoiceEngine {
     };
 
     const run = async (): Promise<VoiceTurnOutcome> => {
+      const vad = energyVad(int16PcmToFloat32(utterance));
+      vtrace('vad', {
+        passed: vad.passed,
+        voicedMs: vad.voicedMs,
+        ms: Math.round(vad.durationMs),
+      });
+      if (!vad.passed) {
+        return 'empty';
+      }
       let transcript: AsrTranscript;
       try {
         if (!this.tier) {

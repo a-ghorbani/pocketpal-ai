@@ -8,7 +8,7 @@ import {
   ASR_SPEECH_FLOOR_DBFS,
   ASR_SPEECH_MARGIN_DB,
 } from './constants';
-import {int16PcmToFloat32} from './pcm';
+import {int16PcmToFloat32} from './energyVad';
 
 const FRAME_MS = (ASR_CHUNK_BYTES / (ASR_SAMPLE_RATE * 2)) * 1000;
 const WINDOW_FRAMES = Math.round(ASR_NOISE_WINDOW_MS / FRAME_MS);

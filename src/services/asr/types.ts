@@ -62,6 +62,18 @@ export interface AsrTranscript {
 /** Progress callback (0..1) for a tier download. */
 export type AsrProgressCallback = (progress: number) => void;
 
+/** Result of energy-VAD gating a captured buffer. */
+export interface VadResult {
+  /** True when the buffer carries enough voiced signal to decode. */
+  passed: boolean;
+  /** RMS amplitude of the whole buffer (normalized 0..1). */
+  rms: number;
+  /** Total duration of the voiced frames in ms. */
+  voicedMs: number;
+  /** Captured duration in ms. */
+  durationMs: number;
+}
+
 /**
  * Speech-recognition engine. One install per tier on disk; install truth is
  * the file system (model file + current-version sentinel), never a store flag.
