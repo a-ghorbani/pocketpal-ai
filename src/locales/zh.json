@@ -1267,7 +1267,8 @@
         "startChat": "开始聊天",
         "needsMemory": "此 Pal 的最小模型需要设备至少有 {{size}} 内存。",
         "noModelFits": "此设备的内存不足以运行此 Pal。"
-      }
+      },
+      "storeOnly": "仅在 Google Play / App Store 版应用中可用"
     }
   },
   "validation": {
