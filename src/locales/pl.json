@@ -1241,7 +1241,8 @@
         "startChat": "Rozpocznij czat",
         "needsMemory": "Najmniejszy model tego Kumpla wymaga urządzenia z co najmniej {{size}} pamięci.",
         "noModelFits": "To urządzenie nie ma wystarczającej ilości pamięci dla tego Kumpla."
-      }
+      },
+      "storeOnly": "Dostępne w wersji aplikacji z Google Play / App Store"
     }
   },
   "validation": {
