@@ -3,8 +3,9 @@ import {
   ASR_MIN_SPEECH_MS,
   ASR_SAMPLE_RATE,
   ASR_SEGMENT_LEAD_IN_MS,
+  ASR_VAD_RMS_FLOOR,
 } from '../asr/constants';
-import {SpeechDetector} from '../asr/speechDetector';
+import {int16PcmToFloat32} from '../asr/energyVad';
 
 import {vtrace} from '../../utils/voiceTrace';
 
@@ -12,21 +13,32 @@ import {VOICE_ENDPOINT_HANG_MS} from './constants';
 
 const BYTES_PER_MS = (ASR_SAMPLE_RATE * 2) / 1000;
 
+const isVoiced = (chunk: Uint8Array): boolean => {
+  const samples = int16PcmToFloat32(chunk);
+  if (samples.length === 0) {
+    return false;
+  }
+  let sumSquares = 0;
+  for (let i = 0; i < samples.length; i++) {
+    sumSquares += samples[i]! * samples[i]!;
+  }
+  return Math.sqrt(sumSquares / samples.length) >= ASR_VAD_RMS_FLOOR;
+};
+
 /**
  * Finds the end of one spoken utterance in a live 16-bit PCM stream: a
  * pause of `VOICE_ENDPOINT_HANG_MS` after at least `ASR_MIN_SPEECH_MS` of
- * speech, or `ASR_MAX_SEGMENT_MS` of audio holding that much speech. Silence
- * before speech is trimmed to a short lead-in; blips too short to be speech
- * are dropped once the silence after them reaches the hang, or at the cap.
+ * voiced audio, or `ASR_MAX_SEGMENT_MS` of audio. Silence before speech is
+ * trimmed to a short lead-in; voiced blips too short to be speech are
+ * dropped once the silence after them reaches the hang.
  */
 export class Endpointer {
   private chunks: Uint8Array[] = [];
   private bytes = 0;
   private voicedBytes = 0;
   private silentBytes = 0;
-  private detector = new SpeechDetector();
 
-  /** True once enough speech was heard to count as an utterance. */
+  /** True once enough voiced audio was heard to count as speech. */
   get hasSpeech(): boolean {
     return this.voicedBytes >= ASR_MIN_SPEECH_MS * BYTES_PER_MS;
   }
@@ -38,12 +50,11 @@ export class Endpointer {
   push(chunk: Uint8Array): 'none' | 'endpoint' {
     this.chunks.push(chunk);
     this.bytes += chunk.length;
-    const {speechBytes} = this.detector.push(chunk);
-    if (speechBytes > 0) {
+    if (isVoiced(chunk)) {
       if (this.voicedBytes === 0) {
         vtrace('vad.start');
       }
-      this.voicedBytes += speechBytes;
+      this.voicedBytes += chunk.length;
       this.silentBytes = 0;
     } else {
       this.silentBytes += chunk.length;
@@ -54,14 +65,13 @@ export class Endpointer {
       return 'none';
     }
     const paused = this.silentBytes >= VOICE_ENDPOINT_HANG_MS * BYTES_PER_MS;
-    const atCap = this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS;
-    if ((paused || atCap) && !this.hasSpeech) {
+    if (paused && !this.hasSpeech) {
       vtrace('vad.drop', {voicedMs: this.voicedMs});
       this.voicedBytes = 0;
       this.trimLeadIn();
       return 'none';
     }
-    if (paused || atCap) {
+    if (paused || this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS) {
       vtrace('vad.end', {
         by: paused ? 'pause' : 'max',
         ms: Math.round(this.bytes / BYTES_PER_MS),
@@ -93,7 +103,6 @@ export class Endpointer {
     this.bytes = 0;
     this.voicedBytes = 0;
     this.silentBytes = 0;
-    this.detector = new SpeechDetector();
   }
 
   private trimLeadIn(): void {
