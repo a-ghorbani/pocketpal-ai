@@ -17,6 +17,7 @@ import {
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
+  energyVad,
   inputLevel,
   int16PcmToFloat32,
   whisperAsrEngine,
@@ -108,8 +109,15 @@ export function useVoiceCapture(
           );
           if (session === sessionRef.current && text.length > 0) {
             textsRef.current.push(text);
-            // Save only a detected language, so a reset during the decode holds.
-            if (!fixedLanguage && !asrStore.spokenLanguage && language) {
+            // Save only a detected language, so a reset during the decode
+            // holds, and only from speech at the fixed -40 dBFS floor, so a
+            // quiet TV or room noise can't set it for later recordings.
+            if (
+              !fixedLanguage &&
+              !asrStore.spokenLanguage &&
+              language &&
+              energyVad(int16PcmToFloat32(pcm)).passed
+            ) {
               asrStore.setSpokenLanguage(language);
             }
           }

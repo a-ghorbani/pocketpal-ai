@@ -1,6 +1,6 @@
 import {Alert, AppState, type AlertButton} from 'react-native';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
-import {fromByteArray} from 'base64-js';
+import {fromByteArray, toByteArray} from 'base64-js';
 
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
@@ -9,10 +9,18 @@ import {asrStore, modelStore, uiStore} from '../../store';
 import {
   ASR_MIN_SEGMENT_MS,
   ASR_NO_AUDIO_MS,
+  ASR_SAMPLE_RATE,
+  energyVad,
+  int16PcmToFloat32,
   whisperAsrEngine,
 } from '../../services/asr';
 import {
+  type Signal,
   chunksOf,
+  joined,
+  mixed,
+  overQuietRoom,
+  quietRoom,
   quietRoomPcm,
   speechAt,
   toPcm,
@@ -49,6 +57,13 @@ const loudPcmChunkBase64 = () => pcmChunkBase64(1000, 0.3);
 const silentPcmChunkBase64 = () => pcmChunkBase64(1000, 0);
 const longSpeechPcmBase64 = () => pcmChunkBase64(ASR_MIN_SEGMENT_MS, 0.3);
 const said = (text: string, language = 'en') => ({text, language});
+
+// A 500 Hz tone at an RMS level of `dbfs`.
+const toneAt = (dbfs: number, ms: number): Signal =>
+  Float64Array.from(
+    {length: (ms * ASR_SAMPLE_RATE) / 1000},
+    (_, i) => Math.SQRT2 * 10 ** (dbfs / 20) * Math.sin((i / 16) * Math.PI),
+  );
 
 describe('useVoiceCapture', () => {
   let dataCallback: ((chunk: string) => void) | null = null;
@@ -342,6 +357,56 @@ describe('useVoiceCapture', () => {
 
     await waitFor(() => expect(mockRelease).toHaveBeenCalled());
     expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+  });
+
+  describe('saving the detected language', () => {
+    const segmentVad = () =>
+      energyVad(
+        int16PcmToFloat32(toByteArray(mockTranscribe.mock.calls[0][0])),
+      );
+
+    beforeEach(() => {
+      asrStore.spokenLanguage = null;
+      mockTranscribe.mockResolvedValue(said('hallo', 'de'));
+    });
+
+    async function dictate(signal: Signal) {
+      const {result, onTranscript} = await startRecording();
+      feed(toPcm(signal));
+      await act(async () => {
+        result.current.stop();
+      });
+      await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('hallo'));
+    }
+
+    it('does not save it from quiet speech the -40 dBFS floor would not pass', async () => {
+      await dictate(overQuietRoom(speechAt(-46)));
+
+      expect(segmentVad().voicedMs).toBe(0);
+      expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [240, false],
+      [360, true],
+    ])(
+      'with a %d ms burst at -30 dBFS in the quiet speech, saves it: %s',
+      async (burstMs, saves) => {
+        await dictate(
+          joined(
+            overQuietRoom(speechAt(-46)),
+            mixed(quietRoom(1000), toneAt(-30, burstMs), 300),
+          ),
+        );
+
+        expect(segmentVad().passed).toBe(saves);
+        if (saves) {
+          expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith('de');
+        } else {
+          expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+        }
+      },
+    );
   });
 
   it('waits for a chat reply on the CPU before transcribing', async () => {
