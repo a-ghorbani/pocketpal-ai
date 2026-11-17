@@ -111,13 +111,12 @@ describe('CascadeVoiceEngine', () => {
   });
 
   describe('a turn', () => {
-    it('sends nothing for audio the VAD rejects', async () => {
+    it('transcribes a quiet utterance the endpointer handed over', async () => {
       const port = makePort();
-      const turn = engine.runTurn(speech(500, 0.001), port, events());
+      engine.runTurn(speech(500, 0.001), port, events());
+      await flush();
 
-      await expect(turn.done).resolves.toBe('empty');
-      expect(transcribe).not.toHaveBeenCalled();
-      expect(port.send).not.toHaveBeenCalled();
+      expect(transcribe).toHaveBeenCalledTimes(1);
     });
 
     it('sends nothing for an empty transcript', async () => {

@@ -1,6 +1,6 @@
 export * from './constants';
 export * from './types';
-export {energyVad, inputLevel, int16PcmToFloat32} from './energyVad';
+export {inputLevel, int16PcmToFloat32} from './pcm';
 export {SpeechSegmenter} from './speechSegmenter';
 export {
   androidMemoryBudget,

@@ -9,6 +9,14 @@ import {check} from 'react-native-permissions';
 
 import {modelsList} from '../../../jest/fixtures/models';
 import {
+  chunksOf,
+  joined,
+  overQuietRoom,
+  quietRoom,
+  speechAt,
+  toPcm,
+} from '../../../jest/fixtures/asr';
+import {
   ASR_CHUNK_BYTES,
   ASR_IOS_CEILING_SHARE,
   ASR_TIERS,
@@ -1315,6 +1323,23 @@ describe('useVoiceMode', () => {
       expect(voiceModeStore.phase).toBe('listening');
       expect(voiceModeStore.lastError).toBeNull();
       expect(AudioRecord.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts a turn for quiet speech over a quiet room', async () => {
+      const {enter, engine} = renderVoiceMode();
+      await enter();
+      const said = joined(
+        quietRoom(1000),
+        overQuietRoom(speechAt(-46)),
+        quietRoom(1000),
+      );
+
+      const listener = micListener();
+      act(() => {
+        chunksOf(toPcm(said)).forEach(c => listener(fromByteArray(c)));
+      });
+
+      expect(engine.runTurn).toHaveBeenCalledTimes(1);
     });
 
     it('after an empty turn, starts the mic again only once the old one has settled', async () => {

@@ -33,8 +33,7 @@ const mockAudioOn = AudioRecord.on as jest.Mock;
 const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 const mockMemoryFit = asrStore.captureMemoryFit as jest.Mock;
 
-// Base64-encoded 16-bit PCM: `ms` of speech-level signal (passes the energy
-// gate) or of silence.
+// Base64-encoded 16-bit PCM: `ms` of a tone at `amplitude`.
 function pcmChunkBase64(ms: number, amplitude: number): string {
   const samples = ms * 16; // 16 kHz
   const bytes = new Uint8Array(samples * 2);
