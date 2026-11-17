@@ -1267,7 +1267,8 @@
         "startChat": "Почати чат",
         "needsMemory": "Для найменшої моделі цього Pal потрібен пристрій з обсягом пам'яті не менше {{size}}.",
         "noModelFits": "Цьому пристрою не вистачає пам'яті для цього Pal."
-      }
+      },
+      "storeOnly": "Доступно у версії для Google Play / App Store"
     }
   },
   "validation": {
@@ -1647,7 +1648,8 @@
     "systemLanguageSearchPlaceholder": "Пошук мов",
     "speakingNotificationTitle": "PocketPal говорить",
     "speakingNotificationStop": "Зупинити",
-    "speakingNotificationChannel": "Мовлення"
+    "speakingNotificationChannel": "Мовлення",
+    "systemIosReadAndSpeakHint": "Додайте голоси в Параметри > Доступність > Читання і мовлення > Голоси."
   },
   "htmlPreview": {
     "defaultTitle": "Попередній перегляд",
@@ -1907,6 +1909,7 @@
     "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} ще не завантажено. Натисніть «Продовжити» — і ми його завантажимо.",
     "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз.",
-    "memoryNeededOfTotal": "{{needed}} із {{total}} на цьому телефоні"
+    "memoryNeededOfTotal": "{{needed}} із {{total}} на цьому телефоні",
+    "voiceRowChoose": "Виберіть голос для озвучення відповідей."
   }
 }

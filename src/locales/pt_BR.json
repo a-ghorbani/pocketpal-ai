@@ -1267,7 +1267,8 @@
         "startChat": "Iniciar chat",
         "needsMemory": "Este Pal precisa de um dispositivo com pelo menos {{size}} de memória para o menor modelo dele.",
         "noModelFits": "Este dispositivo não tem memória suficiente para este Pal."
-      }
+      },
+      "storeOnly": "Disponível na versão do app para Google Play / App Store"
     }
   },
   "validation": {
@@ -1655,7 +1656,8 @@
     "systemLanguageSearchPlaceholder": "Pesquisar idiomas",
     "speakingNotificationTitle": "O PocketPal está falando",
     "speakingNotificationStop": "Parar",
-    "speakingNotificationChannel": "Fala"
+    "speakingNotificationChannel": "Fala",
+    "systemIosReadAndSpeakHint": "Adicione vozes em Ajustes > Acessibilidade > Leitura e Fala > Vozes."
   },
   "onboarding": {
     "back": "Voltar",
@@ -1907,6 +1909,7 @@
     "teaserKeepTyping": "Continuar digitando, grátis",
     "voiceRowFileMissing": "{{voice}} ainda não foi baixada. Toque em Continuar para baixar.",
     "voiceRowFileFailed": "Não deu para baixar {{voice}}. Conecte-se à internet e tente novamente.",
-    "memoryNeededOfTotal": "{{needed}} de {{total}} neste celular"
+    "memoryNeededOfTotal": "{{needed}} de {{total}} neste celular",
+    "voiceRowChoose": "Escolha uma voz para as respostas faladas."
   }
 }

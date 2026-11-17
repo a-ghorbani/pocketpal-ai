@@ -1267,7 +1267,8 @@
         "startChat": "Mulakan sembang",
         "needsMemory": "Pal ini memerlukan peranti dengan sekurang-kurangnya {{size}} memori untuk model terkecilnya.",
         "noModelFits": "Peranti ini tidak mempunyai memori yang mencukupi untuk Pal ini."
-      }
+      },
+      "storeOnly": "Tersedia dalam aplikasi versi Google Play / App Store sahaja"
     }
   },
   "validation": {
@@ -1655,7 +1656,8 @@
     "systemLanguageSearchPlaceholder": "Cari bahasa",
     "speakingNotificationTitle": "PocketPal sedang bercakap",
     "speakingNotificationStop": "Hentikan",
-    "speakingNotificationChannel": "Pertuturan"
+    "speakingNotificationChannel": "Pertuturan",
+    "systemIosReadAndSpeakHint": "Tambah suara dalam Seting > Kebolehcapaian > Baca & Sebut > Suara."
   },
   "onboarding": {
     "back": "Kembali",
@@ -1907,6 +1909,7 @@
     "teaserKeepTyping": "Terus menaip, percuma",
     "voiceRowFileMissing": "{{voice}} belum dimuat turun. Ketik Teruskan untuk memuat turunnya.",
     "voiceRowFileFailed": "Tidak dapat memuat turun {{voice}}. Sambung ke internet dan cuba lagi.",
-    "memoryNeededOfTotal": "{{needed}} daripada {{total}} pada telefon ini"
+    "memoryNeededOfTotal": "{{needed}} daripada {{total}} pada telefon ini",
+    "voiceRowChoose": "Pilih suara untuk membacakan balasan."
   }
 }
