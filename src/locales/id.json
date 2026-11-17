@@ -1267,7 +1267,8 @@
         "startChat": "Mulai Obrolan",
         "needsMemory": "Pal ini memerlukan perangkat dengan memori minimal {{size}} untuk model terkecilnya.",
         "noModelFits": "Perangkat ini tidak memiliki cukup memori untuk Pal ini."
-      }
+      },
+      "storeOnly": "Hanya tersedia di aplikasi versi Google Play / App Store"
     }
   },
   "validation": {
