@@ -7,12 +7,16 @@ import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 import {useVoiceCapture} from '../useVoiceCapture';
 import {asrStore, modelStore, uiStore} from '../../store';
 import {
-  ASR_CHUNK_BYTES,
   ASR_MIN_SEGMENT_MS,
   ASR_NO_AUDIO_MS,
   whisperAsrEngine,
 } from '../../services/asr';
-import {quietRoomPcm, speechPcm} from '../../../jest/fixtures/asr';
+import {
+  chunksOf,
+  quietRoomPcm,
+  speechAt,
+  toPcm,
+} from '../../../jest/fixtures/asr';
 import * as micPerm from '../../utils/asrMicPermission';
 
 const mockEnsureMicPermission = jest.spyOn(micPerm, 'ensureMicPermission');
@@ -510,53 +514,9 @@ describe('useVoiceCapture', () => {
   });
 
   describe('real speech at quiet microphone levels', () => {
-    function int16(pcm: Uint8Array): Int16Array {
-      const view = new DataView(pcm.buffer, pcm.byteOffset, pcm.byteLength);
-      return Int16Array.from({length: pcm.length / 2}, (_, i) =>
-        view.getInt16(i * 2, true),
-      );
-    }
-
-    // Active speech level: RMS over the 30 ms frames within 30 dB of the loudest.
-    function activeSpeechDb(samples: Int16Array): number {
-      const frames: number[] = [];
-      for (let s = 0; s + 480 <= samples.length; s += 480) {
-        let sq = 0;
-        for (let i = s; i < s + 480; i++) {
-          sq += (samples[i]! / 0x8000) ** 2;
-        }
-        frames.push(sq / 480);
-      }
-      const loudest = Math.max(...frames);
-      const active = frames.filter(p => p > loudest / 1000);
-      const mean = active.reduce((a, b) => a + b, 0) / active.length;
-      return 10 * Math.log10(mean);
-    }
-
-    function atLevel(pcm: Uint8Array, dbfs: number): Uint8Array {
-      const samples = int16(pcm);
-      const gain = 10 ** ((dbfs - activeSpeechDb(samples)) / 20);
-      const out = new Uint8Array(pcm.length);
-      const view = new DataView(out.buffer);
-      samples.forEach((v, i) => {
-        const scaled = Math.max(
-          -0x8000,
-          Math.min(0x7fff, Math.round(v * gain)),
-        );
-        view.setInt16(i * 2, scaled, true);
-      });
-      return out;
-    }
-
     function feed(pcm: Uint8Array) {
       act(() => {
-        for (
-          let o = 0;
-          o + ASR_CHUNK_BYTES <= pcm.length;
-          o += ASR_CHUNK_BYTES
-        ) {
-          dataCallback?.(fromByteArray(pcm.subarray(o, o + ASR_CHUNK_BYTES)));
-        }
+        chunksOf(pcm).forEach(chunk => dataCallback?.(fromByteArray(chunk)));
       });
     }
 
@@ -570,7 +530,7 @@ describe('useVoiceCapture', () => {
       async dbfs => {
         const {result, onTranscript} = await startRecording();
 
-        feed(atLevel(speechPcm(), dbfs));
+        feed(toPcm(speechAt(dbfs)));
         expect(tallestBar()).toBeGreaterThan(0.35);
         await act(async () => {
           result.current.stop();
