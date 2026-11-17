@@ -14,12 +14,20 @@ import {
   SettingsIcon,
   ShareIcon,
   TrashIcon,
+  VolumeMinIcon,
+  VolumeOnIcon,
 } from '../../assets/icons';
 
 import {Menu} from '../Menu';
 import {styles} from './styles';
 
-import {chatSessionStore, modelStore, uiStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -55,6 +63,34 @@ export const HeaderRight: React.FC = observer(() => {
   const session = chatSessionStore.sessions.find(
     s => s.id === chatSessionStore.activeSessionId,
   );
+
+  // Session-level speaker toggle. Session-scoped on purpose: it does not
+  // persist, and it reflects the active Pal's voiceEnabled on session
+  // start (ChatScreen seeds it via ttsStore.syncSessionSpeakForPal).
+  const activePal = chatSessionStore.activePalId
+    ? palStore.pals.find(p => p.id === chatSessionStore.activePalId)
+    : undefined;
+  const palSpeechDisabled = activePal?.voiceEnabled === false;
+  const speakerColor = palSpeechDisabled
+    ? theme.colors.onSurfaceDisabled
+    : theme.colors.primary;
+  const sessionSpeakOn = ttsStore.sessionSpeakOn;
+  const effectivelySpeaking =
+    !palSpeechDisabled &&
+    ttsStore.isTTSAvailable &&
+    (sessionSpeakOn ?? ttsStore.autoSpeakEnabled);
+
+  const onToggleSessionSpeak = () => {
+    if (
+      !effectivelySpeaking &&
+      ttsStore.currentVoice == null &&
+      ttsStore.palVoiceOverride == null
+    ) {
+      ttsStore.openSetupSheet();
+      return;
+    }
+    ttsStore.setSessionSpeak(!effectivelySpeaking);
+  };
 
   const onSelectModel = (model: Model) => {
     modelStore.selectModel(model);
@@ -158,6 +194,31 @@ export const HeaderRight: React.FC = observer(() => {
   return (
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
+      {ttsStore.isTTSAvailable && (
+        <IconButton
+          icon={() =>
+            effectivelySpeaking ? (
+              <VolumeOnIcon stroke={speakerColor} />
+            ) : (
+              <VolumeMinIcon stroke={speakerColor} />
+            )
+          }
+          testID="session-speak-button"
+          disabled={palSpeechDisabled}
+          accessibilityHint={
+            palSpeechDisabled
+              ? l10n.voiceAndSpeech.sessionPalMutedHint
+              : undefined
+          }
+          style={styles.chatBtn}
+          onPress={onToggleSessionSpeak}
+          accessibilityLabel={
+            effectivelySpeaking
+              ? l10n.voiceAndSpeech.sessionMuteLabel
+              : l10n.voiceAndSpeech.sessionSpeakLabel
+          }
+        />
+      )}
       <IconButton
         icon={() => <EditBoxIcon stroke={theme.colors.primary} />}
         testID="reset-button"

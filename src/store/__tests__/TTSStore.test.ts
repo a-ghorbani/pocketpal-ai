@@ -29,6 +29,7 @@ jest
 // real SystemEngine (which imports @pocketpalai/react-native-speech).
 const mockSystemPlay = jest.fn().mockResolvedValue(undefined);
 const mockSystemStop = jest.fn().mockResolvedValue(undefined);
+const mockSystemGetVoices = jest.fn().mockResolvedValue([]);
 const mockSupertonicPlay = jest
   .fn()
   .mockRejectedValue(new Error('Supertonic model is not installed'));
@@ -123,7 +124,7 @@ jest.mock('../../services/tts', () => {
       return {
         id: 'system',
         isInstalled: jest.fn().mockResolvedValue(true),
-        getVoices: jest.fn().mockResolvedValue([]),
+        getVoices: mockSystemGetVoices,
         play: mockSystemPlay,
         playStreaming: mockSystemPlayStreaming,
         stop: mockSystemStop,
@@ -579,6 +580,52 @@ describe('TTSStore', () => {
       expect(store.playbackState.mode).toBe('idle');
       expect(mockSystemStop).toHaveBeenCalled();
     });
+  });
+
+  it('does not start replay after a stop during its initial stop wait', async () => {
+    const store = await makeStore();
+    store.setCurrentVoice(SYSTEM_VOICE);
+    let finishStop!: () => void;
+    mockSystemStop.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finishStop = resolve;
+        }),
+    );
+    const playing = store.play('cancelled-replay', 'Must stay silent');
+    await store.stop();
+    finishStop();
+    await playing;
+
+    expect(mockSystemPlay).not.toHaveBeenCalled();
+    expect(store.playbackState.mode).toBe('idle');
+  });
+
+  it('stops the replay engine even when the app-wide voice changes', async () => {
+    const store = await makeStore();
+    store.setCurrentVoice(KOKORO_VOICE);
+    let finish!: () => void;
+    mockSystemPlay.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+    const playing = store.play('override-replay', 'Hello', {
+      voiceOverride: SYSTEM_VOICE,
+    });
+    await flush();
+    expect(mockSystemPlay).toHaveBeenCalled();
+    store.setCurrentVoice(SUPERTONIC_VOICE);
+    mockSystemStop.mockClear();
+    mockSupertonicStop.mockClear();
+
+    await store.stop();
+
+    expect(mockSystemStop).toHaveBeenCalledTimes(1);
+    expect(mockSupertonicStop).not.toHaveBeenCalled();
+    finish();
+    await playing;
   });
 
   describe('streaming callbacks', () => {
@@ -3179,5 +3226,278 @@ describe('TTSStore', () => {
       await flush();
       expect(released).toBe(true);
     });
+  });
+});
+
+describe('per-Pal voice resolution (resolvePalVoice)', () => {
+  const makeStore = () => {
+    const store = new TTSStore();
+    store.deviceMeetsMemory = true;
+    store.userTTSOverride = null;
+    return store;
+  };
+
+  beforeEach(() => {
+    mockSystemGetVoices.mockResolvedValue([]);
+  });
+
+  it('leaves the voice override unset when the Pal pins no engine', async () => {
+    const store = makeStore();
+    store.currentVoice = SYSTEM_VOICE;
+
+    await expect(store.resolvePalVoice(null)).resolves.toBeNull();
+    await expect(store.resolvePalVoice({})).resolves.toBeNull();
+  });
+
+  it('resolves an explicit Pal voice before an app-wide voice is configured', async () => {
+    const store = makeStore();
+    store.currentVoice = null;
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'system'})).resolves.toBe(
+      SYSTEM_VOICE,
+    );
+  });
+
+  it('returns the app-wide voice when the Pal pins the same engine', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'kokoro'}),
+    ).resolves.toStrictEqual(KOKORO_VOICE);
+  });
+
+  it('resolves a voice from the pinned engine when it is installed', async () => {
+    const store = makeStore();
+    store.currentVoice = SYSTEM_VOICE;
+    mockKokoroIsInstalled.mockResolvedValueOnce(true);
+    mockKokoroGetVoices.mockResolvedValueOnce([KOKORO_VOICE]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'kokoro'})).resolves.toBe(
+      KOKORO_VOICE,
+    );
+  });
+
+  it('falls back to a system voice when the pinned engine is not installed', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockKittenIsInstalled.mockResolvedValueOnce(false);
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'kitten'})).resolves.toBe(
+      SYSTEM_VOICE,
+    );
+  });
+
+  it('falls back to a system voice when the pinned engine fails to initialize', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockSupertonicIsInstalled.mockResolvedValueOnce(true);
+    mockSupertonicGetVoices.mockRejectedValueOnce(new Error('init crashed'));
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'supertonic'}),
+    ).resolves.toBe(SYSTEM_VOICE);
+  });
+
+  it('falls back to a system voice when the pinned engine has no voices', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockSupertonicIsInstalled.mockResolvedValueOnce(true);
+    mockSupertonicGetVoices.mockResolvedValueOnce([]);
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'supertonic'}),
+    ).resolves.toStrictEqual(SYSTEM_VOICE);
+  });
+
+  it('falls back when Phonon is unsupported on this device (iOS < 18)', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    store.phononSupported = false;
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'phonon'})).resolves.toBe(
+      SYSTEM_VOICE,
+    );
+    // The engine is never probed when the device can't run it.
+    expect(mockPhononIsInstalled).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a system voice on low-memory devices (neural engines only)', async () => {
+    const store = makeStore();
+    store.deviceMeetsMemory = false;
+    store.currentVoice = KOKORO_VOICE;
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'supertonic'}),
+    ).resolves.toBe(SYSTEM_VOICE);
+  });
+
+  it('speaks with the system voice when the Pal pins system', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockSystemGetVoices.mockResolvedValueOnce([SYSTEM_VOICE]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'system'})).resolves.toBe(
+      SYSTEM_VOICE,
+    );
+  });
+
+  it('skips network-only system voices during automatic fallback', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockKittenIsInstalled.mockResolvedValueOnce(false);
+    mockSystemGetVoices.mockResolvedValueOnce([
+      {...SYSTEM_VOICE, id: 'network-only', requiresNetwork: true},
+      SYSTEM_VOICE,
+    ]);
+
+    await expect(store.resolvePalVoice({ttsEngine: 'kitten'})).resolves.toBe(
+      SYSTEM_VOICE,
+    );
+  });
+
+  it('keeps the app voice when the fallback offers only network voices', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockKittenIsInstalled.mockResolvedValueOnce(false);
+    mockSystemGetVoices.mockResolvedValueOnce([
+      {...SYSTEM_VOICE, id: 'network-only', requiresNetwork: true},
+    ]);
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'kitten'}),
+    ).resolves.toStrictEqual(KOKORO_VOICE);
+  });
+
+  it('does not automatically select a network-only voice without an app voice', async () => {
+    const store = makeStore();
+    store.currentVoice = null;
+    mockSystemGetVoices.mockResolvedValueOnce([
+      {...SYSTEM_VOICE, id: 'network-only', requiresNetwork: true},
+    ]);
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'system'}),
+    ).resolves.toBeNull();
+  });
+
+  it('preserves an explicitly selected network voice for the same pinned engine', async () => {
+    const store = makeStore();
+    const selected = {
+      ...SYSTEM_VOICE,
+      id: 'network-only',
+      requiresNetwork: true as const,
+    };
+    store.currentVoice = selected;
+
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'system'}),
+    ).resolves.toStrictEqual(selected);
+  });
+
+  it('falls back to the app-wide voice when no system voice exists', async () => {
+    const store = makeStore();
+    store.currentVoice = KOKORO_VOICE;
+    mockKittenIsInstalled.mockResolvedValueOnce(false);
+    // No system voices available at all: keep the app-wide voice rather
+    // than dropping speech.
+    await expect(
+      store.resolvePalVoice({ttsEngine: 'kitten'}),
+    ).resolves.toStrictEqual(KOKORO_VOICE);
+  });
+});
+
+describe('session speaker toggle', () => {
+  const makeStore = () => {
+    const store = new TTSStore();
+    store.deviceMeetsMemory = true;
+    store.userTTSOverride = null;
+    return store;
+  };
+
+  it('defers to auto-speak when the toggle is unset (null)', () => {
+    const store = makeStore();
+    expect(store.streamsReplies).toBe(false);
+
+    store.autoSpeakEnabled = true;
+    expect(store.streamsReplies).toBe(true);
+  });
+
+  it('forces speak-on when set true even with auto-speak off', () => {
+    const store = makeStore();
+    store.autoSpeakEnabled = false;
+    store.sessionSpeakOn = true;
+
+    expect(store.streamsReplies).toBe(true);
+  });
+
+  it('forces mute when set false even with auto-speak on', () => {
+    const store = makeStore();
+    store.autoSpeakEnabled = true;
+    store.sessionSpeakOn = false;
+
+    expect(store.streamsReplies).toBe(false);
+  });
+
+  it('voice-mode replies keep speaking when the session is muted', () => {
+    const store = makeStore();
+    store.autoSpeakEnabled = false;
+    store.sessionSpeakOn = false;
+    store.voiceOutputActive = true;
+
+    expect(store.streamsReplies).toBe(true);
+  });
+
+  it('syncSessionSpeakForPal mutes the session for voice-disabled pals', () => {
+    const store = makeStore();
+    store.syncSessionSpeakForPal({voiceEnabled: false});
+    expect(store.sessionSpeakOn).toBe(false);
+
+    // Legacy pals / enabled pals defer to the auto-speak preference.
+    store.syncSessionSpeakForPal({voiceEnabled: true});
+    expect(store.sessionSpeakOn).toBe(null);
+    store.syncSessionSpeakForPal(undefined);
+    expect(store.sessionSpeakOn).toBe(null);
+  });
+
+  it('stops in-flight playback when muted mid-speech', async () => {
+    const store = makeStore();
+    store.currentVoice = SYSTEM_VOICE;
+    await store.setSessionSpeak(false);
+
+    expect(mockSystemStop).toHaveBeenCalled();
+  });
+
+  it('onAssistantMessageStart speaks with the Pal voice override', () => {
+    const store = makeStore();
+    store.autoSpeakEnabled = true;
+    store.currentVoice = null;
+    store.setPalVoiceOverride(KOKORO_VOICE);
+
+    store.onAssistantMessageStart('msg-pal-1');
+
+    expect(mockKokoroPlayStreaming).toHaveBeenCalledWith(
+      KOKORO_VOICE,
+      expect.anything(),
+    );
+    expect(store.playbackState.mode).toBe('streaming');
+  });
+
+  it('onAssistantMessageComplete falls back to replay with the Pal voice override', async () => {
+    const store = makeStore();
+    store.autoSpeakEnabled = true;
+    store.currentVoice = null;
+    store.palVoiceOverride = SYSTEM_VOICE;
+
+    await store.onAssistantMessageComplete('msg-pal-2', 'hello there', {});
+    await flush();
+
+    expect(mockSystemPlay).toHaveBeenCalledWith('hello there', SYSTEM_VOICE);
   });
 });

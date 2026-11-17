@@ -103,6 +103,29 @@ export const ChatScreen: React.FC = observer(() => {
       end();
     }
   }, [isVideoPal, end]);
+
+  // Seed the session-level speaker toggle and the Pal's pinned TTS voice
+  // whenever the active Pal changes. A voice-disabled Pal starts the
+  // session muted; otherwise the toggle defers to the app auto-speak pref.
+  React.useEffect(() => {
+    ttsStore.syncSessionSpeakForPal(activePal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSessionStore.activeSessionId, activePalId, activePal?.voiceEnabled]);
+
+  React.useEffect(() => {
+    ttsStore.setPalVoiceOverride(null);
+    let cancelled = false;
+    ttsStore.resolvePalVoice(activePal).then(voice => {
+      if (!cancelled) {
+        ttsStore.setPalVoiceOverride(voice);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePalId, activePal?.ttsEngine, ttsStore.currentVoice]);
+
   const voiceControls = useMemo(
     () => ({tapCloud, toggleMute, end}),
     [tapCloud, toggleMute, end],

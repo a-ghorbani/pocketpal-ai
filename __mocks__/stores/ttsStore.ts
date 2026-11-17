@@ -24,9 +24,15 @@ class MockTTSStore {
   voiceOutputActive = false;
   voiceSpeechStarted: string | null = null;
   voiceStreamFailed: string | null = null;
+  sessionSpeakOn: boolean | null = null;
+  palVoiceOverride: any = null;
   get streamsReplies(): boolean {
+    if (this.sessionSpeakOn === false && !this.voiceOutputActive) {
+      return false;
+    }
     return (
-      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+      this.voiceOutputActive ||
+      (this.isTTSAvailable && (this.sessionSpeakOn ?? this.autoSpeakEnabled))
     );
   }
   currentVoice: any = null;
@@ -59,6 +65,10 @@ class MockTTSStore {
   isPreviewingVoice: jest.Mock;
   stop: jest.Mock;
   setAutoSpeak: jest.Mock;
+  setSessionSpeak: jest.Mock;
+  syncSessionSpeakForPal: jest.Mock;
+  resolvePalVoice: jest.Mock;
+  setPalVoiceOverride: jest.Mock;
   setVoiceOutputActive: jest.Mock;
   setUserTTSOverride: jest.Mock;
   setCurrentVoice: jest.Mock;
@@ -95,6 +105,10 @@ class MockTTSStore {
       isPreviewingVoice: false,
       stop: false,
       setAutoSpeak: false,
+      setSessionSpeak: false,
+      syncSessionSpeakForPal: false,
+      resolvePalVoice: false,
+      setPalVoiceOverride: false,
       setVoiceOutputActive: false,
       setUserTTSOverride: false,
       setCurrentVoice: false,
@@ -125,6 +139,34 @@ class MockTTSStore {
     this.isPreviewingVoice = jest.fn().mockReturnValue(false);
     this.stop = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
+    this.setSessionSpeak = jest.fn((on: boolean | null) => {
+      runInAction(() => {
+        this.sessionSpeakOn = on;
+      });
+    });
+    this.syncSessionSpeakForPal = jest.fn(
+      (pal?: {voiceEnabled?: boolean} | null) => {
+        runInAction(() => {
+          this.sessionSpeakOn =
+            pal && pal.voiceEnabled === false ? false : null;
+        });
+      },
+    );
+    this.resolvePalVoice = jest.fn(async (pal?: any) => {
+      const wanted = pal?.ttsEngine;
+      if (!wanted) {
+        return null;
+      }
+      if (wanted === this.currentVoice?.engine) {
+        return this.currentVoice;
+      }
+      return {id: `${wanted}-voice`, name: wanted, engine: wanted};
+    });
+    this.setPalVoiceOverride = jest.fn((voice: any) => {
+      runInAction(() => {
+        this.palVoiceOverride = voice;
+      });
+    });
     this.setVoiceOutputActive = jest.fn((active: boolean) => {
       runInAction(() => {
         this.voiceOutputActive = active;

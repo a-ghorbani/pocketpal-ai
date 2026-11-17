@@ -68,7 +68,10 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
       ttsStore.stop().catch(() => {});
       return;
     }
-    if (ttsStore.currentVoice == null) {
+    // Replay honors the active Pal's pinned TTS engine when one is set;
+    // otherwise it falls back to the app-wide voice.
+    const voiceOverride = ttsStore.palVoiceOverride ?? undefined;
+    if (ttsStore.currentVoice == null && voiceOverride == null) {
       ttsStore.openSetupSheet();
       return;
     }
@@ -76,7 +79,9 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
       message.type === 'assistant_turn'
         ? (message.steps ?? []).some(s => s.reasoningContent?.trim())
         : !!message.metadata?.completionResult?.reasoning_content?.trim();
-    ttsStore.play(message.id, speakableText, {hadReasoning}).catch(() => {});
+    ttsStore
+      .play(message.id, speakableText, {hadReasoning, voiceOverride})
+      .catch(() => {});
   };
 
   const iconSize = 16;

@@ -11,7 +11,12 @@ import {
 } from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
-import {chatSessionStore, modelStore, serverStore} from '../../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  serverStore,
+  ttsStore,
+} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
@@ -32,6 +37,60 @@ describe('ChatScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     llamaRN = require('llama.rn');
+  });
+
+  it('resets the speaker override when switching sessions with the same Pal', async () => {
+    const previousId = chatSessionStore.activeSessionId;
+    const previousVoice = ttsStore.currentVoice;
+    const view = render(<ChatScreen />, {withNavigation: true});
+    await waitFor(() => expect(ttsStore.resolvePalVoice).toHaveBeenCalled());
+    act(() => {
+      ttsStore.setSessionSpeak(false);
+    });
+    expect(ttsStore.sessionSpeakOn).toBe(false);
+    act(() => {
+      chatSessionStore.activeSessionId = 'another-session-without-pal';
+      // The session-store fixture is a plain object. An observable voice
+      // change supplies the render real navigation would otherwise trigger.
+      ttsStore.currentVoice = {
+        id: 'session-voice',
+        name: 'System',
+        engine: 'system',
+      };
+    });
+    await waitFor(() => expect(ttsStore.sessionSpeakOn).toBeNull());
+    view.unmount();
+    runInAction(() => {
+      chatSessionStore.activeSessionId = previousId;
+      ttsStore.currentVoice = previousVoice;
+    });
+  });
+
+  it('follows a changed app voice without resetting the session mute', async () => {
+    const previousVoice = ttsStore.currentVoice;
+    const view = render(<ChatScreen />, {withNavigation: true});
+    await waitFor(() => expect(ttsStore.resolvePalVoice).toHaveBeenCalled());
+    act(() => {
+      ttsStore.setSessionSpeak(false);
+    });
+    const calls = (ttsStore.resolvePalVoice as jest.Mock).mock.calls.length;
+    act(() => {
+      ttsStore.currentVoice = {
+        id: 'changed-system-voice',
+        name: 'Changed',
+        engine: 'system',
+      };
+    });
+    await waitFor(() =>
+      expect(ttsStore.resolvePalVoice).toHaveBeenCalledTimes(calls + 1),
+    );
+    expect(ttsStore.palVoiceOverride).toBeNull();
+    expect(ttsStore.sessionSpeakOn).toBe(false);
+    view.unmount();
+    runInAction(() => {
+      ttsStore.currentVoice = previousVoice;
+      ttsStore.sessionSpeakOn = null;
+    });
   });
 
   it('renders correctly when model is not loaded', () => {
