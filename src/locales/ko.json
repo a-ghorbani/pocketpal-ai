@@ -1486,7 +1486,8 @@
         "startChat": "채팅 시작",
         "needsMemory": "이 Pal의 가장 작은 모델을 사용하려면 메모리가 {{size}} 이상인 기기가 필요합니다.",
         "noModelFits": "이 기기는 이 Pal을 실행할 메모리가 부족합니다."
-      }
+      },
+      "storeOnly": "Google Play / App Store 버전 앱에서만 사용할 수 있습니다"
     }
   },
   "video": {
