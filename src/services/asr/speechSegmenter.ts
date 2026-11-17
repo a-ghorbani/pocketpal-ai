@@ -1,26 +1,14 @@
 import {
   ASR_MAX_SEGMENT_MS,
   ASR_MIN_SEGMENT_MS,
+  ASR_MIN_SPEECH_MS,
   ASR_SAMPLE_RATE,
   ASR_SEGMENT_LEAD_IN_MS,
   ASR_SEGMENT_PAUSE_MS,
-  ASR_VAD_RMS_FLOOR,
 } from './constants';
-import {int16PcmToFloat32} from './energyVad';
+import {SpeechDetector} from './speechDetector';
 
 const BYTES_PER_MS = (ASR_SAMPLE_RATE * 2) / 1000;
-
-function chunkIsVoiced(chunk: Uint8Array): boolean {
-  const samples = int16PcmToFloat32(chunk);
-  if (samples.length === 0) {
-    return false;
-  }
-  let sumSquares = 0;
-  for (let i = 0; i < samples.length; i++) {
-    sumSquares += samples[i]! * samples[i]!;
-  }
-  return Math.sqrt(sumSquares / samples.length) >= ASR_VAD_RMS_FLOOR;
-}
 
 function concat(chunks: Uint8Array[]): Uint8Array {
   let total = 0;
@@ -41,13 +29,16 @@ function concat(chunks: Uint8Array[]): Uint8Array {
  * transcribed while the user keeps speaking. A segment of at least
  * `ASR_MIN_SEGMENT_MS` ends after `ASR_SEGMENT_PAUSE_MS` of silence that
  * follows speech; any segment ends at `ASR_MAX_SEGMENT_MS`. Silence before any speech is trimmed to a short
- * lead-in, so long pauses are never buffered or decoded.
+ * lead-in, so long pauses are never buffered or decoded. A segment with less
+ * than `ASR_MIN_SPEECH_MS` of speech is dropped, never handed over.
  */
 export class SpeechSegmenter {
   private chunks: Uint8Array[] = [];
   private bytes = 0;
   private heardSpeech = false;
   private silentBytes = 0;
+  private voicedBytes = 0;
+  private readonly detector = new SpeechDetector();
 
   constructor(private readonly onSegment: (pcm: Uint8Array) => void) {}
 
@@ -55,8 +46,10 @@ export class SpeechSegmenter {
     this.chunks.push(chunk);
     this.bytes += chunk.length;
 
-    if (chunkIsVoiced(chunk)) {
+    const {speechBytes} = this.detector.push(chunk);
+    if (speechBytes > 0) {
       this.heardSpeech = true;
+      this.voicedBytes += speechBytes;
       this.silentBytes = 0;
     } else {
       this.silentBytes += chunk.length;
@@ -70,15 +63,18 @@ export class SpeechSegmenter {
       this.silentBytes >= ASR_SEGMENT_PAUSE_MS * BYTES_PER_MS &&
       this.bytes >= ASR_MIN_SEGMENT_MS * BYTES_PER_MS;
     if (atPause || this.bytes >= ASR_MAX_SEGMENT_MS * BYTES_PER_MS) {
-      this.onSegment(this.take());
+      const pcm = this.flush();
+      if (pcm) {
+        this.onSegment(pcm);
+      }
     }
   }
 
-  /** The audio not yet emitted, or null when it holds no speech. */
+  /** The audio not yet emitted, or null when it holds too little speech. */
   flush(): Uint8Array | null {
-    const heardSpeech = this.heardSpeech;
+    const enoughSpeech = this.voicedBytes >= ASR_MIN_SPEECH_MS * BYTES_PER_MS;
     const pcm = this.take();
-    return heardSpeech ? pcm : null;
+    return enoughSpeech ? pcm : null;
   }
 
   private take(): Uint8Array {
@@ -87,6 +83,7 @@ export class SpeechSegmenter {
     this.bytes = 0;
     this.heardSpeech = false;
     this.silentBytes = 0;
+    this.voicedBytes = 0;
     return pcm;
   }
 

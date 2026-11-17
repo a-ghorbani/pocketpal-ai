@@ -1,6 +1,7 @@
 import {
   ASR_MAX_SEGMENT_MS,
   ASR_MIN_SEGMENT_MS,
+  ASR_MIN_SPEECH_MS,
   ASR_SEGMENT_LEAD_IN_MS,
   ASR_SEGMENT_PAUSE_MS,
 } from '../constants';
@@ -87,6 +88,17 @@ describe('SpeechSegmenter', () => {
     const tail = segmenter.flush();
     expect(segments).toHaveLength(0);
     expect(tail?.length).toBe((ASR_SEGMENT_LEAD_IN_MS + 500) * BYTES_PER_MS);
+  });
+
+  it('hands over nothing with less than the minimum of speech', () => {
+    const segments: Uint8Array[] = [];
+    const segmenter = new SpeechSegmenter(s => segments.push(s));
+
+    push(segmenter, speech, ASR_MIN_SPEECH_MS - CHUNK_MS);
+    push(segmenter, silence, ASR_MAX_SEGMENT_MS);
+
+    expect(segments).toHaveLength(0);
+    expect(segmenter.flush()).toBeNull();
   });
 
   it('cuts long speech without a pause at the segment cap', () => {

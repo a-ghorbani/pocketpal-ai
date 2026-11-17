@@ -16,7 +16,6 @@ import {
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
-  energyVad,
   inputLevel,
   int16PcmToFloat32,
   whisperAsrEngine,
@@ -72,10 +71,6 @@ export function useVoiceCapture(
     (pcm: Uint8Array, session: number) => {
       enqueueEngine(async () => {
         if (session !== sessionRef.current) {
-          return;
-        }
-        // Whisper hallucinates on silence — never decode a silent segment.
-        if (!energyVad(int16PcmToFloat32(pcm)).passed) {
           return;
         }
         if (asrStore.chatBusyOnCpu) {
