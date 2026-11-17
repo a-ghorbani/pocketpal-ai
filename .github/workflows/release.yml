@@ -26,7 +26,7 @@ jobs:
   # Job 1: Version Bumping and Android Build
   build_android:
     if: ${{ !inputs.ios_only }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ruby-builder has no Ruby 3.2.3 for ubuntu-26.04
     permissions:
       contents: 'write' # Allows workflow to checkout repository code
       id-token: 'write' # Required for Google Cloud Workload Identity Federation authentication (OIDC token generation)
