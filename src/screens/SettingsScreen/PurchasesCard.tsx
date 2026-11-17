@@ -11,6 +11,7 @@ import {t} from '../../locales';
 import {L10nContext} from '../../utils';
 import {authService} from '../../services';
 import {ACCOUNT_LINK_ENABLED} from '../../services/iap/accountLink';
+import {isStoreBuild} from '../../services/plus/gate';
 import {purchaseStore} from '../../store';
 import type {LedgerRecord} from '../../store/PurchaseStore';
 
@@ -29,7 +30,7 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
     const records = purchaseStore.storeOwnedRecords;
     const isReady = purchaseStore.availability === 'ready';
 
-    if (!isReady && records.length === 0) {
+    if (!isStoreBuild() || (!isReady && records.length === 0)) {
       return null;
     }
 

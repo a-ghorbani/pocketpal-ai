@@ -1549,7 +1549,8 @@
         "startChat": "開始對話",
         "needsMemory": "此 Pal 需要至少 {{size}} 的記憶體才能執行其最小模型。",
         "noModelFits": "此裝置的記憶體不足以執行此 Pal。"
-      }
+      },
+      "storeOnly": "僅在 Google Play / App Store 版應用程式中可用"
     }
   },
   "voiceAndSpeech": {
@@ -1638,14 +1639,17 @@
     "systemNeedsInternet": "需要網路",
     "systemVoiceNumber": "語音 {{number}}",
     "systemQualityEnhanced": "增強",
-    "systemVoiceModeHint": "系統語音無法在語音模式中朗讀。",
     "systemOnDeviceSection": "這台手機上",
     "systemLanguagesLabel": "語言",
     "systemGetMoreVoices": "取得更多語音",
     "systemNoVoicesForLanguage": "這台手機上還沒有{{language}}語音。",
     "systemIosSettingsHint": "請在「設定 > 輔助使用 > 朗讀內容 > 語音」中新增語音。",
     "systemLanguageSheetTitle": "語音語言",
-    "systemLanguageSearchPlaceholder": "搜尋語言"
+    "systemLanguageSearchPlaceholder": "搜尋語言",
+    "speakingNotificationTitle": "PocketPal 正在朗讀",
+    "speakingNotificationStop": "停止",
+    "speakingNotificationChannel": "朗讀",
+    "systemIosReadAndSpeakHint": "請在「設定 > 輔助使用 > 閱讀與朗讀 > 聲音」中新增語音。"
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
@@ -1881,7 +1885,6 @@
     "installedLabel": "已安裝",
     "voiceRowTitle": "語音",
     "voiceRowReady": "{{voice}} · 已就緒",
-    "voiceRowMissing": "請選擇自然語音。系統語音無法於語音模式下使用。",
     "chooseVoiceCta": "選擇語音",
     "micNote": "接下來將請求麥克風權限。",
     "micDenied": "開啟語音模式時，需要取得麥克風權限。",
@@ -1906,6 +1909,7 @@
     "memorySttRowModel": "語音辨識 · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} 尚未下載。繼續將會下載它。",
     "voiceRowFileFailed": "無法下載{{voice}}。連接網路並重試。",
-    "memoryNeededOfTotal": "此手機所需量：{{needed}} / {{total}}"
+    "memoryNeededOfTotal": "此手機所需量：{{needed}} / {{total}}",
+    "voiceRowChoose": "選擇用於朗讀回覆的語音。"
   }
 }

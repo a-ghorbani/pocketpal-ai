@@ -1267,7 +1267,8 @@
         "startChat": "Mulakan sembang",
         "needsMemory": "Pal ini memerlukan peranti dengan sekurang-kurangnya {{size}} memori untuk model terkecilnya.",
         "noModelFits": "Peranti ini tidak mempunyai memori yang mencukupi untuk Pal ini."
-      }
+      },
+      "storeOnly": "Tersedia dalam aplikasi versi Google Play / App Store sahaja"
     }
   },
   "validation": {
@@ -1646,14 +1647,17 @@
     "systemNeedsInternet": "Perlu internet",
     "systemVoiceNumber": "Suara {{number}}",
     "systemQualityEnhanced": "Dipertingkat",
-    "systemVoiceModeHint": "Suara sistem tidak boleh bercakap dalam mod suara.",
     "systemOnDeviceSection": "Pada telefon ini",
     "systemLanguagesLabel": "Bahasa",
     "systemGetMoreVoices": "Dapatkan lebih banyak suara",
     "systemNoVoicesForLanguage": "Belum ada suara {{language}} pada telefon ini.",
     "systemIosSettingsHint": "Tambah suara dalam Settings > Accessibility > Spoken Content > Voices.",
     "systemLanguageSheetTitle": "Bahasa suara",
-    "systemLanguageSearchPlaceholder": "Cari bahasa"
+    "systemLanguageSearchPlaceholder": "Cari bahasa",
+    "speakingNotificationTitle": "PocketPal sedang bercakap",
+    "speakingNotificationStop": "Hentikan",
+    "speakingNotificationChannel": "Pertuturan",
+    "systemIosReadAndSpeakHint": "Tambah suara dalam Seting > Kebolehcapaian > Baca & Sebut > Suara."
   },
   "onboarding": {
     "back": "Kembali",
@@ -1779,7 +1783,7 @@
     "errorPermissionBlocked": "Capaian mikrofon disekat. Dayakannya dalam Tetapan.",
     "errorTranscribeFailed": "Tidak dapat menukar kepada teks — sila cuba lagi.",
     "errorNotInstalled": "Muat turun model suara untuk menggunakan input suara.",
-    "errorInsufficientMemory": "Memori tidak mencukupi untuk input suara dengan model sembang ini. Cuba model yang lebih kecil.",
+    "errorInsufficientMemory": "Model sembang ini dan input suara memerlukan lebih banyak memori daripada yang ada pada telefon ini. Cuba model yang lebih kecil.",
     "errorMicUnavailable": "Mikrofon tidak bertindak balas. Cuba lagi, atau tukar ke model sembang yang lebih kecil.",
     "errorTranscriptPartial": "Sebahagian pertuturan anda tidak dapat ditukar kepada teks.",
     "openSettingsLabel": "Buka Tetapan",
@@ -1882,7 +1886,6 @@
     "installedLabel": "Dipasang",
     "voiceRowTitle": "Suara",
     "voiceRowReady": "{{voice}} · sedia",
-    "voiceRowMissing": "Pilih suara semula jadi. Suara sistem tidak boleh bercakap dalam mod suara.",
     "chooseVoiceCta": "Pilih suara",
     "micNote": "Kami akan meminta capaian mikrofon selepas ini.",
     "micDenied": "Mod suara memerlukan capaian mikrofon.",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "Memori terhad",
     "memoryTightBody": "Mod suara memuatkan tiga model serentak. Pada telefon ini ia mungkin perlahan, atau aplikasi mungkin ditutup.",
     "memoryWontFitTitle": "Memori tidak mencukupi",
-    "memoryWontFitBody": "Pengecaman pertuturan tidak dapat dimuatkan bersama model sembang ini. Pilih model yang lebih kecil untuk menggunakan mod suara.",
+    "memoryWontFitBody": "Model-model ini memerlukan lebih banyak memori daripada yang ada pada telefon ini. Pilih model yang lebih kecil untuk menggunakan mod suara.",
     "memoryChatRow": "Model sembang · {{name}}",
     "memorySttRowModel": "Pengecaman pertuturan · Whisper {{tier}}",
     "memoryVoiceRow": "Suara · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "Terus menaip, percuma",
     "voiceRowFileMissing": "{{voice}} belum dimuat turun. Ketik Teruskan untuk memuat turunnya.",
     "voiceRowFileFailed": "Tidak dapat memuat turun {{voice}}. Sambung ke internet dan cuba lagi.",
-    "memoryNeededOfTotal": "{{needed}} daripada {{total}} pada telefon ini"
+    "memoryNeededOfTotal": "{{needed}} daripada {{total}} pada telefon ini",
+    "voiceRowChoose": "Pilih suara untuk membacakan balasan."
   }
 }

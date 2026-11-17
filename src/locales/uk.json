@@ -1267,7 +1267,8 @@
         "startChat": "Почати чат",
         "needsMemory": "Для найменшої моделі цього Pal потрібен пристрій з обсягом пам'яті не менше {{size}}.",
         "noModelFits": "Цьому пристрою не вистачає пам'яті для цього Pal."
-      }
+      },
+      "storeOnly": "Доступно у версії для Google Play / App Store"
     }
   },
   "validation": {
@@ -1638,14 +1639,17 @@
     "systemNeedsInternet": "Потрібен інтернет",
     "systemVoiceNumber": "Голос {{number}}",
     "systemQualityEnhanced": "Покращений",
-    "systemVoiceModeHint": "Системні голоси не можуть говорити в голосовому режимі.",
     "systemOnDeviceSection": "На цьому телефоні",
     "systemLanguagesLabel": "Мови",
     "systemGetMoreVoices": "Отримати більше голосів",
     "systemNoVoicesForLanguage": "Голосів для мови {{language}} на цьому телефоні ще немає.",
     "systemIosSettingsHint": "Додайте голоси в Налаштування > Доступність > Усний контент > Голоси.",
     "systemLanguageSheetTitle": "Мова голосу",
-    "systemLanguageSearchPlaceholder": "Пошук мов"
+    "systemLanguageSearchPlaceholder": "Пошук мов",
+    "speakingNotificationTitle": "PocketPal говорить",
+    "speakingNotificationStop": "Зупинити",
+    "speakingNotificationChannel": "Мовлення",
+    "systemIosReadAndSpeakHint": "Додайте голоси в Параметри > Доступність > Читання і мовлення > Голоси."
   },
   "htmlPreview": {
     "defaultTitle": "Попередній перегляд",
@@ -1881,7 +1885,6 @@
     "installedLabel": "Встановлено",
     "voiceRowTitle": "Голос",
     "voiceRowReady": "{{voice}} · готовий",
-    "voiceRowMissing": "Оберіть природний голос. Системний голос не може говорити в голосовому режимі.",
     "chooseVoiceCta": "Виберіть голос",
     "micNote": "Далі ми попросимо надати доступ до мікрофона.",
     "micDenied": "Для роботи голосового режиму потрібен доступ до мікрофона.",
@@ -1906,6 +1909,7 @@
     "memorySttRowModel": "Розпізнавання мови · Whisper {{tier}}",
     "voiceRowFileMissing": "{{voice}} ще не завантажено. Натисніть «Продовжити» — і ми його завантажимо.",
     "voiceRowFileFailed": "Не вдалося завантажити {{voice}}. Підключіться до інтернету та спробуйте ще раз.",
-    "memoryNeededOfTotal": "{{needed}} із {{total}} на цьому телефоні"
+    "memoryNeededOfTotal": "{{needed}} із {{total}} на цьому телефоні",
+    "voiceRowChoose": "Виберіть голос для озвучення відповідей."
   }
 }

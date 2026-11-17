@@ -272,11 +272,11 @@
       "teaserTitle": "سرور API محلی یک قابلیت Plus است",
       "teaserBody": "بگذارید برنامه‌های دیگر هم از مدل بارگذاری‌شده روی این گوشی استفاده کنند.",
       "teaserGetPlus": "تهیه Plus",
-      "teaserNotNow": "حالا نه",
+      "teaserNotNow": "فعلاً نه",
       "errors": {
         "portInUse": "پورت {{port}} در حال استفاده است. سرور را خاموش کنید و پورت دیگری انتخاب کنید.",
         "listenFailed": "راه‌اندازی سرور ممکن نشد. آن را خاموش و دوباره روشن کنید، یا پورت دیگری انتخاب کنید.",
-        "stoppedListening": "سرور به‌طور ناگهانی متوقف شد. آن را خاموش و دوباره روشن کنید.",
+        "stoppedListening": "سرور به‌طور غیرمنتظره متوقف شد. آن را خاموش و دوباره روشن کنید.",
         "keyUnavailable": "خواندن کلید API ممکن نشد. قفل گوشی را باز کنید، بعد سرور را خاموش و دوباره روشن کنید."
       }
     }
@@ -1267,7 +1267,8 @@
         "startChat": "شروع چت",
         "needsMemory": "این پَل برای کوچک‌ترین مدلش به دستگاهی با حداقل {{size}} حافظه نیاز دارد.",
         "noModelFits": "این دستگاه حافظه کافی برای این پَل ندارد."
-      }
+      },
+      "storeOnly": "فقط در نسخه Google Play / App Store در دسترس است"
     }
   },
   "validation": {
@@ -1638,14 +1639,17 @@
     "systemNeedsInternet": "نیاز به اینترنت",
     "systemVoiceNumber": "صدای {{number}}",
     "systemQualityEnhanced": "بهبودیافته",
-    "systemVoiceModeHint": "صداهای سیستمی در حالت صوتی نمی‌توانند صحبت کنند.",
     "systemOnDeviceSection": "روی این گوشی",
     "systemLanguagesLabel": "زبان‌ها",
     "systemGetMoreVoices": "دریافت صداهای بیشتر",
     "systemNoVoicesForLanguage": "هنوز هیچ صدای {{language}} روی این گوشی نیست.",
     "systemIosSettingsHint": "صداها را از مسیر Settings > Accessibility > Spoken Content > Voices اضافه کنید.",
     "systemLanguageSheetTitle": "زبان صدا",
-    "systemLanguageSearchPlaceholder": "جستجوی زبان‌ها"
+    "systemLanguageSearchPlaceholder": "جستجوی زبان‌ها",
+    "speakingNotificationTitle": "PocketPal در حال صحبت است",
+    "speakingNotificationStop": "توقف",
+    "speakingNotificationChannel": "گفتار",
+    "systemIosReadAndSpeakHint": "صداها را از مسیر Settings > Accessibility > Read & Speak > Voices اضافه کنید."
   },
   "htmlPreview": {
     "defaultTitle": "پیش‌نمایش",
@@ -1779,7 +1783,7 @@
     "errorPermissionBlocked": "دسترسی به میکروفون مسدود است. آن را در تنظیمات فعال کنید.",
     "errorTranscribeFailed": "تبدیل به متن ممکن نشد — لطفاً دوباره تلاش کنید.",
     "errorNotInstalled": "برای استفاده از ورودی صوتی، یک مدل صوتی دانلود کنید.",
-    "errorInsufficientMemory": "حافظه برای ورودی صوتی با این مدل چت کافی نیست. مدل کوچک‌تری را امتحان کنید.",
+    "errorInsufficientMemory": "این مدل چت و ورودی صوتی به حافظه‌ای بیش از ظرفیت این گوشی نیاز دارند. مدل کوچک‌تری را امتحان کنید.",
     "errorMicUnavailable": "میکروفون پاسخ نمی‌دهد. دوباره تلاش کنید یا به یک مدل چت کوچک‌تر تغییر دهید.",
     "errorTranscriptPartial": "بخشی از گفتار شما به متن تبدیل نشد.",
     "openSettingsLabel": "باز کردن تنظیمات",
@@ -1882,7 +1886,6 @@
     "installedLabel": "نصب‌شده",
     "voiceRowTitle": "صدا",
     "voiceRowReady": "{{voice}} · آماده",
-    "voiceRowMissing": "یک صدای طبیعی انتخاب کنید. صدای سیستمی نمی‌تواند در حالت صوتی صحبت کند.",
     "chooseVoiceCta": "انتخاب صدا",
     "micNote": "در مرحله بعد دسترسی به میکروفون را درخواست می‌کنیم.",
     "micDenied": "برای حالت صوتی به دسترسی میکروفون نیاز است.",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "حافظه محدود است",
     "memoryTightBody": "حالت صوتی سه مدل را همزمان در حافظه نگه می‌دارد. روی این گوشی ممکن است کند باشد یا برنامه بسته شود.",
     "memoryWontFitTitle": "حافظه کافی نیست",
-    "memoryWontFitBody": "تشخیص گفتار در کنار این مدل چت جا نمی‌شود. برای استفاده از حالت صوتی مدل کوچک‌تری انتخاب کنید.",
+    "memoryWontFitBody": "این مدل‌ها به حافظه‌ای بیش از ظرفیت این گوشی نیاز دارند. برای استفاده از حالت صوتی مدل کوچک‌تری انتخاب کنید.",
     "memoryChatRow": "مدل چت · {{name}}",
     "memorySttRowModel": "تشخیص گفتار · Whisper {{tier}}",
     "memoryVoiceRow": "صدا · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "ادامه با تایپ، رایگان",
     "voiceRowFileMissing": "{{voice}} هنوز دانلود نشده. روی «ادامه» بزنید تا دانلود شود.",
     "voiceRowFileFailed": "دانلود {{voice}} ممکن نشد. به اینترنت وصل شوید و دوباره تلاش کنید.",
-    "memoryNeededOfTotal": "{{needed}} از {{total}} حافظه این گوشی"
+    "memoryNeededOfTotal": "{{needed}} از {{total}} حافظه این گوشی",
+    "voiceRowChoose": "صدایی برای پاسخ‌های گفتاری انتخاب کنید."
   }
 }

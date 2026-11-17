@@ -1267,7 +1267,8 @@
         "startChat": "Iniciar chat",
         "needsMemory": "Este Pal necesita un dispositivo con al menos {{size}} de memoria para su modelo más pequeño.",
         "noModelFits": "Este dispositivo no tiene suficiente memoria para este Pal."
-      }
+      },
+      "storeOnly": "Disponible en la versión de Google Play / App Store"
     }
   },
   "validation": {
@@ -1646,14 +1647,17 @@
     "systemNeedsInternet": "Necesita internet",
     "systemVoiceNumber": "Voz {{number}}",
     "systemQualityEnhanced": "Mejorada",
-    "systemVoiceModeHint": "Las voces del sistema no pueden hablar en el modo de voz.",
     "systemOnDeviceSection": "En este teléfono",
     "systemLanguagesLabel": "Idiomas",
     "systemGetMoreVoices": "Obtener más voces",
     "systemNoVoicesForLanguage": "Este teléfono todavía no tiene voces en {{language}}.",
     "systemIosSettingsHint": "Añade voces en Ajustes > Accesibilidad > Contenido leído > Voces.",
     "systemLanguageSheetTitle": "Idioma de la voz",
-    "systemLanguageSearchPlaceholder": "Buscar idiomas"
+    "systemLanguageSearchPlaceholder": "Buscar idiomas",
+    "speakingNotificationTitle": "PocketPal está hablando",
+    "speakingNotificationStop": "Detener",
+    "speakingNotificationChannel": "Voz",
+    "systemIosReadAndSpeakHint": "Añade voces en Ajustes > Accesibilidad > Lectura y voz > Voces."
   },
   "onboarding": {
     "back": "Atrás",
@@ -1779,7 +1783,7 @@
     "errorPermissionBlocked": "El acceso al micrófono está bloqueado. Actívalo en Ajustes.",
     "errorTranscribeFailed": "No se pudo transcribir. Inténtalo de nuevo.",
     "errorNotInstalled": "Descarga un modelo de voz para usar la entrada de voz.",
-    "errorInsufficientMemory": "No hay suficiente memoria para la entrada de voz con este modelo de chat. Prueba con un modelo más pequeño.",
+    "errorInsufficientMemory": "Este modelo de chat y la entrada de voz necesitan más memoria de la que tiene este teléfono. Prueba con un modelo más pequeño.",
     "errorMicUnavailable": "El micrófono no responde. Inténtalo de nuevo o cambia a un modelo de chat más pequeño.",
     "errorTranscriptPartial": "No se pudo transcribir una parte de lo que dictaste.",
     "openSettingsLabel": "Abrir Ajustes",
@@ -1882,7 +1886,6 @@
     "installedLabel": "Instalado",
     "voiceRowTitle": "Voz",
     "voiceRowReady": "{{voice}} · disponible",
-    "voiceRowMissing": "Elige una voz natural. La voz del sistema no puede hablar en el modo de voz.",
     "chooseVoiceCta": "Elegir una voz",
     "micNote": "A continuación te pediremos acceso al micrófono.",
     "micDenied": "El modo de voz necesita acceso al micrófono.",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "Memoria ajustada",
     "memoryTightBody": "El modo de voz mantiene tres modelos cargados a la vez. En este teléfono puede ir lento o la aplicación puede cerrarse.",
     "memoryWontFitTitle": "Memoria insuficiente",
-    "memoryWontFitBody": "El reconocimiento de voz no cabe junto a este modelo de chat. Elige un modelo más pequeño para usar el modo de voz.",
+    "memoryWontFitBody": "Estos modelos necesitan más memoria de la que tiene este teléfono. Elige un modelo más pequeño para usar el modo de voz.",
     "memoryChatRow": "Modelo de chat · {{name}}",
     "memorySttRowModel": "Reconocimiento de voz · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "Seguir escribiendo, gratis",
     "voiceRowFileMissing": "Aún no has descargado {{voice}}. Toca Continuar para descargarla.",
     "voiceRowFileFailed": "No se pudo descargar {{voice}}. Conéctate a internet e inténtalo de nuevo.",
-    "memoryNeededOfTotal": "{{needed}} de {{total}} en este teléfono"
+    "memoryNeededOfTotal": "{{needed}} de {{total}} en este teléfono",
+    "voiceRowChoose": "Elige una voz para las respuestas habladas."
   }
 }

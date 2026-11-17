@@ -1267,7 +1267,8 @@
         "startChat": "チャットを開始",
         "needsMemory": "このPalの最小モデルを動かすには、{{size}}以上のメモリを搭載したデバイスが必要です。",
         "noModelFits": "このデバイスにはこのPalを動かすのに十分なメモリがありません。"
-      }
+      },
+      "storeOnly": "Google Play / App Store版のアプリでのみご利用いただけます"
     }
   },
   "validation": {
@@ -1645,15 +1646,18 @@
     "engineTierNatural": "自然な英語",
     "systemNeedsInternet": "インターネットが必要",
     "systemVoiceNumber": "音声{{number}}",
-    "systemQualityEnhanced": "強化",
-    "systemVoiceModeHint": "システム音声は音声モードでは使用できません。",
+    "systemQualityEnhanced": "拡張",
     "systemOnDeviceSection": "このデバイス内",
     "systemLanguagesLabel": "言語",
     "systemGetMoreVoices": "音声を追加",
     "systemNoVoicesForLanguage": "このデバイスにはまだ{{language}}の音声がありません。",
     "systemIosSettingsHint": "「設定 > アクセシビリティ > 読み上げコンテンツ > 声」で音声を追加できます。",
     "systemLanguageSheetTitle": "音声の言語",
-    "systemLanguageSearchPlaceholder": "言語を検索"
+    "systemLanguageSearchPlaceholder": "言語を検索",
+    "speakingNotificationTitle": "PocketPalが読み上げ中",
+    "speakingNotificationStop": "停止",
+    "speakingNotificationChannel": "読み上げ",
+    "systemIosReadAndSpeakHint": "「設定 > アクセシビリティ > リーダーと読み上げ > 声」で音声を追加できます。"
   },
   "onboarding": {
     "back": "戻る",
@@ -1779,7 +1783,7 @@
     "errorPermissionBlocked": "マイクへのアクセスがブロックされています。設定で有効にしてください。",
     "errorTranscribeFailed": "文字起こしできませんでした。もう一度お試しください。",
     "errorNotInstalled": "音声入力を使うには音声モデルをダウンロードしてください。",
-    "errorInsufficientMemory": "このチャットモデルでは音声入力に必要なメモリが足りません。より小さいモデルをお試しください。",
+    "errorInsufficientMemory": "このチャットモデルと音声入力には、このデバイスのメモリを超える容量が必要です。より小さいモデルをお試しください。",
     "errorMicUnavailable": "マイクが応答していません。もう一度お試しいただくか、より小さいチャットモデルに切り替えてください。",
     "errorTranscriptPartial": "音声の一部を文字起こしできませんでした。",
     "openSettingsLabel": "設定を開く",
@@ -1882,7 +1886,6 @@
     "installedLabel": "インストール済み",
     "voiceRowTitle": "音声",
     "voiceRowReady": "{{voice}} · 準備完了",
-    "voiceRowMissing": "自然な音声を選んでください。システム音声は音声モードでは使用できません。",
     "chooseVoiceCta": "音声を選択",
     "micNote": "この後、マイクへのアクセス許可を求めます。",
     "micDenied": "音声モードにはマイクへのアクセスが必要です。",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "メモリに余裕がありません",
     "memoryTightBody": "音声モードは3つのモデルを同時に読み込みます。このデバイスでは動作が遅くなったり、アプリが終了したりする可能性があります。",
     "memoryWontFitTitle": "メモリ不足",
-    "memoryWontFitBody": "このチャットモデルと一緒に音声認識を読み込むことはできません。音声モードを使うには、より小さいモデルを選んでください。",
+    "memoryWontFitBody": "これらのモデルには、このデバイスのメモリを超える容量が必要です。音声モードを使うには、より小さいモデルを選んでください。",
     "memoryChatRow": "チャットモデル · {{name}}",
     "memorySttRowModel": "音声認識 · Whisper {{tier}}",
     "memoryVoiceRow": "音声 · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "テキスト入力を続ける（無料）",
     "voiceRowFileMissing": "{{voice}}はまだダウンロードされていません。「続行」でダウンロードします。",
     "voiceRowFileFailed": "{{voice}}をダウンロードできませんでした。インターネットに接続してもう一度お試しください。",
-    "memoryNeededOfTotal": "{{needed}} / {{total}}（このデバイス）"
+    "memoryNeededOfTotal": "{{needed}} / {{total}}（このデバイス）",
+    "voiceRowChoose": "返信の読み上げに使う音声を選択してください。"
   }
 }

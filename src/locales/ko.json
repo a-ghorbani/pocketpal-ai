@@ -1486,7 +1486,8 @@
         "startChat": "채팅 시작",
         "needsMemory": "이 Pal의 가장 작은 모델을 사용하려면 메모리가 {{size}} 이상인 기기가 필요합니다.",
         "noModelFits": "이 기기는 이 Pal을 실행할 메모리가 부족합니다."
-      }
+      },
+      "storeOnly": "Google Play / App Store 버전 앱에서만 사용할 수 있습니다"
     }
   },
   "video": {
@@ -1638,14 +1639,17 @@
     "systemNeedsInternet": "인터넷 필요",
     "systemVoiceNumber": "음성 {{number}}",
     "systemQualityEnhanced": "향상됨",
-    "systemVoiceModeHint": "시스템 음성은 음성 모드에서 사용할 수 없습니다.",
     "systemOnDeviceSection": "이 휴대폰에 설치됨",
     "systemLanguagesLabel": "언어",
     "systemGetMoreVoices": "음성 더 받기",
     "systemNoVoicesForLanguage": "이 휴대폰에 아직 {{language}} 음성이 없습니다.",
     "systemIosSettingsHint": "설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성에서 새 음성을 추가할 수 있습니다.",
     "systemLanguageSheetTitle": "음성 언어",
-    "systemLanguageSearchPlaceholder": "언어 검색"
+    "systemLanguageSearchPlaceholder": "언어 검색",
+    "speakingNotificationTitle": "PocketPal이 말하는 중",
+    "speakingNotificationStop": "중지",
+    "speakingNotificationChannel": "음성 읽기",
+    "systemIosReadAndSpeakHint": "설정 > 손쉬운 사용 > 읽기 및 말하기 > 음성에서 새 음성을 추가할 수 있습니다."
   },
   "htmlPreview": {
     "defaultTitle": "미리보기",
@@ -1779,7 +1783,7 @@
     "errorPermissionBlocked": "마이크 접근 권한이 차단되어 있습니다. 설정에서 허용해 주세요.",
     "errorTranscribeFailed": "텍스트로 변환하지 못했습니다. 다시 시도해 주세요.",
     "errorNotInstalled": "음성 입력을 사용하려면 음성 모델을 다운로드해 주세요.",
-    "errorInsufficientMemory": "이 채팅 모델과 함께 음성 입력을 사용하기에는 메모리가 부족합니다. 더 작은 모델을 사용해 보세요.",
+    "errorInsufficientMemory": "이 채팅 모델과 음성 입력에 필요한 메모리가 이 기기의 메모리보다 많습니다. 더 작은 모델을 사용해 보세요.",
     "errorMicUnavailable": "마이크가 응답하지 않습니다. 다시 시도하거나 더 작은 채팅 모델로 바꿔 보세요.",
     "errorTranscriptPartial": "말한 내용 중 일부를 텍스트로 변환하지 못했습니다.",
     "openSettingsLabel": "설정 열기",
@@ -1882,7 +1886,6 @@
     "installedLabel": "설치됨",
     "voiceRowTitle": "음성",
     "voiceRowReady": "{{voice}} · 사용 가능",
-    "voiceRowMissing": "자연스러운 음성을 선택해 주세요. 음성 모드에서는 시스템 음성을 사용할 수 없습니다.",
     "chooseVoiceCta": "음성 선택",
     "micNote": "다음 단계에서 마이크 접근 권한을 요청합니다.",
     "micDenied": "음성 모드를 사용하려면 마이크 접근 권한이 필요합니다.",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "메모리 여유가 적습니다",
     "memoryTightBody": "음성 모드는 모델 세 개를 동시에 메모리에 올려 둡니다. 이 기기에서는 느려지거나 앱이 종료될 수 있습니다.",
     "memoryWontFitTitle": "메모리가 부족합니다",
-    "memoryWontFitBody": "이 채팅 모델과 함께 음성 인식을 올릴 메모리가 부족합니다. 음성 모드를 사용하려면 더 작은 모델을 선택해 주세요.",
+    "memoryWontFitBody": "이 모델들에 필요한 메모리가 이 기기의 메모리보다 많습니다. 음성 모드를 사용하려면 더 작은 모델을 선택해 주세요.",
     "memoryChatRow": "채팅 모델 · {{name}}",
     "memorySttRowModel": "음성 인식 · Whisper {{tier}}",
     "memoryVoiceRow": "음성 · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "무료로 계속 입력하기",
     "voiceRowFileMissing": "{{voice}} 음성은 아직 다운로드되지 않았습니다. 계속 버튼을 누르면 다운로드합니다.",
     "voiceRowFileFailed": "{{voice}} 음성을 다운로드하지 못했습니다. 인터넷에 연결한 뒤 다시 시도해 주세요.",
-    "memoryNeededOfTotal": "이 기기의 {{total}} 중 {{needed}}"
+    "memoryNeededOfTotal": "이 기기의 {{total}} 중 {{needed}}",
+    "voiceRowChoose": "답변을 읽어 줄 음성을 선택하세요."
   }
 }

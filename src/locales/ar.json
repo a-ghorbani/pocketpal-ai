@@ -1267,7 +1267,8 @@
         "startChat": "ابدء الدردشة",
         "needsMemory": "يحتاج هذا الرفيق إلى جهاز بذاكرة لا تقل عن {{size}} لأصغر نموذج لديه.",
         "noModelFits": "لا يمتلك هذا الجهاز ذاكرة كافية لهذا الرفيق."
-      }
+      },
+      "storeOnly": "متاح فقط في إصدار التطبيق من Google Play / App Store"
     }
   },
   "validation": {
@@ -1646,14 +1647,17 @@
     "systemNeedsInternet": "يتطلب إنترنت",
     "systemVoiceNumber": "صوت {{number}}",
     "systemQualityEnhanced": "مُحسَّن",
-    "systemVoiceModeHint": "أصوات النظام لا تعمل في الوضع الصوتي.",
     "systemOnDeviceSection": "على هذا الهاتف",
     "systemLanguagesLabel": "اللغات",
     "systemGetMoreVoices": "احصل على مزيد من الأصوات",
     "systemNoVoicesForLanguage": "لا توجد أصوات {{language}} على هذا الهاتف بعد.",
     "systemIosSettingsHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > المحتوى المنطوق > الأصوات.",
     "systemLanguageSheetTitle": "لغة الصوت",
-    "systemLanguageSearchPlaceholder": "البحث في اللغات"
+    "systemLanguageSearchPlaceholder": "البحث في اللغات",
+    "speakingNotificationTitle": "PocketPal يتحدّث",
+    "speakingNotificationStop": "إيقاف",
+    "speakingNotificationChannel": "الكلام",
+    "systemIosReadAndSpeakHint": "أضف أصواتًا من الإعدادات > تسهيلات الاستخدام > القراءة والنطق > الأصوات."
   },
   "onboarding": {
     "back": "رجوع",
@@ -1882,7 +1886,6 @@
     "installedLabel": "مُثبَّت",
     "voiceRowTitle": "الصوت",
     "voiceRowReady": "{{voice}} · جاهز",
-    "voiceRowMissing": "اختر صوتًا طبيعيًا. لا يمكن لصوت النظام التحدّث في الوضع الصوتي.",
     "chooseVoiceCta": "اختيار صوت",
     "micNote": "سنطلب إذن الوصول إلى الميكروفون بعد ذلك.",
     "micDenied": "يحتاج الوضع الصوتي إلى إذن الوصول إلى الميكروفون.",
@@ -1890,7 +1893,7 @@
     "memoryTightTitle": "الذاكرة محدودة",
     "memoryTightBody": "يُبقي الوضع الصوتي ثلاثة نماذج محمّلة في الوقت نفسه. قد يكون ذلك بطيئًا على هذا الهاتف، أو قد يُغلق التطبيق.",
     "memoryWontFitTitle": "الذاكرة غير كافية",
-    "memoryWontFitBody": "لا تتسع الذاكرة للتعرّف على الكلام مع نموذج الدردشة هذا. اختر نموذجًا أصغر لاستخدام الوضع الصوتي.",
+    "memoryWontFitBody": "تحتاج هذه النماذج إلى ذاكرة أكبر مما يمتلكه هذا الهاتف. اختر نموذجًا أصغر لاستخدام الوضع الصوتي.",
     "memoryChatRow": "نموذج الدردشة · {{name}}",
     "memorySttRowModel": "التعرّف على الكلام · Whisper {{tier}}",
     "memoryVoiceRow": "الصوت · {{name}}",
@@ -1906,6 +1909,7 @@
     "teaserKeepTyping": "تابع الكتابة مجانًا",
     "voiceRowFileMissing": "{{voice}} لم يُنزَّل بعد. اضغط «متابعة» لتنزيله.",
     "voiceRowFileFailed": "تعذّر تنزيل {{voice}}. اتصل بالإنترنت وحاول مرة أخرى.",
-    "memoryNeededOfTotal": "{{needed}} من {{total}} على هذا الهاتف"
+    "memoryNeededOfTotal": "{{needed}} من {{total}} على هذا الهاتف",
+    "voiceRowChoose": "اختر صوتًا لقراءة الردود بصوت عالٍ."
   }
 }
