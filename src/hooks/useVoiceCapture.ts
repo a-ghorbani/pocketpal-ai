@@ -13,6 +13,7 @@ import {
   ASR_LEVEL_CHUNKS,
   ASR_MAX_RECORD_MS,
   ASR_NO_AUDIO_MS,
+  ASR_NO_SPEECH_NOTICE_MS,
   ASR_PROMPT_CHARS,
   ASR_SAMPLE_RATE,
   SpeechSegmenter,
@@ -21,6 +22,8 @@ import {
   whisperAsrEngine,
 } from '../services/asr';
 import {ensureMicPermission} from '../utils/asrMicPermission';
+
+const CHUNK_MS = (ASR_CHUNK_BYTES / (ASR_SAMPLE_RATE * 2)) * 1000;
 
 interface UseVoiceCaptureOptions {
   /** Called with the final transcript; appended to the composer, never sent. */
@@ -49,6 +52,7 @@ export function useVoiceCapture(
   const engineQueueRef = useRef<Promise<void>>(Promise.resolve());
   const textsRef = useRef<string[]>([]);
   const failedRef = useRef(false);
+  const chunkCountRef = useRef(0);
   const listenerRef = useRef<{remove: () => void} | null>(null);
   const chatWaitRef = useRef<(Promise<void> & {cancel(): void}) | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,6 +165,13 @@ export function useVoiceCapture(
         asrStore.setError('transcribe_failed');
         return;
       }
+      if (
+        text.length === 0 &&
+        chunkCountRef.current * CHUNK_MS >= ASR_NO_SPEECH_NOTICE_MS
+      ) {
+        asrStore.setError('no_speech');
+        return;
+      }
       asrStore.resetCapture();
       if (text.length > 0) {
         onTranscriptRef.current(text);
@@ -265,18 +276,18 @@ export function useVoiceCapture(
       }
       textsRef.current = [];
       failedRef.current = false;
+      chunkCountRef.current = 0;
       segmenterRef.current = new SpeechSegmenter(pcm =>
         transcribeSegment(pcm, session),
       );
       recordingRef.current = true;
-      let chunkCount = 0;
       let peakLevel = 0;
       listenerRef.current = AudioRecord.on('data', (chunk: string) => {
         if (recordingRef.current) {
           const bytes = toByteArray(chunk);
           segmenterRef.current?.push(bytes);
           peakLevel = Math.max(peakLevel, inputLevel(int16PcmToFloat32(bytes)));
-          if (++chunkCount % ASR_LEVEL_CHUNKS === 0) {
+          if (++chunkCountRef.current % ASR_LEVEL_CHUNKS === 0) {
             asrStore.pushInputLevel(peakLevel);
             peakLevel = 0;
           }
@@ -290,7 +301,7 @@ export function useVoiceCapture(
       }, ASR_MAX_RECORD_MS);
       noAudioTimerRef.current = setTimeout(() => {
         noAudioTimerRef.current = null;
-        if (chunkCount === 0 && session === sessionRef.current) {
+        if (chunkCountRef.current === 0 && session === sessionRef.current) {
           teardownCapture();
           segmenterRef.current = null;
           asrStore.setError('mic_unavailable');

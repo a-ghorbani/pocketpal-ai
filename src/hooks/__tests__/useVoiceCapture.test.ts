@@ -94,6 +94,12 @@ describe('useVoiceCapture', () => {
     return {...hook, onTranscript};
   }
 
+  function feed(pcm: Uint8Array) {
+    act(() => {
+      chunksOf(pcm).forEach(chunk => dataCallback?.(fromByteArray(chunk)));
+    });
+  }
+
   it('records, transcribes on stop, and appends (never sends)', async () => {
     const {result, onTranscript} = await startRecording();
 
@@ -513,12 +519,6 @@ describe('useVoiceCapture', () => {
   });
 
   describe('real speech at quiet microphone levels', () => {
-    function feed(pcm: Uint8Array) {
-      act(() => {
-        chunksOf(pcm).forEach(chunk => dataCallback?.(fromByteArray(chunk)));
-      });
-    }
-
     const tallestBar = () => Math.max(0, ...asrStore.inputLevels);
 
     // Android's CDD sets VOICE_RECOGNITION so a 90 dB SPL tone reads about
@@ -541,18 +541,96 @@ describe('useVoiceCapture', () => {
         expect(mockTranscribe).toHaveBeenCalledTimes(1);
       },
     );
+  });
 
-    it('decodes nothing from a quiet room', async () => {
-      const {result, onTranscript} = await startRecording();
-
-      feed(quietRoomPcm());
+  describe('when nothing is heard', () => {
+    const stop = async (result: {current: {stop: () => void}}) => {
       await act(async () => {
         result.current.stop();
       });
+    };
 
-      await waitFor(() => expect(asrStore.captureState).toBe('idle'));
+    it('says so after a quiet room, without decoding it', async () => {
+      const {result, onTranscript} = await startRecording();
+
+      feed(quietRoomPcm());
+      await stop(result);
+
+      await waitFor(() =>
+        expect(asrStore.setError).toHaveBeenCalledWith('no_speech'),
+      );
+      expect(asrStore.captureState).toBe('error');
       expect(mockTranscribe).not.toHaveBeenCalled();
       expect(onTranscript).not.toHaveBeenCalled();
+    });
+
+    it('says so when speech decodes to no words', async () => {
+      mockTranscribe.mockResolvedValue(said(''));
+      const {result, onTranscript} = await startRecording();
+
+      feed(toPcm(speechAt(-30)));
+      await stop(result);
+
+      await waitFor(() =>
+        expect(asrStore.setError).toHaveBeenCalledWith('no_speech'),
+      );
+      expect(mockTranscribe).toHaveBeenCalledTimes(1);
+      expect(onTranscript).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on a stop within a second', async () => {
+      const {result} = await startRecording();
+
+      feed(quietRoomPcm().subarray(0, 950 * 32));
+      await stop(result);
+
+      await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+    });
+
+    it('counts the audio of each capture on its own', async () => {
+      const {result} = await startRecording();
+      feed(quietRoomPcm());
+      await stop(result);
+      await waitFor(() => expect(asrStore.captureState).toBe('error'));
+      (asrStore.setError as jest.Mock).mockClear();
+
+      await act(async () => {
+        result.current.start();
+      });
+      await waitFor(() => expect(asrStore.captureState).toBe('recording'));
+      feed(quietRoomPcm().subarray(0, 500 * 32));
+      await stop(result);
+
+      await waitFor(() => expect(asrStore.captureState).toBe('idle'));
+      expect(asrStore.setError).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on cancel', async () => {
+      const {result} = await startRecording();
+
+      feed(quietRoomPcm());
+      act(() => {
+        result.current.cancel();
+      });
+      await stop(result);
+
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed decode rather than no speech', async () => {
+      mockTranscribe.mockRejectedValueOnce(new Error('decode failed'));
+      const {result} = await startRecording();
+
+      feed(toPcm(speechAt(-30)));
+      await stop(result);
+
+      await waitFor(() =>
+        expect(asrStore.setError).toHaveBeenCalledWith('transcribe_failed'),
+      );
+      expect(asrStore.setError).not.toHaveBeenCalledWith('no_speech');
     });
   });
 
@@ -589,12 +667,14 @@ describe('useVoiceCapture', () => {
     });
   });
 
-  it('returns to idle without an error on an empty transcript', async () => {
+  it('returns to idle without an error on an empty transcript of a short stop', async () => {
     mockTranscribe.mockResolvedValue(said(''));
     const {result, onTranscript} = await startRecording();
 
     act(() => {
-      dataCallback?.(loudPcmChunkBase64());
+      for (let i = 0; i < 10; i++) {
+        dataCallback?.(pcmChunkBase64(50, 0.3));
+      }
     });
     await act(async () => {
       result.current.stop();

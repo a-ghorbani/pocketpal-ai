@@ -1697,6 +1697,7 @@
     "memoryAlertTryAnyway": "Try anyway",
     "errorMicUnavailable": "The microphone isn't responding. Try again, or switch to a smaller chat model.",
     "errorTranscriptPartial": "Part of your dictation couldn't be transcribed.",
+    "errorNoSpeech": "Didn't catch any speech. Try speaking closer to the microphone.",
     "openSettingsLabel": "Open Settings",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },

@@ -192,6 +192,20 @@ describe('ChatView voice-input append seam', () => {
     ).toBeTruthy();
   });
 
+  it('says when a dictation heard no speech', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('no_speech');
+    });
+
+    expect(
+      getByText(
+        "Didn't catch any speech. Try speaking closer to the microphone.",
+      ),
+    ).toBeTruthy();
+  });
+
   it('offers an open-Settings action when permission is blocked', () => {
     const {getByText} = renderChat();
 
