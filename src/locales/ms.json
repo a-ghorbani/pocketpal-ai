@@ -1267,7 +1267,8 @@
         "startChat": "Mulakan sembang",
         "needsMemory": "Pal ini memerlukan peranti dengan sekurang-kurangnya {{size}} memori untuk model terkecilnya.",
         "noModelFits": "Peranti ini tidak mempunyai memori yang mencukupi untuk Pal ini."
-      }
+      },
+      "storeOnly": "Tersedia dalam aplikasi versi Google Play / App Store sahaja"
     }
   },
   "validation": {
