@@ -1,6 +1,6 @@
 import {Alert, AppState, type AlertButton} from 'react-native';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
-import {fromByteArray} from 'base64-js';
+import {fromByteArray, toByteArray} from 'base64-js';
 
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
@@ -9,8 +9,22 @@ import {asrStore, modelStore, uiStore} from '../../store';
 import {
   ASR_MIN_SEGMENT_MS,
   ASR_NO_AUDIO_MS,
+  ASR_SAMPLE_RATE,
+  energyVad,
+  int16PcmToFloat32,
   whisperAsrEngine,
 } from '../../services/asr';
+import {
+  type Signal,
+  chunksOf,
+  joined,
+  mixed,
+  overQuietRoom,
+  quietRoom,
+  quietRoomPcm,
+  speechAt,
+  toPcm,
+} from '../../../jest/fixtures/asr';
 import * as micPerm from '../../utils/asrMicPermission';
 
 const mockEnsureMicPermission = jest.spyOn(micPerm, 'ensureMicPermission');
@@ -27,8 +41,7 @@ const mockAudioOn = AudioRecord.on as jest.Mock;
 const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 const mockMemoryFit = asrStore.captureMemoryFit as jest.Mock;
 
-// Base64-encoded 16-bit PCM: `ms` of speech-level signal (passes the energy
-// gate) or of silence.
+// Base64-encoded 16-bit PCM: `ms` of a tone at `amplitude`.
 function pcmChunkBase64(ms: number, amplitude: number): string {
   const samples = ms * 16; // 16 kHz
   const bytes = new Uint8Array(samples * 2);
@@ -44,6 +57,13 @@ const loudPcmChunkBase64 = () => pcmChunkBase64(1000, 0.3);
 const silentPcmChunkBase64 = () => pcmChunkBase64(1000, 0);
 const longSpeechPcmBase64 = () => pcmChunkBase64(ASR_MIN_SEGMENT_MS, 0.3);
 const said = (text: string, language = 'en') => ({text, language});
+
+// A 500 Hz tone at an RMS level of `dbfs`.
+const toneAt = (dbfs: number, ms: number): Signal =>
+  Float64Array.from(
+    {length: (ms * ASR_SAMPLE_RATE) / 1000},
+    (_, i) => Math.SQRT2 * 10 ** (dbfs / 20) * Math.sin((i / 16) * Math.PI),
+  );
 
 describe('useVoiceCapture', () => {
   let dataCallback: ((chunk: string) => void) | null = null;
@@ -87,6 +107,12 @@ describe('useVoiceCapture', () => {
     });
     await waitFor(() => expect(asrStore.captureState).toBe('recording'));
     return {...hook, onTranscript};
+  }
+
+  function feed(pcm: Uint8Array) {
+    act(() => {
+      chunksOf(pcm).forEach(chunk => dataCallback?.(fromByteArray(chunk)));
+    });
   }
 
   it('records, transcribes on stop, and appends (never sends)', async () => {
@@ -333,6 +359,56 @@ describe('useVoiceCapture', () => {
     expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
   });
 
+  describe('saving the detected language', () => {
+    const segmentVad = () =>
+      energyVad(
+        int16PcmToFloat32(toByteArray(mockTranscribe.mock.calls[0][0])),
+      );
+
+    beforeEach(() => {
+      asrStore.spokenLanguage = null;
+      mockTranscribe.mockResolvedValue(said('hallo', 'de'));
+    });
+
+    async function dictate(signal: Signal) {
+      const {result, onTranscript} = await startRecording();
+      feed(toPcm(signal));
+      await act(async () => {
+        result.current.stop();
+      });
+      await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('hallo'));
+    }
+
+    it('does not save it from quiet speech the -40 dBFS floor would not pass', async () => {
+      await dictate(overQuietRoom(speechAt(-46)));
+
+      expect(segmentVad().voicedMs).toBe(0);
+      expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [240, false],
+      [360, true],
+    ])(
+      'with a %d ms burst at -30 dBFS in the quiet speech, saves it: %s',
+      async (burstMs, saves) => {
+        await dictate(
+          joined(
+            overQuietRoom(speechAt(-46)),
+            mixed(quietRoom(1000), toneAt(-30, burstMs), 300),
+          ),
+        );
+
+        expect(segmentVad().passed).toBe(saves);
+        if (saves) {
+          expect(asrStore.setSpokenLanguage).toHaveBeenCalledWith('de');
+        } else {
+          expect(asrStore.setSpokenLanguage).not.toHaveBeenCalled();
+        }
+      },
+    );
+  });
+
   it('waits for a chat reply on the CPU before transcribing', async () => {
     modelStore.inferencing = true;
     modelStore.context = {gpu: false} as any;
@@ -505,6 +581,92 @@ describe('useVoiceCapture', () => {
     expect(asrStore.setError).not.toHaveBeenCalled();
     expect(mockTranscribe).not.toHaveBeenCalled();
     expect(onTranscript).not.toHaveBeenCalled();
+  });
+
+  describe('real speech at quiet microphone levels', () => {
+    const tallestBar = () => Math.max(0, ...asrStore.inputLevels);
+
+    // Android's CDD sets VOICE_RECOGNITION so a 90 dB SPL tone reads about
+    // -22 dBFS, with no gain control: -40 dBFS is speech at about 72 dB SPL at
+    // the microphone, -44 about 68 and -46 about 66.
+    it.each([-40, -44, -46])(
+      'decodes a short phrase spoken at %d dBFS that the waveform draws',
+      async dbfs => {
+        const {result, onTranscript} = await startRecording();
+
+        feed(toPcm(speechAt(dbfs)));
+        expect(tallestBar()).toBeGreaterThan(0.35);
+        await act(async () => {
+          result.current.stop();
+        });
+
+        await waitFor(() =>
+          expect(onTranscript).toHaveBeenCalledWith('hello world'),
+        );
+        expect(mockTranscribe).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
+  describe('when a dictation ends with no text', () => {
+    const stop = async (result: {current: {stop: () => void}}) => {
+      await act(async () => {
+        result.current.stop();
+      });
+    };
+
+    it('closes silently after a quiet room, without decoding it', async () => {
+      const {result, onTranscript} = await startRecording();
+
+      feed(quietRoomPcm());
+      await stop(result);
+
+      await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(mockTranscribe).not.toHaveBeenCalled();
+      expect(onTranscript).not.toHaveBeenCalled();
+    });
+
+    it('closes silently when speech decodes to no words', async () => {
+      mockTranscribe.mockResolvedValue(said(''));
+      const {result, onTranscript} = await startRecording();
+
+      feed(toPcm(speechAt(-30)));
+      await stop(result);
+
+      await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(mockTranscribe).toHaveBeenCalledTimes(1);
+      expect(onTranscript).not.toHaveBeenCalled();
+    });
+
+    it('closes silently on a stop within a second', async () => {
+      const {result, onTranscript} = await startRecording();
+
+      feed(quietRoomPcm().subarray(0, 950 * 32));
+      await stop(result);
+
+      await waitFor(() => expect(mockRelease).toHaveBeenCalled());
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(onTranscript).not.toHaveBeenCalled();
+    });
+
+    it('stays silent on cancel', async () => {
+      const {result, onTranscript} = await startRecording();
+
+      feed(quietRoomPcm());
+      act(() => {
+        result.current.cancel();
+      });
+      await stop(result);
+
+      expect(asrStore.captureState).toBe('idle');
+      expect(asrStore.setError).not.toHaveBeenCalled();
+      expect(onTranscript).not.toHaveBeenCalled();
+    });
   });
 
   describe('when the microphone delivers nothing', () => {

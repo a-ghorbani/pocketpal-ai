@@ -86,6 +86,31 @@ export const ASR_VAD_RMS_FLOOR = 0.01;
 /** Energy-VAD frame length (ms). */
 export const ASR_VAD_FRAME_MS = 30;
 
+/**
+ * A 50 ms frame is speech when it stands `ASR_SPEECH_MARGIN_DB` above the
+ * room, with that threshold held between this floor and
+ * `ASR_SPEECH_CEILING_DBFS` (dBFS). See speechDetector.ts.
+ */
+export const ASR_SPEECH_FLOOR_DBFS = -55;
+
+/** A frame at or above this level (dBFS) is speech whatever the room. */
+export const ASR_SPEECH_CEILING_DBFS = -40;
+
+/** How far above the room level (dB) a frame must be to count as speech. */
+export const ASR_SPEECH_MARGIN_DB = 10;
+
+/** The room level is taken from the frames of this window (ms). */
+export const ASR_NOISE_WINDOW_MS = 1_500;
+
+/**
+ * The room level is the frame of this rank, quietest first, in the window:
+ * one unusually quiet frame must not set it.
+ */
+export const ASR_NOISE_RANK = 2;
+
+/** A frame below this level (dBFS) is digital silence: neither room nor speech. */
+export const ASR_DIGITAL_SILENCE_DBFS = -90;
+
 /** Minimum voiced duration (ms) required before a buffer is decoded. */
 export const ASR_MIN_SPEECH_MS = 300;
 
