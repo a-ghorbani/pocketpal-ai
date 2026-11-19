@@ -21,6 +21,7 @@ import {FormField} from './FormField';
 import type {PalFormData} from './types';
 import {ColorSection} from './ColorSection';
 import {TalentSection} from './TalentSection';
+import {VoiceSection} from './VoiceSection';
 import {ModelSelector} from './ModelSelector';
 import {GreetingSection} from './GreetingSection';
 import {SectionDivider} from './SectionDivider';
@@ -58,6 +59,8 @@ const INITIAL_STATE: PalFormData = {
   talents: [],
   greetingText: '',
   suggestedPrompts: [],
+  voiceEnabled: true,
+  ttsEngine: undefined,
 };
 
 export const PalSheet: React.FC<PalSheetProps> = observer(
@@ -108,6 +111,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         talents: z.array(z.string()).optional(),
         greetingText: z.string().optional(),
         suggestedPrompts: z.array(z.string()).optional(),
+        voiceEnabled: z.boolean().optional(),
+        ttsEngine: z.string().optional(),
       });
 
       // Add dynamic parameter validation
@@ -165,6 +170,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         talents: pal.pact?.talents?.map(t => t.name) ?? [],
         greetingText: pal.greeting?.text ?? '',
         suggestedPrompts: pal.greeting?.suggestedPrompts ?? [],
+        voiceEnabled: pal.voiceEnabled !== false,
+        ttsEngine: pal.ttsEngine,
         ...pal.parameters, // Spread dynamic parameters
       };
       setCurrentCompletionSettings(pal.completionSettings);
@@ -187,6 +194,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         talents: pal.pact?.talents?.map(t => t.name) ?? [],
         greetingText: pal.greeting?.text ?? '',
         suggestedPrompts: pal.greeting?.suggestedPrompts ?? [],
+        voiceEnabled: pal.voiceEnabled !== false,
+        ttsEngine: pal.ttsEngine,
         ...pal.parameters, // Spread dynamic parameters
       };
       methods.reset(formData);
@@ -298,6 +307,11 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           completionSettings: data.completionSettings,
           pact,
           greeting,
+          // Voice: TTS is a downstream consumer of text, so this applies to
+          // video/multimodal Pals too. Absent ttsEngine follows the
+          // app-wide voice.
+          voiceEnabled: data.voiceEnabled !== false,
+          ttsEngine: data.ttsEngine as Pal['ttsEngine'],
         };
 
         if (isEditing) {
@@ -426,6 +440,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                 <ColorSection />
 
                 <TalentSection />
+
+                <VoiceSection />
 
                 {/* Generation Settings Section - only for existing local pals */}
                 {pal.id && (

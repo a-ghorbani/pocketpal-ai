@@ -32,6 +32,7 @@ import type {
   SupertonicSteps,
   Voice,
 } from '../services/tts';
+import type {PalTtsEngine} from '../types/pal';
 import {
   holdSpeechService,
   onSpeechServiceStop,
@@ -160,6 +161,22 @@ export class TTSStore {
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
   currentVoice: Voice | null = null;
+  /**
+   * Session-level speaker toggle from the chat header. NOT persisted: null
+   * defers to `autoSpeakEnabled` (the pre-toggle behavior), true/false forces
+   * speak/mute for the current chat session only. Voice mode replies are
+   * unaffected — voice mode is already an explicit opt-in.
+   */
+  sessionSpeakOn: boolean | null = null;
+  /**
+   * Per-Pal voice resolved for the current run (from the Pal's `ttsEngine`
+   * override). NOT persisted; falls back to `currentVoice` when null.
+   */
+  palVoiceOverride: Voice | null = null;
+
+  // Replay/preview may use a different engine from the Settings voice.
+  private playbackVoice: Voice | null = null;
+  private stopGeneration = 0;
   /**
    * Supertonic diffusion-step count. Persisted so a user's quality
    * preference survives restart. Missing values default to 5 on first load.
@@ -423,8 +440,12 @@ export class TTSStore {
 
   /** Whether the next assistant reply opens a speech stream. */
   get streamsReplies(): boolean {
+    if (this.sessionSpeakOn === false && !this.voiceOutputActive) {
+      return false;
+    }
     return (
-      this.voiceOutputActive || (this.isTTSAvailable && this.autoSpeakEnabled)
+      this.voiceOutputActive ||
+      (this.isTTSAvailable && (this.sessionSpeakOn ?? this.autoSpeakEnabled))
     );
   }
 
@@ -509,6 +530,110 @@ export class TTSStore {
         .catch(err => {
           console.warn('[TTSStore] release on auto-speak off failed:', err);
         });
+    }
+  }
+
+  /**
+   * Session-level speaker toggle (chat header icon). Not persisted — a
+   * reload or session switch re-derives it from the Pal / auto-speak.
+   * Turning it off stops in-flight audio but keeps the engine loaded,
+   * since the same session may toggle back on.
+   */
+  setSessionSpeak(on: boolean | null) {
+    this.sessionSpeakOn = on;
+    if (on === false) {
+      this.stop('session_toggle').catch(err => {
+        console.warn('[TTSStore] stop on session mute failed:', err);
+      });
+    }
+  }
+
+  /**
+   * Seed the session-level toggle for a chat session. A Pal with voice
+   * disabled starts the session muted; otherwise the toggle defers to the
+   * existing auto-speak preference (null), preserving prior behavior.
+   */
+  syncSessionSpeakForPal(pal: {voiceEnabled?: boolean} | null | undefined) {
+    this.setSessionSpeak(pal && pal.voiceEnabled === false ? false : null);
+  }
+
+  /**
+   * Pin the voice resolved for the active Pal (per-run, not persisted).
+   * Call sites reset it on Pal switch so the next run re-resolves.
+   */
+  setPalVoiceOverride(voice: Voice | null) {
+    this.palVoiceOverride = voice;
+  }
+
+  /**
+   * Resolve the voice a Pal's replies should be spoken with.
+   *
+   * TTS is a downstream consumer of text: any Pal may speak, but each Pal
+   * can pin its own engine. When the Pal pins an engine other than the
+   * app-wide voice's engine, resolve a voice from that engine — falling
+   * back silently to a system voice (never crashing, never modaling) when
+   * the pinned engine is unsupported (e.g. Phonon on iOS < 18), not
+   * installed, or fails to initialize.
+   */
+  async resolvePalVoice(
+    pal: {ttsEngine?: PalTtsEngine} | null | undefined,
+  ): Promise<Voice | null> {
+    const base = this.currentVoice;
+    const wanted = pal?.ttsEngine;
+    // An unpinned Pal must keep following currentVoice as settings change.
+    if (!wanted) {
+      return null;
+    }
+    if (wanted === base?.engine) {
+      return base;
+    }
+    if (wanted === 'system') {
+      const systemVoice = await this.systemFallbackVoice();
+      return systemVoice ?? base;
+    }
+    if (!this.isEngineOffered(wanted) || !this.isTTSAvailable) {
+      // Neural engines are gated on device RAM and the Phonon probe;
+      // system voices are not.
+      console.warn(
+        `[TTSStore] engine ${wanted} unavailable on this device; using system voice`,
+      );
+      const systemVoice = await this.systemFallbackVoice();
+      return systemVoice ?? base;
+    }
+    try {
+      const engine = getEngine(wanted);
+      if (!(await engine.isInstalled())) {
+        console.warn(
+          `[TTSStore] engine ${wanted} not installed; using system voice`,
+        );
+        return (await this.systemFallbackVoice()) ?? base;
+      }
+      const voice = (await engine.getVoices())[0];
+      if (!voice) {
+        console.warn(
+          `[TTSStore] engine ${wanted} has no voices; using system voice`,
+        );
+        return (await this.systemFallbackVoice()) ?? base;
+      }
+      return voice;
+    } catch (err) {
+      console.warn(
+        `[TTSStore] engine ${wanted} init failed; using system voice:`,
+        err,
+      );
+      return (await this.systemFallbackVoice()) ?? base;
+    }
+  }
+
+  private async systemFallbackVoice(): Promise<Voice | null> {
+    try {
+      // Automatic fallback must not silently choose a voice known to need
+      // a network connection. Explicit app-wide selections are preserved.
+      const voices = await getEngine('system').getVoices();
+      return voices.find(voice => !voice.requiresNetwork) ?? null;
+    } catch (err) {
+      console.warn('[TTSStore] system voice lookup failed:', err);
+      return null;
     }
   }
 
@@ -655,8 +780,10 @@ export class TTSStore {
    * Stop any in-flight playback and reset state to idle.
    */
   async stop(by = 'other'): Promise<void> {
+    this.stopGeneration += 1;
     const state = this.playbackState;
-    const voice = this.currentVoice;
+    const voice = this.playbackVoice ?? this.currentVoice;
+    this.playbackVoice = null;
     vtrace('tts.stop', {by, mode: state.mode});
     let settle = () => {};
     const settled = new Promise<void>(resolve => (settle = resolve));
@@ -706,7 +833,12 @@ export class TTSStore {
       return;
     }
 
-    await this.stop();
+    const stopping = this.stop();
+    const generation = this.stopGeneration;
+    await stopping;
+    if (generation !== this.stopGeneration) {
+      return;
+    }
 
     const {text: cleanText, hadNonEmptyThink} = ThinkingStripper.stripFinal(
       text,
@@ -717,6 +849,7 @@ export class TTSStore {
       : cleanText;
 
     const playing = runInAction(() => {
+      this.playbackVoice = voice;
       this.playbackState = {mode: 'playing', messageId};
       return this.playbackState;
     });
@@ -743,6 +876,7 @@ export class TTSStore {
     } finally {
       runInAction(() => {
         if (this.playbackState === playing) {
+          this.playbackVoice = null;
           this.playbackState = {mode: 'idle'};
         }
       });
@@ -765,8 +899,14 @@ export class TTSStore {
       return;
     }
     const messageId = previewMessageId(voice);
-    await this.stop();
+    const stopping = this.stop();
+    const generation = this.stopGeneration;
+    await stopping;
+    if (generation !== this.stopGeneration) {
+      return;
+    }
     const playing = runInAction(() => {
+      this.playbackVoice = voice;
       this.playbackState = {mode: 'playing', messageId};
       return this.playbackState;
     });
@@ -792,6 +932,7 @@ export class TTSStore {
     } finally {
       runInAction(() => {
         if (this.playbackState === playing) {
+          this.playbackVoice = null;
           this.playbackState = {mode: 'idle'};
         }
       });
@@ -813,9 +954,10 @@ export class TTSStore {
 
   /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string): void {
+    const voice = this.palVoiceOverride ?? this.currentVoice;
     if (
       !this.streamsReplies ||
-      this.currentVoice == null ||
+      voice == null ||
       messageId === this.lastSpokenMessageId
     ) {
       return;
@@ -828,7 +970,6 @@ export class TTSStore {
       console.warn('[TTSStore] stop before new stream failed:', err);
     });
 
-    const voice = this.currentVoice;
     const voiceReady = stopDone
       .then(() => ensureVoiceFile(voice))
       .then(() => undefined);
@@ -1049,15 +1190,19 @@ export class TTSStore {
       return;
     }
 
+    const voice = this.palVoiceOverride ?? this.currentVoice;
     if (
       !this.streamsReplies ||
-      this.currentVoice == null ||
+      voice == null ||
       messageId === this.lastSpokenMessageId
     ) {
       return;
     }
     this.lastSpokenMessageId = messageId;
-    this.play(messageId, text, {hadReasoning: opts?.hadReasoning}).catch(() => {
+    this.play(messageId, text, {
+      hadReasoning: opts?.hadReasoning,
+      voiceOverride: voice,
+    }).catch(() => {
       // play() already logs and recovers; swallow to satisfy no-floating-promises.
     });
   }

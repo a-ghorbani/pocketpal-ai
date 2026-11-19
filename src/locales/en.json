@@ -960,6 +960,13 @@
         "promptModelRequired": "Prompt generation model is required when using AI prompt"
       },
       "talents": "Talents",
+      "voice": {
+        "sectionLabel": "Voice",
+        "speakLabel": "Speak responses aloud",
+        "speakDescription": "Read this pal's replies aloud with on-device text-to-speech.",
+        "engineLabel": "TTS engine",
+        "engineDefaultOption": "Follow app voice"
+      },
       "talentNames": {
         "render_html": "HTML preview",
         "calculate": "Math expressions",
@@ -1606,6 +1613,9 @@
       "vi": "Vietnamese"
     },
     "toggleAutoSpeakLabel": "Toggle auto-speak",
+    "sessionSpeakLabel": "Speak replies in this chat",
+    "sessionMuteLabel": "Mute replies in this chat",
+    "sessionPalMutedHint": "Speech is turned off for this Pal. Enable it in Pal settings.",
     "openSettingsLabel": "TTS settings",
     "playMessageLabel": "Play message",
     "stopMessageLabel": "Stop message",

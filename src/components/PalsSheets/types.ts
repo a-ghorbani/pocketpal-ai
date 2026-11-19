@@ -16,6 +16,8 @@ export interface PalFormData {
   talents?: string[];
   greetingText?: string;
   suggestedPrompts?: string[];
+  voiceEnabled?: boolean;
+  ttsEngine?: string;
   // Dynamic parameters will be added based on schema
   [key: string]: any;
 }
