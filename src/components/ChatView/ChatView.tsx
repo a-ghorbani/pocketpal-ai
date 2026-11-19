@@ -233,8 +233,6 @@ function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
       return l10n.voiceInput.errorMicUnavailable;
     case 'transcript_partial':
       return l10n.voiceInput.errorTranscriptPartial;
-    case 'no_speech':
-      return l10n.voiceInput.errorNoSpeech;
   }
 }
 

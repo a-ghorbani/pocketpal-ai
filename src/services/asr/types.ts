@@ -36,8 +36,7 @@ export type AsrErrorKind =
   | 'not_installed'
   | 'insufficient_memory'
   | 'mic_unavailable'
-  | 'transcript_partial'
-  | 'no_speech';
+  | 'transcript_partial';
 
 /** Static per-tier model manifest (URL + filename + size). */
 export interface AsrTierManifest {

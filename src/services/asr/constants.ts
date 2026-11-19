@@ -111,12 +111,6 @@ export const ASR_NOISE_RANK = 2;
 /** A frame below this level (dBFS) is digital silence: neither room nor speech. */
 export const ASR_DIGITAL_SILENCE_DBFS = -90;
 
-/**
- * A dictation that delivered at least this much audio (ms) and produced no
- * text says so; a shorter stop stays silent.
- */
-export const ASR_NO_SPEECH_NOTICE_MS = 1_000;
-
 /** Minimum voiced duration (ms) required before a buffer is decoded. */
 export const ASR_MIN_SPEECH_MS = 300;
 
