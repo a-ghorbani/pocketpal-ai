@@ -8,6 +8,7 @@ describe('createSearchProvider', () => {
       'brave',
       'exa',
       'firecrawl',
+      'outcrawl',
       'parallel',
       'you',
     ];
