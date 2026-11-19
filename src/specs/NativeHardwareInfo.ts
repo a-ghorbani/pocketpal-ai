@@ -19,6 +19,7 @@ export interface CPUInfo {
   socModel?: string;
   hardware?: string;
   maxFreqMhz?: number;
+  performanceCores?: number; // Android: cores above half the top cpu_capacity
 }
 
 export interface GPUInfo {

@@ -43,6 +43,7 @@ export interface CpuInfo {
   hasDotProd?: boolean;
   hasSve?: boolean;
   hasI8mm?: boolean;
+  performanceCores?: number;
 }
 
 /**
@@ -169,6 +170,7 @@ export async function getCpuInfo(): Promise<CpuInfo | null> {
       hasDotProd: info.hasDotProd,
       hasSve: info.hasSve,
       hasI8mm: info.hasI8mm,
+      performanceCores: info.performanceCores,
     };
   } catch (error) {
     console.warn('Failed to get CPU info:', error);
@@ -187,11 +189,18 @@ export async function getCpuCoreCount(): Promise<number> {
 
 /**
  * Get recommended thread count based on CPU cores
- * Uses 80% of cores for devices with more than 4 cores, otherwise uses all cores
+ * Uses the performance cores when the device reports them (Android), so no
+ * thread lands on an efficiency core and holds the others back. Otherwise
+ * uses 80% of cores for devices with more than 4 cores, or all cores.
  * @returns Promise<number> Recommended thread count
  */
 export async function getRecommendedThreadCount(): Promise<number> {
-  const cores = await getCpuCoreCount();
+  const cpuInfo = await getCpuInfo();
+  const cores = cpuInfo?.cores || 4;
+  const performanceCores = cpuInfo?.performanceCores;
+  if (performanceCores && performanceCores >= 2 && performanceCores < cores) {
+    return performanceCores;
+  }
   return cores <= 4 ? cores : Math.floor(cores * 0.8);
 }
 

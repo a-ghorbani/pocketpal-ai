@@ -211,6 +211,7 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
       }
 
       readMaxCpuFreqMhz()?.let { cpuInfo.putInt("maxFreqMhz", it) }
+      readPerformanceCoreCount()?.let { cpuInfo.putInt("performanceCores", it) }
 
       promise.resolve(cpuInfo)
     } catch (e: Exception) {
@@ -277,6 +278,29 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
         }
       }
       if (maxKhz > 0L) (maxKhz / 1000).toInt() else null
+    } catch (e: Throwable) {
+      null
+    }
+  }
+
+  // Number of cores whose kernel capacity (cpu_capacity, 1024 = the
+  // strongest core) is above half of the strongest one. On a Dimensity 8300
+  // this is 4 (capacity 996-1024) and leaves out the 4 Cortex-A510s (221).
+  // Returns null when any online core has no readable value, or when every
+  // core qualifies, so the caller keeps its default.
+  private fun readPerformanceCoreCount(): Int? {
+    return try {
+      val coreCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 16)
+      val capacities = (0 until coreCount).map { core ->
+        File("/sys/devices/system/cpu/cpu$core/cpu_capacity")
+          .takeIf { it.exists() }
+          ?.readText()?.trim()?.toIntOrNull()
+          ?: return null
+      }
+      val strongest = capacities.maxOrNull() ?: return null
+      if (strongest <= 0) return null
+      val performance = capacities.count { it * 2 > strongest }
+      performance.takeIf { it in 1 until coreCount }
     } catch (e: Throwable) {
       null
     }
