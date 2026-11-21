@@ -1,4 +1,5 @@
 import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
+import {memMark} from '../utils/memRecorder';
 import DeviceInfo from 'react-native-device-info';
 
 import {v4 as uuidv4} from 'uuid';
@@ -2421,17 +2422,21 @@ class ModelStore {
       const contextInitParams = createContextInitParams(effectiveSettings);
 
       const t0 = Date.now();
+      memMark(`llm:load:start ${model.name} ctx=${effectiveSettings.n_ctx}`);
+      const tripwire = await readTripwire();
       const ctx = await initLlama(
         {
           model: filePath,
           ...effectiveSettings, // Use effectiveSettings without version for llama.rn
           use_progress_callback: true,
-        },
+          ...tripwire,
+        } as any,
         (_progress: number) => {
           //console.log('progress: ', _progress);
         },
       );
       const t1 = Date.now();
+      memMark(`llm:load:end ${model.name}`);
       console.log('init time: ', t1 - t0);
 
       await this.updateModelStopTokens(ctx, model);
@@ -2525,6 +2530,7 @@ class ModelStore {
 
       return ctx;
     } catch (error) {
+      memMark(`llm:load:fail ${String(error)}`);
       console.error(
         `Failed to initialize model context for "${model.name}" (${model.id}):`,
         error,
@@ -4124,3 +4130,16 @@ class ModelStore {
 }
 
 export const modelStore = new ModelStore();
+
+async function readTripwire(): Promise<Record<string, number>> {
+  try {
+    const raw = await RNFS.readFile(`${RNFS.ExternalDirectoryPath}/memtrip.json`);
+    const cfg = JSON.parse(raw);
+    return {
+      tripwire_swap_kb: Number(cfg.swapKb) || 0,
+      tripwire_mem_avail_kb: Number(cfg.memAvailKb) || 0,
+    };
+  } catch {
+    return {};
+  }
+}

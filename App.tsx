@@ -1,3 +1,5 @@
+import {AppState as MemRecAppState} from 'react-native';
+import {memMark, startMemRecorder} from './src/utils/memRecorder';
 import * as React from 'react';
 import {
   Appearance,
@@ -61,6 +63,9 @@ import {
 } from './src/screens';
 import PalsScreen from './src/screens/PalsScreen';
 import {OnboardingStack} from './src/screens/OnboardingScreens';
+
+startMemRecorder();
+MemRecAppState.addEventListener('change', st => memMark(`app:${st}`));
 
 // Check if app is in debug mode
 const isDebugMode = __DEV__;

@@ -65,6 +65,8 @@ export interface Spec extends TurboModule {
    * addresses; null when it has none.
    */
   getWifiIPv4(): Promise<string | null>;
+  startMemoryRecorder(intervalMs: number): Promise<string>;
+  markMemoryRecorder(label: string): void;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('HardwareInfo');

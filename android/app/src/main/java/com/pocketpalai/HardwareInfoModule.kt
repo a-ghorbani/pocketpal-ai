@@ -322,6 +322,18 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun startMemoryRecorder(intervalMs: Double, promise: Promise) {
+    try {
+      promise.resolve(MemoryRecorder.start(reactApplicationContext, intervalMs.toLong()))
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  override fun markMemoryRecorder(label: String) {
+    MemoryRecorder.mark(reactApplicationContext, label)
+  }
+
   override fun writeMemorySnapshot(label: String, promise: Promise) {
     try {
       // Collect memory metrics

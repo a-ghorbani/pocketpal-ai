@@ -1,3 +1,4 @@
+import {memMark} from '../../utils/memRecorder';
 import Speech from '@pocketpalai/react-native-speech';
 
 import type {Engine, EngineId} from './types';
@@ -37,10 +38,13 @@ class TTSRuntime {
         if (this.activeEngineId !== null) {
           await this.releaseInternal();
         }
+        memMark(`tts:load:start ${engine.id}`);
         await engine.loadInto();
+        memMark(`tts:load:end ${engine.id}`);
         this.activeEngineId = engine.id;
         this.stale = false;
       }
+      memMark(`tts:run ${engine.id}`);
       return fn();
     });
   }

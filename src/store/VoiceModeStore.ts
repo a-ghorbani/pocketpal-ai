@@ -1,3 +1,4 @@
+import {memMark} from '../utils/memRecorder';
 import {Platform} from 'react-native';
 
 import {makeAutoObservable} from 'mobx';
@@ -75,6 +76,7 @@ export class VoiceModeStore {
   setPhase(phase: VoicePhase): void {
     if (phase !== this.phase) {
       this.lastError = null;
+      memMark(`voice:${phase}`);
     }
     this.phase = phase;
     if (phase === 'closed') {

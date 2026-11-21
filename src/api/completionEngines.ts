@@ -1,4 +1,5 @@
 import {LlamaContext} from 'llama.rn';
+import {memMark} from '../utils/memRecorder';
 
 import {streamChatCompletion} from './openai';
 import type {RemoteEndpoint} from './servers';
@@ -20,10 +21,16 @@ export class LocalCompletionEngine implements CompletionEngine {
     params: ApiCompletionParams,
     callback?: (data: CompletionStreamData) => void,
   ): Promise<CompletionResult> {
+    memMark('llm:gen:start');
+    let first = true;
     const result = await this.context.completion(
       params,
       callback
         ? data => {
+            if (first) {
+              first = false;
+              memMark('llm:gen:first-token');
+            }
             callback({
               token: data.token,
               content: data.content,
@@ -34,6 +41,7 @@ export class LocalCompletionEngine implements CompletionEngine {
           }
         : undefined,
     );
+    memMark('llm:gen:end');
     return {
       text: result.text,
       content: result.content,

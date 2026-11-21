@@ -1,3 +1,4 @@
+import {memMark} from '../../../../utils/memRecorder';
 import {Platform} from 'react-native';
 
 import * as RNFS from '@dr.pogodin/react-native-fs';
@@ -193,6 +194,7 @@ export class WhisperAsrEngine implements AsrEngine {
     const promise = (async () => {
       await previous?.catch(() => {});
       await this.releaseContext();
+      memMark(`asr:load:start ${tier}`);
       const context = await initWhisper({
         filePath: this.getModelPath(tier),
         // CoreML sidecar is an optional accelerator; absence degrades to the
@@ -205,6 +207,7 @@ export class WhisperAsrEngine implements AsrEngine {
       }
       this.context = context;
       this.loadedTier = tier;
+      memMark(`asr:load:end ${tier}`);
       return context;
     })();
     const loading = {tier, promise};
@@ -233,6 +236,7 @@ export class WhisperAsrEngine implements AsrEngine {
       throw new Error(`ASR model not installed for tier ${tier}`);
     }
     const context = await this.ensureContext(tier);
+    memMark('asr:transcribe:start');
     // transcribeData decodes the buffer as signed 16-bit PCM, whatever
     // whisper.rn's own doc comment says.
     const {stop, promise} = context.transcribeData(pcmBase64Int16, {
