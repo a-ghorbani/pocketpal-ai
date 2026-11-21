@@ -50,6 +50,15 @@ object MemoryRecorder {
     sample(am)
   }
 
+  fun signals(context: Context): LongArray {
+    val status = readKb("/proc/self/status", arrayOf("VmRSS", "VmSwap"))
+    val meminfo = readKb("/proc/meminfo", arrayOf("MemAvailable"))
+    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val info = ActivityManager.MemoryInfo()
+    am.getMemoryInfo(info)
+    return longArrayOf(status[0], status[1], meminfo[0], if (info.lowMemory) 1 else 0)
+  }
+
   private fun sample(am: ActivityManager) {
     val status = readKb("/proc/self/status", arrayOf("VmRSS", "VmSwap", "RssAnon", "RssFile"))
     val meminfo = readKb("/proc/meminfo", arrayOf("MemAvailable", "MemFree", "SwapFree"))

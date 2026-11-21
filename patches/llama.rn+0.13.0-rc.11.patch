@@ -297,12 +297,15 @@ index 4699569..3759fd2 100644
  #if defined(__ANDROID__)
  static bool shouldExcludeHexagonDevice(ggml_backend_dev_t dev) {
  #if defined(GGML_USE_HEXAGON)
-@@ -149,8 +158,26 @@
+@@ -149,8 +158,29 @@
          int contextId;
          std::atomic<int> lastProgress{0};
          int progressEvery = 1;
 +        long tripSwapKb = 0;
 +        long tripMemAvailKb = 0;
++        long tripRemainingKb = 0;
++        long tripFloorKb = 0;
++        long swapBaselineKb = -1;
      };
  
 +    static long readProcKb(const char *path, const char *key) {
@@ -324,7 +327,7 @@ index 4699569..3759fd2 100644
      void setContextLimit(int64_t limit) {
          g_context_limit.store(limit);
      }
-@@ -188,6 +215,7 @@
+@@ -188,6 +218,7 @@
      // beginCompletion(), see #403).
      class ContextClaim {
      public:
@@ -332,7 +335,7 @@ index 4699569..3759fd2 100644
          explicit ContextClaim(rnllama::llama_rn_context* ctx) : ctx_(ctx) {
              bool expected = false;
              if (!ctx_->is_claimed.compare_exchange_strong(expected, true)) {
-@@ -534,20 +562,40 @@
+@@ -534,20 +565,40 @@
          }
      }
  
@@ -382,29 +385,36 @@ index 4699569..3759fd2 100644
      }
  
      void installJSIBindings(
-@@ -582,6 +630,8 @@
+@@ -582,6 +633,10 @@
                      progressData->contextId = contextId;
                      progressData->progressEvery = std::max(1, progressCallbackEvery);
                      progressData->lastProgress.store(0);
 +                    progressData->tripSwapKb = getPropertyAsInt(params, "tripwire_swap_kb", 0);
 +                    progressData->tripMemAvailKb = getPropertyAsInt(params, "tripwire_mem_avail_kb", 0);
++                    progressData->tripRemainingKb = getPropertyAsInt(params, "tripwire_remaining_kb", 0);
++                    progressData->tripFloorKb = getPropertyAsInt(params, "tripwire_floor_kb", 0);
                  } else if (useProgressCallback) {
                      // Progress requested but no callback provided
                      useProgressCallback = false;
-@@ -663,6 +713,21 @@
+@@ -663,6 +718,26 @@
                                  return true;
                              }
  
-+                            if (data->tripSwapKb > 0 || data->tripMemAvailKb > 0) {
++                            if (data->tripSwapKb > 0 || data->tripMemAvailKb > 0 || data->tripFloorKb > 0) {
 +                                long swapKb = readProcKb("/proc/self/status", "VmSwap");
 +                                long availKb = readProcKb("/proc/meminfo", "MemAvailable");
-+                                bool overSwap = data->tripSwapKb > 0 && swapKb > data->tripSwapKb;
++                                if (data->swapBaselineKb < 0) data->swapBaselineKb = swapKb;
++                                long swapGrowthKb = swapKb - data->swapBaselineKb;
++                                bool overSwap = data->tripSwapKb > 0 && swapGrowthKb > data->tripSwapKb;
 +                                bool underAvail = data->tripMemAvailKb > 0 && availKb >= 0 && availKb < data->tripMemAvailKb;
-+                                if (overSwap || underAvail) {
++                                bool restWontFit = progress >= 1.0f && data->tripFloorKb > 0 && availKb >= 0 &&
++                                    availKb - data->tripRemainingKb < data->tripFloorKb;
++                                if (overSwap || underAvail || restWontFit) {
 +#if defined(__ANDROID__)
 +                                    __android_log_print(ANDROID_LOG_WARN, "RNLlama",
-+                                        "TRIPWIRE abort at %.1f%%: swap_kb=%ld (limit %ld) mem_avail_kb=%ld (floor %ld)",
-+                                        progress * 100.0f, swapKb, data->tripSwapKb, availKb, data->tripMemAvailKb);
++                                        "TRIPWIRE abort at %.1f%%: swap_growth_kb=%ld (limit %ld) mem_avail_kb=%ld (floor %ld) remaining_kb=%ld rest_floor_kb=%ld",
++                                        progress * 100.0f, swapGrowthKb, data->tripSwapKb, availKb, data->tripMemAvailKb,
++                                        data->tripRemainingKb, data->tripFloorKb);
 +#endif
 +                                    return false;
 +                                }
@@ -413,7 +423,7 @@ index 4699569..3759fd2 100644
                              int percentage = (int) (progress * 100.0f);
                              int last = data->lastProgress.load();
                              if (percentage < 100 && percentage - last < data->progressEvery) {
-@@ -740,7 +805,8 @@
+@@ -740,7 +815,8 @@
                               }
                           }
  
@@ -423,7 +433,7 @@ index 4699569..3759fd2 100644
  
                           std::string androidLibName = "";
                           #if defined(__ANDROID__)
-@@ -751,7 +817,7 @@
+@@ -751,7 +827,7 @@
                               {"reasonNoGPU", reasonNoGPU},
                               {"systemInfo", common_params_get_system_info(ctx->params)},
                               // Model metadata and chat template capabilities
@@ -432,7 +442,7 @@ index 4699569..3759fd2 100644
                               {"devices", usedDevices},
                               {"androidLib", androidLibName},
                           });
-@@ -819,7 +885,7 @@
+@@ -819,7 +895,7 @@
                  return createPromiseTask(runtime, callInvoker, [contextId, path]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      ContextClaim claim(ctx);
@@ -441,7 +451,7 @@ index 4699569..3759fd2 100644
                      return [result](jsi::Runtime& rt) {
                          return fromJson(rt, result);
                      };
-@@ -839,7 +905,7 @@
+@@ -839,7 +915,7 @@
                  return createPromiseTask(runtime, callInvoker, [contextId, path, size]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      ContextClaim claim(ctx);
@@ -450,7 +460,7 @@ index 4699569..3759fd2 100644
                      return [tokens_saved](jsi::Runtime& rt) {
                          return jsi::Value(tokens_saved);
                      };
-@@ -1134,7 +1200,7 @@
+@@ -1134,7 +1210,7 @@
                  ContextClaim claim(ctx);
                  ctx->completion->rewind();
  
@@ -459,7 +469,7 @@ index 4699569..3759fd2 100644
  
                  std::vector<std::string> mediaPaths;
                  // media_paths: string | string[]
-@@ -1159,7 +1225,7 @@
+@@ -1159,7 +1235,7 @@
  
                  jsi::Value promise = createPromiseTask(runtime, callInvoker, [runtimePtr = std::shared_ptr<jsi::Runtime>(&runtime, [](jsi::Runtime*){}), contextId, onToken, emitPartial, mediaPaths, chat_format, reasoning_format, generation_prompt, chat_parser, prefill_text, callInvoker]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
@@ -468,7 +478,7 @@ index 4699569..3759fd2 100644
  
                      if (ctx->completion == nullptr) {
                          throw std::runtime_error("Completion not initialized");
-@@ -1235,7 +1301,7 @@
+@@ -1235,7 +1311,7 @@
  
                                      auto runtime = runtimePtr;
                                      if (runtime) {
@@ -477,7 +487,7 @@ index 4699569..3759fd2 100644
                                          if (has_partial_output) {
                                              addChatOutputFields(tokenResult, partial_output);
                                          }
-@@ -1263,7 +1329,7 @@
+@@ -1263,7 +1339,7 @@
                      ctx->completion->endCompletion();
  
                      // Snapshot the result here, before another task can touch the context
@@ -486,7 +496,7 @@ index 4699569..3759fd2 100644
  
                      return [contextId, result](jsi::Runtime& rt) -> jsi::Value {
                          if (!g_llamaContexts.get(contextId)) {
-@@ -1381,7 +1447,7 @@
+@@ -1381,7 +1457,7 @@
                      throw jsi::JSError(runtime, "This model only answers decisions, see decide()");
                  }
                  auto originalParams = ctxPtr->params;
@@ -495,7 +505,7 @@ index 4699569..3759fd2 100644
                  common_params cparams = ctxPtr->params;
                  ctxPtr->params = originalParams;
  
-@@ -1420,7 +1486,14 @@
+@@ -1420,7 +1496,14 @@
                      auto tokenizeResult = ctx->tokenize(cparams.prompt, mediaPaths);
                      std::vector<llama_token> tokens = tokenizeResult.tokens;
  
@@ -511,7 +521,7 @@ index 4699569..3759fd2 100644
                          int requestId = token.request_id;
                          rnllama::completion_chat_output parsed_output;
                          bool has_parsed_output = false;
-@@ -1438,7 +1511,7 @@
+@@ -1438,7 +1521,7 @@
  
                          auto callbacks = RequestManager::getInstance().getRequest(contextId, requestId);
                          if (callbacks.onToken) {
@@ -520,7 +530,7 @@ index 4699569..3759fd2 100644
                              if (has_parsed_output) {
                                  addChatOutputFields(tokenResult, parsed_output);
                              }
-@@ -1514,7 +1587,7 @@
+@@ -1514,7 +1597,7 @@
                      if (result == rnllama::llama_rn_cancel_result::QUEUED) {
                          auto callbacks = RequestManager::getInstance().takeRequest(contextId, requestId);
                          if (callbacks.onComplete) {
@@ -529,7 +539,7 @@ index 4699569..3759fd2 100644
                              callbacks.onComplete->call(runtime, fromJson(runtime, response));
                          }
                      }
-@@ -1774,12 +1847,9 @@
+@@ -1774,12 +1857,9 @@
                  int contextId = (int)arguments[0].asNumber();
                  int subscriberId = (int)arguments[1].asNumber();
  
@@ -545,7 +555,7 @@ index 4699569..3759fd2 100644
                  }
  
                  return jsi::Value::undefined();
-@@ -1794,33 +1864,17 @@
+@@ -1794,33 +1874,17 @@
                   int contextId = (int)arguments[0].asNumber();
                   return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
                       RequestManager::getInstance().clearContext(contextId);
@@ -584,7 +594,7 @@ index 4699569..3759fd2 100644
                       }
                       return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
                   }, contextId, false);  // trackTask=false - release should not count itself
-@@ -1835,33 +1889,18 @@
+@@ -1835,33 +1899,18 @@
                   return createPromiseTask(runtime, callInvoker, []() -> PromiseResultGenerator {
                       RequestManager::getInstance().clearAll();
  
@@ -624,7 +634,7 @@ index 4699569..3759fd2 100644
                       return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
                   }, -1, false);  // contextId=-1 (not tracked), trackTask=false
              }
-@@ -2062,7 +2101,7 @@
+@@ -2062,7 +2111,7 @@
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
@@ -633,7 +643,7 @@ index 4699569..3759fd2 100644
                          json res = json::object({{"prompt", audio_result.prompt}});
                          if (!audio_result.grammar.empty()) {
                              res["grammar"] = audio_result.grammar;
-@@ -2095,7 +2134,7 @@
+@@ -2095,7 +2144,7 @@
                  return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
@@ -642,7 +652,7 @@ index 4699569..3759fd2 100644
                      json res = json::object({
                          {"type", cap.type},
                          {"promptKind", cap.prompt_kind},
-@@ -2129,7 +2168,7 @@
+@@ -2129,7 +2178,7 @@
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
@@ -651,7 +661,7 @@ index 4699569..3759fd2 100644
                          return [audio_data](jsi::Runtime& rt) {
                              return makeFloat32Array(rt, audio_data);
                          };
-@@ -2158,14 +2197,14 @@
+@@ -2158,14 +2207,14 @@
                      auto ctx = getContextOrThrow(contextId);
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
@@ -668,7 +678,7 @@ index 4699569..3759fd2 100644
                          has_emotion ? opts.emotion : 0.5f, has_emotion);
  
                      json res = json::object({{"id", speakerId}, {"family", family}});
-@@ -2216,7 +2255,7 @@
+@@ -2216,7 +2265,7 @@
                      const int speakerId = ctx->tts_wrapper->loadSpeaker(path, name);
                      json res = json::object({
                          {"id", speakerId},
@@ -677,7 +687,7 @@ index 4699569..3759fd2 100644
                      });
                      return [res](jsi::Runtime& rt) {
                          return fromJson(rt, res);
-@@ -2283,7 +2322,7 @@
+@@ -2283,7 +2332,7 @@
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
@@ -686,7 +696,7 @@ index 4699569..3759fd2 100644
                          return [audio_data](jsi::Runtime& rt) {
                              return makeFloat32Array(rt, audio_data);
                          };
-@@ -2358,19 +2397,9 @@
+@@ -2358,19 +2407,9 @@
          llama_log_set(llama_log_callback_default, nullptr);
  
          RequestManager::getInstance().clearAll();
@@ -709,7 +719,7 @@ index 4699569..3759fd2 100644
          }
  
          if (contexts.empty()) {
-@@ -2379,12 +2408,9 @@
+@@ -2379,12 +2418,9 @@
          }
          ThreadPool::getInstance().shutdown();
  

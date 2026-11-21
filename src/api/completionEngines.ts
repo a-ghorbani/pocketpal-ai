@@ -1,5 +1,6 @@
 import {LlamaContext} from 'llama.rn';
 import {memMark} from '../utils/memRecorder';
+import {beforeTurn, watchGeneration} from '../utils/memGuard';
 
 import {streamChatCompletion} from './openai';
 import type {RemoteEndpoint} from './servers';
@@ -21,8 +22,12 @@ export class LocalCompletionEngine implements CompletionEngine {
     params: ApiCompletionParams,
     callback?: (data: CompletionStreamData) => void,
   ): Promise<CompletionResult> {
+    await beforeTurn();
     memMark('llm:gen:start');
     let first = true;
+    const unwatch = watchGeneration(() => {
+      this.context.stopCompletion();
+    });
     const result = await this.context.completion(
       params,
       callback
@@ -41,6 +46,7 @@ export class LocalCompletionEngine implements CompletionEngine {
           }
         : undefined,
     );
+    unwatch();
     memMark('llm:gen:end');
     return {
       text: result.text,

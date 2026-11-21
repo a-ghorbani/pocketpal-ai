@@ -1,5 +1,10 @@
 import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
 import {memMark} from '../utils/memRecorder';
+import {
+  loadMemTripConfig,
+  loadTripwireParams,
+  noteLoadStart,
+} from '../utils/memGuard';
 import DeviceInfo from 'react-native-device-info';
 
 import {v4 as uuidv4} from 'uuid';
@@ -2423,7 +2428,18 @@ class ModelStore {
 
       const t0 = Date.now();
       memMark(`llm:load:start ${model.name} ctx=${effectiveSettings.n_ctx}`);
-      const tripwire = await readTripwire();
+      await loadMemTripConfig();
+      await noteLoadStart();
+      const remainingKb =
+        (getModelMemoryRequirement(
+          model,
+          projectionModel,
+          this.memoryEstimateSettings,
+          pairedDraftModel(draftConfig),
+        ) -
+          model.size) /
+        1024;
+      const tripwire = loadTripwireParams(remainingKb);
       const ctx = await initLlama(
         {
           model: filePath,
@@ -4131,15 +4147,3 @@ class ModelStore {
 
 export const modelStore = new ModelStore();
 
-async function readTripwire(): Promise<Record<string, number>> {
-  try {
-    const raw = await RNFS.readFile(`${RNFS.ExternalDirectoryPath}/memtrip.json`);
-    const cfg = JSON.parse(raw);
-    return {
-      tripwire_swap_kb: Number(cfg.swapKb) || 0,
-      tripwire_mem_avail_kb: Number(cfg.memAvailKb) || 0,
-    };
-  } catch {
-    return {};
-  }
-}

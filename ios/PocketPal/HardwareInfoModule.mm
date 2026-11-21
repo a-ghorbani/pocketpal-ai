@@ -270,6 +270,22 @@ RCT_EXPORT_METHOD(startMemoryRecorder:(double)intervalMs
   resolve(gRecPath ?: @"");
 }
 
+RCT_EXPORT_METHOD(getMemorySignals:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  task_vm_info_data_t vmInfo;
+  mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+  kern_return_t kr = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vmInfo, &count);
+  resolve(@{
+    @"rssKb": @(kr == KERN_SUCCESS ? vmInfo.resident_size / 1024 : 0),
+    @"swapKb": @(kr == KERN_SUCCESS ? vmInfo.compressed / 1024 : 0),
+    @"memAvailKb": @(-1),
+    @"lowMemory": @(gRecPressureLevel >= DISPATCH_MEMORYPRESSURE_WARN),
+    @"footprintKb": @(kr == KERN_SUCCESS ? vmInfo.phys_footprint / 1024 : 0),
+    @"procAvailKb": @(os_proc_available_memory() / 1024),
+  });
+}
+
 RCT_EXPORT_METHOD(markMemoryRecorder:(NSString *)label)
 {
   NSString *clean = [[label stringByReplacingOccurrencesOfString:@"\t" withString:@" "]

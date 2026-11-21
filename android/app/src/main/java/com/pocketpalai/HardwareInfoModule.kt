@@ -330,6 +330,22 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun getMemorySignals(promise: Promise) {
+    try {
+      val s = MemoryRecorder.signals(reactApplicationContext)
+      promise.resolve(Arguments.createMap().apply {
+        putDouble("rssKb", s[0].toDouble())
+        putDouble("swapKb", s[1].toDouble())
+        putDouble("memAvailKb", s[2].toDouble())
+        putBoolean("lowMemory", s[3] == 1L)
+        putDouble("footprintKb", -1.0)
+        putDouble("procAvailKb", -1.0)
+      })
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
   override fun markMemoryRecorder(label: String) {
     MemoryRecorder.mark(reactApplicationContext, label)
   }
