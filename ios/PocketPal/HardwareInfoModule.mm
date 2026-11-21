@@ -8,6 +8,7 @@
 #import <sys/sysctl.h>
 #import <sys/time.h>
 #import <fcntl.h>
+#import <sys/mman.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>
 @end
@@ -268,6 +269,47 @@ RCT_EXPORT_METHOD(startMemoryRecorder:(double)intervalMs
     dispatch_resume(gRecTimer);
   });
   resolve(gRecPath ?: @"");
+}
+
+RCT_EXPORT_METHOD(probeMemory:(double)targetKb
+                  chunkKb:(double)chunkKb
+                  swapLimitKb:(double)swapLimitKb
+                  availFloorKb:(double)availFloorKb
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    NSDate *t0 = [NSDate date];
+    size_t chunk = (size_t)chunkKb * 1024;
+    NSMutableArray<NSValue *> *chunks = [NSMutableArray array];
+    task_vm_info_data_t vmInfo;
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vmInfo, &count);
+    long long compressedBase = (long long)(vmInfo.compressed / 1024);
+    long long reached = 0, stop = 0, growth = 0;
+    long long avail = (long long)(os_proc_available_memory() / 1024);
+    long long minAvail = avail;
+    uint64_t x = 0x9E3779B97F4A7C15ULL;
+    while (reached < (long long)targetKb) {
+      void *p = mmap(NULL, chunk, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+      if (p == MAP_FAILED) { stop = 3; break; }
+      [chunks addObject:[NSValue valueWithPointer:p]];
+      uint64_t *w = (uint64_t *)p;
+      for (size_t i = 0; i < chunk / 8; i++) { x ^= x << 13; x ^= x >> 7; x ^= x << 17; w[i] = x; }
+      reached += (long long)chunkKb;
+      count = TASK_VM_INFO_COUNT;
+      task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vmInfo, &count);
+      growth = (long long)(vmInfo.compressed / 1024) - compressedBase;
+      avail = (long long)(os_proc_available_memory() / 1024);
+      if (avail < minAvail) minAvail = avail;
+      if (swapLimitKb > 0 && growth > (long long)swapLimitKb) { stop = 1; break; }
+      if (availFloorKb > 0 && avail < (long long)availFloorKb) { stop = 2; break; }
+    }
+    for (NSValue *v in chunks) munmap(v.pointerValue, chunk);
+    long long ms = (long long)(-[t0 timeIntervalSinceNow] * 1000);
+    resolve(@{@"reachedKb": @(reached), @"stopReason": @(stop), @"swapGrowthKb": @(growth),
+              @"memAvailKb": @(avail), @"minAvailKb": @(minAvail), @"ms": @(ms)});
+  });
 }
 
 RCT_EXPORT_METHOD(getMemorySignals:(RCTPromiseResolveBlock)resolve

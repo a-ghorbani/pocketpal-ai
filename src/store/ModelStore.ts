@@ -4,6 +4,7 @@ import {
   loadMemTripConfig,
   loadTripwireParams,
   noteLoadStart,
+  probeBeforeLoad,
 } from '../utils/memGuard';
 import DeviceInfo from 'react-native-device-info';
 
@@ -2430,6 +2431,13 @@ class ModelStore {
       memMark(`llm:load:start ${model.name} ctx=${effectiveSettings.n_ctx}`);
       await loadMemTripConfig();
       await noteLoadStart();
+      const needBytes = getModelMemoryRequirement(
+        model,
+        projectionModel,
+        this.memoryEstimateSettings,
+        pairedDraftModel(draftConfig),
+      );
+      await probeBeforeLoad(needBytes);
       const remainingKb =
         (getModelMemoryRequirement(
           model,

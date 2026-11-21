@@ -29,6 +29,7 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
   // already mapped by the time this is called. No System.loadLibrary
   // needed.
   private external fun nativePurgeAll(): Boolean
+  private external fun nativeProbeMemory(targetKb: Long, chunkKb: Long, swapLimitKb: Long, availFloorKb: Long): LongArray
 
   override fun getName(): String = NativeHardwareInfoSpec.NAME
 
@@ -328,6 +329,24 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
     }
+  }
+
+  override fun probeMemory(targetKb: Double, chunkKb: Double, swapLimitKb: Double, availFloorKb: Double, promise: Promise) {
+    Thread {
+      try {
+        val r = nativeProbeMemory(targetKb.toLong(), chunkKb.toLong(), swapLimitKb.toLong(), availFloorKb.toLong())
+        promise.resolve(Arguments.createMap().apply {
+          putDouble("reachedKb", r[0].toDouble())
+          putDouble("stopReason", r[1].toDouble())
+          putDouble("swapGrowthKb", r[2].toDouble())
+          putDouble("memAvailKb", r[3].toDouble())
+          putDouble("minAvailKb", r[4].toDouble())
+          putDouble("ms", r[5].toDouble())
+        })
+      } catch (e: Throwable) {
+        promise.reject("ERROR", e.message)
+      }
+    }.start()
   }
 
   override fun getMemorySignals(promise: Promise) {

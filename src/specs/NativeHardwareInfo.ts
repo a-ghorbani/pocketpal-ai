@@ -67,6 +67,19 @@ export interface Spec extends TurboModule {
   getWifiIPv4(): Promise<string | null>;
   startMemoryRecorder(intervalMs: number): Promise<string>;
   markMemoryRecorder(label: string): void;
+  probeMemory(
+    targetKb: number,
+    chunkKb: number,
+    swapLimitKb: number,
+    availFloorKb: number,
+  ): Promise<{
+    reachedKb: number;
+    stopReason: number; // 0 target, 1 swap, 2 MemAvailable / iOS headroom, 3 map failed
+    swapGrowthKb: number;
+    memAvailKb: number;
+    minAvailKb: number;
+    ms: number;
+  }>;
   getMemorySignals(): Promise<{
     rssKb: number;
     swapKb: number;
