@@ -113,6 +113,7 @@ import {
   createDefaultContextInitParams,
 } from '../utils/contextInitParamsVersions';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import {defaultFlashAttnType} from '../utils/flashAttnCompatibility';
 import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
@@ -595,17 +596,8 @@ class ModelStore {
     const mode = draftConfig?.mode ?? 'off';
     const speculative = mode !== 'off';
 
-    // Handle flash_attn_type (v2.0) - platform-specific default
-    const flashAttnModeDefault =
-      mode === 'paired'
-        ? 'off'
-        : mode === 'embedded'
-          ? 'auto'
-          : Platform.OS === 'ios'
-            ? 'auto'
-            : 'off';
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ?? flashAttnModeDefault;
+      this.contextInitParams.flash_attn_type ?? defaultFlashAttnType(mode);
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {

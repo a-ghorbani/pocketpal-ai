@@ -5,6 +5,7 @@
 
 import {Platform} from 'react-native';
 import {
+  defaultFlashAttnType,
   inferBackendType,
   isCacheTypeVSafe,
   isCacheTypeKSafe,
@@ -16,6 +17,30 @@ import {
 import {CacheType} from '../types';
 
 describe('flashAttnCompatibility', () => {
+  describe('defaultFlashAttnType', () => {
+    const originalOS = Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+
+    afterEach(() => setOS(originalOS));
+
+    it.each([
+      ['ios', 'off', 'auto'],
+      ['ios', 'embedded', 'auto'],
+      ['ios', 'paired', 'off'],
+      ['android', 'off', 'off'],
+      ['android', 'embedded', 'auto'],
+      ['android', 'paired', 'off'],
+    ] as const)('on %s with draft mode %s is %s', (os, mode, expected) => {
+      setOS(os);
+
+      expect(defaultFlashAttnType(mode)).toBe(expected);
+    });
+  });
+
   describe('inferBackendType', () => {
     describe('iOS platform', () => {
       let originalOS: string;

@@ -1,8 +1,9 @@
 import {
   getModelMemoryRequirement,
+  parseGGUFMetadata,
   stateCacheBudgetMb,
 } from '../memoryEstimator';
-import {Model} from '../types';
+import {GGUFMetadata, Model} from '../types';
 import {createDefaultContextInitParams} from '../contextInitParamsVersions';
 
 describe('memoryEstimator', () => {
@@ -399,6 +400,138 @@ describe('memoryEstimator', () => {
           draftModel,
         ),
       ).toBe(base + 64 * MiB);
+    });
+  });
+
+  describe('hostile metadata', () => {
+    const size = 2 * 1e9;
+    const sizePath = size * 1.2;
+    const llamaInfo = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'llama',
+      'llama.block_count': '2',
+      'llama.embedding_length': '1024',
+      'llama.attention.head_count': '8',
+      'llama.attention.head_count_kv': '4',
+      'llama.vocab_size': '32000',
+      'llama.context_length': '4096',
+      ...overrides,
+    });
+    const estimate = (
+      ggufMetadata: GGUFMetadata | undefined,
+      settings = contextSettings,
+    ) =>
+      getModelMemoryRequirement(
+        {...baseModel, size, ggufMetadata} as Model,
+        undefined,
+        settings,
+      );
+    const storedMetadata = (overrides: Partial<GGUFMetadata>) =>
+      ({...parseGGUFMetadata(llamaInfo())!, ...overrides}) as GGUFMetadata;
+
+    it.each(['2147483648', '513', '0', '-4', '1e309', '12.5', 'x'])(
+      'returns no metadata for block_count %s',
+      blockCount => {
+        expect(
+          parseGGUFMetadata(llamaInfo({'llama.block_count': blockCount})),
+        ).toBeUndefined();
+      },
+    );
+
+    it.each([
+      ['non-numeric', '[4, x]'],
+      ['wrong length', '[4, 4, 4]'],
+      ['out of range', '[4, 2097152]'],
+      ['unterminated', '[4, 4'],
+      ['non-numeric scalar', 'four'],
+    ])('takes the size path for a %s head_count_kv', (_case, value) => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.attention.head_count_kv': value}),
+      );
+
+      expect(metadata?.n_head_kv).toBe(0);
+      expect(estimate(metadata)).toBe(sizePath);
+    });
+
+    it('keeps the other fields but takes the size path without a vocabulary size', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.vocab_size': undefined}),
+      );
+
+      expect(metadata).toMatchObject({n_vocab: 0, context_length: 4096});
+      expect(estimate(metadata)).toBe(sizePath);
+    });
+
+    it('reads the vocabulary from the tokenizer length when vocab_size is absent', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({
+          'llama.vocab_size': undefined,
+          'tokenizer.ggml.tokens.length': 151936,
+        }),
+      );
+
+      expect(metadata?.n_vocab).toBe(151936);
+    });
+
+    it.each([
+      ['llama.attention.sliding_window', '-4', 'sliding_window'],
+      ['llama.context_length', '1e309', 'context_length'],
+      ['llama.shortconv.l_cache', '0.5', 'shortconv_l_cache'],
+      ['llama.shortconv.l_cache', '0', 'shortconv_l_cache'],
+    ] as const)('drops %s %s', (key, value, field) => {
+      expect(parseGGUFMetadata(llamaInfo({[key]: value}))?.[field]).toBe(
+        undefined,
+      );
+    });
+
+    it('derives the head dimension from the first layer, as llama.cpp does', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.attention.head_count': '[4, 8]'}),
+      );
+
+      expect(metadata).toMatchObject({
+        n_head: 8,
+        n_embd_head_k: 256,
+        n_embd_head_v: 256,
+      });
+    });
+
+    it('never goes below the file size for a crafted hybrid with a fractional conv cache', () => {
+      const info = {
+        'general.architecture': 'lfm2',
+        'lfm2.block_count': '512',
+        'lfm2.embedding_length': '1000000000',
+        'lfm2.attention.head_count': '1',
+        'lfm2.attention.head_count_kv': `[8${', 0'.repeat(511)}]`,
+        'lfm2.attention.key_length': '1',
+        'lfm2.attention.value_length': '1',
+        'lfm2.feed_forward_length': '1',
+        'lfm2.shortconv.l_cache': '0.5',
+        'lfm2.vocab_size': '1',
+      };
+      const settings = {...contextSettings, n_batch: 1, n_ubatch: 1};
+      const metadata = parseGGUFMetadata(info);
+
+      expect(metadata).toMatchObject({n_embd: 1e9, n_head_kv: 8});
+      expect(metadata?.shortconv_l_cache).toBeUndefined();
+      expect(estimate(metadata, settings)).toBe(sizePath);
+      expect(
+        estimate(
+          {...metadata!, n_embd: 2 ** 20, shortconv_l_cache: 0.5},
+          settings,
+        ),
+      ).toBeGreaterThanOrEqual(size);
+    });
+
+    it.each<[string, Partial<GGUFMetadata>]>([
+      ['n_layers 2^31', {n_layers: 2 ** 31}],
+      ['n_head_kv above 2^20', {n_head_kv: 2 ** 21}],
+      ['n_embd 1e9', {n_embd: 1e9}],
+      ['n_vocab 1e9', {n_vocab: 1e9}],
+      ['a head dimension above 2^20', {n_embd_head_k: 2 ** 21}],
+      ['a per-layer KV array of the wrong length', {n_head_kv_layers: [4]}],
+      ['a negative per-layer KV entry', {n_head_kv_layers: [4, -4]}],
+    ])('takes the size path for a stored record with %s', (_case, fields) => {
+      expect(estimate(storedMetadata(fields))).toBe(sizePath);
     });
   });
 });

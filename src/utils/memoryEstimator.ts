@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
+import {FlashAttnType, defaultFlashAttnType} from './flashAttnCompatibility';
 import type {Tier} from '../services/deviceRules/types';
 
 export const GGUF_METADATA_VERSION = 2;
@@ -7,6 +8,8 @@ export const GGUF_METADATA_VERSION = 2;
 // llama.cpp refuses a GGUF with more layers than this at load.
 const MAX_LAYERS = 512;
 const MAX_PER_LAYER_VALUE = 2 ** 20;
+const MAX_EMBEDDING = 2 ** 20;
+const MAX_VOCAB = 2 ** 24;
 const KV_CELL_PADDING = 256;
 const F32_BYTES = 4;
 
@@ -34,6 +37,11 @@ const positive = (value: number | undefined) =>
 
 const nonNegative = (value: number | undefined) =>
   value !== undefined && value >= 0 ? value : undefined;
+
+const positiveInteger = (value: number | undefined) =>
+  value !== undefined && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
 
 const isLayerValue = (value: number | undefined): value is number =>
   value !== undefined && value >= 0 && value <= MAX_PER_LAYER_VALUE;
@@ -98,7 +106,7 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
 
   const heads = toPerLayer(raw('attention.head_count'), n_layers);
   const n_head = heads ? Math.max(...heads) : 0;
-  if (n_head <= 0) {
+  if (!heads || n_head <= 0) {
     return undefined;
   }
 
@@ -112,6 +120,7 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
     kvHeads && isArrayText(headCountKv) ? kvHeads : undefined;
 
   const feedForward = toPerLayer(raw('feed_forward_length'), n_layers);
+  const headDim = Math.floor(n_embd / (heads[0] || n_head));
 
   return {
     metadataVersion: GGUF_METADATA_VERSION,
@@ -125,12 +134,10 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
       positive(num('vocab_size')) ??
       positive(toNumber(info['tokenizer.ggml.tokens.length'])) ??
       0,
-    n_embd_head_k:
-      positive(num('attention.key_length')) ?? Math.floor(n_embd / n_head),
-    n_embd_head_v:
-      positive(num('attention.value_length')) ?? Math.floor(n_embd / n_head),
+    n_embd_head_k: positive(num('attention.key_length')) ?? headDim,
+    n_embd_head_v: positive(num('attention.value_length')) ?? headDim,
     sliding_window: nonNegative(num('attention.sliding_window')),
-    shortconv_l_cache: positive(num('shortconv.l_cache')),
+    shortconv_l_cache: positiveInteger(num('shortconv.l_cache')),
     n_ff: feedForward ? positive(Math.max(...feedForward)) : undefined,
     context_length: nonNegative(num('context_length')),
     nextn_predict_layers: nonNegative(num('nextn_predict_layers')),
@@ -156,8 +163,14 @@ function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
     ) &&
     Number.isInteger(metadata.n_layers) &&
     metadata.n_layers <= MAX_LAYERS &&
-    metadata.n_head <= MAX_PER_LAYER_VALUE &&
-    metadata.n_head_kv <= MAX_PER_LAYER_VALUE &&
+    metadata.n_embd <= MAX_EMBEDDING &&
+    metadata.n_vocab <= MAX_VOCAB &&
+    [
+      metadata.n_head,
+      metadata.n_head_kv,
+      metadata.n_embd_head_k,
+      metadata.n_embd_head_v,
+    ].every(value => value <= MAX_PER_LAYER_VALUE) &&
     (metadata.n_head_kv_layers === undefined ||
       isValidPerLayer(metadata.n_head_kv_layers, metadata.n_layers))
   );
@@ -229,7 +242,7 @@ function recurrentStateBytes(metadata: GGUFMetadata): number {
   const recurrentLayers = planLayers(metadata).kinds.filter(
     kind => kind === 'recurrent',
   ).length;
-  const lCache = metadata.shortconv_l_cache;
+  const lCache = positiveInteger(metadata.shortconv_l_cache);
   const perLayer = lCache ? metadata.n_embd * (lCache - 1) : 0;
   return recurrentLayers * perLayer * F32_BYTES;
 }
@@ -252,19 +265,14 @@ function computeBytes(
   return Math.max(logits, attentionMatrix) + mask + graph;
 }
 
-type FlashAttnType = NonNullable<ContextInitParams['flash_attn_type']>;
-
 function resolveFlashAttn(
   settings: ContextInitParams,
   hasPairedDraft: boolean,
 ): FlashAttnType {
-  if (settings.flash_attn_type) {
-    return settings.flash_attn_type;
-  }
-  if (hasPairedDraft) {
-    return 'off';
-  }
-  return Platform.OS === 'ios' ? 'auto' : 'off';
+  return (
+    settings.flash_attn_type ??
+    defaultFlashAttnType(hasPairedDraft ? 'paired' : 'off')
+  );
 }
 
 // Without flash attention llama.cpp materialises the full attention matrix in
@@ -347,7 +355,7 @@ export function getModelMemoryRequirement(
       projectionModel,
       draftModel,
     );
-    if (Number.isFinite(need)) {
+    if (Number.isFinite(need) && need >= model.size) {
       return need;
     }
   }
