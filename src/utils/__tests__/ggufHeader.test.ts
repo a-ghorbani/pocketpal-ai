@@ -12,6 +12,7 @@ import {
   GGUFFixture,
   localReadFor,
   rangeFetchFor,
+  realignedGGUF,
   tensorInfoEntry,
   tensorInfoFile,
 } from './ggufFixture';
@@ -321,7 +322,7 @@ describe('readLocalGGUFEmbeddingTensors', () => {
 
   it.each([
     ['0 tensors', 0],
-    ['4097 tensors', 4097],
+    ['2049 tensors', 2049],
     ['2^32 tensors', 2 ** 32],
   ])('rejects a prefix with %s', async (_case, tensorCount) => {
     await expect(
@@ -422,19 +423,45 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     await expect(scan(file)).rejects.toThrow(/more than one consistent end/);
   });
 
-  it('rejects a crafted tail that would walk every tensor from each candidate end', async () => {
+  it.each([
+    ['LFM2.5-350M-Q4_K_M', 64, {type: 14, dims: [1024, 65536]}, false],
+    ['LFM2.5-350M-Q4_K_M', 2048, {type: 14, dims: [1024, 65536]}, false],
+    ['LFM2.5-350M-Q4_K_M', 4096, {type: 14, dims: [1024, 65536]}, false],
+    [
+      'Phi-3.5-mini-instruct-Q4_K_M',
+      2048,
+      {type: 12, dims: [3072, 32064]},
+      true,
+    ],
+  ])(
+    'reads the captured %s header rewritten to alignment %i as at 32',
+    async (name, alignment, tokenEmbd, hasOutput) => {
+      const file = realignedGGUF(capturedHeader(name), alignment);
+
+      expect(file.layout.dataOffset % alignment).toBe(0);
+      await expect(scan(file)).resolves.toEqual({tokenEmbd, hasOutput});
+    },
+  );
+
+  it('reads a crafted tail whose padding is full of entries carrying the last offset', async () => {
     // llama.cpp accepts it: unique names, chained offsets, and padding it
-    // never checks, here full of entries carrying the last real offset.
-    const tensorCount = 4096;
+    // never checks.
+    const tensorCount = 2048;
     const alignment = 4096;
     const entries = Array.from({length: tensorCount}, (_, i) =>
-      tensorInfoEntry({
-        name: `t${i.toString(36).padStart(4, '0')}`,
-        dims: [],
-        offset: i * alignment,
-      }),
+      i === 0
+        ? tensorInfoEntry({
+            name: 'token_embd.weight',
+            dims: [64, 256],
+            ggmlType: 14,
+          })
+        : tensorInfoEntry({
+            name: `t${i.toString(36).padStart(4, '0')}`,
+            dims: [],
+            offset: i * alignment,
+          }),
     );
-    const infoLength = tensorCount * 29;
+    const infoLength = entries.reduce((n, e) => n + e.length, 0);
     const kvEnd =
       Math.ceil((24 + infoLength) / alignment) * alignment - infoLength + 1;
     const fake = tensorInfoEntry({
@@ -453,6 +480,9 @@ describe('readLocalGGUFEmbeddingTensors', () => {
       padding,
     });
 
-    await expect(scan(file)).rejects.toThrow(/step budget/);
+    await expect(scan(file)).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [64, 256]},
+      hasOutput: false,
+    });
   });
 });

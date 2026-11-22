@@ -369,7 +369,7 @@ export interface GGUFLayout {
 
 const LOCAL_PREFIX_BYTES = 24; // magic, version, tensor count, KV count
 const MAX_LOCAL_DATA_OFFSET = 64 * 1024 * 1024;
-const MAX_LOCAL_TENSORS = 4096;
+const MAX_LOCAL_TENSORS = 2048;
 const MAX_LOCAL_ALIGNMENT = 4096;
 // gguf.cpp rejects names of GGML_MAX_NAME (64) bytes or more and more than
 // GGML_MAX_DIMS (4) dims.
@@ -402,11 +402,20 @@ const readLocalBytes = async (
   return bytes;
 };
 
+interface TensorInfoEntry {
+  start: number;
+  offset: number;
+  nDims: number;
+  nameAt: number;
+  nameLength: number;
+}
+
 /**
  * Parses the tensor-info section backwards from its end, the last byte of
- * `bytes`, which lies within `alignment` bytes of the data. Each candidate
- * end is walked back `tensorCount` entries; exactly one walk must arrive at a
- * first tensor with data offset 0.
+ * `bytes`, which lies within `alignment` bytes of the data. Exactly one
+ * candidate end must have `tensorCount` entries behind it, offsets falling
+ * going back, the last of them at data offset 0. Each position is parsed once
+ * and its chain facts cached, so the work is linear in the window.
  */
 const parseTensorInfoTail = (
   bytes: Uint8Array,
@@ -419,75 +428,112 @@ const parseTensorInfoTail = (
   const isName = (at: number, name: number[]) =>
     name.every((code, i) => bytes[at + i] === code);
 
-  const budget = tensorCount + 2 * alignment;
-  let steps = 0;
-  let parsed: GGUFEmbeddingTensors | undefined;
-
-  for (let end = bytes.length; end > bytes.length - alignment; end--) {
-    const result: GGUFEmbeddingTensors = {hasOutput: false};
-    let at = end;
-    let nextOffset = Infinity;
-    let walked = 0;
-    for (; walked < tensorCount; walked++) {
-      if (++steps > budget) {
-        throw new Error('gguf tensor info: step budget exceeded');
-      }
-      if (at - 12 < 0) {
-        break;
-      }
-      const offset = u64(at - 8);
-      if (offset % alignment !== 0 || offset > nextOffset) {
-        break;
-      }
-      let match: {nDims: number; nameAt: number; nameLength: number} | null =
-        null;
-      let matches = 0;
-      for (let nDims = 0; nDims <= MAX_TENSOR_DIMS && matches < 2; nDims++) {
-        const nDimsAt = at - 16 - 8 * nDims;
-        if (nDimsAt < 0 || view.getUint32(nDimsAt, true) !== nDims) {
-          continue;
-        }
-        for (let nameLength = 1; nameLength <= MAX_TENSOR_NAME; nameLength++) {
-          const nameAt = nDimsAt - nameLength;
-          if (nameAt < 8 || bytes[nameAt] < 0x21 || bytes[nameAt] > 0x7e) {
-            break;
-          }
-          if (
-            view.getUint32(nameAt - 4, true) === 0 &&
-            view.getUint32(nameAt - 8, true) === nameLength
-          ) {
-            match = {nDims, nameAt, nameLength};
-            matches++;
-          }
-        }
-      }
-      if (matches !== 1 || !match) {
-        break;
-      }
-      const {nDims, nameAt, nameLength} = match;
-      if (nameLength === TOKEN_EMBD.length && isName(nameAt, TOKEN_EMBD)) {
-        const dims: number[] = [];
-        for (let d = 0; d < nDims; d++) {
-          dims.push(u64(nameAt + nameLength + 4 + 8 * d));
-        }
-        result.tokenEmbd = {type: view.getUint32(at - 12, true), dims};
-      } else if (nameLength === OUTPUT.length && isName(nameAt, OUTPUT)) {
-        result.hasOutput = true;
-      }
-      nextOffset = offset;
-      at = nameAt - 8;
+  const parseEntryEndingAt = (end: number): TensorInfoEntry | null => {
+    if (end - 12 < 0) {
+      return null;
     }
-    if (walked === tensorCount && nextOffset === 0) {
-      if (parsed) {
+    const offset = u64(end - 8);
+    if (offset % alignment !== 0) {
+      return null;
+    }
+    let entry: TensorInfoEntry | null = null;
+    let matches = 0;
+    for (let nDims = 0; nDims <= MAX_TENSOR_DIMS && matches < 2; nDims++) {
+      const nDimsAt = end - 16 - 8 * nDims;
+      if (nDimsAt < 0 || view.getUint32(nDimsAt, true) !== nDims) {
+        continue;
+      }
+      for (let nameLength = 1; nameLength <= MAX_TENSOR_NAME; nameLength++) {
+        const nameAt = nDimsAt - nameLength;
+        if (nameAt < 8 || bytes[nameAt] < 0x21 || bytes[nameAt] > 0x7e) {
+          break;
+        }
+        if (
+          view.getUint32(nameAt - 4, true) === 0 &&
+          view.getUint32(nameAt - 8, true) === nameLength
+        ) {
+          entry = {start: nameAt - 8, offset, nDims, nameAt, nameLength};
+          matches++;
+        }
+      }
+    }
+    return matches === 1 ? entry : null;
+  };
+
+  const entries = new Map<number, TensorInfoEntry | null>();
+  const entryEndingAt = (end: number): TensorInfoEntry | null => {
+    let entry = entries.get(end);
+    if (entry === undefined) {
+      entry = parseEntryEndingAt(end);
+      entries.set(end, entry);
+    }
+    return entry;
+  };
+
+  // From an end, walking back: how many entries chain with non-increasing
+  // offsets, and the depth of the first one at offset 0 (0 for none).
+  const chainLength = new Map<number, number>();
+  const zeroDepth = new Map<number, number>();
+  const chainFrom = (end: number) => {
+    const unresolved: number[] = [];
+    let at = end;
+    while (!chainLength.has(at)) {
+      const entry = entryEndingAt(at);
+      if (!entry) {
+        chainLength.set(at, 0);
+        zeroDepth.set(at, 0);
+        break;
+      }
+      unresolved.push(at);
+      at = entry.start;
+    }
+    for (let i = unresolved.length - 1; i >= 0; i--) {
+      const entry = entryEndingAt(unresolved[i])!;
+      const previous = entryEndingAt(entry.start);
+      const chained = previous !== null && previous.offset <= entry.offset;
+      const previousZero = chained ? zeroDepth.get(entry.start)! : 0;
+      chainLength.set(
+        unresolved[i],
+        1 + (chained ? chainLength.get(entry.start)! : 0),
+      );
+      zeroDepth.set(
+        unresolved[i],
+        entry.offset === 0 ? 1 : previousZero > 0 ? previousZero + 1 : 0,
+      );
+    }
+    return {length: chainLength.get(end)!, zero: zeroDepth.get(end)!};
+  };
+
+  let sectionEnd = -1;
+  for (let end = bytes.length; end > bytes.length - alignment; end--) {
+    const {length, zero} = chainFrom(end);
+    if (zero > 0 && zero <= tensorCount && tensorCount <= length) {
+      if (sectionEnd >= 0) {
         throw new Error('gguf tensor info: more than one consistent end');
       }
-      parsed = result;
+      sectionEnd = end;
     }
   }
-  if (!parsed) {
+  if (sectionEnd < 0) {
     throw new Error('gguf tensor info: no consistent end');
   }
-  return parsed;
+
+  const result: GGUFEmbeddingTensors = {hasOutput: false};
+  let at = sectionEnd;
+  for (let i = 0; i < tensorCount; i++) {
+    const {start, nDims, nameAt, nameLength} = entryEndingAt(at)!;
+    if (nameLength === TOKEN_EMBD.length && isName(nameAt, TOKEN_EMBD)) {
+      const dims: number[] = [];
+      for (let d = 0; d < nDims; d++) {
+        dims.push(u64(nameAt + nameLength + 4 + 8 * d));
+      }
+      result.tokenEmbd = {type: view.getUint32(at - 12, true), dims};
+    } else if (nameLength === OUTPUT.length && isName(nameAt, OUTPUT)) {
+      result.hasOutput = true;
+    }
+    at = start;
+  }
+  return result;
 };
 
 /**

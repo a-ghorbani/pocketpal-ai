@@ -253,3 +253,102 @@ export const tensorInfoFile = ({
     layout: {version, alignment, dataOffset: bytes.length},
   };
 };
+
+const SCALAR_BYTES: Record<number, number> = {
+  [FixtureType.UINT8]: 1,
+  [FixtureType.INT8]: 1,
+  [FixtureType.UINT16]: 2,
+  [FixtureType.INT16]: 2,
+  [FixtureType.UINT32]: 4,
+  [FixtureType.INT32]: 4,
+  [FixtureType.FLOAT32]: 4,
+  [FixtureType.BOOL]: 1,
+  [FixtureType.UINT64]: 8,
+  [FixtureType.INT64]: 8,
+  [FixtureType.FLOAT64]: 8,
+};
+
+/**
+ * A v2/v3 GGUF header that ends at its data offset, rewritten the way a
+ * writer would emit it with `general.alignment` = `alignment`: the KV set,
+ * data offsets moved to multiples of it, and zeros up to the next multiple.
+ */
+export const realignedGGUF = (bytes: Uint8Array, alignment: number) => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u64 = (at: number) => Number(view.getBigUint64(at, true));
+  let at = 24;
+  const skip = (type: number) => {
+    if (type === FixtureType.STRING) {
+      at += 8 + u64(at);
+    } else if (type === FixtureType.ARRAY) {
+      const elemType = view.getUint32(at, true);
+      const length = u64(at + 4);
+      at += 12;
+      for (let i = 0; i < length; i++) {
+        skip(elemType);
+      }
+    } else {
+      at += SCALAR_BYTES[type];
+    }
+  };
+  const kvs: Uint8Array[] = [];
+  const kvCount = u64(16);
+  for (let i = 0; i < kvCount; i++) {
+    const start = at;
+    const key = Buffer.from(
+      bytes.subarray(at + 8, at + 8 + u64(at)),
+    ).toString();
+    at += 8 + key.length;
+    const type = view.getUint32(at, true);
+    at += 4;
+    skip(type);
+    if (key !== 'general.alignment') {
+      kvs.push(bytes.subarray(start, at));
+    }
+  }
+  const alignmentKV = new DataView(new ArrayBuffer(8 + 17 + 8));
+  alignmentKV.setBigUint64(0, 17n, true);
+  Buffer.from('general.alignment').forEach((b, i) =>
+    alignmentKV.setUint8(8 + i, b),
+  );
+  alignmentKV.setUint32(25, FixtureType.UINT32, true);
+  alignmentKV.setUint32(29, alignment, true);
+  kvs.push(new Uint8Array(alignmentKV.buffer));
+
+  const entries: Uint8Array[] = [];
+  const offsets: number[] = [];
+  const tensorCount = u64(8);
+  for (let i = 0; i < tensorCount; i++) {
+    const start = at;
+    at += 8 + u64(at);
+    at += 4 + 8 * view.getUint32(at, true) + 4 + 8;
+    offsets.push(u64(at - 8));
+    entries.push(new Uint8Array(bytes.subarray(start, at)));
+  }
+  const padTo = (n: number) => Math.ceil(n / alignment) * alignment;
+  let offset = 0;
+  entries.forEach((entry, i) => {
+    new DataView(entry.buffer).setBigUint64(
+      entry.length - 8,
+      BigInt(offset),
+      true,
+    );
+    if (i + 1 < entries.length) {
+      offset += padTo(offsets[i + 1] - offsets[i]);
+    }
+  });
+
+  const prefix = new Uint8Array(bytes.subarray(0, 24));
+  new DataView(prefix.buffer).setBigUint64(16, BigInt(kvs.length), true);
+  const body = Buffer.concat([prefix, ...kvs, ...entries]);
+  const out = new Uint8Array(padTo(body.length));
+  out.set(body);
+  return {
+    bytes: out,
+    layout: {
+      version: view.getUint32(4, true),
+      alignment,
+      dataOffset: out.length,
+    },
+  };
+};
