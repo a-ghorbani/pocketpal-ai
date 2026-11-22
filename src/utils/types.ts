@@ -581,6 +581,7 @@ export interface GGUFMetadata {
   ssm_group_count?: number;
   ssm_inner_size?: number;
   n_ff?: number; // max over layers when per-layer
+  tied_embd_bytes?: number; // second token_embd copy on an Android CPU load; absent when the tensor scan failed
   context_length?: number; // Native context length from GGUF
   nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers
   embedding_length_out?: number; // <arch>.embedding_length_out; draft output width (n_embd_out)

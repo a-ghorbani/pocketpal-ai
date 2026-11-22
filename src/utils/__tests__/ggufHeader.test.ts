@@ -1,5 +1,18 @@
-import {readGGUFHeaderForMTP} from '../ggufHeader';
-import {FixtureType, GGUFFixture, rangeFetchFor} from './ggufFixture';
+import * as fs from 'fs';
+import * as path from 'path';
+import {gunzipSync} from 'zlib';
+import * as RNFS from '@dr.pogodin/react-native-fs';
+
+import {
+  readGGUFHeaderForMTP,
+  readLocalGGUFEmbeddingTensors,
+} from '../ggufHeader';
+import {
+  FixtureType,
+  GGUFFixture,
+  localReadFor,
+  rangeFetchFor,
+} from './ggufFixture';
 
 const URL = 'https://host/file.gguf';
 
@@ -171,4 +184,94 @@ describe('readGGUFHeaderForMTP', () => {
       globalThis.TextDecoder = nativeTextDecoder;
     }
   });
+});
+
+describe('readLocalGGUFEmbeddingTensors', () => {
+  const capturedHeader = (name: string) =>
+    new Uint8Array(
+      gunzipSync(
+        fs.readFileSync(
+          path.join(
+            __dirname,
+            '../../../jest/fixtures/gguf-memory/headers',
+            `${name}.gguf-header.gz`,
+          ),
+        ),
+      ),
+    );
+  const scan = (bytes: Uint8Array, dataOffset = bytes.length) => {
+    (RNFS.read as jest.Mock).mockImplementation(localReadFor(bytes));
+    return readLocalGGUFEmbeddingTensors('/models/file.gguf', dataOffset);
+  };
+
+  afterEach(() => {
+    (RNFS.read as jest.Mock).mockReset();
+  });
+
+  it('reads a tied embedding from a captured header', async () => {
+    await expect(scan(capturedHeader('LFM2.5-350M-Q4_K_M'))).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [1024, 65536]},
+      hasOutput: false,
+    });
+  });
+
+  it('sees output.weight in a captured untied header', async () => {
+    await expect(
+      scan(capturedHeader('Phi-3.5-mini-instruct-Q4_K_M')),
+    ).resolves.toEqual({
+      tokenEmbd: {type: 12, dims: [3072, 32064]},
+      hasOutput: true,
+    });
+  });
+
+  it('reads the header in bounded chunks up to the data offset', async () => {
+    const bytes = capturedHeader('LFM2.5-350M-Q4_K_M');
+
+    await scan(bytes);
+
+    const calls = (RNFS.read as jest.Mock).mock.calls;
+    expect(calls.every(([, length]) => length <= 2 * 1024 * 1024)).toBe(true);
+    expect(
+      Math.max(...calls.map(([, length, position]) => position + length)),
+    ).toBe(bytes.length);
+  });
+
+  it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
+    const bytes = new GGUFFixture()
+      .tensor('token_embd.weight', [2 ** 40, 2 ** 40], 14)
+      .build();
+
+    await expect(scan(bytes)).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [2 ** 40, 2 ** 40]},
+      hasOutput: false,
+    });
+  });
+
+  it('rejects a header cut short of its tensor descriptors', async () => {
+    const bytes = new GGUFFixture()
+      .tensor('token_embd.weight', [2048, 65536], 14)
+      .build();
+
+    await expect(
+      scan(bytes.slice(0, bytes.length - 8), bytes.length),
+    ).rejects.toThrow(/truncated/);
+  });
+
+  it('rejects a captured header cut inside its tokenizer', async () => {
+    const bytes = capturedHeader('LFM2.5-350M-Q4_K_M');
+
+    await expect(
+      scan(bytes.slice(0, 1024 * 1024), bytes.length),
+    ).rejects.toThrow(/truncated/);
+  });
+
+  it.each([0, -1, 1.5, 64 * 1024 * 1024 + 1])(
+    'rejects data offset %s without reading',
+    async dataOffset => {
+      await expect(scan(new GGUFFixture().build(), dataOffset)).rejects.toThrow(
+        /out of range/,
+      );
+      expect(RNFS.read).not.toHaveBeenCalled();
+    },
+  );
 });

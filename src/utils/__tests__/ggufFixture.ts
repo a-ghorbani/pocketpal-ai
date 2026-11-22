@@ -37,6 +37,7 @@ type KVValue =
 interface TensorEntry {
   name: string;
   dims?: number[];
+  ggmlType?: number;
 }
 
 export class GGUFFixture {
@@ -50,8 +51,8 @@ export class GGUFFixture {
     return this;
   }
 
-  tensor(name: string, dims: number[] = [1]): this {
-    this.tensors.push({name, dims});
+  tensor(name: string, dims: number[] = [1], ggmlType = 0): this {
+    this.tensors.push({name, dims, ggmlType});
     return this;
   }
 
@@ -134,7 +135,7 @@ export class GGUFFixture {
       pushValue(value);
     }
 
-    for (const {name, dims = [1]} of this.tensors) {
+    for (const {name, dims = [1], ggmlType = 0} of this.tensors) {
       pushStr(name);
       pushU32(dims.length);
       for (const d of dims) {
@@ -144,13 +145,19 @@ export class GGUFFixture {
           pushU64(d);
         }
       }
-      pushU32(0); // dtype
+      pushU32(ggmlType);
       pushU64(0); // data offset
     }
 
     return Uint8Array.from(parts);
   }
 }
+
+/** An `RNFS.read(path, length, position, 'base64')` mock over the bytes. */
+export const localReadFor =
+  (bytes: Uint8Array) =>
+  async (_path: string, length: number, position: number) =>
+    Buffer.from(bytes.subarray(position, position + length)).toString('base64');
 
 /** A fetch mock that honors Range headers over the fixture bytes. */
 export const rangeFetchFor = (bytes: Uint8Array): jest.Mock =>

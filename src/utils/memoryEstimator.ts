@@ -7,6 +7,7 @@ import {
   ModelType,
 } from './types';
 import {FlashAttnType, defaultFlashAttnType} from './flashAttnCompatibility';
+import type {GGUFEmbeddingTensors} from './ggufHeader';
 import type {Tier} from '../services/deviceRules/types';
 
 export const GGUF_METADATA_VERSION = 2;
@@ -24,6 +25,8 @@ const F32_BYTES = 4;
 const NON_BUFFER_BYTES_PER_VOCAB_TOKEN = 384;
 const PRE_PROBE_FIT_MARGIN = 1.0;
 const PROJECTOR_AND_DRAFT_OVERHEAD = 1.1;
+const Q8_0_BYTES_PER_WEIGHT = 34 / 32;
+const MAX_SAFE_BYTES = 2 ** 53;
 const RUNTIME_OVERHEAD_WITHOUT_METADATA = 1.2;
 
 // Layer layouts llama.cpp hard-codes per architecture when the GGUF omits them.
@@ -32,6 +35,28 @@ const DEFAULT_SWA_PERIOD: Record<string, number> = {
   gemma3: 6,
   gemma3n: 5,
 };
+// ggml_type ids a GGUF may carry (`ggml.h`).
+const KNOWN_GGML_TYPES = new Set([
+  0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+  23, 24, 25, 26, 27, 28, 29, 30, 34, 35, 39, 40, 41, 42, 43,
+]);
+
+// Types the ARM CPU backend repacks (`repack.cpp`, NEON with dotprod or
+// i8mm), with their block layout and the row multiple the repack needs.
+const ARM_REPACKED_TYPES: Record<
+  number,
+  {blockWeights: number; blockBytes: number; rowMultiple: number}
+> = {
+  2: {blockWeights: 32, blockBytes: 18, rowMultiple: 4}, // Q4_0
+  8: {blockWeights: 32, blockBytes: 34, rowMultiple: 4}, // Q8_0
+  12: {blockWeights: 256, blockBytes: 144, rowMultiple: 8}, // Q4_K
+  13: {blockWeights: 256, blockBytes: 176, rowMultiple: 8}, // Q5_K
+  14: {blockWeights: 256, blockBytes: 210, rowMultiple: 8}, // Q6_K
+  20: {blockWeights: 32, blockBytes: 18, rowMultiple: 4}, // IQ4_NL
+  39: {blockWeights: 32, blockBytes: 17, rowMultiple: 4}, // MXFP4
+  41: {blockWeights: 128, blockBytes: 18, rowMultiple: 4}, // Q1_0
+};
+
 const DEFAULT_FULL_ATTENTION_INTERVAL: Record<string, number> = {
   qwen35: 4,
   qwen35moe: 4,
@@ -197,6 +222,45 @@ export function needsGGUFMetadata(model: Model): boolean {
     (!model.ggufMetadata ||
       (model.ggufMetadata.metadataVersion ?? 1) < GGUF_METADATA_VERSION)
   );
+}
+
+/**
+ * Bytes of the second `token_embd` copy llama.cpp keeps on an Android CPU
+ * load: a GGUF without `output.weight` reuses the embedding as the output
+ * matrix, and the CPU backend repacks that use into its own buffer. 0 when
+ * nothing is repacked; undefined when the descriptor cannot be trusted.
+ */
+export function tiedEmbeddingBytes(
+  tensors: GGUFEmbeddingTensors,
+  modelSize: number,
+): number | undefined {
+  const embedding = tensors.tokenEmbd;
+  if (
+    !embedding ||
+    !KNOWN_GGML_TYPES.has(embedding.type) ||
+    embedding.dims.length < 1 ||
+    embedding.dims.length > 4 ||
+    !embedding.dims.every(
+      dim => Number.isInteger(dim) && dim > 0 && dim <= MAX_SAFE_BYTES,
+    ) ||
+    embedding.dims.reduce((product, dim) => product * dim, 1) > MAX_SAFE_BYTES
+  ) {
+    return undefined;
+  }
+  const layout = ARM_REPACKED_TYPES[embedding.type];
+  if (tensors.hasOutput || !layout) {
+    return 0;
+  }
+  const [rowWeights, ...rest] = embedding.dims;
+  if (rowWeights % layout.blockWeights !== 0) {
+    return undefined;
+  }
+  const rows = rest.reduce((product, dim) => product * dim, 1);
+  const bytes = (rowWeights / layout.blockWeights) * layout.blockBytes * rows;
+  if (bytes > MAX_SAFE_BYTES || bytes > modelSize) {
+    return undefined;
+  }
+  return (rest[0] ?? 1) % layout.rowMultiple === 0 ? bytes : 0;
 }
 
 // Guards against corrupted metadata persisted by older app versions.
@@ -401,13 +465,41 @@ function computeBytes(
   const attentionMatrix = countsAttentionMatrix
     ? largestCells * metadata.n_head * ubatch * F32_BYTES
     : 0;
-  const logits = metadata.n_vocab * ubatch * F32_BYTES;
   const maskCells =
     hasGlobal || hasSwa ? cells.global + (hasSwa ? cells.swa : 0) : 0;
   const mask = maskCells * ubatch * (countsAttentionMatrix ? 4 : 2);
   const feedForward = Number(metadata.n_ff) || 4 * metadata.n_embd;
   const graph = (2 * feedForward + 2 * metadata.n_embd) * ubatch * F32_BYTES;
-  return Math.max(logits, attentionMatrix) + mask + graph;
+  // The CPU backend only pages in what the graph writes, and chat writes one
+  // logits row per ubatch. Metal keeps its whole reserved buffer resident.
+  if (Platform.OS === 'ios') {
+    const logits = metadata.n_vocab * ubatch * F32_BYTES;
+    return Math.max(logits, attentionMatrix) + mask + graph;
+  }
+  return attentionMatrix + mask + graph + metadata.n_vocab * F32_BYTES;
+}
+
+function tiedCopyBytes(
+  model: Model,
+  metadata: GGUFMetadata,
+  settings: ContextInitParams,
+): number {
+  if (Platform.OS === 'ios' || settings.no_extra_bufts) {
+    return 0;
+  }
+  const scanned = metadata.tied_embd_bytes;
+  if (
+    typeof scanned === 'number' &&
+    Number.isFinite(scanned) &&
+    scanned >= 0 &&
+    scanned <= model.size
+  ) {
+    return scanned;
+  }
+  return Math.min(
+    metadata.n_vocab * metadata.n_embd * Q8_0_BYTES_PER_WEIGHT,
+    model.size,
+  );
 }
 
 function resolveFlashAttn(
@@ -443,6 +535,7 @@ function ggufNeed(
   const flashAttn = resolveFlashAttn(settings, draftModel !== undefined);
   const buffers =
     model.size +
+    tiedCopyBytes(model, metadata, settings) +
     kvBytes(
       metadata,
       settings,

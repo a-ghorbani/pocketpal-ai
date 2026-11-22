@@ -1,10 +1,9 @@
 /**
- * Minimal GGUF header reader for the remote MTP capability probe.
- *
- * Reads just enough of a remote GGUF file, over plain HTTP range requests, to
- * answer one question: does this model carry MTP draft layers (the
+ * Minimal GGUF header reader. Over HTTP range requests it answers the remote
+ * MTP capability probe: does this model carry MTP draft layers (the
  * `<arch>.nextn_predict_layers` KV, or `nextn.*` tensors from converters that
- * write the layers but omit the KV)?
+ * write the layers but omit the KV)? Over a local file it reads the embedding
+ * tensors' descriptors, which `loadLlamaModelInfo` does not return.
  *
  * A general-purpose parser must materialize every metadata value — including
  * the ~10^5-string tokenizer vocab that dominates a header — before the caller
@@ -19,10 +18,13 @@
  * throws — the probe maps that to `unknown`, never to a false negative.
  */
 
+import * as RNFS from '@dr.pogodin/react-native-fs';
+import {Buffer} from 'buffer';
+
 const GGUF_MAGIC = 0x46554747; // "GGUF" read as LE u32
 
-const HTTP_CHUNK_SIZE = 2 * 1024 * 1024;
-const HTTP_TOTAL_MAX = 64 * 1024 * 1024;
+const CHUNK_SIZE = 2 * 1024 * 1024;
+const HEADER_BYTE_BUDGET = 64 * 1024 * 1024;
 
 const MAX_KV_COUNT = 4096;
 const MAX_TENSOR_COUNT = 65536;
@@ -71,46 +73,68 @@ export interface ReadGGUFHeaderOptions {
   chunkSize?: number;
 }
 
-/** Sequential-prefix buffer over HTTP range requests. */
+export interface GGUFTensorDescriptor {
+  type: number;
+  dims: number[];
+}
+
+export interface GGUFEmbeddingTensors {
+  tokenEmbd?: GGUFTensorDescriptor;
+  hasOutput: boolean;
+}
+
+type ChunkSource = (from: number, length: number) => Promise<Uint8Array>;
+
+/** Sequential-prefix buffer over a chunked byte source. */
 class ChunkedReader {
-  private bytes = new Uint8Array(0);
-  private view = new DataView(new ArrayBuffer(0));
+  private bytes: Uint8Array;
+  private view: DataView;
+  private filled = 0;
   private eof = false;
 
+  /**
+   * `preallocate` sizes the buffer to `limit` once, for a source whose header
+   * length is known, so chunks are copied in place instead of regrowing it.
+   */
   constructor(
-    private readonly url: string,
-    private readonly fetchImpl: typeof fetch,
+    private readonly source: ChunkSource,
     private readonly chunkSize: number,
-  ) {}
+    private readonly limit: number,
+    preallocate = false,
+  ) {
+    this.bytes = new Uint8Array(preallocate ? limit : 0);
+    this.view = new DataView(this.bytes.buffer);
+  }
+
+  private append(chunk: Uint8Array): void {
+    const needed = this.filled + chunk.byteLength;
+    if (needed > this.bytes.byteLength) {
+      const grown = new Uint8Array(needed);
+      grown.set(this.bytes.subarray(0, this.filled));
+      this.bytes = grown;
+      this.view = new DataView(grown.buffer);
+    }
+    this.bytes.set(chunk, this.filled);
+    this.filled = needed;
+  }
 
   private async ensure(end: number): Promise<void> {
-    if (end > HTTP_TOTAL_MAX) {
-      throw new Error(`gguf header read past ${HTTP_TOTAL_MAX} byte budget`);
+    if (end > this.limit) {
+      throw new Error(`gguf header read past ${this.limit} byte budget`);
     }
-    while (this.bytes.byteLength < end && !this.eof) {
-      const from = this.bytes.byteLength;
-      const to = from + this.chunkSize - 1;
-      const res = await this.fetchImpl(this.url, {
-        headers: {Range: `bytes=${from}-${to}`},
-      });
-      if (!res.ok) {
-        throw new Error(`gguf range request failed: HTTP ${res.status}`);
-      }
-      const chunk = new Uint8Array(await res.arrayBuffer());
+    while (this.filled < end && !this.eof) {
+      const length = Math.min(this.chunkSize, this.limit - this.filled);
+      const chunk = await this.source(this.filled, length);
       if (chunk.byteLength === 0) {
         this.eof = true;
         break;
       }
-      const grown = new Uint8Array(this.bytes.byteLength + chunk.byteLength);
-      grown.set(this.bytes);
-      grown.set(chunk, this.bytes.byteLength);
-      this.bytes = grown;
-      this.view = new DataView(grown.buffer);
-      if (chunk.byteLength < this.chunkSize) {
+      this.append(chunk.subarray(0, this.limit - this.filled));
+      if (chunk.byteLength < length) {
         this.eof = true;
       }
     }
-    if (this.bytes.byteLength < end) {
+    if (this.filled < end) {
       throw new Error('gguf header truncated');
     }
   }
@@ -127,6 +151,12 @@ class ChunkedReader {
       throw new Error('gguf length exceeds safe integer range');
     }
     return Number(value);
+  }
+
+  /** A u64 that may exceed the safe-integer range, for the caller to bound. */
+  async u64Unbounded(offset: number): Promise<number> {
+    await this.ensure(offset + 8);
+    return Number(this.view.getBigUint64(offset, true));
   }
 
   async i64(offset: number): Promise<number> {
@@ -147,6 +177,22 @@ class ChunkedReader {
   async slice(offset: number, length: number): Promise<Uint8Array> {
     await this.ensure(offset + length);
     return this.bytes.subarray(offset, offset + length);
+  }
+
+  /**
+   * Skips a length-prefixed string already in the buffer without awaiting;
+   * undefined when any of it still has to be read.
+   */
+  skipBufferedString(offset: number, wideLength: boolean): number | undefined {
+    const lengthBytes = wideLength ? 8 : 4;
+    if (offset + lengthBytes > this.filled) {
+      return undefined;
+    }
+    const length = wideLength
+      ? Number(this.view.getBigUint64(offset, true))
+      : this.view.getUint32(offset, true);
+    const end = offset + lengthBytes + length;
+    return end <= this.filled ? end : undefined;
   }
 
   /** Advancing past bytes still fetches them (sequential prefix), enforcing the budget. */
@@ -191,16 +237,22 @@ const decodeUtf8 = (bytes: Uint8Array): string => {
 const NEXTN_KV_SUFFIX = '.nextn_predict_layers';
 const NEXTN_TENSOR = /(^|\.)nextn\./;
 
-export const readGGUFHeaderForMTP = async (
-  url: string,
-  options?: ReadGGUFHeaderOptions,
-): Promise<GGUFHeaderProbeResult> => {
-  const reader = new ChunkedReader(
-    url,
-    options?.fetchImpl ?? fetch,
-    options?.chunkSize ?? HTTP_CHUNK_SIZE,
-  );
+interface HeaderVisitor {
+  /** Returns the offset after a value it read, `'skip'` or `'stop'`. */
+  kv?: (
+    key: string,
+    valueType: number,
+    valueAt: number,
+    readNumber: (type: number, at: number) => Promise<[number, number]>,
+  ) => Promise<number | 'skip' | 'stop'>;
+  /** Returns true to stop the walk. */
+  tensor?: (name: string, descriptor: GGUFTensorDescriptor) => boolean;
+}
 
+const walkGGUFHeader = async (
+  reader: ChunkedReader,
+  visitor: HeaderVisitor,
+): Promise<void> => {
   if ((await reader.u32(0)) !== GGUF_MAGIC) {
     throw new Error('not a GGUF file (bad magic)');
   }
@@ -286,16 +338,20 @@ export const readGGUFHeaderForMTP = async (
         return reader.skip(next, count * elemFixed);
       }
       // Element-by-element only for strings / nested arrays: integer reads,
-      // nothing decoded — this is the tokenizer-vocab walk.
+      // nothing decoded — this is the tokenizer-vocab walk. Strings already
+      // buffered are skipped without a microtask each.
       for (let i = 0; i < count; i++) {
-        next = await skipValue(elemType, next, depth + 1);
+        const buffered =
+          elemType === GGUFType.STRING
+            ? reader.skipBufferedString(next, version !== 1)
+            : undefined;
+        next = buffered ?? (await skipValue(elemType, next, depth + 1));
       }
       return next;
     }
     throw new Error(`unknown gguf value type ${type}`);
   };
 
-  let nextnPredictLayers = 0;
   for (let i = 0; i < kvCount; i++) {
     const [keyLen, afterLen] = await len(offset);
     if (keyLen > MAX_KEY_LENGTH) {
@@ -305,41 +361,121 @@ export const readGGUFHeaderForMTP = async (
     const typeAt = afterLen + keyLen;
     const valueType = await reader.u32(typeAt);
     const valueAt = typeAt + 4;
-
-    if (key.endsWith(NEXTN_KV_SUFFIX) && valueType !== GGUFType.ARRAY) {
-      const [value, next] = await readNumber(valueType, valueAt);
-      if (Number.isFinite(value) && value > 0) {
-        return {nextnPredictLayers: value, hasNextnTensor: false};
-      }
-      nextnPredictLayers = 0;
-      offset = next;
-    } else {
-      offset = await skipValue(valueType, valueAt, 0);
+    const next = visitor.kv
+      ? await visitor.kv(key, valueType, valueAt, readNumber)
+      : 'skip';
+    if (next === 'stop') {
+      return;
     }
+    offset = next === 'skip' ? await skipValue(valueType, valueAt, 0) : next;
   }
 
-  // KV said nothing; fall back to tensor names (some converters write the
-  // layers without the KV). Stop at the first match.
   for (let i = 0; i < tensorCount; i++) {
     const [nameLen, afterLen] = await len(offset);
     if (nameLen > MAX_KEY_LENGTH) {
       throw new Error('gguf tensor name length out of range');
     }
     const name = decodeUtf8(await reader.slice(afterLen, nameLen));
-    if (NEXTN_TENSOR.test(name)) {
-      return {nextnPredictLayers, hasNextnTensor: true};
-    }
     let at = afterLen + nameLen;
     const nDims = await reader.u32(at);
     if (nDims > 8) {
       throw new Error('gguf tensor rank out of range');
     }
     at += 4;
-    at = await reader.skip(at, nDims * (version === 1 ? 4 : 8));
-    at = await reader.skip(at, 4); // dtype
-    at = await reader.skip(at, 8); // data offset
+    const dims: number[] = [];
+    for (let d = 0; d < nDims; d++) {
+      dims.push(
+        version === 1 ? await reader.u32(at) : await reader.u64Unbounded(at),
+      );
+      at += version === 1 ? 4 : 8;
+    }
+    const type = await reader.u32(at);
+    at = await reader.skip(at, 4 + 8); // dtype, data offset
+    if (visitor.tensor?.(name, {type, dims})) {
+      return;
+    }
     offset = at;
   }
+};
 
-  return {nextnPredictLayers, hasNextnTensor: false};
+export const readGGUFHeaderForMTP = async (
+  url: string,
+  options?: ReadGGUFHeaderOptions,
+): Promise<GGUFHeaderProbeResult> => {
+  const fetchImpl = options?.fetchImpl ?? fetch;
+  const reader = new ChunkedReader(
+    async (from, length) => {
+      const res = await fetchImpl(url, {
+        headers: {Range: `bytes=${from}-${from + length - 1}`},
+      });
+      if (!res.ok) {
+        throw new Error(`gguf range request failed: HTTP ${res.status}`);
+      }
+      return new Uint8Array(await res.arrayBuffer());
+    },
+    options?.chunkSize ?? CHUNK_SIZE,
+    HEADER_BYTE_BUDGET,
+  );
+
+  let nextnPredictLayers = 0;
+  let hasNextnTensor = false;
+  await walkGGUFHeader(reader, {
+    kv: async (key, valueType, valueAt, readNumber) => {
+      if (!key.endsWith(NEXTN_KV_SUFFIX) || valueType === GGUFType.ARRAY) {
+        return 'skip';
+      }
+      const [value, next] = await readNumber(valueType, valueAt);
+      if (Number.isFinite(value) && value > 0) {
+        nextnPredictLayers = value;
+        return 'stop';
+      }
+      nextnPredictLayers = 0;
+      return next;
+    },
+    // KV said nothing; fall back to tensor names (some converters write the
+    // layers without the KV). Stop at the first match.
+    tensor: name => {
+      hasNextnTensor = NEXTN_TENSOR.test(name);
+      return hasNextnTensor;
+    },
+  });
+  return {nextnPredictLayers, hasNextnTensor};
+};
+
+/**
+ * `token_embd.weight`'s descriptor and whether `output.weight` exists, read
+ * from a local GGUF up to `dataOffset` (the header length
+ * `loadLlamaModelInfo` reports). Any structural anomaly throws.
+ */
+export const readLocalGGUFEmbeddingTensors = async (
+  path: string,
+  dataOffset: number,
+): Promise<GGUFEmbeddingTensors> => {
+  if (
+    !Number.isInteger(dataOffset) ||
+    dataOffset <= 0 ||
+    dataOffset > HEADER_BYTE_BUDGET
+  ) {
+    throw new Error(`gguf data offset ${dataOffset} out of range`);
+  }
+  const reader = new ChunkedReader(
+    async (from, length) =>
+      Buffer.from(await RNFS.read(path, length, from, 'base64'), 'base64'),
+    CHUNK_SIZE,
+    dataOffset,
+    true,
+  );
+
+  const result: GGUFEmbeddingTensors = {hasOutput: false};
+  await walkGGUFHeader(reader, {
+    tensor: (name, descriptor) => {
+      if (name === 'token_embd.weight') {
+        result.tokenEmbd = descriptor;
+      } else if (name === 'output.weight') {
+        result.hasOutput = true;
+      }
+      return false;
+    },
+  });
+  return result;
 };

@@ -120,7 +120,9 @@ import {
   needsGGUFMetadata,
   parseGGUFMetadata,
   stateCacheBudgetMb,
+  tiedEmbeddingBytes,
 } from '../utils/memoryEstimator';
+import {readLocalGGUFEmbeddingTensors} from '../utils/ggufHeader';
 import {loadLlamaModelInfo} from 'llama.rn';
 
 /**
@@ -184,6 +186,29 @@ const isRegularFile = async (path: string): Promise<boolean> => {
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
+
+const readTiedEmbeddingBytes = async (
+  filePath: string,
+  dataOffset: number,
+  modelSize: number,
+): Promise<number | undefined> => {
+  try {
+    const bytes = tiedEmbeddingBytes(
+      await readLocalGGUFEmbeddingTensors(filePath, dataOffset),
+      modelSize,
+    );
+    if (bytes === undefined) {
+      throw new Error('unrecognised token_embd tensor');
+    }
+    return bytes;
+  } catch (error) {
+    console.warn(
+      '[ModelStore] GGUF tensor scan failed; the estimate counts its bound:',
+      error,
+    );
+    return undefined;
+  }
+};
 
 class ModelStore {
   models: Model[] = [];
@@ -1947,13 +1972,18 @@ class ModelStore {
       if (!metadata) {
         return;
       }
+      const tied_embd_bytes = await readTiedEmbeddingBytes(
+        filePath,
+        Number((modelInfo as Record<string, unknown>).data_offset),
+        model.size,
+      );
 
       const paramCount = parseSizeLabel(
         (modelInfo as any)['general.size_label'],
       );
 
       runInAction(() => {
-        model.ggufMetadata = metadata;
+        model.ggufMetadata = {...metadata, tied_embd_bytes};
         if (!model.params && paramCount) {
           model.params = paramCount;
         }

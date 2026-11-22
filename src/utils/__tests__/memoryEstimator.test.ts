@@ -2,6 +2,7 @@ import {
   getModelMemoryRequirement,
   parseGGUFMetadata,
   stateCacheBudgetMb,
+  tiedEmbeddingBytes,
 } from '../memoryEstimator';
 import {runInAction} from 'mobx';
 import * as ReactNative from 'react-native';
@@ -656,7 +657,228 @@ describe('memoryEstimator', () => {
     });
   });
 
-  describe('formula terms', () => {
+  describe('tied embedding copy', () => {
+    const MiB = 1024 * 1024;
+    // Gemma 3 4B Q4_0: no output.weight, token_embd Q6_K [2560, 262208].
+    const gemma3 = {
+      ...baseModel,
+      size: ggufFileSize('gemma-3-4b-it-Q4_0'),
+      ggufMetadata: parseGGUFMetadata(ggufMetadata('gemma-3-4b-it-Q4_0')),
+    } as Model;
+    const tokenEmbd = {type: 14, dims: [2560, 262208]};
+    const copy = 2560 * 262208 * (210 / 256);
+    const withCopy = (tied_embd_bytes: number | undefined) =>
+      ({
+        ...gemma3,
+        ggufMetadata: {...gemma3.ggufMetadata!, tied_embd_bytes},
+      }) as Model;
+    const at2k = {...contextSettings, flash_attn_type: 'off' as const};
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+
+    afterEach(() => setOS(originalOS));
+
+    describe('tiedEmbeddingBytes', () => {
+      it('is the embedding bytes when there is no output matrix', () => {
+        expect(tiedEmbeddingBytes({tokenEmbd, hasOutput: false}, 5e9)).toBe(
+          copy,
+        );
+        expect(copy / MiB).toBeCloseTo(525.1, 1);
+      });
+
+      it('is 0 when the GGUF carries output.weight', () => {
+        expect(tiedEmbeddingBytes({tokenEmbd, hasOutput: true}, 5e9)).toBe(0);
+      });
+
+      it.each([
+        ['F16, never repacked on ARM', {type: 1, dims: [2560, 262208]}],
+        ['Q4_1, never repacked on ARM', {type: 3, dims: [2560, 262208]}],
+        [
+          'Q6_K with rows not a multiple of 8',
+          {type: 14, dims: [2560, 262204]},
+        ],
+        ['Q8_0 with rows not a multiple of 4', {type: 8, dims: [2560, 262202]}],
+      ])('is 0 for %s', (_case, embedding) => {
+        expect(
+          tiedEmbeddingBytes({tokenEmbd: embedding, hasOutput: false}, 5e9),
+        ).toBe(0);
+      });
+
+      it.each([
+        ['no token_embd tensor', undefined],
+        ['an unknown type id', {type: 9999, dims: [2560, 262208]}],
+        ['a removed type id', {type: 4, dims: [2560, 262208]}],
+        ['five dims', {type: 14, dims: [256, 2, 2, 2, 2]}],
+        ['a zero dim', {type: 14, dims: [2560, 0]}],
+        ['a fractional dim', {type: 14, dims: [2560.5, 262208]}],
+        ['dims overflowing 2^53', {type: 14, dims: [2 ** 40, 2 ** 40]}],
+        ['a row not a whole number of blocks', {type: 14, dims: [100, 262208]}],
+        ['more bytes than the file', {type: 14, dims: [2560, 2621440]}],
+      ])('is undefined (a failed scan) for %s', (_case, embedding) => {
+        expect(
+          tiedEmbeddingBytes({tokenEmbd: embedding, hasOutput: false}, 5e9),
+        ).toBeUndefined();
+      });
+    });
+
+    it('adds the copy on Android and nothing on iOS', () => {
+      setOS('android');
+      const android = getModelMemoryRequirement(
+        withCopy(copy),
+        undefined,
+        at2k,
+      );
+      const androidWithout = getModelMemoryRequirement(
+        withCopy(0),
+        undefined,
+        at2k,
+      );
+      setOS('ios');
+
+      expect(android - androidWithout).toBe(copy);
+      expect(getModelMemoryRequirement(withCopy(copy), undefined, at2k)).toBe(
+        getModelMemoryRequirement(withCopy(0), undefined, at2k),
+      );
+    });
+
+    it('adds nothing when extra buffer types are off, since nothing is repacked', () => {
+      setOS('android');
+
+      expect(
+        getModelMemoryRequirement(withCopy(copy), undefined, {
+          ...at2k,
+          no_extra_bufts: true,
+        }),
+      ).toBe(
+        getModelMemoryRequirement(withCopy(0), undefined, {
+          ...at2k,
+          no_extra_bufts: true,
+        }),
+      );
+    });
+
+    it.each([
+      ['absent (a failed scan)', undefined],
+      ['NaN', NaN],
+      ['negative', -1],
+      ['above the file size', 1e12],
+    ])(
+      'counts the Q8_0 bound V x E x 34/32 when the stored copy is %s',
+      (_case, stored) => {
+        setOS('android');
+
+        expect(
+          getModelMemoryRequirement(withCopy(stored), undefined, at2k) -
+            getModelMemoryRequirement(withCopy(0), undefined, at2k),
+        ).toBeCloseTo(262208 * 2560 * (34 / 32), 0);
+      },
+    );
+
+    it('caps the bound at the file size', () => {
+      setOS('android');
+      const small = {...withCopy(undefined), size: 100 * MiB};
+
+      expect(
+        getModelMemoryRequirement(small, undefined, at2k) -
+          getModelMemoryRequirement(
+            {
+              ...small,
+              ggufMetadata: {...small.ggufMetadata!, tied_embd_bytes: 0},
+            },
+            undefined,
+            at2k,
+          ),
+      ).toBe(100 * MiB);
+    });
+  });
+
+  describe('compute on Android', () => {
+    const UB = 512;
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+    const dense = (vocab: number) =>
+      ({
+        ...baseModel,
+        size: 1e9,
+        ggufMetadata: {
+          ...parseGGUFMetadata({
+            'general.architecture': 'llama',
+            'llama.block_count': '4',
+            'llama.embedding_length': '1024',
+            'llama.attention.head_count': '8',
+            'llama.attention.head_count_kv': '2',
+            'llama.attention.key_length': '128',
+            'llama.attention.value_length': '128',
+            'llama.feed_forward_length': '4096',
+            'tokenizer.ggml.tokens.length': vocab,
+          })!,
+          tied_embd_bytes: 0,
+        },
+      }) as Model;
+    const at = (flash_attn_type: 'on' | 'off') => ({
+      ...contextSettings,
+      n_ctx: 2048,
+      n_batch: UB,
+      n_ubatch: UB,
+      flash_attn_type,
+    });
+
+    afterEach(() => setOS(originalOS));
+
+    it('counts one logits row per vocabulary token, not a row per ubatch slot', () => {
+      setOS('android');
+      const perToken =
+        getModelMemoryRequirement(dense(200000), undefined, at('on')) -
+        getModelMemoryRequirement(dense(100000), undefined, at('on'));
+
+      // Compute adds 4 B per token; the overhead 384 B.
+      expect(perToken).toBe(100000 * (4 + 384));
+    });
+
+    it('adds the attention matrix on top of the logits row instead of taking the larger', () => {
+      setOS('android');
+      const attentionMatrix = 2048 * 8 * UB * 4;
+      const maskDifference = 2048 * UB * (4 - 2);
+
+      expect(
+        getModelMemoryRequirement(dense(151936), undefined, at('off')) -
+          getModelMemoryRequirement(dense(151936), undefined, at('on')),
+      ).toBe(attentionMatrix + maskDifference);
+    });
+
+    it('keeps the reserved logits rows on iOS', () => {
+      setOS('ios');
+      const perToken =
+        getModelMemoryRequirement(dense(200000), undefined, at('on')) -
+        getModelMemoryRequirement(dense(100000), undefined, at('on'));
+
+      expect(perToken).toBe(100000 * (UB * 4 + 384));
+    });
+  });
+
+  describe('formula terms, with iOS compute', () => {
+    const originalOS = ReactNative.Platform.OS;
+    beforeEach(() =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => 'ios',
+        configurable: true,
+      }),
+    );
+    afterEach(() =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => originalOS,
+        configurable: true,
+      }),
+    );
+
     const size = 1e9;
     const UB = 512;
     const settings = (
