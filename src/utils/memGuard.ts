@@ -17,6 +17,7 @@ export interface MemTripConfig {
   probeSwapKb?: number; // probe stops when own swap grows past this
   probeAvailFloorKb?: number; // probe stops when MemAvailable (Android) / iOS headroom drops below this
   probeStallX10?: number; // probe stops after 2 chunks slower than this x the probe's own early chunks (x10)
+  probeLevelFloor?: number; // iOS: probe stops when kern.memorystatus_level (%) drops below this
   probeOnly?: boolean; // measure only: always stop after the probe, never load
 }
 
@@ -106,9 +107,10 @@ export async function probeBeforeLoad(needBytes: number): Promise<void> {
     config.probeSwapKb ?? 0,
     config.probeAvailFloorKb ?? 0,
     config.probeStallX10 ?? 0,
+    config.probeLevelFloor ?? 0,
   );
   memMark(
-    `probe:end target_kb=${target} reached_kb=${r.reachedKb} stop=${r.stopReason} swap_growth_kb=${r.swapGrowthKb} min_avail_kb=${r.minAvailKb} ms=${r.ms}`,
+    `probe:end target_kb=${target} reached_kb=${r.reachedKb} stop=${r.stopReason} swap_growth_kb=${r.swapGrowthKb} min_avail_kb=${r.minAvailKb} min_level=${r.minLevel ?? -1} ms=${r.ms}`,
   );
   if (config.probeOnly) {
     throw new MemoryGuardError(

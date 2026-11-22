@@ -73,12 +73,14 @@ export interface Spec extends TurboModule {
     swapLimitKb: number,
     availFloorKb: number,
     stallX10: number,
+    levelFloor: number,
   ): Promise<{
     reachedKb: number;
-    stopReason: number; // 0 target, 1 swap, 2 MemAvailable / iOS headroom, 3 map failed, 4 stall
+    stopReason: number; // 0 target, 1 swap, 2 MemAvailable / iOS headroom, 3 map failed, 4 stall, 5 iOS memorystatus_level
     swapGrowthKb: number;
     memAvailKb: number;
     minAvailKb: number;
+    minLevel?: number;
     ms: number;
   }>;
   getMemorySignals(): Promise<{

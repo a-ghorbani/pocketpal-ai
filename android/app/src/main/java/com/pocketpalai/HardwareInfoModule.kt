@@ -331,7 +331,7 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun probeMemory(targetKb: Double, chunkKb: Double, swapLimitKb: Double, availFloorKb: Double, stallX10: Double, promise: Promise) {
+  override fun probeMemory(targetKb: Double, chunkKb: Double, swapLimitKb: Double, availFloorKb: Double, stallX10: Double, levelFloor: Double, promise: Promise) {
     Thread {
       try {
         val r = nativeProbeMemory(targetKb.toLong(), chunkKb.toLong(), swapLimitKb.toLong(), availFloorKb.toLong(), stallX10.toLong())

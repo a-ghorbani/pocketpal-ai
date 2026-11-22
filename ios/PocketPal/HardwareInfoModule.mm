@@ -276,6 +276,7 @@ RCT_EXPORT_METHOD(probeMemory:(double)targetKb
                   swapLimitKb:(double)swapLimitKb
                   availFloorKb:(double)availFloorKb
                   stallX10:(double)stallX10
+                  levelFloor:(double)levelFloor
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -293,6 +294,7 @@ RCT_EXPORT_METHOD(probeMemory:(double)targetKb
     uint64_t x = 0x9E3779B97F4A7C15ULL;
     NSMutableArray<NSNumber *> *chunkUs = [NSMutableArray array];
     long long baseUs = 0, slowRun = 0;
+    int minLevel = 101;
     while (reached < (long long)targetKb) {
       NSDate *c0 = [NSDate date];
       void *p = mmap(NULL, chunk, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
@@ -319,13 +321,18 @@ RCT_EXPORT_METHOD(probeMemory:(double)targetKb
       if (avail < minAvail) minAvail = avail;
       if (swapLimitKb > 0 && growth > (long long)swapLimitKb) { stop = 1; break; }
       if (availFloorKb > 0 && avail < (long long)availFloorKb) { stop = 2; break; }
-      NSLog(@"probe chunk n=%lu us=%lld base_us=%lld avail_kb=%lld compressed_kb=%lld", (unsigned long)chunkUs.count, us, baseUs, avail, growth);
+      int level = -1; size_t levelLen = sizeof(level);
+      if (sysctlbyname("kern.memorystatus_level", &level, &levelLen, NULL, 0) != 0) level = -1;
+      if (level >= 0 && level < minLevel) minLevel = level;
+      if (levelFloor > 0 && level >= 0 && level < (int)levelFloor) { stop = 5; break; }
+      NSLog(@"probe chunk n=%lu us=%lld base_us=%lld avail_kb=%lld compressed_kb=%lld level=%d", (unsigned long)chunkUs.count, us, baseUs, avail, growth, level);
       if (stop == 4) break;
     }
     for (NSValue *v in chunks) munmap(v.pointerValue, chunk);
     long long ms = (long long)(-[t0 timeIntervalSinceNow] * 1000);
     resolve(@{@"reachedKb": @(reached), @"stopReason": @(stop), @"swapGrowthKb": @(growth),
-              @"memAvailKb": @(avail), @"minAvailKb": @(minAvail), @"ms": @(ms)});
+              @"memAvailKb": @(avail), @"minAvailKb": @(minAvail), @"ms": @(ms),
+              @"minLevel": @(minLevel)});
   });
 }
 
