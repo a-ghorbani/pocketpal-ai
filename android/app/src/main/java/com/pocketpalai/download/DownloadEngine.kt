@@ -20,6 +20,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLPeerUnverifiedException
 
@@ -311,6 +312,11 @@ class DownloadEngine(
                 part.delete()
                 return End.Failed(SIZE_MISMATCH_ERROR)
             }
+            if (file.name.endsWith(MODEL_SUFFIX, ignoreCase = true) && !startsWithModelMagic(part)) {
+                Log.e(TAG, "Not a model file for ${row.id}: $length bytes without the GGUF magic")
+                part.delete()
+                return End.Failed(NOT_MODEL_ERROR)
+            }
             if (!part.renameTo(file)) return End.Failed("Could not move the finished download into place")
             return End.Completed
         }
@@ -331,6 +337,15 @@ class DownloadEngine(
     private fun linkedSize(response: Response): Long? =
         generateSequence(response.priorResponse) { it.priorResponse }
             .firstNotNullOfOrNull { redirect -> redirect.header(LINKED_SIZE)?.toLongOrNull()?.takeIf { it > 0 } }
+
+    private fun startsWithModelMagic(file: File): Boolean =
+        try {
+            val head = ByteArray(MODEL_MAGIC.size)
+            RandomAccessFile(file, "r").use { it.readFully(head) }
+            head.contentEquals(MODEL_MAGIC)
+        } catch (_: IOException) {
+            false
+        }
 
     private fun strongEtag(response: Response): String? =
         response.header("ETag")?.takeUnless { it.startsWith("W/") }
@@ -380,6 +395,8 @@ class DownloadEngine(
         private val CONTENT_RANGE = Regex("""bytes (\d+)-(\d+)/(\d+|\*)""")
         private val UNSATISFIED_RANGE = Regex("""bytes \*/(\d+)""")
         private const val LINKED_SIZE = "x-linked-size"
+        private const val MODEL_SUFFIX = ".gguf"
+        private val MODEL_MAGIC = "GGUF".toByteArray(Charsets.US_ASCII)
 
         val sharedClient: OkHttpClient by lazy {
             OkHttpClient.Builder()

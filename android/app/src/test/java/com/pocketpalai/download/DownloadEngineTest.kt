@@ -44,8 +44,9 @@ class DownloadEngineTest {
     private val dao = database.downloadDao()
     private val runs = DownloadRuns()
     private var clock = 0L
-    private val content = ByteArray(300_000) { (it % 251).toByte() }
-    private val destination by lazy { File(tmp.root, "model.gguf") }
+    private val content = ByteArray(300_000) { (it % 251).toByte() }.also { GGUF.copyInto(it) }
+    private var destinationName = "model.gguf"
+    private val destination by lazy { File(tmp.root, destinationName) }
     private val part by lazy { File(destination.path + DownloadEngine.PART_SUFFIX) }
     private val requests = mutableListOf<RecordedRequest>()
 
@@ -130,6 +131,8 @@ class DownloadEngineTest {
 
     private fun writePart(bytes: Int) = part.writeBytes(content.copyOfRange(0, bytes))
 
+    private fun seed(bytes: Int) = ByteArray(bytes) { 7 }.also { GGUF.copyInto(it) }
+
     private fun blockedPageBytes() = javaClass.getResourceAsStream("/download/blocked-page.html")!!.readBytes()
 
     private fun blockedPage() = MockResponse()
@@ -182,7 +185,7 @@ class DownloadEngineTest {
 
     @Test
     fun changedEtagOnResumeRestartsFromZero() {
-        val changed = content.reversedArray()
+        val changed = content.reversedArray().also { GGUF.copyInto(it) }
         insert(totalBytes = content.size.toLong(), etag = E1)
         writePart(100)
         serve(honest(etag = E2, body = changed))
@@ -198,7 +201,7 @@ class DownloadEngineTest {
     @Test
     fun fullResponseOnResumeTruncatesAndRewrites() {
         insert(totalBytes = content.size.toLong(), etag = E1)
-        part.writeBytes(ByteArray(100) { 7 })
+        part.writeBytes(seed(100))
         serve({ MockResponse().setBody(Buffer().write(content)).setHeader("ETag", E2) })
 
         run()
@@ -328,6 +331,44 @@ class DownloadEngineTest {
     }
 
     @Test
+    fun errorBodyToAModelFileIsNeverCommitted() {
+        insert()
+        serve({ MockResponse().setHeader("Content-Type", "application/json").setBody(JSON_ERROR) })
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun modelFileSuffixIgnoresCase() {
+        destinationName = "Model.GGUF"
+        insert()
+        serve({ MockResponse().setBody(JSON_ERROR) })
+
+        run()
+
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun otherFileTypesAreNotCheckedForTheMagic() {
+        destinationName = "model.bin"
+        val body = content.reversedArray()
+        insert()
+        serve({ MockResponse().setHeader("Content-Type", "application/octet-stream").setBody(Buffer().write(body)) })
+
+        run()
+
+        assertEquals(DownloadStatus.COMPLETED, row().status)
+        assertArrayEquals(body, destination.readBytes())
+    }
+
+    @Test
     fun secondValidatorMismatchInOneRunFails() {
         insert(totalBytes = content.size.toLong(), etag = E1)
         writePart(100)
@@ -349,7 +390,7 @@ class DownloadEngineTest {
     @Test
     fun contentRangeTotalMismatchIsNeverAppended() {
         insert(totalBytes = content.size.toLong())
-        part.writeBytes(ByteArray(100) { 7 })
+        part.writeBytes(seed(100))
         serve({ partial(100, total = content.size + 5) }, honest())
 
         run()
@@ -361,7 +402,7 @@ class DownloadEngineTest {
     @Test
     fun contentRangeStartMismatchIsNeverAppended() {
         insert(totalBytes = content.size.toLong())
-        part.writeBytes(ByteArray(100) { 7 })
+        part.writeBytes(seed(100))
         serve({ partial(50) }, honest())
 
         run()
@@ -616,7 +657,7 @@ class DownloadEngineTest {
     @Test
     fun inPlaceFileOfUnknownSizeIsNeverSplicedIntoANewDownload() {
         insert(status = DownloadStatus.RUNNING)
-        destination.writeBytes(ByteArray(100) { 7 })
+        destination.writeBytes(seed(100))
         serve({ partial(it.getHeader("Range")?.removePrefix("bytes=")?.removeSuffix("-")?.toInt() ?: 0) })
 
         run()
@@ -737,6 +778,8 @@ class DownloadEngineTest {
         const val E2 = "\"etag-2\""
         const val E3 = "\"etag-3\""
         const val NO_SPACE = "No space left on device"
+        val GGUF = "GGUF".toByteArray()
+        const val JSON_ERROR = "{\"error\":\"Access to this resource is restricted on your network. Contact your administrator.\"}"
         const val RESOLVE_PATH = "/model.gguf"
         const val CDN_PATH = "/xet-bridge-us/69a591f0311144ce3c262890/d97438bd"
         const val HF_ETAG = "\"d97438bdfb705334a9ec568ec87f57f2d6929da2bccf7e61bab37ee002e75533\""
