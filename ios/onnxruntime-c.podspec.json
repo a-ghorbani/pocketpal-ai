@@ -1,0 +1,35 @@
+{
+  "name": "onnxruntime-c",
+  "version": "1.24.3",
+  "authors": {
+    "ONNX Runtime": "onnxruntime@microsoft.com"
+  },
+  "license": {
+    "type": "MIT",
+    "file": "LICENSE"
+  },
+  "homepage": "https://github.com/microsoft/onnxruntime",
+  "source": {
+    "http": "https://github.com/a-ghorbani/pocketpal-ai/releases/download/deps-onnxruntime-c-1.24.3/pod-archive-onnxruntime-c-1.24.3.zip",
+    "sha256": "b7eedc45932bac758ffd057cac0feb3f682269e47750b159e4c865145cbf0a8e"
+  },
+  "summary": "ONNX Runtime C/C++ Pod",
+  "platforms": {
+    "ios": "15.1",
+    "osx": "14.0"
+  },
+  "vendored_frameworks": "onnxruntime.xcframework",
+  "static_framework": true,
+  "weak_frameworks": [
+    "CoreML"
+  ],
+  "source_files": "Headers/*.h",
+  "preserve_paths": [
+    "LICENSE"
+  ],
+  "description": "A pod for the ONNX Runtime C/C++ library.",
+  "libraries": "c++",
+  "pod_target_xcconfig": {
+    "OTHER_CPLUSPLUSFLAGS": "-fvisibility=hidden -fvisibility-inlines-hidden"
+  }
+}
