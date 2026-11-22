@@ -299,6 +299,33 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     expect((RNFS.read as jest.Mock).mock.calls[1][1]).toBe(4 * 119 + 32);
   });
 
+  it('reads a section whose first tensors share data offset 0', async () => {
+    const file = tensorInfoFile({
+      entries: [
+        tensorInfoEntry({name: 'a', dims: [0]}),
+        tied[0],
+        tensorInfoEntry({name: 'b', offset: 13440}),
+      ],
+    });
+
+    await expect(scan(file)).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [64, 256]},
+      hasOutput: false,
+    });
+  });
+
+  it('reads a section behind a KV section whose last bytes read as an entry at offset 0', async () => {
+    const file = tensorInfoFile({
+      entries: tied,
+      kv: tensorInfoEntry({name: 'general.name', dims: []}),
+    });
+
+    await expect(scan(file)).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [64, 256]},
+      hasOutput: false,
+    });
+  });
+
   it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
     const file = tensorInfoFile({
       entries: [
