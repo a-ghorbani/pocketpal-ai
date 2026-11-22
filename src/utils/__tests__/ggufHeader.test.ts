@@ -284,6 +284,21 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     await expect(scan(file)).resolves.toEqual({hasOutput: false});
   });
 
+  it('reads maximal entries with maximal padding through a window of n * 119 + alignment bytes', async () => {
+    const entries = Array.from({length: 4}, (_, i) =>
+      tensorInfoEntry({
+        name: String(i).repeat(63),
+        dims: [1, 1, 1, 1],
+        offset: i * 32,
+      }),
+    );
+    const file = tensorInfoFile({entries, kv: new Uint8Array(1037)});
+
+    expect(file.layout.dataOffset - (24 + 1037)).toBe(4 * 119 + 31);
+    await expect(scan(file)).resolves.toEqual({hasOutput: false});
+    expect((RNFS.read as jest.Mock).mock.calls[1][1]).toBe(4 * 119 + 32);
+  });
+
   it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
     const file = tensorInfoFile({
       entries: [
@@ -331,6 +346,19 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     expect(RNFS.read).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a prefix with 2^32 + 2 tensors, whose low word alone would fit', async () => {
+    await expect(
+      scan(tensorInfoFile({entries: tied, tensorCount: 2 ** 32 + 2})),
+    ).rejects.toThrow(/tensor count/);
+  });
+
+  it('rejects a prefix without the GGUF magic', async () => {
+    const file = tensorInfoFile({entries: tied});
+    file.bytes[0] = 0x48;
+
+    await expect(scan(file)).rejects.toThrow(/prefix/);
+  });
+
   it('rejects a prefix whose version differs from the reported one', async () => {
     const file = tensorInfoFile({entries: tied, version: 2});
 
@@ -350,11 +378,20 @@ describe('readLocalGGUFEmbeddingTensors', () => {
   it.each([
     ['a space in a name', 'blk.0.attn q.weight'],
     ['a non-ASCII byte in a name', 'blk.0.attn_\xe9.weight'],
+    ['a DEL byte in a name', 'blk.0.attn_\x7f.weight'],
     ['an empty name', ''],
   ])('rejects %s', async (_case, name) => {
     const file = tensorInfoFile({
       entries: [tied[0], tensorInfoEntry({name, offset: 13440})],
     });
+
+    await expect(scan(file)).rejects.toThrow(/no consistent end/);
+  });
+
+  it('rejects a name length whose high word is set', async () => {
+    const entry = tensorInfoEntry({name: 'blk.0.attn_q.weight', offset: 13440});
+    new DataView(entry.buffer).setUint32(4, 1, true);
+    const file = tensorInfoFile({entries: [tied[0], entry]});
 
     await expect(scan(file)).rejects.toThrow(/no consistent end/);
   });
