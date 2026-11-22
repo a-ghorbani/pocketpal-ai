@@ -117,6 +117,7 @@ import {defaultFlashAttnType} from '../utils/flashAttnCompatibility';
 import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
+  needsGGUFMetadata,
   parseGGUFMetadata,
   stateCacheBudgetMb,
 } from '../utils/memoryEstimator';
@@ -1963,16 +1964,12 @@ class ModelStore {
   };
 
   /**
-   * Load GGUF metadata for downloaded models that don't have it yet.
+   * Load GGUF metadata for downloaded models whose stored metadata is missing
+   * or out of date.
    * Runs in background, doesn't block startup.
    */
   private loadMissingGGUFMetadata = () => {
-    const modelsNeedingMetadata = this.models.filter(
-      m =>
-        m.isDownloaded &&
-        !m.ggufMetadata &&
-        m.modelType !== ModelType.PROJECTION,
-    );
+    const modelsNeedingMetadata = this.models.filter(needsGGUFMetadata);
 
     if (modelsNeedingMetadata.length === 0) {
       return;

@@ -1,5 +1,6 @@
 jest.unmock('../../store');
 import {loadLlamaModelInfo} from 'llama.rn';
+import {runInAction} from 'mobx';
 import {Platform} from 'react-native';
 
 import {modelStore} from '..';
@@ -8,7 +9,13 @@ import {
   MemoryEstimateSettings,
 } from '../../utils/memoryEstimator';
 import {createDefaultContextInitParams} from '../../utils/contextInitParamsVersions';
-import {CacheType, ContextInitParams, Model} from '../../utils/types';
+import {isMTPCapable} from '../../utils/mtp';
+import {
+  CacheType,
+  ContextInitParams,
+  GGUFMetadata,
+  Model,
+} from '../../utils/types';
 import {createModel} from '../../../jest/fixtures/models';
 import {
   BufferCapture,
@@ -174,5 +181,152 @@ describe('text-side estimate against llama.cpp buffers', () => {
     );
 
     expect(estimate / GiB).toBeLessThanOrEqual(3.31);
+  });
+});
+
+describe('metadata stored by an earlier version', () => {
+  // What the scalar-only parse stored: a per-layer head_count_kv fell back to
+  // head_count, and the vocabulary came from a per-architecture table.
+  const lfm2V1: GGUFMetadata = {
+    architecture: 'lfm2',
+    n_layers: 16,
+    n_embd: 2048,
+    n_head: 32,
+    n_head_kv: 32,
+    n_vocab: 65536,
+    n_embd_head_k: 64,
+    n_embd_head_v: 64,
+    context_length: 128000,
+  };
+  const qwen35V1: GGUFMetadata = {
+    architecture: 'qwen35',
+    n_layers: 25,
+    n_embd: 1024,
+    n_head: 8,
+    n_head_kv: 2,
+    n_vocab: 128000,
+    n_embd_head_k: 256,
+    n_embd_head_v: 256,
+    context_length: 262144,
+    nextn_predict_layers: 1,
+  };
+  const flush = async () => {
+    for (let i = 0; i < 5; i++) {
+      await new Promise(resolve => setImmediate(resolve));
+    }
+  };
+  const storedModel = (name: GGUFMemoryFixture, stored: GGUFMetadata) => {
+    runInAction(() => {
+      modelStore.models = [
+        createModel({
+          id: name,
+          filename: `${name}.gguf`,
+          size: ggufFileSize(name),
+          isDownloaded: true,
+          ggufMetadata: stored,
+        }) as Model,
+      ];
+    });
+    return modelStore.models[0];
+  };
+  const backfill = () =>
+    (
+      modelStore as unknown as {loadMissingGGUFMetadata: () => void}
+    ).loadMissingGGUFMetadata();
+
+  beforeEach(() => {
+    (loadLlamaModelInfo as jest.Mock).mockReset();
+  });
+
+  it('is re-read at launch, and the estimate follows', async () => {
+    const model = storedModel('LFM2.5-1.2B-Instruct-Q4_K_M', lfm2V1);
+    const before = getModelMemoryRequirement(
+      model,
+      undefined,
+      settings(16384, 'off'),
+    );
+    (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce(
+      ggufMetadata('LFM2.5-1.2B-Instruct-Q4_K_M'),
+    );
+
+    backfill();
+    await flush();
+
+    expect(model.ggufMetadata).toMatchObject({
+      metadataVersion: 2,
+      n_head_kv: 8,
+      context_length: 128000,
+    });
+    expect(
+      getModelMemoryRequirement(model, undefined, settings(16384, 'off')),
+    ).toBeLessThan(before);
+  });
+
+  it('stays readable while the header read is in flight', async () => {
+    const model = storedModel('Qwen3.5-0.8B-Q4_0', qwen35V1);
+    const stored = model.ggufMetadata;
+    let finishRead: (info: Record<string, unknown>) => void = () => {};
+    (loadLlamaModelInfo as jest.Mock).mockReturnValueOnce(
+      new Promise(resolve => {
+        finishRead = resolve;
+      }),
+    );
+
+    backfill();
+    await flush();
+
+    expect(model.ggufMetadata).toBe(stored);
+    expect(isMTPCapable(model)).toBe(true);
+    expect(model.ggufMetadata?.context_length).toBe(262144);
+
+    finishRead(ggufMetadata('Qwen3.5-0.8B-Q4_0'));
+    await flush();
+
+    expect(model.ggufMetadata).toMatchObject({
+      metadataVersion: 2,
+      nextn_predict_layers: 1,
+      context_length: 262144,
+    });
+  });
+
+  it('is kept when the header read fails', async () => {
+    const model = storedModel('Qwen3.5-0.8B-Q4_0', qwen35V1);
+    const stored = model.ggufMetadata;
+    (loadLlamaModelInfo as jest.Mock).mockRejectedValueOnce(
+      new Error('std::runtime_error'),
+    );
+
+    backfill();
+    await flush();
+
+    expect(model.ggufMetadata).toBe(stored);
+  });
+
+  it('is kept unstamped when the header is one the parse now rejects', async () => {
+    const tooDeep = {...qwen35V1, n_layers: 513};
+    const model = storedModel('Qwen3.5-0.8B-Q4_0', tooDeep);
+    const stored = model.ggufMetadata;
+    (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce({
+      ...ggufMetadata('Qwen3.5-0.8B-Q4_0'),
+      'qwen35.block_count': '513',
+    });
+
+    backfill();
+    await flush();
+
+    expect(model.ggufMetadata).toBe(stored);
+    expect(
+      getModelMemoryRequirement(model, undefined, settings(4096, 'off')),
+    ).toBe(model.size * 1.2);
+  });
+
+  it('is not re-read once current', async () => {
+    const model = await downloadedModel('Qwen_Qwen3-4B-Q4_K_M');
+    storedModel('Qwen_Qwen3-4B-Q4_K_M', model.ggufMetadata!);
+
+    backfill();
+    await flush();
+
+    expect(loadLlamaModelInfo).toHaveBeenCalledTimes(1);
   });
 });

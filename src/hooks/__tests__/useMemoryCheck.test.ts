@@ -393,4 +393,50 @@ describe('useMemoryCheck', () => {
       expect(await hasEnoughMemory(swaModel)).toBe(false);
     });
   });
+
+  describe('stored metadata refresh', () => {
+    const v1Metadata = {
+      architecture: 'lfm2',
+      n_layers: 16,
+      n_embd: 2048,
+      n_head: 32,
+      n_head_kv: 32,
+      n_vocab: 65536,
+      n_embd_head_k: 64,
+      n_embd_head_v: 64,
+    };
+    const downloaded = (ggufMetadata?: Model['ggufMetadata']): Model => ({
+      ...basicModel,
+      isDownloaded: true,
+      ggufMetadata,
+    });
+
+    it.each([
+      ['missing', undefined],
+      ['from an earlier version', v1Metadata],
+    ])(
+      'reads the header before checking when metadata is %s',
+      async (_case, metadata) => {
+        const model = downloaded(metadata);
+
+        await hasEnoughMemory(model);
+
+        expect(modelStore.fetchAndPersistGGUFMetadata).toHaveBeenCalledWith(
+          model,
+        );
+      },
+    );
+
+    it('does not read the header again when metadata is current', async () => {
+      await hasEnoughMemory(downloaded({...v1Metadata, metadataVersion: 2}));
+
+      expect(modelStore.fetchAndPersistGGUFMetadata).not.toHaveBeenCalled();
+    });
+
+    it('does not read the header of a model that is not downloaded', async () => {
+      await hasEnoughMemory({...downloaded(v1Metadata), isDownloaded: false});
+
+      expect(modelStore.fetchAndPersistGGUFMetadata).not.toHaveBeenCalled();
+    });
+  });
 });

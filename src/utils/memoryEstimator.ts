@@ -1,5 +1,11 @@
 import {Platform} from 'react-native';
-import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
+import {
+  Model,
+  GGUFMetadata,
+  ContextInitParams,
+  CacheType,
+  ModelType,
+} from './types';
 import {FlashAttnType, defaultFlashAttnType} from './flashAttnCompatibility';
 import type {Tier} from '../services/deviceRules/types';
 
@@ -178,6 +184,19 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
     nextn_predict_layers: nonNegative(num('nextn_predict_layers')),
     embedding_length_out: nonNegative(num('embedding_length_out')),
   };
+}
+
+/**
+ * Whether a downloaded model's stored metadata is missing or predates the
+ * current parse, so its header should be read again.
+ */
+export function needsGGUFMetadata(model: Model): boolean {
+  return (
+    model.isDownloaded &&
+    model.modelType !== ModelType.PROJECTION &&
+    (!model.ggufMetadata ||
+      (model.ggufMetadata.metadataVersion ?? 1) < GGUF_METADATA_VERSION)
+  );
 }
 
 // Guards against corrupted metadata persisted by older app versions.
