@@ -1976,11 +1976,14 @@ class ModelStore {
       if (!metadata) {
         return;
       }
-      const tied_embd_bytes = await readTiedEmbeddingBytes(
-        filePath,
-        modelInfo as Record<string, unknown>,
-        model.size,
-      );
+      const tied_embd_bytes =
+        Platform.OS === 'android'
+          ? await readTiedEmbeddingBytes(
+              filePath,
+              modelInfo as Record<string, unknown>,
+              model.size,
+            )
+          : undefined;
 
       const paramCount = parseSizeLabel(
         (modelInfo as any)['general.size_label'],

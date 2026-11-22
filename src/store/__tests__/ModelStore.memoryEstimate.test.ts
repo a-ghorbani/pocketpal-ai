@@ -68,7 +68,7 @@ async function downloadedModel(name: GGUFMemoryFixture): Promise<Model> {
     ggufMetadata: undefined,
   }) as Model;
   (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce(ggufMetadata(name));
-  (readLocalGGUFEmbeddingTensors as jest.Mock).mockResolvedValueOnce(
+  (readLocalGGUFEmbeddingTensors as jest.Mock).mockResolvedValue(
     embeddingTensors(name),
   );
   await modelStore.fetchAndPersistGGUFMetadata(model);
@@ -317,6 +317,32 @@ describe('tensor scan through the metadata read', () => {
       n_vocab: 65536,
       tied_embd_bytes: 1024 * 65536 * (210 / 256),
     });
+  });
+
+  it('reads the prefix and the tensor-info tail, nothing more', async () => {
+    (RNFS.read as jest.Mock).mockImplementation(localReadFor(header));
+
+    await read();
+
+    const calls = (RNFS.read as jest.Mock).mock.calls;
+    const tailLength = calls[1][1];
+    const tensorCount = new DataView(header.buffer).getUint32(8, true);
+    expect(calls.map(([, length, position]) => [length, position])).toEqual([
+      [24, 0],
+      [tailLength, ggufMetadata(name).data_offset - tailLength],
+    ]);
+    expect(tailLength).toBeLessThanOrEqual(tensorCount * 119 + 32);
+  });
+
+  it('runs no scan on iOS and stores no tied copy', async () => {
+    setOS('ios');
+    (RNFS.read as jest.Mock).mockImplementation(localReadFor(header));
+
+    const model = await read();
+
+    expect(RNFS.read).not.toHaveBeenCalled();
+    expect(model.ggufMetadata).toMatchObject({metadataVersion: 2});
+    expect(model.ggufMetadata?.tied_embd_bytes).toBeUndefined();
   });
 
   it('keeps the metadata, without the field, when the scan fails, and counts the Q8_0 bound', async () => {
