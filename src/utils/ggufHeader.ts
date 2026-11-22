@@ -1,9 +1,10 @@
 /**
- * Minimal GGUF header reader. Over HTTP range requests it answers the remote
- * MTP capability probe: does this model carry MTP draft layers (the
+ * Minimal GGUF header reader for the remote MTP capability probe.
+ *
+ * Reads just enough of a remote GGUF file, over plain HTTP range requests, to
+ * answer one question: does this model carry MTP draft layers (the
  * `<arch>.nextn_predict_layers` KV, or `nextn.*` tensors from converters that
- * write the layers but omit the KV)? Over a local file it reads the embedding
- * tensors' descriptors, which `loadLlamaModelInfo` does not return.
+ * write the layers but omit the KV)?
  *
  * A general-purpose parser must materialize every metadata value — including
  * the ~10^5-string tokenizer vocab that dominates a header — before the caller
@@ -16,15 +17,18 @@
  * and frozen at the container level: llama.cpp cannot change the layout
  * without breaking every reader in the ecosystem. Any structural anomaly
  * throws — the probe maps that to `unknown`, never to a false negative.
+ *
+ * `readLocalGGUFEmbeddingTensors` reads a downloaded file's embedding tensor
+ * descriptors, which `loadLlamaModelInfo` does not return.
  */
 
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {Buffer} from 'buffer';
+import {toByteArray} from 'base64-js';
 
 const GGUF_MAGIC = 0x46554747; // "GGUF" read as LE u32
 
-const CHUNK_SIZE = 2 * 1024 * 1024;
-const HEADER_BYTE_BUDGET = 64 * 1024 * 1024;
+const HTTP_CHUNK_SIZE = 2 * 1024 * 1024;
+const HTTP_TOTAL_MAX = 64 * 1024 * 1024;
 
 const MAX_KV_COUNT = 4096;
 const MAX_TENSOR_COUNT = 65536;
@@ -73,68 +77,46 @@ export interface ReadGGUFHeaderOptions {
   chunkSize?: number;
 }
 
-export interface GGUFTensorDescriptor {
-  type: number;
-  dims: number[];
-}
-
-export interface GGUFEmbeddingTensors {
-  tokenEmbd?: GGUFTensorDescriptor;
-  hasOutput: boolean;
-}
-
-type ChunkSource = (from: number, length: number) => Promise<Uint8Array>;
-
-/** Sequential-prefix buffer over a chunked byte source. */
+/** Sequential-prefix buffer over HTTP range requests. */
 class ChunkedReader {
-  private bytes: Uint8Array;
-  private view: DataView;
-  private filled = 0;
+  private bytes = new Uint8Array(0);
+  private view = new DataView(new ArrayBuffer(0));
   private eof = false;
 
-  /**
-   * `preallocate` sizes the buffer to `limit` once, for a source whose header
-   * length is known, so chunks are copied in place instead of regrowing it.
-   */
   constructor(
-    private readonly source: ChunkSource,
+    private readonly url: string,
+    private readonly fetchImpl: typeof fetch,
     private readonly chunkSize: number,
-    private readonly limit: number,
-    preallocate = false,
-  ) {
-    this.bytes = new Uint8Array(preallocate ? limit : 0);
-    this.view = new DataView(this.bytes.buffer);
-  }
-
-  private append(chunk: Uint8Array): void {
-    const needed = this.filled + chunk.byteLength;
-    if (needed > this.bytes.byteLength) {
-      const grown = new Uint8Array(needed);
-      grown.set(this.bytes.subarray(0, this.filled));
-      this.bytes = grown;
-      this.view = new DataView(grown.buffer);
-    }
-    this.bytes.set(chunk, this.filled);
-    this.filled = needed;
-  }
+  ) {}
 
   private async ensure(end: number): Promise<void> {
-    if (end > this.limit) {
-      throw new Error(`gguf header read past ${this.limit} byte budget`);
+    if (end > HTTP_TOTAL_MAX) {
+      throw new Error(`gguf header read past ${HTTP_TOTAL_MAX} byte budget`);
     }
-    while (this.filled < end && !this.eof) {
-      const length = Math.min(this.chunkSize, this.limit - this.filled);
-      const chunk = await this.source(this.filled, length);
+    while (this.bytes.byteLength < end && !this.eof) {
+      const from = this.bytes.byteLength;
+      const to = from + this.chunkSize - 1;
+      const res = await this.fetchImpl(this.url, {
+        headers: {Range: `bytes=${from}-${to}`},
+      });
+      if (!res.ok) {
+        throw new Error(`gguf range request failed: HTTP ${res.status}`);
+      }
+      const chunk = new Uint8Array(await res.arrayBuffer());
       if (chunk.byteLength === 0) {
         this.eof = true;
         break;
       }
-      this.append(chunk.subarray(0, this.limit - this.filled));
-      if (chunk.byteLength < length) {
+      const grown = new Uint8Array(this.bytes.byteLength + chunk.byteLength);
+      grown.set(this.bytes);
+      grown.set(chunk, this.bytes.byteLength);
+      this.bytes = grown;
+      this.view = new DataView(grown.buffer);
+      if (chunk.byteLength < this.chunkSize) {
         this.eof = true;
       }
     }
-    if (this.filled < end) {
+    if (this.bytes.byteLength < end) {
       throw new Error('gguf header truncated');
     }
   }
@@ -151,12 +133,6 @@ class ChunkedReader {
       throw new Error('gguf length exceeds safe integer range');
     }
     return Number(value);
-  }
-
-  /** A u64 that may exceed the safe-integer range, for the caller to bound. */
-  async u64Unbounded(offset: number): Promise<number> {
-    await this.ensure(offset + 8);
-    return Number(this.view.getBigUint64(offset, true));
   }
 
   async i64(offset: number): Promise<number> {
@@ -177,22 +153,6 @@ class ChunkedReader {
   async slice(offset: number, length: number): Promise<Uint8Array> {
     await this.ensure(offset + length);
     return this.bytes.subarray(offset, offset + length);
-  }
-
-  /**
-   * Skips a length-prefixed string already in the buffer without awaiting;
-   * undefined when any of it still has to be read.
-   */
-  skipBufferedString(offset: number, wideLength: boolean): number | undefined {
-    const lengthBytes = wideLength ? 8 : 4;
-    if (offset + lengthBytes > this.filled) {
-      return undefined;
-    }
-    const length = wideLength
-      ? Number(this.view.getBigUint64(offset, true))
-      : this.view.getUint32(offset, true);
-    const end = offset + lengthBytes + length;
-    return end <= this.filled ? end : undefined;
   }
 
   /** Advancing past bytes still fetches them (sequential prefix), enforcing the budget. */
@@ -237,22 +197,16 @@ const decodeUtf8 = (bytes: Uint8Array): string => {
 const NEXTN_KV_SUFFIX = '.nextn_predict_layers';
 const NEXTN_TENSOR = /(^|\.)nextn\./;
 
-interface HeaderVisitor {
-  /** Returns the offset after a value it read, `'skip'` or `'stop'`. */
-  kv?: (
-    key: string,
-    valueType: number,
-    valueAt: number,
-    readNumber: (type: number, at: number) => Promise<[number, number]>,
-  ) => Promise<number | 'skip' | 'stop'>;
-  /** Returns true to stop the walk. */
-  tensor?: (name: string, descriptor: GGUFTensorDescriptor) => boolean;
-}
+export const readGGUFHeaderForMTP = async (
+  url: string,
+  options?: ReadGGUFHeaderOptions,
+): Promise<GGUFHeaderProbeResult> => {
+  const reader = new ChunkedReader(
+    url,
+    options?.fetchImpl ?? fetch,
+    options?.chunkSize ?? HTTP_CHUNK_SIZE,
+  );
 
-const walkGGUFHeader = async (
-  reader: ChunkedReader,
-  visitor: HeaderVisitor,
-): Promise<void> => {
   if ((await reader.u32(0)) !== GGUF_MAGIC) {
     throw new Error('not a GGUF file (bad magic)');
   }
@@ -338,20 +292,16 @@ const walkGGUFHeader = async (
         return reader.skip(next, count * elemFixed);
       }
       // Element-by-element only for strings / nested arrays: integer reads,
-      // nothing decoded — this is the tokenizer-vocab walk. Strings already
-      // buffered are skipped without a microtask each.
+      // nothing decoded — this is the tokenizer-vocab walk.
       for (let i = 0; i < count; i++) {
-        const buffered =
-          elemType === GGUFType.STRING
-            ? reader.skipBufferedString(next, version !== 1)
-            : undefined;
-        next = buffered ?? (await skipValue(elemType, next, depth + 1));
+        next = await skipValue(elemType, next, depth + 1);
       }
       return next;
     }
     throw new Error(`unknown gguf value type ${type}`);
   };
 
+  let nextnPredictLayers = 0;
   for (let i = 0; i < kvCount; i++) {
     const [keyLen, afterLen] = await len(offset);
     if (keyLen > MAX_KEY_LENGTH) {
@@ -361,121 +311,242 @@ const walkGGUFHeader = async (
     const typeAt = afterLen + keyLen;
     const valueType = await reader.u32(typeAt);
     const valueAt = typeAt + 4;
-    const next = visitor.kv
-      ? await visitor.kv(key, valueType, valueAt, readNumber)
-      : 'skip';
-    if (next === 'stop') {
-      return;
+
+    if (key.endsWith(NEXTN_KV_SUFFIX) && valueType !== GGUFType.ARRAY) {
+      const [value, next] = await readNumber(valueType, valueAt);
+      if (Number.isFinite(value) && value > 0) {
+        return {nextnPredictLayers: value, hasNextnTensor: false};
+      }
+      nextnPredictLayers = 0;
+      offset = next;
+    } else {
+      offset = await skipValue(valueType, valueAt, 0);
     }
-    offset = next === 'skip' ? await skipValue(valueType, valueAt, 0) : next;
   }
 
+  // KV said nothing; fall back to tensor names (some converters write the
+  // layers without the KV). Stop at the first match.
   for (let i = 0; i < tensorCount; i++) {
     const [nameLen, afterLen] = await len(offset);
     if (nameLen > MAX_KEY_LENGTH) {
       throw new Error('gguf tensor name length out of range');
     }
     const name = decodeUtf8(await reader.slice(afterLen, nameLen));
+    if (NEXTN_TENSOR.test(name)) {
+      return {nextnPredictLayers, hasNextnTensor: true};
+    }
     let at = afterLen + nameLen;
     const nDims = await reader.u32(at);
     if (nDims > 8) {
       throw new Error('gguf tensor rank out of range');
     }
     at += 4;
-    const dims: number[] = [];
-    for (let d = 0; d < nDims; d++) {
-      dims.push(
-        version === 1 ? await reader.u32(at) : await reader.u64Unbounded(at),
-      );
-      at += version === 1 ? 4 : 8;
-    }
-    const type = await reader.u32(at);
-    at = await reader.skip(at, 4 + 8); // dtype, data offset
-    if (visitor.tensor?.(name, {type, dims})) {
-      return;
-    }
+    at = await reader.skip(at, nDims * (version === 1 ? 4 : 8));
+    at = await reader.skip(at, 4); // dtype
+    at = await reader.skip(at, 8); // data offset
     offset = at;
   }
+
+  return {nextnPredictLayers, hasNextnTensor: false};
 };
 
-export const readGGUFHeaderForMTP = async (
-  url: string,
-  options?: ReadGGUFHeaderOptions,
-): Promise<GGUFHeaderProbeResult> => {
-  const fetchImpl = options?.fetchImpl ?? fetch;
-  const reader = new ChunkedReader(
-    async (from, length) => {
-      const res = await fetchImpl(url, {
-        headers: {Range: `bytes=${from}-${from + length - 1}`},
-      });
-      if (!res.ok) {
-        throw new Error(`gguf range request failed: HTTP ${res.status}`);
-      }
-      return new Uint8Array(await res.arrayBuffer());
-    },
-    options?.chunkSize ?? CHUNK_SIZE,
-    HEADER_BYTE_BUDGET,
-  );
+export interface GGUFTensorDescriptor {
+  type: number;
+  dims: number[];
+}
 
-  let nextnPredictLayers = 0;
-  let hasNextnTensor = false;
-  await walkGGUFHeader(reader, {
-    kv: async (key, valueType, valueAt, readNumber) => {
-      if (!key.endsWith(NEXTN_KV_SUFFIX) || valueType === GGUFType.ARRAY) {
-        return 'skip';
-      }
-      const [value, next] = await readNumber(valueType, valueAt);
-      if (Number.isFinite(value) && value > 0) {
-        nextnPredictLayers = value;
-        return 'stop';
-      }
-      nextnPredictLayers = 0;
-      return next;
-    },
-    // KV said nothing; fall back to tensor names (some converters write the
-    // layers without the KV). Stop at the first match.
-    tensor: name => {
-      hasNextnTensor = NEXTN_TENSOR.test(name);
-      return hasNextnTensor;
-    },
-  });
-  return {nextnPredictLayers, hasNextnTensor};
+export interface GGUFEmbeddingTensors {
+  tokenEmbd?: GGUFTensorDescriptor;
+  hasOutput: boolean;
+}
+
+/** What `loadLlamaModelInfo` reports about a file's layout. */
+export interface GGUFLayout {
+  version: number;
+  alignment: number;
+  dataOffset: number;
+}
+
+const LOCAL_PREFIX_BYTES = 24; // magic, version, tensor count, KV count
+const MAX_LOCAL_DATA_OFFSET = 64 * 1024 * 1024;
+const MAX_LOCAL_TENSORS = 4096;
+const MAX_LOCAL_ALIGNMENT = 4096;
+// gguf.cpp rejects names of GGML_MAX_NAME (64) bytes or more and more than
+// GGML_MAX_DIMS (4) dims.
+const MAX_TENSOR_NAME = 63;
+const MAX_TENSOR_DIMS = 4;
+// name length, name, n_dims, dims, type, data offset
+const MAX_TENSOR_INFO_BYTES =
+  8 + MAX_TENSOR_NAME + 4 + 8 * MAX_TENSOR_DIMS + 12;
+
+const TOKEN_EMBD = Array.from('token_embd.weight', c => c.charCodeAt(0));
+const OUTPUT = Array.from('output.weight', c => c.charCodeAt(0));
+
+const isPowerOfTwo = (value: number): boolean => {
+  let rest = value;
+  while (rest > 1 && rest % 2 === 0) {
+    rest /= 2;
+  }
+  return rest === 1;
+};
+
+const readLocalBytes = async (
+  path: string,
+  length: number,
+  position: number,
+): Promise<Uint8Array> => {
+  const bytes = toByteArray(await RNFS.read(path, length, position, 'base64'));
+  if (bytes.length !== length) {
+    throw new Error('gguf local read returned fewer bytes than requested');
+  }
+  return bytes;
 };
 
 /**
- * `token_embd.weight`'s descriptor and whether `output.weight` exists, read
- * from a local GGUF up to `dataOffset` (the header length
- * `loadLlamaModelInfo` reports). Any structural anomaly throws.
+ * Parses the tensor-info section backwards from its end, the last byte of
+ * `bytes`, which lies within `alignment` bytes of the data. Each candidate
+ * end is walked back `tensorCount` entries; exactly one walk must arrive at a
+ * first tensor with data offset 0.
+ */
+const parseTensorInfoTail = (
+  bytes: Uint8Array,
+  tensorCount: number,
+  alignment: number,
+): GGUFEmbeddingTensors => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u64 = (at: number) =>
+    view.getUint32(at + 4, true) * 2 ** 32 + view.getUint32(at, true);
+  const isName = (at: number, name: number[]) =>
+    name.every((code, i) => bytes[at + i] === code);
+
+  const budget = tensorCount + 2 * alignment;
+  let steps = 0;
+  let parsed: GGUFEmbeddingTensors | undefined;
+
+  for (let end = bytes.length; end > bytes.length - alignment; end--) {
+    const result: GGUFEmbeddingTensors = {hasOutput: false};
+    let at = end;
+    let nextOffset = Infinity;
+    let walked = 0;
+    for (; walked < tensorCount; walked++) {
+      if (++steps > budget) {
+        throw new Error('gguf tensor info: step budget exceeded');
+      }
+      if (at - 12 < 0) {
+        break;
+      }
+      const offset = u64(at - 8);
+      if (offset % alignment !== 0 || offset > nextOffset) {
+        break;
+      }
+      let match: {nDims: number; nameAt: number; nameLength: number} | null =
+        null;
+      let matches = 0;
+      for (let nDims = 0; nDims <= MAX_TENSOR_DIMS && matches < 2; nDims++) {
+        const nDimsAt = at - 16 - 8 * nDims;
+        if (nDimsAt < 0 || view.getUint32(nDimsAt, true) !== nDims) {
+          continue;
+        }
+        for (let nameLength = 1; nameLength <= MAX_TENSOR_NAME; nameLength++) {
+          const nameAt = nDimsAt - nameLength;
+          if (nameAt < 8 || bytes[nameAt] < 0x21 || bytes[nameAt] > 0x7e) {
+            break;
+          }
+          if (
+            view.getUint32(nameAt - 4, true) === 0 &&
+            view.getUint32(nameAt - 8, true) === nameLength
+          ) {
+            match = {nDims, nameAt, nameLength};
+            matches++;
+          }
+        }
+      }
+      if (matches !== 1 || !match) {
+        break;
+      }
+      const {nDims, nameAt, nameLength} = match;
+      if (nameLength === TOKEN_EMBD.length && isName(nameAt, TOKEN_EMBD)) {
+        const dims: number[] = [];
+        for (let d = 0; d < nDims; d++) {
+          dims.push(u64(nameAt + nameLength + 4 + 8 * d));
+        }
+        result.tokenEmbd = {type: view.getUint32(at - 12, true), dims};
+      } else if (nameLength === OUTPUT.length && isName(nameAt, OUTPUT)) {
+        result.hasOutput = true;
+      }
+      nextOffset = offset;
+      at = nameAt - 8;
+    }
+    if (walked === tensorCount && nextOffset === 0) {
+      if (parsed) {
+        throw new Error('gguf tensor info: more than one consistent end');
+      }
+      parsed = result;
+    }
+  }
+  if (!parsed) {
+    throw new Error('gguf tensor info: no consistent end');
+  }
+  return parsed;
+};
+
+/**
+ * `token_embd.weight`'s descriptor and whether `output.weight` exists, from
+ * the tensor-info section of a local GGUF, read back from `dataOffset`. Two
+ * reads: the 24-byte prefix, and at most `tensorCount` maximal entries plus
+ * `alignment` bytes of padding below the data. Any anomaly throws.
  */
 export const readLocalGGUFEmbeddingTensors = async (
   path: string,
-  dataOffset: number,
+  {version, alignment, dataOffset}: GGUFLayout,
 ): Promise<GGUFEmbeddingTensors> => {
+  if (version !== 2 && version !== 3) {
+    throw new Error(`gguf version ${version} out of range`);
+  }
+  if (
+    !Number.isInteger(alignment) ||
+    alignment > MAX_LOCAL_ALIGNMENT ||
+    !isPowerOfTwo(alignment)
+  ) {
+    throw new Error(`gguf alignment ${alignment} out of range`);
+  }
   if (
     !Number.isInteger(dataOffset) ||
-    dataOffset <= 0 ||
-    dataOffset > HEADER_BYTE_BUDGET
+    dataOffset < LOCAL_PREFIX_BYTES ||
+    dataOffset > MAX_LOCAL_DATA_OFFSET
   ) {
     throw new Error(`gguf data offset ${dataOffset} out of range`);
   }
-  const reader = new ChunkedReader(
-    async (from, length) =>
-      Buffer.from(await RNFS.read(path, length, from, 'base64'), 'base64'),
-    CHUNK_SIZE,
-    dataOffset,
-    true,
-  );
 
-  const result: GGUFEmbeddingTensors = {hasOutput: false};
-  await walkGGUFHeader(reader, {
-    tensor: (name, descriptor) => {
-      if (name === 'token_embd.weight') {
-        result.tokenEmbd = descriptor;
-      } else if (name === 'output.weight') {
-        result.hasOutput = true;
-      }
-      return false;
-    },
-  });
-  return result;
+  const prefixBytes = await readLocalBytes(path, LOCAL_PREFIX_BYTES, 0);
+  const prefix = new DataView(
+    prefixBytes.buffer,
+    prefixBytes.byteOffset,
+    prefixBytes.byteLength,
+  );
+  if (
+    prefix.getUint32(0, true) !== GGUF_MAGIC ||
+    prefix.getUint32(4, true) !== version
+  ) {
+    throw new Error('gguf prefix does not match the reported layout');
+  }
+  const tensorCount = prefix.getUint32(8, true);
+  if (
+    prefix.getUint32(12, true) !== 0 ||
+    tensorCount < 1 ||
+    tensorCount > MAX_LOCAL_TENSORS
+  ) {
+    throw new Error('gguf tensor count out of range');
+  }
+
+  const windowLength = Math.min(
+    dataOffset - LOCAL_PREFIX_BYTES,
+    tensorCount * MAX_TENSOR_INFO_BYTES + alignment,
+  );
+  const tail = await readLocalBytes(
+    path,
+    windowLength,
+    dataOffset - windowLength,
+  );
+  return parseTensorInfoTail(tail, tensorCount, alignment);
 };

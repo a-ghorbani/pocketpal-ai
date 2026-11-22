@@ -12,6 +12,8 @@ import {
   GGUFFixture,
   localReadFor,
   rangeFetchFor,
+  tensorInfoEntry,
+  tensorInfoFile,
 } from './ggufFixture';
 
 const URL = 'https://host/file.gguf';
@@ -187,6 +189,7 @@ describe('readGGUFHeaderForMTP', () => {
 });
 
 describe('readLocalGGUFEmbeddingTensors', () => {
+  const PATH = '/models/file.gguf';
   const capturedHeader = (name: string) =>
     new Uint8Array(
       gunzipSync(
@@ -199,17 +202,38 @@ describe('readLocalGGUFEmbeddingTensors', () => {
         ),
       ),
     );
-  const scan = (bytes: Uint8Array, dataOffset = bytes.length) => {
-    (RNFS.read as jest.Mock).mockImplementation(localReadFor(bytes));
-    return readLocalGGUFEmbeddingTensors('/models/file.gguf', dataOffset);
+  const captured = (name: string) => {
+    const bytes = capturedHeader(name);
+    return {
+      bytes,
+      layout: {version: 3, alignment: 32, dataOffset: bytes.length},
+    };
   };
+  const scan = ({
+    bytes,
+    layout,
+  }: {
+    bytes: Uint8Array;
+    layout: {version: number; alignment: number; dataOffset: number};
+  }) => {
+    (RNFS.read as jest.Mock).mockImplementation(localReadFor(bytes));
+    return readLocalGGUFEmbeddingTensors(PATH, layout);
+  };
+  const tied = [
+    tensorInfoEntry({name: 'token_embd.weight', dims: [64, 256], ggmlType: 14}),
+    tensorInfoEntry({
+      name: 'blk.0.attn_q.weight',
+      dims: [64, 64],
+      offset: 13440,
+    }),
+  ];
 
   afterEach(() => {
     (RNFS.read as jest.Mock).mockReset();
   });
 
   it('reads a tied embedding from a captured header', async () => {
-    await expect(scan(capturedHeader('LFM2.5-350M-Q4_K_M'))).resolves.toEqual({
+    await expect(scan(captured('LFM2.5-350M-Q4_K_M'))).resolves.toEqual({
       tokenEmbd: {type: 14, dims: [1024, 65536]},
       hasOutput: false,
     });
@@ -217,61 +241,177 @@ describe('readLocalGGUFEmbeddingTensors', () => {
 
   it('sees output.weight in a captured untied header', async () => {
     await expect(
-      scan(capturedHeader('Phi-3.5-mini-instruct-Q4_K_M')),
+      scan(captured('Phi-3.5-mini-instruct-Q4_K_M')),
     ).resolves.toEqual({
       tokenEmbd: {type: 12, dims: [3072, 32064]},
       hasOutput: true,
     });
   });
 
-  it('reads the header in bounded chunks up to the data offset', async () => {
-    const bytes = capturedHeader('LFM2.5-350M-Q4_K_M');
+  it('reads the prefix and only the tensor-info tail below the data offset', async () => {
+    const file = captured('LFM2.5-350M-Q4_K_M');
+    const tensorCount = new DataView(file.bytes.buffer).getUint32(8, true);
 
-    await scan(bytes);
+    await scan(file);
 
     const calls = (RNFS.read as jest.Mock).mock.calls;
-    expect(calls.every(([, length]) => length <= 2 * 1024 * 1024)).toBe(true);
-    expect(
-      Math.max(...calls.map(([, length, position]) => position + length)),
-    ).toBe(bytes.length);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEqual([PATH, 24, 0, 'base64']);
+    const [, length, position] = calls[1];
+    expect(length).toBeLessThanOrEqual(tensorCount * 119 + 32);
+    expect(position + length).toBe(file.layout.dataOffset);
+  });
+
+  it('reads a tail whose window reaches back to the prefix', async () => {
+    const file = tensorInfoFile({entries: tied});
+
+    await expect(scan(file)).resolves.toEqual({
+      tokenEmbd: {type: 14, dims: [64, 256]},
+      hasOutput: false,
+    });
+    expect((RNFS.read as jest.Mock).mock.calls[1][2]).toBe(24);
   });
 
   it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
-    const bytes = new GGUFFixture()
-      .tensor('token_embd.weight', [2 ** 40, 2 ** 40], 14)
-      .build();
+    const file = tensorInfoFile({
+      entries: [
+        tensorInfoEntry({
+          name: 'token_embd.weight',
+          dims: [2 ** 40, 2 ** 40],
+          ggmlType: 14,
+        }),
+      ],
+    });
 
-    await expect(scan(bytes)).resolves.toEqual({
+    await expect(scan(file)).resolves.toEqual({
       tokenEmbd: {type: 14, dims: [2 ** 40, 2 ** 40]},
       hasOutput: false,
     });
   });
 
-  it('rejects a header cut short of its tensor descriptors', async () => {
-    const bytes = new GGUFFixture()
-      .tensor('token_embd.weight', [2048, 65536], 14)
-      .build();
+  it.each([
+    ['version 1', {version: 1}],
+    ['alignment 48', {alignment: 48}],
+    ['alignment 8192', {alignment: 8192}],
+    ['alignment 0', {alignment: 0}],
+    ['data offset 0', {dataOffset: 0}],
+    ['data offset 23', {dataOffset: 23}],
+    ['data offset 1.5', {dataOffset: 1.5}],
+    ['data offset past 64 MiB', {dataOffset: 64 * 1024 * 1024 + 1}],
+    ['data offset NaN', {dataOffset: NaN}],
+  ])('rejects %s without reading', async (_case, override) => {
+    const file = tensorInfoFile({entries: tied});
 
     await expect(
-      scan(bytes.slice(0, bytes.length - 8), bytes.length),
-    ).rejects.toThrow(/truncated/);
+      scan({...file, layout: {...file.layout, ...override}}),
+    ).rejects.toThrow(/out of range/);
+    expect(RNFS.read).not.toHaveBeenCalled();
   });
 
-  it('rejects a captured header cut inside its tokenizer', async () => {
-    const bytes = capturedHeader('LFM2.5-350M-Q4_K_M');
+  it.each([
+    ['0 tensors', 0],
+    ['4097 tensors', 4097],
+    ['2^32 tensors', 2 ** 32],
+  ])('rejects a prefix with %s', async (_case, tensorCount) => {
+    await expect(
+      scan(tensorInfoFile({entries: tied, tensorCount})),
+    ).rejects.toThrow(/tensor count/);
+    expect(RNFS.read).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a prefix whose version differs from the reported one', async () => {
+    const file = tensorInfoFile({entries: tied, version: 2});
 
     await expect(
-      scan(bytes.slice(0, 1024 * 1024), bytes.length),
-    ).rejects.toThrow(/truncated/);
+      scan({...file, layout: {...file.layout, version: 3}}),
+    ).rejects.toThrow(/prefix/);
   });
 
-  it.each([0, -1, 1.5, 64 * 1024 * 1024 + 1])(
-    'rejects data offset %s without reading',
-    async dataOffset => {
-      await expect(scan(new GGUFFixture().build(), dataOffset)).rejects.toThrow(
-        /out of range/,
-      );
-      expect(RNFS.read).not.toHaveBeenCalled();
-    },
-  );
+  it('rejects a read that returns fewer bytes than requested', async () => {
+    const file = tensorInfoFile({entries: tied});
+
+    await expect(
+      scan({...file, bytes: file.bytes.slice(0, file.bytes.length - 1)}),
+    ).rejects.toThrow(/fewer bytes/);
+  });
+
+  it.each([
+    ['a space in a name', 'blk.0.attn q.weight'],
+    ['a non-ASCII byte in a name', 'blk.0.attn_\xe9.weight'],
+    ['an empty name', ''],
+  ])('rejects %s', async (_case, name) => {
+    const file = tensorInfoFile({
+      entries: [tied[0], tensorInfoEntry({name, offset: 13440})],
+    });
+
+    await expect(scan(file)).rejects.toThrow(/no consistent end/);
+  });
+
+  it('rejects a first tensor whose data offset is not 0', async () => {
+    const file = tensorInfoFile({
+      entries: [
+        tensorInfoEntry({
+          name: 'token_embd.weight',
+          dims: [64, 256],
+          offset: 32,
+        }),
+      ],
+    });
+
+    await expect(scan(file)).rejects.toThrow(/no consistent end/);
+  });
+
+  it('rejects a window too short for the reported tensor count', async () => {
+    await expect(
+      scan(tensorInfoFile({entries: tied, tensorCount: 3})),
+    ).rejects.toThrow(/no consistent end/);
+  });
+
+  it('rejects a tail with two consistent ends', async () => {
+    // A one-tensor section ending at byte 57 and a decoy entry ending at the
+    // data offset, both within one alignment of it.
+    const decoy = tensorInfoEntry({name: 'b'});
+    const file = tensorInfoFile({
+      entries: [tensorInfoEntry({name: 'a'})],
+      alignment: 64,
+      padding: Buffer.concat([new Uint8Array(6), decoy]),
+    });
+
+    expect(file.layout.dataOffset).toBe(96);
+    await expect(scan(file)).rejects.toThrow(/more than one consistent end/);
+  });
+
+  it('rejects a crafted tail that would walk every tensor from each candidate end', async () => {
+    // llama.cpp accepts it: unique names, chained offsets, and padding it
+    // never checks, here full of entries carrying the last real offset.
+    const tensorCount = 4096;
+    const alignment = 4096;
+    const entries = Array.from({length: tensorCount}, (_, i) =>
+      tensorInfoEntry({
+        name: `t${i.toString(36).padStart(4, '0')}`,
+        dims: [],
+        offset: i * alignment,
+      }),
+    );
+    const infoLength = tensorCount * 29;
+    const kvEnd =
+      Math.ceil((24 + infoLength) / alignment) * alignment - infoLength + 1;
+    const fake = tensorInfoEntry({
+      name: 'A',
+      dims: [],
+      offset: (tensorCount - 1) * alignment,
+    });
+    const padding = new Uint8Array(alignment - 1);
+    for (let at = 0; at + fake.length <= padding.length; at += fake.length) {
+      padding.set(fake, at);
+    }
+    const file = tensorInfoFile({
+      entries,
+      alignment,
+      kv: new Uint8Array(kvEnd - 24),
+      padding,
+    });
+
+    await expect(scan(file)).rejects.toThrow(/step budget/);
+  });
 });

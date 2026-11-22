@@ -189,12 +189,16 @@ const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
 
 const readTiedEmbeddingBytes = async (
   filePath: string,
-  dataOffset: number,
+  modelInfo: Record<string, unknown>,
   modelSize: number,
 ): Promise<number | undefined> => {
   try {
     const bytes = tiedEmbeddingBytes(
-      await readLocalGGUFEmbeddingTensors(filePath, dataOffset),
+      await readLocalGGUFEmbeddingTensors(filePath, {
+        version: Number(modelInfo.version),
+        alignment: Number(modelInfo.alignment),
+        dataOffset: Number(modelInfo.data_offset),
+      }),
       modelSize,
     );
     if (bytes === undefined) {
@@ -1974,7 +1978,7 @@ class ModelStore {
       }
       const tied_embd_bytes = await readTiedEmbeddingBytes(
         filePath,
-        Number((modelInfo as Record<string, unknown>).data_offset),
+        modelInfo as Record<string, unknown>,
         model.size,
       );
 
