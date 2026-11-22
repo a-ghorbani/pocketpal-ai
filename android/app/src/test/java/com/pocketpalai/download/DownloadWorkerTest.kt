@@ -41,7 +41,7 @@ class DownloadWorkerTest {
     private val runs = DownloadRuns()
     private var clock = 0L
     private val engine = DownloadEngine(dao, runs, now = { clock }, sleep = { clock += it })
-    private val content = ByteArray(200_000) { (it % 251).toByte() }
+    private val content = ByteArray(200_000) { (it % 251).toByte() }.also { "GGUF".toByteArray().copyInto(it) }
     private val destination by lazy { File(tmp.root, "model.gguf") }
     private val part by lazy { File(destination.path + DownloadEngine.PART_SUFFIX) }
 

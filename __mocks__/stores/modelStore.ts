@@ -73,6 +73,8 @@ class MockModelStore {
   lastUsedModelId: any;
   checkSpaceAndDownload: jest.Mock;
   getDownloadProgress: jest.Mock;
+  updateModelHash: jest.Mock;
+  fetchAndUpdateModelFileDetails: jest.Mock;
   manualReleaseContext: jest.Mock;
   addHFModel: jest.Mock;
   registerOnboardingPalModel: jest.Mock;
@@ -137,6 +139,8 @@ class MockModelStore {
       reprobeRemoteCapsAfterCompletion: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
+      updateModelHash: false,
+      fetchAndUpdateModelFileDetails: false,
       manualReleaseContext: false,
       addHFModel: false,
       registerOnboardingPalModel: false,
@@ -206,6 +210,10 @@ class MockModelStore {
     this.reprobeRemoteCapsAfterCompletion = jest.fn();
     this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
+    this.updateModelHash = jest.fn();
+    this.fetchAndUpdateModelFileDetails = jest
+      .fn()
+      .mockResolvedValue(undefined);
     this.manualReleaseContext = jest.fn();
     this.addHFModel = jest.fn();
     this.registerOnboardingPalModel = jest.fn().mockImplementation(
