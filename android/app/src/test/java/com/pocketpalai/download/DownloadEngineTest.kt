@@ -114,6 +114,10 @@ class DownloadEngineTest {
 
     private fun writePart(bytes: Int) = part.writeBytes(content.copyOfRange(0, bytes))
 
+    private fun blockedPage() = MockResponse()
+        .setHeader("Content-Type", "text/html; charset=utf-8")
+        .setBody(Buffer().write(javaClass.getResourceAsStream("/download/blocked-page.html")!!.readBytes()))
+
     private fun awaitPartBytes() {
         val deadline = System.currentTimeMillis() + 10_000
         while (!(part.exists() && part.length() > 0)) {
@@ -175,6 +179,30 @@ class DownloadEngineTest {
         assertCompleted()
         assertEquals(E2, row().etag)
         assertEquals(content.size.toLong(), row().totalBytes)
+    }
+
+    @Test
+    fun webPageOnAFreshStartIsNeverCommitted() {
+        insert()
+        serve({ blockedPage() })
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertFalse(destination.exists())
+        assertFalse(part.exists())
+    }
+
+    @Test
+    fun webPageAnsweringAResumeIsNeverCommitted() {
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        writePart(100_000)
+        serve({ blockedPage() })
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertFalse(destination.exists())
     }
 
     @Test
