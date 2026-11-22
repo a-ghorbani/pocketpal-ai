@@ -655,6 +655,234 @@ describe('memoryEstimator', () => {
     });
   });
 
+  describe('formula terms', () => {
+    const size = 1e9;
+    const UB = 512;
+    const settings = (
+      n_ctx: number,
+      flash_attn_type: 'on' | 'off',
+      overrides = {},
+    ) => ({
+      ...contextSettings,
+      n_ctx,
+      n_batch: UB,
+      n_ubatch: UB,
+      cache_type_k: CacheType.F16,
+      cache_type_v: CacheType.F16,
+      flash_attn_type,
+      ...overrides,
+    });
+    const need = (
+      info: Record<string, unknown>,
+      s: ReturnType<typeof settings>,
+      modelSize = size,
+    ) =>
+      getModelMemoryRequirement(
+        {
+          ...baseModel,
+          size: modelSize,
+          ggufMetadata: parseGGUFMetadata(info),
+        } as Model,
+        undefined,
+        s,
+      );
+    const dense = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'llama',
+      'llama.block_count': '4',
+      'llama.embedding_length': '1024',
+      'llama.attention.head_count': '8',
+      'llama.attention.head_count_kv': '2',
+      'llama.attention.key_length': '128',
+      'llama.attention.value_length': '128',
+      'llama.feed_forward_length': '4096',
+      'tokenizer.ggml.tokens.length': 151936,
+      ...overrides,
+    });
+
+    it('counts n_embd x (l_cache - 1) f32 of short-convolution state per recurrent layer', () => {
+      const lfm2 = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'lfm2',
+        'lfm2.block_count': '4',
+        'lfm2.embedding_length': '1024',
+        'lfm2.attention.head_count': '8',
+        'lfm2.attention.head_count_kv': '[0, 0, 0, 2]',
+        'lfm2.feed_forward_length': '4096',
+        'tokenizer.ggml.tokens.length': 65536,
+        ...overrides,
+      });
+      const at2k = settings(2048, 'on');
+
+      expect(need(lfm2({'lfm2.shortconv.l_cache': '3'}), at2k)).toBe(
+        need(lfm2(), at2k) + 3 * 1024 * (3 - 1) * 4,
+      );
+    });
+
+    it('counts the gated-delta state, d_state x d_inner included, per recurrent layer', () => {
+      const qwen35 = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'qwen35',
+        'qwen35.block_count': '8',
+        'qwen35.embedding_length': '1024',
+        'qwen35.attention.head_count': '8',
+        'qwen35.attention.head_count_kv': '2',
+        'qwen35.attention.key_length': '256',
+        'qwen35.attention.value_length': '256',
+        'tokenizer.ggml.tokens.length': 248320,
+        ...overrides,
+      });
+      const ssm = {
+        'qwen35.ssm.conv_kernel': '4',
+        'qwen35.ssm.state_size': '128',
+        'qwen35.ssm.group_count': '16',
+        'qwen35.ssm.inner_size': '2048',
+      };
+      const perLayer = (4 - 1) * (2048 + 2 * 16 * 128) + 128 * 2048;
+      const at2k = settings(2048, 'on');
+
+      // Interval 4 over 8 layers leaves 6 recurrent layers.
+      expect(need(qwen35(ssm), at2k)).toBe(
+        need(qwen35(), at2k) + 6 * perLayer * 4,
+      );
+    });
+
+    it('marks the layer before each interval boundary as full attention', () => {
+      const qwen35 = (overrides: Record<string, unknown>) => ({
+        'general.architecture': 'qwen35',
+        'qwen35.block_count': '8',
+        'qwen35.embedding_length': '1024',
+        'qwen35.attention.head_count': '8',
+        'qwen35.attention.head_count_kv': '[2, 2, 2, 4, 2, 2, 2, 4]',
+        'qwen35.attention.key_length': '256',
+        'qwen35.attention.value_length': '256',
+        'tokenizer.ggml.tokens.length': 248320,
+        ...overrides,
+      });
+      const at16k = settings(16384, 'on');
+
+      expect(need(qwen35({}), at16k)).toBe(
+        need(
+          qwen35({
+            'qwen35.attention.recurrent_layers': '[1, 1, 1, 0, 1, 1, 1, 0]',
+          }),
+          at16k,
+        ),
+      );
+    });
+
+    it('counts the feed-forward graph term as 2 x n_ff x ubatch f32', () => {
+      const at2k = settings(2048, 'on');
+
+      expect(need(dense({'llama.feed_forward_length': '5120'}), at2k)).toBe(
+        need(dense(), at2k) + 2 * 1024 * UB * 4,
+      );
+    });
+
+    it('counts the mask at 4 B per cell with the attention matrix and 2 B without', () => {
+      // Logits dominate the attention matrix here, so only the mask differs.
+      expect(
+        need(dense(), settings(2048, 'off')) -
+          need(dense(), settings(2048, 'on')),
+      ).toBe(2048 * UB * (4 - 2));
+    });
+
+    it('counts both global and sliding-window cells in the mask', () => {
+      const allSwa = {
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '256',
+        'gemma3.attention.value_length': '256',
+        'gemma3.attention.sliding_window': '1024',
+        'gemma3.attention.sliding_window_pattern': '0',
+        'tokenizer.ggml.tokens.length': 262144,
+      };
+      const globalCells = 16384;
+      const swaCells = 1024 + 512;
+
+      expect(
+        need(allSwa, settings(16384, 'off')) -
+          need(allSwa, settings(16384, 'on')),
+      ).toBe((globalCells + swaCells) * UB * (4 - 2));
+    });
+
+    it('treats a sliding-window period of 0 as every layer sliding', () => {
+      const gemma3 = (pattern: string) => ({
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '256',
+        'gemma3.attention.value_length': '256',
+        'gemma3.attention.sliding_window': '1024',
+        'gemma3.attention.sliding_window_pattern': pattern,
+        'tokenizer.ggml.tokens.length': 262144,
+      });
+      const at16k = settings(16384, 'on');
+
+      expect(need(gemma3('0'), at16k)).toBe(
+        need(gemma3('[1, 1, 1, 1, 1, 1]'), at16k),
+      );
+    });
+
+    it('sizes sliding-window layers with the sliding-window K and V lengths', () => {
+      const gemma = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '512',
+        'gemma3.attention.value_length': '512',
+        'gemma3.attention.sliding_window': '512',
+        'tokenizer.ggml.tokens.length': 262144,
+        ...overrides,
+      });
+      const at16k = settings(16384, 'on');
+      // Period 6: layers 0-4 slide over min(n_ctx, pad256(512 + 512)) cells.
+      const swaLayers = 5;
+      const swaCells = 1024;
+
+      expect(
+        need(gemma(), at16k) -
+          need(
+            gemma({
+              'gemma3.attention.key_length_swa': '256',
+              'gemma3.attention.value_length_swa': '256',
+            }),
+            at16k,
+          ),
+      ).toBe(swaLayers * swaCells * ((512 - 256) * 2 + (512 - 256) * 2));
+    });
+
+    it('leaves the nextn prediction layers out of the KV cache', () => {
+      const at16k = settings(16384, 'on');
+
+      expect(
+        need(
+          dense({
+            'llama.block_count': '5',
+            'llama.nextn_predict_layers': '1',
+          }),
+          at16k,
+        ),
+      ).toBe(need(dense(), at16k));
+    });
+
+    it('takes the size path when corrupt settings would put the need below the file size', () => {
+      const modelSize = 1e6;
+
+      expect(
+        need(
+          dense({'tokenizer.ggml.tokens.length': 1000}),
+          settings(2048, 'off', {n_ubatch: -512}),
+          modelSize,
+        ),
+      ).toBe(modelSize * 1.2);
+    });
+  });
+
   describe('paired draft', () => {
     const fixtureModel = (
       name: 'Qwen_Qwen3-4B-Q4_K_M' | 'Qwen_Qwen3-1.7B-Q4_K_M',
