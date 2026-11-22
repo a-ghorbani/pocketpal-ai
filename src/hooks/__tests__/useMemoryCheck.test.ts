@@ -8,8 +8,16 @@ import {
   localModel,
 } from '../../../jest/fixtures/models';
 import {modelStore} from '../../store';
-import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
-import {Model} from '../../utils/types';
+import {
+  getModelMemoryRequirement,
+  parseGGUFMetadata,
+} from '../../utils/memoryEstimator';
+import {CacheType, Model} from '../../utils/types';
+import {
+  GGUFMemoryFixture,
+  ggufFileSize,
+  ggufMetadata,
+} from '../../../jest/fixtures/ggufMemory';
 
 // Unmock the hook for actual testing
 jest.unmock('../useMemoryCheck');
@@ -405,10 +413,10 @@ describe('useMemoryCheck', () => {
       n_embd_head_k: 64,
       n_embd_head_v: 64,
     };
-    const downloaded = (ggufMetadata?: Model['ggufMetadata']): Model => ({
+    const downloaded = (metadata?: Model['ggufMetadata']): Model => ({
       ...basicModel,
       isDownloaded: true,
-      ggufMetadata,
+      ggufMetadata: metadata,
     });
 
     it.each([
@@ -437,6 +445,55 @@ describe('useMemoryCheck', () => {
       await hasEnoughMemory({...downloaded(v1Metadata), isDownloaded: false});
 
       expect(modelStore.fetchAndPersistGGUFMetadata).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('models that fit at 2k', () => {
+    const originalParams = modelStore.contextInitParams;
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams = originalParams;
+      });
+    });
+
+    // Each ceiling is the previous estimate for the model at 2k on Android:
+    // (weights + whole-model KV + (vocab + embd) x 512 x 4) x 1.1.
+    it.each<[GGUFMemoryFixture, number]>([
+      ['Qwen_Qwen3-1.7B-Q4_K_M', 2015947824],
+      ['LFM2.5-1.2B-Instruct-Q4_K_M', 1251516921.6],
+    ])('%s still fits under its previous estimate', async (name, ceiling) => {
+      const model: Model = {
+        ...basicModel,
+        size: ggufFileSize(name),
+        ggufMetadata: parseGGUFMetadata(ggufMetadata(name)),
+      };
+      runInAction(() => {
+        modelStore.contextInitParams = {
+          ...originalParams,
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 512,
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          flash_attn_type: 'off',
+        };
+        modelStore.availableMemoryCeiling = ceiling;
+        modelStore.largestSuccessfulLoad = undefined;
+      });
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8 * 1e9);
+
+      const {result, waitForNextUpdate} = renderHook(() =>
+        useMemoryCheck(model),
+      );
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+
+      expect(result.current.fitStatus).toBe('fits');
+      expect(await hasEnoughMemory(model)).toBe(true);
     });
   });
 });
