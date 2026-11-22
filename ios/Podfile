@@ -182,6 +182,9 @@ target 'PocketPal' do
   # Mustache template rendering for iOS Shortcuts
   pod 'GRMustache.swift'
 
+  # Remove once download.onnxruntime.ai serves this archive again with the same sha256.
+  pod 'onnxruntime-c', :podspec => 'onnxruntime-c.podspec.json'
+
   # Force llama-rn and whisper-rn to build as static libraries. Both vendor a
   # ggml fork whose headers share filenames (ggml.h, ggml-cpu.h, ...); under
   # use_frameworks! the framework header-copy phases otherwise collide

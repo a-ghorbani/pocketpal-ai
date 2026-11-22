@@ -2673,6 +2673,7 @@ DEPENDENCIES:
   - llama-rn (from `../node_modules/llama.rn`)
   - NitroIap (from `../node_modules/react-native-iap`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
+  - onnxruntime-c (from `onnxruntime-c.podspec.json`)
   - onnxruntime-react-native (from `../node_modules/onnxruntime-react-native`)
   - RCT-Folly (from `build/rndeps-facades/RCT-Folly`)
   - RCTDeprecation (from `build/rncore-facades/RCTDeprecation`)
@@ -2806,7 +2807,6 @@ SPEC REPOS:
     - GRMustache.swift
     - GTMAppAuth
     - GTMSessionFetcher
-    - onnxruntime-c
     - openiap
     - PromisesObjC
 
@@ -2834,6 +2834,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-iap"
   NitroModules:
     :path: "../node_modules/react-native-nitro-modules"
+  onnxruntime-c:
+    :podspec: onnxruntime-c.podspec.json
   onnxruntime-react-native:
     :path: "../node_modules/onnxruntime-react-native"
   RCT-Folly:
@@ -3092,7 +3094,7 @@ SPEC CHECKSUMS:
   llama-rn: 70b50b239d10c4f769fd6f94ec1d36b52e78ff7d
   NitroIap: 9298750287e22c634e0cd7c62a24d88358772f53
   NitroModules: d7b6cfed1591a4f067ccfd834c031945763bebc9
-  onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
+  onnxruntime-c: 8eef38823e60ecfb1c0102f001a621a330fcb528
   onnxruntime-react-native: 30fc2e0ea033c986501df7ccc7b06f849ef29d57
   openiap: 253070b2afe71078a2cae63a2b8e282bdd44a059
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
@@ -3212,6 +3214,6 @@ SPEC CHECKSUMS:
   whisper-rn: 19c8e9f7e968c2f9dfddf77ff364f0340925d76b
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 6072d4b8b7daf77e02888e228d992286b9e89072
+PODFILE CHECKSUM: c3e9ae92f5adfbe33e4863498ceb5ea3bda835ed
 
 COCOAPODS: 1.15.2
