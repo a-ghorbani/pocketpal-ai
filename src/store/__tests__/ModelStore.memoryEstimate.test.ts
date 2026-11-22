@@ -279,7 +279,7 @@ describe('tensor scan through the metadata read', () => {
     ),
   );
   const name: GGUFMemoryFixture = 'LFM2.5-350M-Q4_K_M';
-  const read = async () => {
+  const read = async (layout: Record<string, number> = {}) => {
     const model = createModel({
       id: name,
       filename: `${name}.gguf`,
@@ -287,7 +287,10 @@ describe('tensor scan through the metadata read', () => {
       isDownloaded: true,
       ggufMetadata: undefined,
     }) as Model;
-    (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce(ggufMetadata(name));
+    (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce({
+      ...ggufMetadata(name),
+      ...layout,
+    });
     await modelStore.fetchAndPersistGGUFMetadata(model);
     return model;
   };
@@ -378,6 +381,33 @@ describe('tensor scan through the metadata read', () => {
     );
     warn.mockRestore();
   });
+
+  it.each([
+    ['version 1', {version: 1}],
+    ['alignment 48', {alignment: 48}],
+    ['alignment 8192', {alignment: 8192}],
+    ['data offset past 64 MiB', {data_offset: 64 * 1024 * 1024 + 32}],
+    [
+      'a data offset inside the tensor-info section',
+      {data_offset: 2386656 - 32},
+    ],
+  ])(
+    'keeps the metadata, without the field, for a reported %s',
+    async (_case, layout) => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (RNFS.read as jest.Mock).mockImplementation(localReadFor(header));
+
+      const model = await read(layout);
+
+      expect(model.ggufMetadata).toMatchObject({metadataVersion: 2});
+      expect(model.ggufMetadata?.tied_embd_bytes).toBeUndefined();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('tensor scan failed'),
+        expect.any(Error),
+      );
+      warn.mockRestore();
+    },
+  );
 });
 
 describe('metadata stored by an earlier version', () => {
