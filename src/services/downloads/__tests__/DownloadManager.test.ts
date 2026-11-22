@@ -6,6 +6,8 @@ import {basicModel} from '../../../../jest/fixtures/models';
 
 import {DownloadManager, DownloadCancelledError} from '../DownloadManager';
 import {ensureNotificationPermission} from '../../../utils/androidPermission';
+import {NetworkError} from '../../../utils/errors';
+import {l10n} from '../../../locales';
 
 jest.mock('../../../utils/androidPermission', () => ({
   ensureNotificationPermission: jest.fn().mockResolvedValue(undefined),
@@ -142,6 +144,44 @@ describe('DownloadManager', () => {
 
     expect(onError).toHaveBeenCalledWith('model-1', expect.any(Error), 40);
     expect(downloadManager.isDownloading('model-1')).toBe(false);
+  });
+
+  describe('Android failure that is not the model', () => {
+    const startAndCaptureFailure = async () => {
+      NativeModules.DownloadModule.startDownload.mockResolvedValue({
+        downloadId: 'download123',
+      });
+      const onError = jest.fn();
+      downloadManager.setCallbacks({onError});
+      await downloadManager.startDownload(basicModel, '/path/to/model.gguf');
+      const [, emitFailure] = mockEventEmitter.addListener.mock.calls.find(
+        ([name]: [string]) => name === 'onDownloadFailed',
+      );
+      return {onError, emitFailure};
+    };
+
+    it.each([
+      'Downloaded data is not the model',
+      'Downloaded file size does not match the expected size',
+    ])('reports "%s" as the localized not-the-model message', async error => {
+      const {onError, emitFailure} = await startAndCaptureFailure();
+
+      emitFailure({downloadId: 'download123', error, progress: 0});
+
+      const reported = onError.mock.calls[0][1];
+      expect(reported).toBeInstanceOf(NetworkError);
+      expect(reported.message).toBe(l10n.en.errors.downloadNotTheModel);
+    });
+
+    it('passes any other engine error through unchanged', async () => {
+      const {onError, emitFailure} = await startAndCaptureFailure();
+
+      emitFailure({downloadId: 'download123', error: 'Client error: 404'});
+
+      const reported = onError.mock.calls[0][1];
+      expect(reported).not.toBeInstanceOf(NetworkError);
+      expect(reported.message).toBe('Client error: 404');
+    });
   });
 
   it('starts a download on iOS', async () => {

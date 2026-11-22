@@ -12,6 +12,7 @@ import {
 import {Model} from '../../utils/types';
 import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
 import {ensureNotificationPermission} from '../../utils/androidPermission';
+import {NetworkError} from '../../utils/errors';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
 import type {
@@ -46,6 +47,16 @@ const isHuggingFaceUrl = (url: string | undefined): boolean => {
     return false;
   }
 };
+
+const ENGINE_NOT_MODEL_ERRORS = [
+  'Downloaded data is not the model',
+  'Downloaded file size does not match the expected size',
+];
+
+const androidDownloadError = (engineError: string): Error =>
+  ENGINE_NOT_MODEL_ERRORS.includes(engineError)
+    ? new NetworkError(uiStore.l10n.errors.downloadNotTheModel)
+    : new Error(engineError);
 
 export class DownloadManager {
   private downloadJobs: DownloadMap;
@@ -188,16 +199,13 @@ export class DownloadManager {
         );
 
         if (job) {
+          const error = androidDownloadError(event.error);
           runInAction(() => {
-            job.state.error = new Error(event.error);
+            job.state.error = error;
             job.state.isDownloading = false;
           });
           // Ensure callback is called before removing the job
-          this.callbacks.onError?.(
-            job.model.id,
-            new Error(event.error),
-            event.progress ?? 0,
-          );
+          this.callbacks.onError?.(job.model.id, error, event.progress ?? 0);
           runInAction(() => {
             this.downloadJobs.delete(job.model.id);
           });

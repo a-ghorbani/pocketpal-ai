@@ -213,6 +213,10 @@ class DownloadEngine(
             Log.d(TAG, "Response $code for ${row.id} at offset $offset")
             return when {
                 code == 200 -> {
+                    if (isHtml(response)) {
+                        Log.w(TAG, "Rejected 200 for ${row.id}: ${response.body?.contentType()}")
+                        return Attempt.Finished(End.Failed(NOT_MODEL_ERROR))
+                    }
                     etag = strongEtag(response)
                     totalBytes = response.body?.contentLength()?.takeIf { it > 0 } ?: 0
                     if (dao.writeValidators(row.id, etag, totalBytes, 0) == 0) return Attempt.Finished(End.Stopped)
@@ -315,6 +319,9 @@ class DownloadEngine(
         }
     }
 
+    private fun isHtml(response: Response): Boolean =
+        response.body?.contentType()?.let { it.type == "text" && it.subtype == "html" } == true
+
     private fun strongEtag(response: Response): String? =
         response.header("ETag")?.takeUnless { it.startsWith("W/") }
 
@@ -351,6 +358,7 @@ class DownloadEngine(
         const val STALLED_ERROR = "Download stalled: no data received"
         const val REMOTE_CHANGED_ERROR = "Remote file changed during download"
         const val SIZE_MISMATCH_ERROR = "Downloaded file size does not match the expected size"
+        const val NOT_MODEL_ERROR = "Downloaded data is not the model"
         const val MAX_STALLED_RUNS = 5
         const val GIVE_UP_AFTER_MS = 120_000L
         private const val INITIAL_BACKOFF_MS = 2_000L

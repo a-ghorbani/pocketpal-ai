@@ -189,6 +189,7 @@ class DownloadEngineTest {
         assertEquals(Outcome.DONE, run())
 
         assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
         assertFalse(destination.exists())
         assertFalse(part.exists())
     }
@@ -202,7 +203,12 @@ class DownloadEngineTest {
         assertEquals(Outcome.DONE, run())
 
         assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
         assertFalse(destination.exists())
+        assertArrayEquals(content.copyOfRange(0, 100_000), part.readBytes())
+        assertEquals(content.size.toLong(), row().totalBytes)
+        assertEquals(E1, row().etag)
+        assertEquals(100_000L, row().downloadedBytes)
     }
 
     @Test
