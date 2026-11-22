@@ -72,9 +72,10 @@ export interface Spec extends TurboModule {
     chunkKb: number,
     swapLimitKb: number,
     availFloorKb: number,
+    stallX10: number,
   ): Promise<{
     reachedKb: number;
-    stopReason: number; // 0 target, 1 swap, 2 MemAvailable / iOS headroom, 3 map failed
+    stopReason: number; // 0 target, 1 swap, 2 MemAvailable / iOS headroom, 3 map failed, 4 stall
     swapGrowthKb: number;
     memAvailKb: number;
     minAvailKb: number;

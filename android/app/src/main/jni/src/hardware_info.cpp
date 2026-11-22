@@ -63,6 +63,7 @@ Java_com_pocketpal_HardwareInfoModule_nativePurgeAll(JNIEnv* /* env */, jobject 
 #include <cstring>
 #include <cstdint>
 #include <vector>
+#include <algorithm>
 
 static long probeReadKb(const char* path, const char* key) {
     FILE* f = fopen(path, "r");
@@ -83,7 +84,8 @@ static long probeReadKb(const char* path, const char* key) {
 extern "C" JNIEXPORT jlongArray JNICALL
 Java_com_pocketpal_HardwareInfoModule_nativeProbeMemory(JNIEnv* env, jobject /* this */,
                                                         jlong targetKb, jlong chunkKb,
-                                                        jlong swapLimitKb, jlong availFloorKb) {
+                                                        jlong swapLimitKb, jlong availFloorKb,
+                                                        jlong stallX10) {
     auto t0 = std::chrono::steady_clock::now();
     const size_t chunk = (size_t)chunkKb * 1024;
     std::vector<void*> chunks;
@@ -92,7 +94,12 @@ Java_com_pocketpal_HardwareInfoModule_nativeProbeMemory(JNIEnv* env, jobject /* 
     long availKb = probeReadKb("/proc/meminfo", "MemAvailable");
     long minAvail = availKb;
     uint64_t x = 0x9E3779B97F4A7C15ULL;
+    // Stall stop: once the kernel has to reclaim to give us pages, writing a
+    // chunk takes several times longer than it did at the start of this probe.
+    std::vector<long> chunkUs;
+    long baseUs = 0, slowRun = 0, n = 0;
     while (reachedKb < targetKb) {
+        auto c0 = std::chrono::steady_clock::now();
         void* p = mmap(nullptr, chunk, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (p == MAP_FAILED) { stopReason = 3; break; }
         chunks.push_back(p);
@@ -104,8 +111,23 @@ Java_com_pocketpal_HardwareInfoModule_nativeProbeMemory(JNIEnv* env, jobject /* 
             w[i] = x;
         }
         reachedKb += chunkKb;
+        long us = (long)std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - c0).count();
+        chunkUs.push_back(us);
+        n++;
+        if (n == 5) {
+            std::vector<long> first(chunkUs.begin() + 1, chunkUs.begin() + 5);
+            std::sort(first.begin(), first.end());
+            baseUs = (first[1] + first[2]) / 2;
+        }
         long swap = probeReadKb("/proc/self/status", "VmSwap");
         availKb = probeReadKb("/proc/meminfo", "MemAvailable");
+        HW_INFO_LOGI("probe chunk n=%ld us=%ld base_us=%ld avail_kb=%ld swap_kb=%ld", n, us, baseUs, availKb, swap - swapBase);
+        if (stallX10 > 0 && baseUs > 0 && us * 10 > baseUs * stallX10) {
+            if (++slowRun >= 2) { stopReason = 4; break; }
+        } else {
+            slowRun = 0;
+        }
         if (availKb >= 0 && availKb < minAvail) minAvail = availKb;
         swapGrowth = swap - swapBase;
         if (swapLimitKb > 0 && swapGrowth > swapLimitKb) { stopReason = 1; break; }
@@ -114,8 +136,8 @@ Java_com_pocketpal_HardwareInfoModule_nativeProbeMemory(JNIEnv* env, jobject /* 
     for (void* p : chunks) munmap(p, chunk);
     long ms = (long)std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - t0).count();
-    HW_INFO_LOGI("probe reached_kb=%ld stop=%ld swap_growth_kb=%ld mem_avail_kb=%ld min_avail_kb=%ld ms=%ld",
-                 reachedKb, stopReason, swapGrowth, availKb, minAvail, ms);
+    HW_INFO_LOGI("probe reached_kb=%ld stop=%ld swap_growth_kb=%ld mem_avail_kb=%ld min_avail_kb=%ld ms=%ld base_us=%ld",
+                 reachedKb, stopReason, swapGrowth, availKb, minAvail, ms, baseUs);
     jlong out[6] = {reachedKb, stopReason, swapGrowth, availKb, minAvail, ms};
     jlongArray arr = env->NewLongArray(6);
     env->SetLongArrayRegion(arr, 0, 6, out);

@@ -16,6 +16,7 @@ export interface MemTripConfig {
   probeChunkKb?: number;
   probeSwapKb?: number; // probe stops when own swap grows past this
   probeAvailFloorKb?: number; // probe stops when MemAvailable (Android) / iOS headroom drops below this
+  probeStallX10?: number; // probe stops after 2 chunks slower than this x the probe's own early chunks (x10)
   probeOnly?: boolean; // measure only: always stop after the probe, never load
 }
 
@@ -104,6 +105,7 @@ export async function probeBeforeLoad(needBytes: number): Promise<void> {
     config.probeChunkKb ?? 65536,
     config.probeSwapKb ?? 0,
     config.probeAvailFloorKb ?? 0,
+    config.probeStallX10 ?? 0,
   );
   memMark(
     `probe:end target_kb=${target} reached_kb=${r.reachedKb} stop=${r.stopReason} swap_growth_kb=${r.swapGrowthKb} min_avail_kb=${r.minAvailKb} ms=${r.ms}`,
