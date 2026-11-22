@@ -534,4 +534,121 @@ describe('memoryEstimator', () => {
       expect(estimate(storedMetadata(fields))).toBe(sizePath);
     });
   });
+
+  describe('layer layout', () => {
+    const size = 1e9;
+    const at16k = {
+      ...contextSettings,
+      n_ctx: 16384,
+      flash_attn_type: 'on',
+    } as const;
+    const need = (info: Record<string, unknown>) =>
+      getModelMemoryRequirement(
+        {...baseModel, size, ggufMetadata: parseGGUFMetadata(info)} as Model,
+        undefined,
+        at16k,
+      );
+    const qwen35 = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'qwen35',
+      'qwen35.block_count': '8',
+      'qwen35.embedding_length': '1024',
+      'qwen35.attention.head_count': '8',
+      'qwen35.attention.head_count_kv': '2',
+      'qwen35.attention.key_length': '256',
+      'qwen35.attention.value_length': '256',
+      'tokenizer.ggml.tokens.length': 248320,
+      ...overrides,
+    });
+    const swaModel = (architecture: string, overrides = {}) => ({
+      'general.architecture': architecture,
+      [`${architecture}.block_count`]: '12',
+      [`${architecture}.embedding_length`]: '1024',
+      [`${architecture}.attention.head_count`]: '8',
+      [`${architecture}.attention.head_count_kv`]: '4',
+      [`${architecture}.attention.key_length`]: '256',
+      [`${architecture}.attention.value_length`]: '256',
+      'tokenizer.ggml.tokens.length': 262144,
+      ...overrides,
+    });
+
+    it('defaults Qwen3.5 to one full-attention layer in four', () => {
+      expect(need(qwen35())).toBe(
+        need(qwen35({'qwen35.full_attention_interval': '4'})),
+      );
+      expect(need(qwen35())).toBeLessThan(
+        need(qwen35({'qwen35.full_attention_interval': '2'})),
+      );
+    });
+
+    it('lets attention.recurrent_layers win over the interval', () => {
+      const interval = {'qwen35.full_attention_interval': '4'};
+
+      expect(
+        need(
+          qwen35({
+            ...interval,
+            'qwen35.attention.recurrent_layers': '[1, 1, 1, 1, 1, 1, 1, 0]',
+          }),
+        ),
+      ).toBeLessThan(need(qwen35(interval)));
+    });
+
+    it('falls back to the interval when attention.recurrent_layers is malformed', () => {
+      const interval = {'qwen35.full_attention_interval': '4'};
+
+      expect(
+        need(
+          qwen35({...interval, 'qwen35.attention.recurrent_layers': '[1, 0]'}),
+        ),
+      ).toBe(need(qwen35(interval)));
+    });
+
+    it('expands a scalar attention.recurrent_layers to every layer', () => {
+      expect(
+        parseGGUFMetadata(qwen35({'qwen35.attention.recurrent_layers': '1'}))
+          ?.recurrent_layers,
+      ).toEqual(new Array(8).fill(1));
+    });
+
+    it('takes the default sliding-window period of a known architecture', () => {
+      const window = {'gemma3.attention.sliding_window': '1024'};
+
+      expect(need(swaModel('gemma3', window))).toBe(
+        need(
+          swaModel('gemma3', {
+            ...window,
+            'gemma3.attention.sliding_window_pattern': '6',
+          }),
+        ),
+      );
+      expect(need(swaModel('gemma3', window))).toBeLessThan(
+        need(swaModel('gemma3')),
+      );
+    });
+
+    it('falls back to the default period when the pattern array is malformed', () => {
+      const window = {'gemma3.attention.sliding_window': '1024'};
+
+      expect(
+        need(
+          swaModel('gemma3', {
+            ...window,
+            'gemma3.attention.sliding_window_pattern': '[true, false]',
+          }),
+        ),
+      ).toBe(need(swaModel('gemma3', window)));
+    });
+
+    it('counts every layer as global for an architecture with a window but no pattern', () => {
+      expect(
+        need(swaModel('phi3', {'phi3.attention.sliding_window': '1024'})),
+      ).toBe(need(swaModel('phi3')));
+    });
+
+    it('gives shared-KV layers no cache of their own', () => {
+      expect(
+        need(swaModel('llama', {'llama.attention.shared_kv_layers': '4'})),
+      ).toBeLessThan(need(swaModel('llama')));
+    });
+  });
 });

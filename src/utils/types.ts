@@ -568,8 +568,18 @@ export interface GGUFMetadata {
   n_vocab: number; // 0 when the GGUF names no vocabulary size
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
+  n_embd_head_k_swa?: number;
+  n_embd_head_v_swa?: number;
   sliding_window?: number; // For SWA models
+  sliding_window_pattern?: number | number[]; // period, or per layer 1 = SWA
+  recurrent_layers?: number[]; // per layer 1 = recurrent
+  full_attention_interval?: number;
+  shared_kv_layers?: number; // trailing layers that reuse earlier layers' KV
   shortconv_l_cache?: number;
+  ssm_conv_kernel?: number;
+  ssm_state_size?: number;
+  ssm_group_count?: number;
+  ssm_inner_size?: number;
   n_ff?: number; // max over layers when per-layer
   context_length?: number; // Native context length from GGUF
   nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers

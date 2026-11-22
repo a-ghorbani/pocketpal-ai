@@ -20,6 +20,18 @@ const PRE_PROBE_FIT_MARGIN = 1.0;
 const PROJECTOR_AND_DRAFT_OVERHEAD = 1.1;
 const RUNTIME_OVERHEAD_WITHOUT_METADATA = 1.2;
 
+// Layer layouts llama.cpp hard-codes per architecture when the GGUF omits them.
+const DEFAULT_SWA_PERIOD: Record<string, number> = {
+  gemma2: 2,
+  gemma3: 6,
+  gemma3n: 5,
+};
+const DEFAULT_FULL_ATTENTION_INTERVAL: Record<string, number> = {
+  qwen35: 4,
+  qwen35moe: 4,
+  qwen3next: 4,
+};
+
 type GGUFInfo = Record<string, unknown>;
 
 function toNumber(value: unknown): number | undefined {
@@ -40,6 +52,11 @@ const nonNegative = (value: number | undefined) =>
 
 const positiveInteger = (value: number | undefined) =>
   value !== undefined && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
+
+const nonNegativeInteger = (value: number | undefined) =>
+  value !== undefined && Number.isInteger(value) && value >= 0
     ? value
     : undefined;
 
@@ -122,6 +139,9 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
   const feedForward = toPerLayer(raw('feed_forward_length'), n_layers);
   const headDim = Math.floor(n_embd / (heads[0] || n_head));
 
+  const swaPattern = raw('attention.sliding_window_pattern');
+  const sharedKvLayers = positiveInteger(num('attention.shared_kv_layers'));
+
   return {
     metadataVersion: GGUF_METADATA_VERSION,
     architecture,
@@ -136,8 +156,23 @@ export function parseGGUFMetadata(info: GGUFInfo): GGUFMetadata | undefined {
       0,
     n_embd_head_k: positive(num('attention.key_length')) ?? headDim,
     n_embd_head_v: positive(num('attention.value_length')) ?? headDim,
+    n_embd_head_k_swa: positive(num('attention.key_length_swa')),
+    n_embd_head_v_swa: positive(num('attention.value_length_swa')),
     sliding_window: nonNegative(num('attention.sliding_window')),
+    sliding_window_pattern: isArrayText(swaPattern)
+      ? toPerLayer(swaPattern, n_layers)
+      : nonNegativeInteger(toNumber(swaPattern)),
+    recurrent_layers: toPerLayer(raw('attention.recurrent_layers'), n_layers),
+    full_attention_interval: positiveInteger(num('full_attention_interval')),
+    shared_kv_layers:
+      sharedKvLayers !== undefined && sharedKvLayers < n_layers
+        ? sharedKvLayers
+        : undefined,
     shortconv_l_cache: positiveInteger(num('shortconv.l_cache')),
+    ssm_conv_kernel: positiveInteger(num('ssm.conv_kernel')),
+    ssm_state_size: positiveInteger(num('ssm.state_size')),
+    ssm_group_count: positiveInteger(num('ssm.group_count')),
+    ssm_inner_size: positiveInteger(num('ssm.inner_size')),
     n_ff: feedForward ? positive(Math.max(...feedForward)) : undefined,
     context_length: nonNegative(num('context_length')),
     nextn_predict_layers: nonNegative(num('nextn_predict_layers')),
@@ -191,11 +226,57 @@ export function getKVCacheTypeBytes(cacheType: string): number {
   return typeMap[cacheType.toLowerCase()] || 2.0; // Default to f16
 }
 
-type LayerKind = 'attention' | 'recurrent';
+type LayerKind = 'global' | 'swa' | 'recurrent' | 'none';
 
 interface LayerPlan {
   kinds: LayerKind[];
   headsKv: number[];
+}
+
+const perLayerOrUndefined = (values: unknown, layers: number) =>
+  isValidPerLayer(values, layers) ? (values as number[]) : undefined;
+
+function recurrentLayerTest(
+  metadata: GGUFMetadata,
+  headsKv: number[],
+): (il: number) => boolean {
+  const recurrent = perLayerOrUndefined(
+    metadata.recurrent_layers,
+    metadata.n_layers,
+  );
+  if (recurrent) {
+    return il => recurrent[il] > 0;
+  }
+  const interval =
+    positiveInteger(metadata.full_attention_interval) ??
+    DEFAULT_FULL_ATTENTION_INTERVAL[metadata.architecture];
+  if (interval) {
+    return il => (il + 1) % interval !== 0;
+  }
+  return il => headsKv[il] === 0;
+}
+
+function swaLayerTest(metadata: GGUFMetadata): (il: number) => boolean {
+  if (!(Number(metadata.sliding_window) > 0)) {
+    return () => false;
+  }
+  const pattern = perLayerOrUndefined(
+    metadata.sliding_window_pattern,
+    metadata.n_layers,
+  );
+  if (pattern) {
+    return il => pattern[il] > 0;
+  }
+  const period =
+    nonNegativeInteger(
+      typeof metadata.sliding_window_pattern === 'number'
+        ? metadata.sliding_window_pattern
+        : undefined,
+    ) ?? DEFAULT_SWA_PERIOD[metadata.architecture];
+  if (period === undefined) {
+    return () => false;
+  }
+  return il => period === 0 || il % period < period - 1;
 }
 
 function planLayers(metadata: GGUFMetadata): LayerPlan {
@@ -208,9 +289,22 @@ function planLayers(metadata: GGUFMetadata): LayerPlan {
     {length: layers},
     (_, il) => metadata.n_head_kv_layers?.[il] ?? metadata.n_head_kv,
   );
-  const kinds = headsKv.map<LayerKind>(heads =>
-    heads === 0 ? 'recurrent' : 'attention',
-  );
+  const isRecurrent = recurrentLayerTest(metadata, headsKv);
+  const isSwa = swaLayerTest(metadata);
+  const shared = positiveInteger(metadata.shared_kv_layers);
+  const firstSharedLayer =
+    shared !== undefined && shared < metadata.n_layers
+      ? metadata.n_layers - shared
+      : metadata.n_layers;
+  const kinds = headsKv.map<LayerKind>((heads, il) => {
+    if (isRecurrent(il)) {
+      return 'recurrent';
+    }
+    if (heads === 0 || il >= firstSharedLayer) {
+      return 'none';
+    }
+    return isSwa(il) ? 'swa' : 'global';
+  });
   return {kinds, headsKv};
 }
 
@@ -220,6 +314,18 @@ const padCells = (cells: number) =>
 const effectiveUbatch = (settings: ContextInitParams) =>
   Math.min(settings.n_ubatch, settings.n_batch, settings.n_ctx);
 
+function kvCells(
+  metadata: GGUFMetadata,
+  settings: ContextInitParams,
+): Record<'global' | 'swa', number> {
+  const global = padCells(settings.n_ctx);
+  const window = Number(metadata.sliding_window) || 0;
+  return {
+    global,
+    swa: Math.min(global, padCells(window + effectiveUbatch(settings))),
+  };
+}
+
 function kvBytes(
   metadata: GGUFMetadata,
   settings: ContextInitParams,
@@ -227,13 +333,20 @@ function kvBytes(
   typeV: string,
 ): number {
   const {kinds, headsKv} = planLayers(metadata);
-  const cells = padCells(settings.n_ctx);
-  const bytesPerHead =
-    metadata.n_embd_head_k * getKVCacheTypeBytes(typeK) +
-    metadata.n_embd_head_v * getKVCacheTypeBytes(typeV);
+  const cells = kvCells(metadata, settings);
+  const bytesK = getKVCacheTypeBytes(typeK);
+  const bytesV = getKVCacheTypeBytes(typeV);
+  const bytesPerHead = {
+    global: metadata.n_embd_head_k * bytesK + metadata.n_embd_head_v * bytesV,
+    swa:
+      (Number(metadata.n_embd_head_k_swa) || metadata.n_embd_head_k) * bytesK +
+      (Number(metadata.n_embd_head_v_swa) || metadata.n_embd_head_v) * bytesV,
+  };
   return kinds.reduce(
     (sum, kind, il) =>
-      kind === 'attention' ? sum + cells * headsKv[il] * bytesPerHead : sum,
+      kind === 'global' || kind === 'swa'
+        ? sum + cells[kind] * headsKv[il] * bytesPerHead[kind]
+        : sum,
     0,
   );
 }
@@ -243,8 +356,16 @@ function recurrentStateBytes(metadata: GGUFMetadata): number {
     kind => kind === 'recurrent',
   ).length;
   const lCache = positiveInteger(metadata.shortconv_l_cache);
-  const perLayer = lCache ? metadata.n_embd * (lCache - 1) : 0;
-  return recurrentLayers * perLayer * F32_BYTES;
+  const shortConv = lCache ? metadata.n_embd * (lCache - 1) : 0;
+  const dConv = positiveInteger(metadata.ssm_conv_kernel);
+  const dState = positiveInteger(metadata.ssm_state_size);
+  const dInner = positiveInteger(metadata.ssm_inner_size);
+  const nGroup = positiveInteger(metadata.ssm_group_count) ?? 1;
+  const ssm =
+    dConv && dState && dInner
+      ? (dConv - 1) * (dInner + 2 * nGroup * dState) + dState * dInner
+      : 0;
+  return recurrentLayers * (shortConv + ssm) * F32_BYTES;
 }
 
 function computeBytes(
@@ -253,13 +374,18 @@ function computeBytes(
   countsAttentionMatrix: boolean,
 ): number {
   const ubatch = effectiveUbatch(settings);
-  const hasAttention = planLayers(metadata).kinds.includes('attention');
-  const cells = hasAttention ? padCells(settings.n_ctx) : 0;
+  const {kinds} = planLayers(metadata);
+  const cells = kvCells(metadata, settings);
+  const hasGlobal = kinds.includes('global');
+  const hasSwa = kinds.includes('swa');
+  const largestCells = hasGlobal ? cells.global : hasSwa ? cells.swa : 0;
   const attentionMatrix = countsAttentionMatrix
-    ? cells * metadata.n_head * ubatch * F32_BYTES
+    ? largestCells * metadata.n_head * ubatch * F32_BYTES
     : 0;
   const logits = metadata.n_vocab * ubatch * F32_BYTES;
-  const mask = cells * ubatch * (countsAttentionMatrix ? 4 : 2);
+  const maskCells =
+    hasGlobal || hasSwa ? cells.global + (hasSwa ? cells.swa : 0) : 0;
+  const mask = maskCells * ubatch * (countsAttentionMatrix ? 4 : 2);
   const feedForward = Number(metadata.n_ff) || 4 * metadata.n_embd;
   const graph = (2 * feedForward + 2 * metadata.n_embd) * ubatch * F32_BYTES;
   return Math.max(logits, attentionMatrix) + mask + graph;
