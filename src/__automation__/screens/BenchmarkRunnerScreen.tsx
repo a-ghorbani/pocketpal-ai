@@ -23,6 +23,7 @@ import {getDeviceOptions} from '../../utils/deviceSelection';
 import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
 import {acquireKeepAwake} from '../../utils/keepAwake';
 import type {Model} from '../../utils/types';
+import {memMark} from '../../utils/memRecorder';
 import {
   BENCH_LOG_RE,
   deriveEffectiveBackend,
@@ -126,6 +127,8 @@ export interface BenchConfig {
    * pushed bench-config.json without rebuilding the APK. The effective
    * value is echoed in the report's top-level `inter_cell_settle_ms`. */
   inter_cell_settle_ms?: number;
+  /** Experiment: base n_ctx override, so a long pp can fill the KV cache. */
+  n_ctx?: number;
 }
 
 interface BenchmarkRunRow {
@@ -501,6 +504,7 @@ export async function runMatrix(
   const benchBase: BenchBaseParams = {
     ...DEFAULT_BENCH_BASE_PARAMS,
     n_threads: recommendedThreads,
+    ...(config.n_ctx ? {n_ctx: config.n_ctx} : {}),
   };
 
   // Matrix-level fingerprint snapshot (WHAT 4c.1). Derived from the
@@ -869,6 +873,7 @@ export async function runMatrix(
         let speedPp: number | undefined;
         let speedTg: number | undefined;
         try {
+          memMark(`bench:start n_ctx=${cellParams.n_ctx} pp=${bench.pp}`);
           const benchResult = await ctx.bench(
             bench.pp,
             bench.tg,

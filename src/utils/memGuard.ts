@@ -42,7 +42,9 @@ export async function noteLoadStart(): Promise<void> {
   }
 }
 
-export function loadTripwireParams(remainingKb: number): Record<string, number> {
+export function loadTripwireParams(
+  remainingKb: number,
+): Record<string, number> {
   return {
     tripwire_swap_kb: config.swapKb ?? 0,
     tripwire_mem_avail_kb: config.memAvailKb ?? 0,
