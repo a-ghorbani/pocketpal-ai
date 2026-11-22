@@ -3,7 +3,10 @@ import {
   parseGGUFMetadata,
   stateCacheBudgetMb,
 } from '../memoryEstimator';
-import {GGUFMetadata, Model} from '../types';
+import * as ReactNative from 'react-native';
+import {CacheType, GGUFMetadata, Model} from '../types';
+import {ggufFileSize, ggufMetadata} from '../../../jest/fixtures/ggufMemory';
+import {modelStore} from '../../store';
 import {createDefaultContextInitParams} from '../contextInitParamsVersions';
 
 describe('memoryEstimator', () => {
@@ -417,11 +420,11 @@ describe('memoryEstimator', () => {
       ...overrides,
     });
     const estimate = (
-      ggufMetadata: GGUFMetadata | undefined,
+      metadata: GGUFMetadata | undefined,
       settings = contextSettings,
     ) =>
       getModelMemoryRequirement(
-        {...baseModel, size, ggufMetadata} as Model,
+        {...baseModel, size, ggufMetadata: metadata} as Model,
         undefined,
         settings,
       );
@@ -649,6 +652,104 @@ describe('memoryEstimator', () => {
       expect(
         need(swaModel('llama', {'llama.attention.shared_kv_layers': '4'})),
       ).toBeLessThan(need(swaModel('llama')));
+    });
+  });
+
+  describe('paired draft', () => {
+    const fixtureModel = (
+      name: 'Qwen_Qwen3-4B-Q4_K_M' | 'Qwen_Qwen3-1.7B-Q4_K_M',
+    ) =>
+      ({
+        ...baseModel,
+        id: name,
+        size: ggufFileSize(name),
+        ggufMetadata: parseGGUFMetadata(ggufMetadata(name)),
+      }) as Model;
+    const target = fixtureModel('Qwen_Qwen3-4B-Q4_K_M');
+    const draft = fixtureModel('Qwen_Qwen3-1.7B-Q4_K_M');
+    const quantizedDraft = {
+      ...contextSettings,
+      n_ctx: 4096,
+      spec_draft_cache_type_k: CacheType.Q8_0,
+      spec_draft_cache_type_v: CacheType.Q8_0,
+    };
+    // Qwen3-1.7B: 28 layers, 8 KV heads, 128-wide K and V, 4096 cells.
+    const draftKv = (bytesK: number, bytesV: number) =>
+      28 * 4096 * 8 * (128 * bytesK + 128 * bytesV);
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+
+    afterEach(() => setOS(originalOS));
+
+    it('resolves an unset flash attention to off, counting the attention matrix', () => {
+      setOS('ios');
+      const unset = {...quantizedDraft, flash_attn_type: undefined};
+
+      expect(getModelMemoryRequirement(target, undefined, unset, draft)).toBe(
+        getModelMemoryRequirement(
+          target,
+          undefined,
+          {...unset, flash_attn_type: 'off'},
+          draft,
+        ),
+      );
+      expect(getModelMemoryRequirement(target, undefined, unset)).toBe(
+        getModelMemoryRequirement(target, undefined, {
+          ...unset,
+          flash_attn_type: 'auto',
+        }),
+      );
+    });
+
+    it('adds (draft size + draft KV) x 1.1, with V clamped to f16 when flash attention is off', () => {
+      const off = {...quantizedDraft, flash_attn_type: 'off'} as const;
+
+      expect(
+        getModelMemoryRequirement(target, undefined, off, draft) -
+          getModelMemoryRequirement(target, undefined, off),
+      ).toBeCloseTo((draft.size + draftKv(1.0625, 2)) * 1.1, 0);
+    });
+
+    it('keeps a quantized draft V when flash attention is on', () => {
+      const on = {...quantizedDraft, flash_attn_type: 'on'} as const;
+
+      expect(
+        getModelMemoryRequirement(target, undefined, on, draft) -
+          getModelMemoryRequirement(target, undefined, on),
+      ).toBeCloseTo((draft.size + draftKv(1.0625, 1.0625)) * 1.1, 0);
+    });
+  });
+
+  describe('purity', () => {
+    it('reads neither the store nor native modules', () => {
+      const target = {
+        ...baseModel,
+        size: ggufFileSize('Qwen_Qwen3-4B-Q4_K_M'),
+        ggufMetadata: parseGGUFMetadata(ggufMetadata('Qwen_Qwen3-4B-Q4_K_M')),
+      } as Model;
+      const projector = {size: 300 * 1e6} as Model;
+      const estimate = () =>
+        getModelMemoryRequirement(target, projector, contextSettings);
+      const first = estimate();
+      const nativeModules = jest
+        .spyOn(ReactNative, 'NativeModules', 'get')
+        .mockImplementation(() => {
+          throw new Error('native module read');
+        });
+
+      Object.assign(modelStore, {
+        largestSuccessfulLoad: 1,
+        availableMemoryCeiling: 1,
+        deviceTier: 'flagship',
+        activeModelId: 'another-model',
+      });
+
+      expect(estimate()).toBe(first);
+      nativeModules.mockRestore();
     });
   });
 });

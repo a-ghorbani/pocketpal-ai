@@ -445,7 +445,9 @@ function ggufNeed(
           draftModel.ggufMetadata,
           settings,
           settings.spec_draft_cache_type_k || CacheType.F16,
-          settings.spec_draft_cache_type_v || CacheType.F16,
+          flashAttn === 'off'
+            ? CacheType.F16
+            : settings.spec_draft_cache_type_v || CacheType.F16,
         )
       : 0;
 
