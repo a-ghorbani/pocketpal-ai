@@ -3,6 +3,7 @@ import {
   parseGGUFMetadata,
   stateCacheBudgetMb,
 } from '../memoryEstimator';
+import {runInAction} from 'mobx';
 import * as ReactNative from 'react-native';
 import {CacheType, GGUFMetadata, Model} from '../types';
 import {ggufFileSize, ggufMetadata} from '../../../jest/fixtures/ggufMemory';
@@ -963,21 +964,36 @@ describe('memoryEstimator', () => {
       const estimate = () =>
         getModelMemoryRequirement(target, projector, contextSettings);
       const first = estimate();
+      const {
+        largestSuccessfulLoad,
+        availableMemoryCeiling,
+        deviceTier,
+        activeModelId,
+      } = modelStore;
       const nativeModules = jest
         .spyOn(ReactNative, 'NativeModules', 'get')
         .mockImplementation(() => {
           throw new Error('native module read');
         });
 
-      Object.assign(modelStore, {
-        largestSuccessfulLoad: 1,
-        availableMemoryCeiling: 1,
-        deviceTier: 'flagship',
-        activeModelId: 'another-model',
-      });
+      try {
+        runInAction(() => {
+          modelStore.largestSuccessfulLoad = 1;
+          modelStore.availableMemoryCeiling = 1;
+          modelStore.deviceTier = 'flagship';
+          modelStore.activeModelId = 'another-model';
+        });
 
-      expect(estimate()).toBe(first);
-      nativeModules.mockRestore();
+        expect(estimate()).toBe(first);
+      } finally {
+        nativeModules.mockRestore();
+        runInAction(() => {
+          modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
+          modelStore.availableMemoryCeiling = availableMemoryCeiling;
+          modelStore.deviceTier = deviceTier;
+          modelStore.activeModelId = activeModelId;
+        });
+      }
     });
   });
 });
