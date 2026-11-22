@@ -369,8 +369,8 @@ export interface GGUFLayout {
 
 const LOCAL_PREFIX_BYTES = 24; // magic, version, tensor count, KV count
 const MAX_LOCAL_DATA_OFFSET = 64 * 1024 * 1024;
-const MAX_LOCAL_TENSORS = 2048;
-const MAX_LOCAL_ALIGNMENT = 4096;
+const MAX_LOCAL_TENSORS = 1024;
+const MAX_LOCAL_ALIGNMENT = 1024;
 // gguf.cpp rejects names of GGML_MAX_NAME (64) bytes or more and more than
 // GGML_MAX_DIMS (4) dims.
 const MAX_TENSOR_NAME = 63;

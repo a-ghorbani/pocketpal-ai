@@ -346,7 +346,7 @@ describe('readLocalGGUFEmbeddingTensors', () => {
   it.each([
     ['version 1', {version: 1}],
     ['alignment 48', {alignment: 48}],
-    ['alignment 8192', {alignment: 8192}],
+    ['alignment 2048', {alignment: 2048}],
     ['alignment 0', {alignment: 0}],
     ['data offset 0', {dataOffset: 0}],
     ['data offset 23', {dataOffset: 23}],
@@ -364,7 +364,7 @@ describe('readLocalGGUFEmbeddingTensors', () => {
 
   it.each([
     ['0 tensors', 0],
-    ['2049 tensors', 2049],
+    ['1025 tensors', 1025],
     ['2^32 tensors', 2 ** 32],
   ])('rejects a prefix with %s', async (_case, tensorCount) => {
     await expect(
@@ -489,11 +489,10 @@ describe('readLocalGGUFEmbeddingTensors', () => {
 
   it.each([
     ['LFM2.5-350M-Q4_K_M', 64, {type: 14, dims: [1024, 65536]}, false],
-    ['LFM2.5-350M-Q4_K_M', 2048, {type: 14, dims: [1024, 65536]}, false],
-    ['LFM2.5-350M-Q4_K_M', 4096, {type: 14, dims: [1024, 65536]}, false],
+    ['LFM2.5-350M-Q4_K_M', 1024, {type: 14, dims: [1024, 65536]}, false],
     [
       'Phi-3.5-mini-instruct-Q4_K_M',
-      2048,
+      1024,
       {type: 12, dims: [3072, 32064]},
       true,
     ],
@@ -507,11 +506,24 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     },
   );
 
+  it.each([2048, 4096])(
+    'rejects a captured header rewritten to alignment %i without reading',
+    async alignment => {
+      const file = realignedGGUF(
+        capturedHeader('LFM2.5-350M-Q4_K_M'),
+        alignment,
+      );
+
+      await expect(scan(file)).rejects.toThrow(/alignment .* out of range/);
+      expect(RNFS.read).not.toHaveBeenCalled();
+    },
+  );
+
   it('reads a crafted tail whose padding is full of entries carrying the last offset', async () => {
     // llama.cpp accepts it: unique names, chained offsets, and padding it
     // never checks.
-    const tensorCount = 2048;
-    const alignment = 4096;
+    const tensorCount = 1024;
+    const alignment = 1024;
     const entries = Array.from({length: tensorCount}, (_, i) =>
       i === 0
         ? tensorInfoEntry({

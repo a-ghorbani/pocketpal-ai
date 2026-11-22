@@ -385,7 +385,7 @@ describe('tensor scan through the metadata read', () => {
   it.each([
     ['version 1', {version: 1}],
     ['alignment 48', {alignment: 48}],
-    ['alignment 8192', {alignment: 8192}],
+    ['alignment 2048', {alignment: 2048}],
     ['data offset past 64 MiB', {data_offset: 64 * 1024 * 1024 + 32}],
     [
       'a data offset inside the tensor-info section',
