@@ -369,6 +369,101 @@ class DownloadEngineTest {
     }
 
     @Test
+    fun webPageToAnyFileTypeIsRejectedBeforeAnyWrite() {
+        destinationName = "model.bin"
+        insert()
+        serve({ blockedPage() })
+
+        run()
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertEquals(0L, row().totalBytes)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun webPageBehindTheRedirectIsRejectedAsAPage() {
+        insert()
+        serve({ blockedPage() }, linkedSize = content.size)
+
+        run()
+
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertFalse(part.exists())
+    }
+
+    @Test
+    fun zeroLinkedSizeCountsAsUnknown() {
+        insert()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                return if (request.path == RESOLVE_PATH) {
+                    resolveRedirect(content.size).setHeader("x-linked-size", "0")
+                } else {
+                    cdn()
+                }
+            }
+        }
+
+        run()
+
+        assertCompleted()
+        assertEquals(content.size.toLong(), row().totalBytes)
+    }
+
+    @Test
+    fun linkedSizeIsReadFromAnEarlierRedirectInTheChain() {
+        insert()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                return when (request.path) {
+                    RESOLVE_PATH -> resolveRedirect(content.size).setHeader("location", "/hop")
+                    "/hop" -> MockResponse().setResponseCode(302).setHeader("location", CDN_PATH)
+                    else -> cdn(blockedPageBytes())
+                }
+            }
+        }
+
+        run()
+
+        assertEquals(DownloadEngine.SIZE_MISMATCH_ERROR, row().error)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun bodyShorterThanTheMagicIsNeverCommitted() {
+        insert()
+        serve({ MockResponse().setHeader("Content-Type", "application/octet-stream").setBody("GG") })
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun resumedPartialWithoutTheMagicIsNeverCommitted() {
+        val body = content.copyOf().also { "ABCD".toByteArray().copyInto(it) }
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        part.writeBytes(body.copyOfRange(0, 100))
+        serve({ partial(100, body = body).setHeader("ETag", E1) })
+
+        run()
+
+        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
+        assertEquals("bytes=100-", requests.single().getHeader("Range"))
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
     fun secondValidatorMismatchInOneRunFails() {
         insert(totalBytes = content.size.toLong(), etag = E1)
         writePart(100)
