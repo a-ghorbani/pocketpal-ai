@@ -326,6 +326,53 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     });
   });
 
+  it('ends a name scan at the first 8 bytes of the window', async () => {
+    // llama.cpp accepts it: the only KV is a u8 array whose tail holds entries
+    // at offset 0 behind the first tensor, back to printable bytes where the
+    // window starts.
+    const entries = [
+      tensorInfoEntry({name: 'token_embd.weight', dims: [64, 256]}),
+      tensorInfoEntry({
+        name: 'blk.0.attn_q.weight',
+        dims: [64, 64],
+        offset: 64 * 256 * 4,
+      }),
+    ];
+    const sectionLength = entries.reduce((n, e) => n + e.length, 0);
+    const windowLength = entries.length * 119 + 32;
+    const decoys = Array.from({length: 4}, () =>
+      tensorInfoEntry({name: 'A', dims: []}),
+    );
+    const decoyLength = decoys.reduce((n, e) => n + e.length, 0);
+    // printable bytes, then the n_dims, type and offset of an entry whose
+    // name would start before the window
+    const lead = new Uint8Array(windowLength - sectionLength - decoyLength);
+    lead.fill(0x41, 0, lead.length - 16);
+    const key = Buffer.from('decoys');
+    const kvHeaderLength = 8 + key.length + 4 + 4 + 8;
+    const filler = (32 - ((24 + kvHeaderLength + windowLength) % 32)) % 32;
+    const values = Buffer.concat([new Uint8Array(filler), lead, ...decoys]);
+    const kvHeader = new DataView(new ArrayBuffer(kvHeaderLength));
+    kvHeader.setBigUint64(0, BigInt(key.length), true);
+    key.forEach((b, i) => kvHeader.setUint8(8 + i, b));
+    kvHeader.setUint32(8 + key.length, FixtureType.ARRAY, true);
+    kvHeader.setUint32(12 + key.length, FixtureType.UINT8, true);
+    kvHeader.setBigUint64(16 + key.length, BigInt(values.length), true);
+    const file = tensorInfoFile({
+      entries,
+      kv: Buffer.concat([new Uint8Array(kvHeader.buffer), values]),
+    });
+    new DataView(file.bytes.buffer).setBigUint64(16, 1n, true);
+
+    expect(file.layout.dataOffset - windowLength).toBe(
+      24 + kvHeaderLength + filler,
+    );
+    await expect(scan(file)).resolves.toEqual({
+      tokenEmbd: {type: 0, dims: [64, 256]},
+      hasOutput: false,
+    });
+  });
+
   it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
     const file = tensorInfoFile({
       entries: [
