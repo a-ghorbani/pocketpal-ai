@@ -217,8 +217,14 @@ class DownloadEngine(
                         Log.w(TAG, "Rejected 200 for ${row.id}: ${response.body?.contentType()}")
                         return Attempt.Finished(End.Failed(NOT_MODEL_ERROR))
                     }
+                    val linkedSize = linkedSize(response)
+                    val declaredSize = response.body?.contentLength() ?: -1
+                    if (linkedSize != null && declaredSize >= 0 && declaredSize != linkedSize) {
+                        Log.w(TAG, "Rejected 200 for ${row.id}: $declaredSize bytes, linked size $linkedSize")
+                        return Attempt.Finished(End.Failed(SIZE_MISMATCH_ERROR))
+                    }
                     etag = strongEtag(response)
-                    totalBytes = response.body?.contentLength()?.takeIf { it > 0 } ?: 0
+                    totalBytes = linkedSize ?: declaredSize.takeIf { it > 0 } ?: 0
                     if (dao.writeValidators(row.id, etag, totalBytes, 0) == 0) return Attempt.Finished(End.Stopped)
                     write(response, append = false, start = 0)
                 }
@@ -322,6 +328,10 @@ class DownloadEngine(
     private fun isHtml(response: Response): Boolean =
         response.body?.contentType()?.let { it.type == "text" && it.subtype == "html" } == true
 
+    private fun linkedSize(response: Response): Long? =
+        generateSequence(response.priorResponse) { it.priorResponse }
+            .firstNotNullOfOrNull { redirect -> redirect.header(LINKED_SIZE)?.toLongOrNull()?.takeIf { it > 0 } }
+
     private fun strongEtag(response: Response): String? =
         response.header("ETag")?.takeUnless { it.startsWith("W/") }
 
@@ -369,6 +379,7 @@ class DownloadEngine(
         private val RUNNING = listOf(DownloadStatus.RUNNING.name)
         private val CONTENT_RANGE = Regex("""bytes (\d+)-(\d+)/(\d+|\*)""")
         private val UNSATISFIED_RANGE = Regex("""bytes \*/(\d+)""")
+        private const val LINKED_SIZE = "x-linked-size"
 
         val sharedClient: OkHttpClient by lazy {
             OkHttpClient.Builder()

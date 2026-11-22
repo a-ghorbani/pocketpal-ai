@@ -74,7 +74,7 @@ class DownloadEngineTest {
     ) = runBlocking {
         dao.insertDownload(
             downloadRow(
-                id, destination.path, status, url = server.url("/model.gguf").toString(),
+                id, destination.path, status, url = server.url(RESOLVE_PATH).toString(),
                 totalBytes = totalBytes, createdAt = createdAt, etag = etag, stalledRuns = stalledRuns,
             )
         )
@@ -86,15 +86,31 @@ class DownloadEngineTest {
         engine.run(ID, runs.register(ID), interval)
     }
 
-    private fun serve(vararg steps: (RecordedRequest) -> MockResponse) {
+    private fun serve(vararg steps: (RecordedRequest) -> MockResponse, linkedSize: Int? = null) {
         val queue = ArrayDeque(steps.toList())
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = synchronized(queue) {
                 requests += request
+                if (linkedSize != null && request.path == RESOLVE_PATH) return resolveRedirect(linkedSize)
                 (if (queue.size > 1) queue.removeFirst() else queue.first())(request)
             }
         }
     }
+
+    private fun resolveRedirect(linkedSize: Int) = MockResponse()
+        .setResponseCode(302)
+        .setHeader("content-type", "text/plain; charset=utf-8")
+        .setHeader("location", CDN_PATH)
+        .setHeader("x-linked-size", linkedSize)
+        .setHeader("x-linked-etag", HF_LINKED_ETAG)
+        .setBody("Found. Redirecting to $CDN_PATH")
+
+    private fun cdn(body: ByteArray = content) = MockResponse()
+        .setHeader("content-type", "application/octet-stream")
+        .setHeader("etag", HF_ETAG)
+        .setBody(Buffer().write(body))
+
+    private fun cdnRequests() = requests.filter { it.path == CDN_PATH }
 
     private fun honest(etag: String? = E1, body: ByteArray = content): (RecordedRequest) -> MockResponse = { request ->
         val from = request.getHeader("Range")?.removePrefix("bytes=")?.removeSuffix("-")?.toInt()
@@ -114,9 +130,21 @@ class DownloadEngineTest {
 
     private fun writePart(bytes: Int) = part.writeBytes(content.copyOfRange(0, bytes))
 
+    private fun blockedPageBytes() = javaClass.getResourceAsStream("/download/blocked-page.html")!!.readBytes()
+
     private fun blockedPage() = MockResponse()
         .setHeader("Content-Type", "text/html; charset=utf-8")
-        .setBody(Buffer().write(javaClass.getResourceAsStream("/download/blocked-page.html")!!.readBytes()))
+        .setBody(Buffer().write(blockedPageBytes()))
+
+    private fun assertPartialKept(error: String) {
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(error, row().error)
+        assertFalse(destination.exists())
+        assertArrayEquals(content.copyOfRange(0, 100_000), part.readBytes())
+        assertEquals(content.size.toLong(), row().totalBytes)
+        assertEquals(E1, row().etag)
+        assertEquals(100_000L, row().downloadedBytes)
+    }
 
     private fun awaitPartBytes() {
         val deadline = System.currentTimeMillis() + 10_000
@@ -202,13 +230,101 @@ class DownloadEngineTest {
 
         assertEquals(Outcome.DONE, run())
 
-        assertEquals(DownloadStatus.FAILED, row().status)
-        assertEquals(DownloadEngine.NOT_MODEL_ERROR, row().error)
-        assertFalse(destination.exists())
-        assertArrayEquals(content.copyOfRange(0, 100_000), part.readBytes())
+        assertPartialKept(DownloadEngine.NOT_MODEL_ERROR)
+    }
+
+    @Test
+    fun hfDownloadCommitsAtTheLinkedSize() {
+        insert()
+        serve({ cdn() }, linkedSize = content.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertCompleted()
+        assertEquals(listOf(RESOLVE_PATH, CDN_PATH), requests.map { it.path })
         assertEquals(content.size.toLong(), row().totalBytes)
-        assertEquals(E1, row().etag)
-        assertEquals(100_000L, row().downloadedBytes)
+        assertEquals(HF_ETAG, row().etag)
+    }
+
+    @Test
+    fun hfDownloadResumesThroughTheRedirect() {
+        insert()
+        serve(
+            { cdn().setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY) },
+            honest(etag = HF_ETAG),
+            linkedSize = content.size,
+        )
+
+        assertEquals(Outcome.DONE, run())
+
+        assertCompleted()
+        assertTrue(cdnRequests().last().getHeader("Range")!!.matches(Regex("bytes=[1-9]\\d*-")))
+    }
+
+    @Test
+    fun bodyOfAnotherLengthThanTheLinkedSizeIsNeverWritten() {
+        insert()
+        serve({ cdn(blockedPageBytes()) }, linkedSize = content.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.SIZE_MISMATCH_ERROR, row().error)
+        assertEquals(1, cdnRequests().size)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun bodyOfAnotherLengthAnsweringAResumeKeepsThePartial() {
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        writePart(100_000)
+        serve({ cdn(blockedPageBytes()) }, linkedSize = content.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertPartialKept(DownloadEngine.SIZE_MISMATCH_ERROR)
+    }
+
+    @Test
+    fun emptyBodyAnsweringAResumeKeepsThePartial() {
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        writePart(100_000)
+        serve({ cdn(ByteArray(0)) }, linkedSize = content.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertPartialKept(DownloadEngine.SIZE_MISMATCH_ERROR)
+    }
+
+    @Test
+    fun chunkedBodyShorterThanTheLinkedSizeIsNeverCommitted() {
+        insert()
+        serve({ cdn().setChunkedBody(Buffer().write(blockedPageBytes()), 1024) }, linkedSize = content.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.FAILED, row().status)
+        assertEquals(DownloadEngine.SIZE_MISMATCH_ERROR, row().error)
+        assertEquals(content.size.toLong(), row().totalBytes)
+        assertFalse(part.exists())
+        assertFalse(destination.exists())
+    }
+
+    @Test
+    fun changedFileBehindTheRedirectRestartsAtItsNewSize() {
+        val changed = content.copyOf(content.size + 1_000)
+        insert(totalBytes = content.size.toLong(), etag = E1)
+        writePart(100)
+        serve({ cdn(changed).setHeader("etag", E2) }, linkedSize = changed.size)
+
+        assertEquals(Outcome.DONE, run())
+
+        assertEquals(DownloadStatus.COMPLETED, row().status)
+        assertArrayEquals(changed, destination.readBytes())
+        assertEquals(changed.size.toLong(), row().totalBytes)
+        assertEquals(E2, row().etag)
+        assertEquals("bytes=100-", cdnRequests().single().getHeader("Range"))
     }
 
     @Test
@@ -621,5 +737,9 @@ class DownloadEngineTest {
         const val E2 = "\"etag-2\""
         const val E3 = "\"etag-3\""
         const val NO_SPACE = "No space left on device"
+        const val RESOLVE_PATH = "/model.gguf"
+        const val CDN_PATH = "/xet-bridge-us/69a591f0311144ce3c262890/d97438bd"
+        const val HF_ETAG = "\"d97438bdfb705334a9ec568ec87f57f2d6929da2bccf7e61bab37ee002e75533\""
+        const val HF_LINKED_ETAG = "\"0bfe35afc9f05b7fac3fa04925e051ac7939a42a8a17ea11afc99701bea826cc\""
     }
 }
