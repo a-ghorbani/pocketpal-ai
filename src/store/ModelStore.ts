@@ -116,6 +116,7 @@ import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
+  parseGGUFMetadata,
   stateCacheBudgetMb,
 } from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
@@ -1949,90 +1950,10 @@ class ModelStore {
         return;
       }
 
-      // Default vocab sizes by architecture (matches Python memory_estimator.py)
-      const ARCH_DEFAULT_VOCAB: Record<string, number> = {
-        llama: 128256,
-        gemma2: 256000,
-        gemma3n: 262144,
-        qwen2: 151936,
-        qwen3: 151936,
-        lfm2: 65536,
-        phi3: 32064,
-        mistral: 32000,
-        deepseek2: 102400,
-        clip: 49408, // CLIP models have smaller vocab
-      };
-
-      // Get the architecture to determine the correct key prefix
-      const architecture: string =
-        (modelInfo as any)['general.architecture'] || 'llama';
-
-      // Helper to get architecture-specific value with fallback (matches Python get_arch_value)
-      const getArchValue = (
-        field: string,
-        defaultValue?: number,
-      ): number | undefined => {
-        const key = `${architecture}.${field}`;
-        const value = (modelInfo as any)[key];
-        if (value !== undefined && value !== null) {
-          // Handle string values (GGUF sometimes returns strings)
-          if (typeof value === 'string') {
-            const parsed = value.includes('.')
-              ? parseFloat(value)
-              : parseInt(value, 10);
-            return isNaN(parsed) ? defaultValue : parsed;
-          }
-          return typeof value === 'number' ? value : defaultValue;
-        }
-        return defaultValue;
-      };
-
-      // Extract core fields (these are required)
-      const n_layers = getArchValue('block_count');
-      const n_embd = getArchValue('embedding_length');
-      const n_head = getArchValue('attention.head_count');
-
-      // Validate core fields exist - without these we can't estimate memory
-      if (!n_layers || !n_embd || !n_head) {
+      const metadata = parseGGUFMetadata(modelInfo as Record<string, unknown>);
+      if (!metadata) {
         return;
       }
-
-      // Extract optional fields with fallbacks (matches Python ModelInfo.__post_init__)
-      const n_head_kv = getArchValue('attention.head_count_kv', n_head); // fallback to n_head
-      const n_vocab =
-        getArchValue('vocab_size') ||
-        ARCH_DEFAULT_VOCAB[architecture] ||
-        128000;
-
-      // Derive head dimensions if not present (matches Python)
-      const n_embd_head_k =
-        getArchValue('attention.key_length') || Math.floor(n_embd / n_head);
-      const n_embd_head_v =
-        getArchValue('attention.value_length') || Math.floor(n_embd / n_head);
-
-      // SWA (Sliding Window Attention) - optional
-      const sliding_window = getArchValue('attention.sliding_window');
-
-      // Context length from GGUF
-      const context_length = getArchValue('context_length');
-
-      const nextn_predict_layers = getArchValue('nextn_predict_layers');
-      const embedding_length_out = getArchValue('embedding_length_out');
-
-      const metadata = {
-        architecture,
-        n_layers,
-        n_embd,
-        n_head,
-        n_head_kv: n_head_kv!,
-        n_vocab,
-        n_embd_head_k,
-        n_embd_head_v,
-        sliding_window,
-        context_length,
-        nextn_predict_layers,
-        embedding_length_out,
-      };
 
       const paramCount = parseSizeLabel(
         (modelInfo as any)['general.size_label'],

@@ -1,0 +1,1 @@
+RESULT n_ctx=32768 fa=off model=3025558624 context=220200960 compute=748183552 total=3993943136 [CPU model=3025558624 context=220200960 compute=748183552]

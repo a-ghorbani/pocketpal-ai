@@ -558,15 +558,19 @@ export enum ModelType {
  * Parsed from model file using llama.rn's loadLlamaModelInfo()
  */
 export interface GGUFMetadata {
+  metadataVersion?: number; // absent on records parsed before per-layer fields existed
   architecture: string;
   n_layers: number;
   n_embd: number;
-  n_head: number;
-  n_head_kv: number;
-  n_vocab: number;
+  n_head: number; // max over layers when per-layer
+  n_head_kv: number; // max over layers when per-layer; 0 when malformed
+  n_head_kv_layers?: number[]; // per layer, when the GGUF stores an array (0 = no KV)
+  n_vocab: number; // 0 when the GGUF names no vocabulary size
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
+  shortconv_l_cache?: number;
+  n_ff?: number; // max over layers when per-layer
   context_length?: number; // Native context length from GGUF
   nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers
   embedding_length_out?: number; // <arch>.embedding_length_out; draft output width (n_embd_out)
