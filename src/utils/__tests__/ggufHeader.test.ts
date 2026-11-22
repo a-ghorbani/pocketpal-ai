@@ -272,6 +272,17 @@ describe('readLocalGGUFEmbeddingTensors', () => {
     expect((RNFS.read as jest.Mock).mock.calls[1][2]).toBe(24);
   });
 
+  it('reads a section of maximal entries ending a full alignment before the data', async () => {
+    const file = tensorInfoFile({
+      entries: [tensorInfoEntry({name: 'x'.repeat(63), dims: [1, 1, 1, 1]})],
+      kv: new Uint8Array(18),
+    });
+
+    const entryStart = file.bytes.indexOf(0x78) - 8;
+    expect(file.layout.dataOffset - entryStart).toBe(119 + 31);
+    await expect(scan(file)).resolves.toEqual({hasOutput: false});
+  });
+
   it('passes through dims beyond the safe-integer range for the caller to bound', async () => {
     const file = tensorInfoFile({
       entries: [
@@ -354,6 +365,36 @@ describe('readLocalGGUFEmbeddingTensors', () => {
           name: 'token_embd.weight',
           dims: [64, 256],
           offset: 32,
+        }),
+      ],
+    });
+
+    await expect(scan(file)).rejects.toThrow(/no consistent end/);
+  });
+
+  it.each([
+    ['decrease from one tensor to the next', [0, 64, 32]],
+    ['are not a multiple of the alignment', [0, 48, 64]],
+  ])('rejects data offsets that %s', async (_case, offsets) => {
+    const file = tensorInfoFile({
+      entries: offsets.map((offset, i) =>
+        tensorInfoEntry({name: `t${i}`, offset}),
+      ),
+    });
+
+    await expect(scan(file)).rejects.toThrow(/no consistent end/);
+  });
+
+  it('rejects an entry that reads as two layouts', async () => {
+    // Dims [8, 4, "abcd"] also read as a scalar named "abcd" whose length
+    // prefix is the dim 4.
+    const file = tensorInfoFile({
+      entries: [
+        tied[0],
+        tensorInfoEntry({
+          name: 'blk.0.ffn_up.weight',
+          dims: [8, 4, 0x64636261],
+          offset: 13440,
         }),
       ],
     });
