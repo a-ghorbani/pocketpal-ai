@@ -566,6 +566,8 @@ export const getSHA256Hash = async (filePath: string): Promise<string> => {
  * @param modelStore - The model store instance for updating model details
  * @returns An object containing the integrity check result and any error message
  */
+export const MODEL_SIZE_TOLERANCE = 0.001;
+
 export const checkModelFileIntegrity = async (
   model: Model,
 ): Promise<{
@@ -591,7 +593,7 @@ export const checkModelFileIntegrity = async (
         Math.abs(actualSize - expectedSize) / expectedSize;
 
       // If size difference is more than 0.1% and hash doesn't match, consider it corrupted
-      if (sizeDiffPercentage > 0.001) {
+      if (sizeDiffPercentage > MODEL_SIZE_TOLERANCE) {
         modelStore.updateModelHash(model.id, false);
 
         // If hash matches, consider it valid

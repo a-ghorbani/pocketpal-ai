@@ -6,6 +6,7 @@ import {basicModel} from '../../../../jest/fixtures/models';
 
 import {DownloadManager, DownloadCancelledError} from '../DownloadManager';
 import {ensureNotificationPermission} from '../../../utils/androidPermission';
+import * as utils from '../../../utils';
 import {NetworkError} from '../../../utils/errors';
 import {l10n} from '../../../locales';
 
@@ -189,7 +190,10 @@ describe('DownloadManager', () => {
 
     const mockDownloadResult = {
       jobId: 123,
-      promise: Promise.resolve({statusCode: 200}),
+      promise: Promise.resolve({
+        statusCode: 200,
+        bytesWritten: basicModel.size,
+      }),
     };
 
     (RNFS.downloadFile as jest.Mock).mockReturnValue(mockDownloadResult);
@@ -325,7 +329,10 @@ describe('DownloadManager', () => {
 
     const mockDownloadResult = {
       jobId: 456,
-      promise: Promise.resolve({statusCode: 200}),
+      promise: Promise.resolve({
+        statusCode: 200,
+        bytesWritten: basicModel.size,
+      }),
     };
 
     (RNFS.downloadFile as jest.Mock).mockImplementation(options => {
@@ -560,6 +567,141 @@ describe('DownloadManager', () => {
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
   });
 
+  describe('iOS file that is not the model', () => {
+    const GGUF_HEAD = 'R0dVRg==';
+    const destination = '/path/to/model.gguf';
+
+    const settleable = () => {
+      let resolve: (result: {
+        statusCode: number;
+        bytesWritten: number;
+      }) => void = () => {};
+      let reject: (error: Error) => void = () => {};
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return {promise, resolve, reject};
+    };
+
+    const startIOS = async (model: typeof basicModel) => {
+      (Platform as any).OS = 'ios';
+      const manager = new DownloadManager();
+      const callbacks = {onComplete: jest.fn(), onError: jest.fn()};
+      manager.setCallbacks(callbacks);
+      jest.spyOn(utils, 'hasEnoughSpace').mockResolvedValueOnce(true);
+      const settle = settleable();
+      let begin: (res: object) => void = () => {};
+      (RNFS.downloadFile as jest.Mock).mockImplementation(options => {
+        begin = options.begin;
+        return {jobId: 42, promise: settle.promise};
+      });
+      const started = manager.startDownload(model, destination);
+      started.catch(() => {});
+      await new Promise(resolve => setImmediate(resolve));
+      return {
+        manager,
+        callbacks,
+        started,
+        settle,
+        begin: (headers: Record<string, string>) =>
+          begin({jobId: 42, statusCode: 200, contentLength: 4465, headers}),
+      };
+    };
+
+    const expectNotTheModel = async ({
+      started,
+      callbacks,
+      manager,
+    }: Awaited<ReturnType<typeof startIOS>>) => {
+      await expect(started).rejects.toThrow(
+        new NetworkError(l10n.en.errors.downloadNotTheModel),
+      );
+      expect(RNFS.unlink).toHaveBeenCalledWith(destination);
+      expect(callbacks.onError).toHaveBeenCalledWith(
+        'model-1',
+        expect.any(NetworkError),
+      );
+      expect(callbacks.onComplete).not.toHaveBeenCalled();
+      expect(manager.isDownloading('model-1')).toBe(false);
+    };
+
+    it('fails a finished file far smaller than the model', async () => {
+      const download = await startIOS({...basicModel, size: 1270808032});
+      download.begin({'Content-Type': 'application/octet-stream'});
+      download.settle.resolve({statusCode: 200, bytesWritten: 4465});
+
+      await expectNotTheModel(download);
+    });
+
+    it('accepts a file within 0.1% of a stale recorded size', async () => {
+      (RNFS.read as jest.Mock).mockResolvedValueOnce(GGUF_HEAD);
+      const download = await startIOS({...basicModel, size: 3041376384});
+      download.begin({'Content-Type': 'application/octet-stream'});
+      download.settle.resolve({statusCode: 200, bytesWritten: 3041378400});
+
+      await download.started;
+
+      expect(download.callbacks.onComplete).toHaveBeenCalledWith('model-1');
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it('accepts a GGUF file when the expected size is unknown', async () => {
+      (RNFS.read as jest.Mock).mockResolvedValueOnce(GGUF_HEAD);
+      const download = await startIOS({...basicModel, size: 0});
+      download.begin({'Content-Type': 'application/octet-stream'});
+      download.settle.resolve({statusCode: 200, bytesWritten: 4465});
+
+      await download.started;
+
+      expect(RNFS.read).toHaveBeenCalledWith(destination, 4, 0, 'base64');
+      expect(download.callbacks.onComplete).toHaveBeenCalledWith('model-1');
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['rejects with the abort', 'content-type', 'abort'],
+      ['resolves anyway', 'Content-Type', 'resolve'],
+    ])(
+      'stops a web page and fails it when the download %s (%s)',
+      async (_label, headerName, settlement) => {
+        const download = await startIOS({...basicModel, size: 0});
+        download.begin({[headerName]: 'text/html; charset=utf-8'});
+
+        expect(RNFS.stopDownload).toHaveBeenCalledWith(42);
+        if (settlement === 'abort') {
+          download.settle.reject(new Error('Download has been aborted'));
+        } else {
+          download.settle.resolve({statusCode: 200, bytesWritten: 4465});
+        }
+
+        await expectNotTheModel(download);
+      },
+    );
+
+    it('fails a non-GGUF body to a model file when the size is unknown', async () => {
+      (RNFS.read as jest.Mock).mockResolvedValueOnce('eyJlcg==');
+      const download = await startIOS({...basicModel, size: 0});
+      download.begin({'Content-Type': 'application/json'});
+      download.settle.resolve({statusCode: 200, bytesWritten: 120});
+
+      await expectNotTheModel(download);
+    });
+
+    it('keeps a user cancel silent while the web-page stop is in flight', async () => {
+      const download = await startIOS({...basicModel, size: 0});
+      download.begin({'content-type': 'text/html'});
+
+      await download.manager.cancelDownload('model-1');
+      download.settle.reject(new Error('Download has been aborted'));
+
+      await expect(download.started).rejects.toBeInstanceOf(
+        DownloadCancelledError,
+      );
+      expect(download.callbacks.onError).not.toHaveBeenCalled();
+    });
+  });
+
   it('sends the attribution User-Agent on the iOS RNFS download', async () => {
     (Platform as any).OS = 'ios';
 
@@ -573,7 +715,10 @@ describe('DownloadManager', () => {
 
     (RNFS.downloadFile as jest.Mock).mockReturnValue({
       jobId: 999,
-      promise: Promise.resolve({statusCode: 200}),
+      promise: Promise.resolve({
+        statusCode: 200,
+        bytesWritten: basicModel.size,
+      }),
     });
 
     await iosDownloadManager.startDownload(basicModel, '/path/to/model.bin');
@@ -600,7 +745,10 @@ describe('DownloadManager', () => {
 
     (RNFS.downloadFile as jest.Mock).mockReturnValue({
       jobId: 1001,
-      promise: Promise.resolve({statusCode: 200}),
+      promise: Promise.resolve({
+        statusCode: 200,
+        bytesWritten: basicModel.size,
+      }),
     });
 
     await iosDownloadManager.startDownload(
@@ -631,7 +779,10 @@ describe('DownloadManager', () => {
 
     (RNFS.downloadFile as jest.Mock).mockReturnValue({
       jobId: 1002,
-      promise: Promise.resolve({statusCode: 200}),
+      promise: Promise.resolve({
+        statusCode: 200,
+        bytesWritten: basicModel.size,
+      }),
     });
 
     const offHostModel = {

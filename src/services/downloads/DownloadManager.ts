@@ -10,7 +10,12 @@ import {
 } from './types';
 
 import {Model} from '../../utils/types';
-import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
+import {
+  MODEL_SIZE_TOLERANCE,
+  formatBytes,
+  hasEnoughSpace,
+  hfUserAgent,
+} from '../../utils';
 import {ensureNotificationPermission} from '../../utils/androidPermission';
 import {NetworkError} from '../../utils/errors';
 import {uiStore} from '../../store';
@@ -57,6 +62,38 @@ const androidDownloadError = (engineError: string): Error =>
   ENGINE_NOT_MODEL_ERRORS.includes(engineError)
     ? new NetworkError(uiStore.l10n.errors.downloadNotTheModel)
     : new Error(engineError);
+
+const GGUF_MAGIC_BASE64 = 'R0dVRg==';
+
+const isHtmlResponse = (headers: Record<string, string> | undefined) => {
+  const contentType = Object.entries(headers ?? {}).find(
+    ([name]) => name.toLowerCase() === 'content-type',
+  )?.[1];
+  return contentType?.split(';')[0].trim().toLowerCase() === 'text/html';
+};
+
+const isFinishedModelFile = async (
+  model: Model,
+  path: string,
+  bytesWritten: number | undefined,
+): Promise<boolean> => {
+  const expectedSize = model.hfModelFile?.lfs?.size || model.size;
+  if (
+    expectedSize > 0 &&
+    Math.abs((bytesWritten ?? 0) - expectedSize) / expectedSize >
+      MODEL_SIZE_TOLERANCE
+  ) {
+    console.error(
+      `${TAG}: Finished size ${bytesWritten} differs from ${expectedSize} for ID: ${model.id}`,
+    );
+    return false;
+  }
+  if (!path.toLowerCase().endsWith('.gguf')) {
+    return true;
+  }
+  const head = await RNFS.read(path, 4, 0, 'base64').catch(() => null);
+  return head === GGUF_MAGIC_BASE64;
+};
 
 export class DownloadManager {
   private downloadJobs: DownloadMap;
@@ -352,6 +389,7 @@ export class DownloadManager {
       });
       this.callbacks.onStart?.(model.id);
 
+      let notTheModel = false;
       // Create the download task
       const downloadResult = RNFS.downloadFile({
         fromUrl: model.downloadUrl!,
@@ -370,6 +408,10 @@ export class DownloadManager {
             headers: res.headers,
             jobId: downloadResult.jobId,
           });
+          if (res.statusCode === 200 && isHtmlResponse(res.headers)) {
+            notTheModel = true;
+            RNFS.stopDownload(res.jobId);
+          }
 
           // Initialize progress
           const progress: DownloadProgress = {
@@ -440,7 +482,26 @@ export class DownloadManager {
       });
 
       // Wait for the download to complete
-      const result = await downloadResult.promise;
+      const result = await downloadResult.promise.catch((error: unknown) => {
+        if (notTheModel) {
+          return null;
+        }
+        throw error;
+      });
+
+      if (
+        !result ||
+        notTheModel ||
+        (result.statusCode === 200 &&
+          !(await isFinishedModelFile(
+            model,
+            destinationPath,
+            result.bytesWritten,
+          )))
+      ) {
+        await RNFS.unlink(destinationPath).catch(() => {});
+        throw new NetworkError(uiStore.l10n.errors.downloadNotTheModel);
+      }
 
       if (result.statusCode === 200) {
         console.log(
