@@ -1,4 +1,8 @@
 jest.unmock('../../store');
+import * as fs from 'fs';
+import * as path from 'path';
+import {gunzipSync} from 'zlib';
+import * as RNFS from '@dr.pogodin/react-native-fs';
 import {loadLlamaModelInfo} from 'llama.rn';
 import {runInAction} from 'mobx';
 import {Platform} from 'react-native';
@@ -8,6 +12,7 @@ import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
 } from '../../utils/memoryEstimator';
+import {readLocalGGUFEmbeddingTensors} from '../../utils/ggufHeader';
 import {createDefaultContextInitParams} from '../../utils/contextInitParamsVersions';
 import {isMTPCapable} from '../../utils/mtp';
 import {
@@ -21,20 +26,38 @@ import {
   BufferCapture,
   FlashAttnCapture,
   GGUFMemoryFixture,
+  WrittenCapture,
   bufferCapture,
   bufferCaptures,
+  embeddingTensors,
   ggufFileSize,
   ggufMetadata,
+  tiedCopyBytes,
+  writtenCapture,
+  writtenCaptures,
 } from '../../../jest/fixtures/ggufMemory';
+import {localReadFor} from '../../utils/__tests__/ggufFixture';
 
 jest.mock('../../services/deviceRules/rules', () => ({
   fetchRules: jest.fn().mockResolvedValue(null),
+}));
+
+jest.mock('../../utils/ggufHeader', () => ({
+  ...jest.requireActual('../../utils/ggufHeader'),
+  readLocalGGUFEmbeddingTensors: jest.fn(),
 }));
 
 const GiB = 1024 ** 3;
 const OVERHEAD_BYTES_PER_VOCAB_TOKEN = 384;
 
 type FlashAttnSetting = ContextInitParams['flash_attn_type'];
+
+const originalOS = Platform.OS;
+const setOS = (os: string) =>
+  Object.defineProperty(Platform, 'OS', {
+    get: () => os,
+    configurable: true,
+  });
 
 async function downloadedModel(name: GGUFMemoryFixture): Promise<Model> {
   const model = createModel({
@@ -45,6 +68,9 @@ async function downloadedModel(name: GGUFMemoryFixture): Promise<Model> {
     ggufMetadata: undefined,
   }) as Model;
   (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce(ggufMetadata(name));
+  (readLocalGGUFEmbeddingTensors as jest.Mock).mockResolvedValueOnce(
+    embeddingTensors(name),
+  );
   await modelStore.fetchAndPersistGGUFMetadata(model);
   return model;
 }
@@ -61,6 +87,7 @@ function settings(
     cache_type_k: CacheType.F16,
     cache_type_v: CacheType.F16,
     flash_attn_type,
+    no_extra_bufts: false,
     state_cache_budget_mb: 0,
   };
 }
@@ -69,28 +96,36 @@ function settings(
 const settingFor = (fa: FlashAttnCapture): FlashAttnSetting =>
   fa === 'off' ? 'off' : 'on';
 
-function reference(name: GGUFMemoryFixture, capture: BufferCapture): number {
-  const vocab = Number(ggufMetadata(name)['tokenizer.ggml.tokens.length']);
-  return (
-    capture.model +
-    capture.context +
-    capture.compute +
-    vocab * OVERHEAD_BYTES_PER_VOCAB_TOKEN
-  );
-}
+const overhead = (name: GGUFMemoryFixture) =>
+  Number(ggufMetadata(name)['tokenizer.ggml.tokens.length']) *
+  OVERHEAD_BYTES_PER_VOCAB_TOKEN;
+
+// What an Android CPU load holds: the buffers, the tied embedding's second
+// copy, and the compute the fill wrote.
+const androidReference = (name: GGUFMemoryFixture, capture: WrittenCapture) =>
+  capture.model +
+  tiedCopyBytes(name) +
+  capture.context +
+  capture.compute +
+  overhead(name);
+
+// What Metal holds: the buffers as reserved.
+const iosReference = (name: GGUFMemoryFixture, capture: BufferCapture) =>
+  capture.model + capture.context + capture.compute + overhead(name);
 
 async function errorAgainst(
   name: GGUFMemoryFixture,
-  capture: BufferCapture,
+  n_ctx: number,
   flashAttn: FlashAttnSetting,
+  reference: number,
 ): Promise<number> {
   const model = await downloadedModel(name);
   const estimate = getModelMemoryRequirement(
     model,
     undefined,
-    settings(capture.n_ctx, flashAttn),
+    settings(n_ctx, flashAttn),
   );
-  return estimate / reference(name, capture) - 1;
+  return estimate / reference - 1;
 }
 
 const FAMILIES: [string, GGUFMemoryFixture][] = [
@@ -116,63 +151,110 @@ const FAMILIES: [string, GGUFMemoryFixture][] = [
   ['Qwen3-VL text side', 'Qwen3-VL-2B-Instruct-Q4_K_M'],
 ];
 
-describe('text-side estimate against llama.cpp buffers', () => {
-  const originalOS = Platform.OS;
-  const setOS = (os: string) =>
-    Object.defineProperty(Platform, 'OS', {
-      get: () => os,
-      configurable: true,
-    });
+const expectInBand = (error: number) => {
+  expect(error).toBeGreaterThanOrEqual(-0.05);
+  expect(error).toBeLessThanOrEqual(0.1);
+};
 
+describe('text-side estimate against llama.cpp', () => {
   beforeEach(() => {
     (loadLlamaModelInfo as jest.Mock).mockReset();
+    (readLocalGGUFEmbeddingTensors as jest.Mock).mockReset();
   });
 
   afterEach(() => setOS(originalOS));
 
-  describe.each(FAMILIES)('%s (%s)', (_family, name) => {
-    it.each(bufferCaptures(name).map(c => [c.n_ctx, c.fa, c] as const))(
-      'is within -5%/+10% at n_ctx %i, flash attention %s',
-      async (_n_ctx, fa, capture) => {
-        const error = await errorAgainst(name, capture, settingFor(fa));
+  describe('on Android, against written compute and the tied copy', () => {
+    beforeEach(() => setOS('android'));
 
-        expect(error).toBeGreaterThanOrEqual(-0.05);
-        expect(error).toBeLessThanOrEqual(0.1);
-      },
-    );
+    describe.each(FAMILIES)('%s (%s)', (_family, name) => {
+      it.each(writtenCaptures(name).map(c => [c.n_ctx, c.fa, c] as const))(
+        'is within -5%/+10% at n_ctx %i, flash attention %s',
+        async (n_ctx, fa, capture) => {
+          expectInBand(
+            await errorAgainst(
+              name,
+              n_ctx,
+              fa,
+              androidReference(name, capture),
+            ),
+          );
+        },
+      );
+    });
+  });
+
+  describe('on iOS, against reserved buffers', () => {
+    beforeEach(() => setOS('ios'));
+
+    describe.each(FAMILIES)('%s (%s)', (_family, name) => {
+      it.each(bufferCaptures(name).map(c => [c.n_ctx, c.fa, c] as const))(
+        'is within -5%/+10% at n_ctx %i, flash attention %s',
+        async (n_ctx, fa, capture) => {
+          expectInBand(
+            await errorAgainst(
+              name,
+              n_ctx,
+              settingFor(fa),
+              iosReference(name, capture),
+            ),
+          );
+        },
+      );
+    });
   });
 
   describe('flash attention setting', () => {
     const name: GGUFMemoryFixture = 'LFM2.5-1.2B-Instruct-Q4_K_M';
 
-    it.each<[string, FlashAttnSetting, FlashAttnCapture]>([
-      ['android', 'off', 'off'],
-      ['android', 'auto', 'off'],
-      ['android', undefined, 'off'],
-      ['android', 'on', 'auto'],
-      ['ios', 'off', 'off'],
-      ['ios', 'auto', 'auto'],
-      ['ios', undefined, 'auto'],
-      ['ios', 'on', 'auto'],
+    it.each<[FlashAttnSetting, 'off' | 'on']>([
+      ['off', 'off'],
+      ['auto', 'off'],
+      [undefined, 'off'],
+      ['on', 'on'],
     ])(
-      'on %s, %s is measured against the fa=%s capture at 16k',
-      async (os, flashAttn, capturedAs) => {
-        setOS(os);
+      'on android, %s is measured against the fa=%s fill at 16k',
+      async (flashAttn, filledAs) => {
+        setOS('android');
 
-        const error = await errorAgainst(
-          name,
-          bufferCapture(name, 16384, capturedAs),
-          flashAttn,
+        expectInBand(
+          await errorAgainst(
+            name,
+            16384,
+            flashAttn,
+            androidReference(name, writtenCapture(name, 16384, filledAs)),
+          ),
         );
+      },
+    );
 
-        expect(error).toBeGreaterThanOrEqual(-0.05);
-        expect(error).toBeLessThanOrEqual(0.1);
+    it.each<[FlashAttnSetting, FlashAttnCapture]>([
+      ['off', 'off'],
+      ['auto', 'auto'],
+      [undefined, 'auto'],
+      ['on', 'auto'],
+    ])(
+      'on ios, %s is measured against the fa=%s buffers at 16k',
+      async (flashAttn, capturedAs) => {
+        setOS('ios');
+
+        expectInBand(
+          await errorAgainst(
+            name,
+            16384,
+            flashAttn,
+            iosReference(name, bufferCapture(name, 16384, capturedAs)),
+          ),
+        );
       },
     );
   });
 
-  it('stays at or under what a Galaxy S23 reached for Qwen3-4B Q4_K_M at 3k', async () => {
+  it('stays at or under the previous estimate for Qwen3-4B Q4_K_M at 3k on Android', async () => {
+    setOS('android');
     const model = await downloadedModel('Qwen_Qwen3-4B-Q4_K_M');
+    // (weights + whole-model KV + (vocab + embd) x 512 x 4) x 1.1
+    const previousEstimate = 3593340960;
 
     const estimate = getModelMemoryRequirement(
       model,
@@ -180,7 +262,95 @@ describe('text-side estimate against llama.cpp buffers', () => {
       settings(3072, 'off'),
     );
 
-    expect(estimate / GiB).toBeLessThanOrEqual(3.31);
+    expect(estimate).toBeLessThanOrEqual(previousEstimate);
+    expect(estimate / GiB).toBeCloseTo(3.34, 2);
+  });
+});
+
+describe('tensor scan through the metadata read', () => {
+  const header = new Uint8Array(
+    gunzipSync(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          '../../../jest/fixtures/gguf-memory/headers/LFM2.5-350M-Q4_K_M.gguf-header.gz',
+        ),
+      ),
+    ),
+  );
+  const name: GGUFMemoryFixture = 'LFM2.5-350M-Q4_K_M';
+  const read = async () => {
+    const model = createModel({
+      id: name,
+      filename: `${name}.gguf`,
+      size: ggufFileSize(name),
+      isDownloaded: true,
+      ggufMetadata: undefined,
+    }) as Model;
+    (loadLlamaModelInfo as jest.Mock).mockResolvedValueOnce(ggufMetadata(name));
+    await modelStore.fetchAndPersistGGUFMetadata(model);
+    return model;
+  };
+
+  beforeEach(() => {
+    (loadLlamaModelInfo as jest.Mock).mockReset();
+    (readLocalGGUFEmbeddingTensors as jest.Mock).mockImplementation(
+      jest.requireActual('../../utils/ggufHeader')
+        .readLocalGGUFEmbeddingTensors,
+    );
+    setOS('android');
+  });
+
+  afterEach(() => {
+    (RNFS.read as jest.Mock).mockReset();
+    (readLocalGGUFEmbeddingTensors as jest.Mock).mockReset();
+    setOS(originalOS);
+  });
+
+  it('stores the tied copy read from the local header with the metadata', async () => {
+    (RNFS.read as jest.Mock).mockImplementation(localReadFor(header));
+
+    const model = await read();
+
+    expect(model.ggufMetadata).toMatchObject({
+      metadataVersion: 2,
+      n_vocab: 65536,
+      tied_embd_bytes: 1024 * 65536 * (210 / 256),
+    });
+  });
+
+  it('keeps the metadata, without the field, when the scan fails, and counts the Q8_0 bound', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (RNFS.read as jest.Mock).mockImplementation(
+      localReadFor(header.slice(0, 4096)),
+    );
+
+    const model = await read();
+    const withBound = getModelMemoryRequirement(
+      model,
+      undefined,
+      settings(2048, 'off'),
+    );
+    const scanned = {
+      ...model,
+      ggufMetadata: {
+        ...model.ggufMetadata!,
+        tied_embd_bytes: 1024 * 65536 * (210 / 256),
+      },
+    };
+
+    expect(model.ggufMetadata).toMatchObject({metadataVersion: 2});
+    expect(model.ggufMetadata).not.toHaveProperty('tied_embd_bytes', 0);
+    expect(model.ggufMetadata?.tied_embd_bytes).toBeUndefined();
+    expect(
+      withBound -
+        getModelMemoryRequirement(scanned, undefined, settings(2048, 'off')),
+    ).toBeCloseTo(65536 * 1024 * (34 / 32) - 1024 * 65536 * (210 / 256), 0);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('tensor scan failed'),
+      expect.any(Error),
+    );
+    warn.mockRestore();
   });
 });
 
