@@ -326,12 +326,15 @@ describe('DownloadManager', () => {
 
     let beginCallback: any;
     let progressCallback: any;
+    let finishDownload: (result: {
+      statusCode: number;
+      bytesWritten: number;
+    }) => void = () => {};
 
     const mockDownloadResult = {
       jobId: 456,
-      promise: Promise.resolve({
-        statusCode: 200,
-        bytesWritten: basicModel.size,
+      promise: new Promise(resolve => {
+        finishDownload = resolve;
       }),
     };
 
@@ -348,7 +351,7 @@ describe('DownloadManager', () => {
       '/path/to/model.bin',
     );
 
-    await jest.runAllTimersAsync();
+    await new Promise(resolve => setImmediate(resolve));
 
     expect(RNFS.mkdir).toHaveBeenCalledWith('/path/to');
 
@@ -397,7 +400,7 @@ describe('DownloadManager', () => {
       }),
     );
 
-    // Wait for the download promise to resolve
+    finishDownload({statusCode: 200, bytesWritten: basicModel.size});
     await downloadPromise;
 
     expect(callbacks.onComplete).toHaveBeenCalledWith('model-1');
@@ -912,5 +915,87 @@ describe('DownloadManager', () => {
 
     const config = NativeModules.DownloadModule.startDownload.mock.calls[0][1];
     expect(config.authToken).toBeUndefined();
+  });
+
+  describe('iOS backup exclusion', () => {
+    const modelsRoot = `${RNFS.DocumentDirectoryPath}/models`;
+    let warn: jest.SpyInstance;
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+
+    beforeEach(() => {
+      (Platform as any).OS = 'ios';
+      (RNFS.read as jest.Mock).mockResolvedValue('R0dVRg==');
+      (RNFS.downloadFile as jest.Mock).mockReturnValue({
+        jobId: 1,
+        promise: Promise.resolve({
+          statusCode: 200,
+          bytesWritten: basicModel.size,
+        }),
+      });
+      downloadManager.setCallbacks(callbacks);
+      warn = jest.spyOn(console, 'warn');
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+      (RNFS.mkdir as jest.Mock).mockReset();
+    });
+
+    const excludedFolders = () =>
+      (RNFS.mkdir as jest.Mock).mock.calls
+        .filter(([, opts]) => opts?.NSURLIsExcludedFromBackupKey === true)
+        .map(([path]) => path as string);
+
+    it.each([
+      ['a Hugging Face model', `${modelsRoot}/hf/author/repo/model.gguf`],
+      ['a preset model', `${modelsRoot}/preset/author/repo/model.gguf`],
+    ])(
+      'flags the folder holding %s before the download starts',
+      async (_kind, destination) => {
+        await downloadManager.startDownload(basicModel, destination);
+        expect(callbacks.onComplete).toHaveBeenCalledWith(basicModel.id);
+
+        const folder = destination.slice(0, destination.lastIndexOf('/'));
+        const covering = excludedFolders().filter(
+          path =>
+            path.startsWith(modelsRoot) &&
+            (folder === path || folder.startsWith(`${path}/`)),
+        );
+        expect(covering).not.toHaveLength(0);
+
+        const lastFlag = Math.max(
+          ...(RNFS.mkdir as jest.Mock).mock.invocationCallOrder,
+        );
+        const download = (RNFS.downloadFile as jest.Mock).mock
+          .invocationCallOrder[0];
+        expect(lastFlag).toBeLessThan(download);
+      },
+    );
+
+    it('still downloads when the folder flag cannot be set', async () => {
+      warn.mockImplementation(() => {});
+      (RNFS.mkdir as jest.Mock).mockImplementation(async (_path, opts) => {
+        if (opts?.NSURLIsExcludedFromBackupKey) {
+          throw new Error('flag refused');
+        }
+      });
+
+      await downloadManager.startDownload(
+        basicModel,
+        `${modelsRoot}/hf/author/repo/model.gguf`,
+      );
+
+      expect(RNFS.downloadFile).toHaveBeenCalled();
+      expect(callbacks.onComplete).toHaveBeenCalledWith(basicModel.id);
+      expect(warn).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({message: 'flag refused'}),
+      );
+    });
   });
 });
