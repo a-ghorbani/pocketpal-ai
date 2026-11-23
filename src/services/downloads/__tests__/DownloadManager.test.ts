@@ -326,12 +326,15 @@ describe('DownloadManager', () => {
 
     let beginCallback: any;
     let progressCallback: any;
+    let finishDownload: (result: {
+      statusCode: number;
+      bytesWritten: number;
+    }) => void = () => {};
 
     const mockDownloadResult = {
       jobId: 456,
-      promise: Promise.resolve({
-        statusCode: 200,
-        bytesWritten: basicModel.size,
+      promise: new Promise(resolve => {
+        finishDownload = resolve;
       }),
     };
 
@@ -348,7 +351,7 @@ describe('DownloadManager', () => {
       '/path/to/model.bin',
     );
 
-    await jest.runAllTimersAsync();
+    await new Promise(resolve => setImmediate(resolve));
 
     expect(RNFS.mkdir).toHaveBeenCalledWith('/path/to');
 
@@ -397,7 +400,7 @@ describe('DownloadManager', () => {
       }),
     );
 
-    // Wait for the download promise to resolve
+    finishDownload({statusCode: 200, bytesWritten: basicModel.size});
     await downloadPromise;
 
     expect(callbacks.onComplete).toHaveBeenCalledWith('model-1');

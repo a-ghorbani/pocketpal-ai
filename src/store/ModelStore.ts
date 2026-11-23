@@ -46,6 +46,7 @@ import {
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isModelFilePath} from '../utils/pathGuard';
+import {excludeModelsFromBackup} from '../utils/backupExclusion';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import {stopQuietly} from '../utils/stopQuietly';
@@ -850,6 +851,8 @@ class ModelStore {
     } catch (error) {
       console.warn('[ModelStore] projection cleanup drain failed:', error);
     }
+
+    await excludeModelsFromBackup();
 
     // Apply the bundled offline floor immediately (no network) so the list is
     // never empty while a slow rules fetch is in flight, then merge/reconcile.

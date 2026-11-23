@@ -17,6 +17,7 @@ import {
   hfUserAgent,
 } from '../../utils';
 import {ensureNotificationPermission} from '../../utils/androidPermission';
+import {excludeModelsFromBackup} from '../../utils/backupExclusion';
 import {NetworkError} from '../../utils/errors';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
@@ -354,6 +355,8 @@ export class DownloadManager {
       console.error(`${TAG}: Failed to create directory:`, err);
       throw err;
     }
+
+    await excludeModelsFromBackup();
 
     if (Platform.OS === 'ios') {
       await this.startIOSDownload(model, destinationPath, effectiveAuthToken);

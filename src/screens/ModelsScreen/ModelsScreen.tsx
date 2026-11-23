@@ -30,6 +30,7 @@ import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
 import {isSafePathSegment} from '../../utils/pathGuard';
+import {excludeModelsFromBackup} from '../../utils/backupExclusion';
 import {ErrorState} from '../../utils/errors';
 
 export const ModelsScreen: React.FC = observer(() => {
@@ -203,6 +204,7 @@ export const ModelsScreen: React.FC = observer(() => {
           if (!(await RNFS.exists(permanentDir))) {
             await RNFS.mkdir(permanentDir);
           }
+          await excludeModelsFromBackup();
 
           if (await RNFS.exists(permanentPath)) {
             const choice = await new Promise<'replace' | 'keep' | 'cancel'>(
