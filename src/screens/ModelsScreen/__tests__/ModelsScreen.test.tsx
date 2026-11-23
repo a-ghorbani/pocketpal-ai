@@ -132,6 +132,15 @@ describe('ModelsScreen', () => {
     const localDir = `${modelsRoot}/local`;
     const target = `${localDir}/mockModelFile.gguf`;
 
+    let warn: jest.SpyInstance;
+    beforeEach(() => {
+      warn = jest.spyOn(console, 'warn');
+    });
+    afterEach(() => {
+      warn.mockRestore();
+      (RNFS.mkdir as jest.Mock).mockReset();
+    });
+
     const importWith = async (localDirExists: boolean) => {
       (pick as jest.Mock).mockResolvedValue([
         {uri: '/mock/file/path', name: 'mockModelFile.gguf'},
@@ -189,6 +198,25 @@ describe('ModelsScreen', () => {
         expect(Math.min(...flagged.map(f => f.order))).toBeLessThan(copyOrder);
       },
     );
+
+    it('still imports when the folder flag cannot be set', async () => {
+      warn.mockImplementation(() => {});
+      (RNFS.mkdir as jest.Mock).mockImplementation(async (_path, opts) => {
+        if (opts?.NSURLIsExcludedFromBackupKey) {
+          throw new Error('flag refused');
+        }
+      });
+
+      await importWith(true);
+
+      await waitFor(() =>
+        expect(modelStore.addLocalModel).toHaveBeenCalledWith(target),
+      );
+      expect(warn).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({message: 'flag refused'}),
+      );
+    });
   });
 
   describe('picked file name', () => {

@@ -919,6 +919,7 @@ describe('DownloadManager', () => {
 
   describe('iOS backup exclusion', () => {
     const modelsRoot = `${RNFS.DocumentDirectoryPath}/models`;
+    let warn: jest.SpyInstance;
     const callbacks = {
       onStart: jest.fn(),
       onProgress: jest.fn(),
@@ -937,6 +938,12 @@ describe('DownloadManager', () => {
         }),
       });
       downloadManager.setCallbacks(callbacks);
+      warn = jest.spyOn(console, 'warn');
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+      (RNFS.mkdir as jest.Mock).mockReset();
     });
 
     const excludedFolders = () =>
@@ -969,5 +976,26 @@ describe('DownloadManager', () => {
         expect(lastFlag).toBeLessThan(download);
       },
     );
+
+    it('still downloads when the folder flag cannot be set', async () => {
+      warn.mockImplementation(() => {});
+      (RNFS.mkdir as jest.Mock).mockImplementation(async (_path, opts) => {
+        if (opts?.NSURLIsExcludedFromBackupKey) {
+          throw new Error('flag refused');
+        }
+      });
+
+      await downloadManager.startDownload(
+        basicModel,
+        `${modelsRoot}/hf/author/repo/model.gguf`,
+      );
+
+      expect(RNFS.downloadFile).toHaveBeenCalled();
+      expect(callbacks.onComplete).toHaveBeenCalledWith(basicModel.id);
+      expect(warn).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({message: 'flag refused'}),
+      );
+    });
   });
 });
