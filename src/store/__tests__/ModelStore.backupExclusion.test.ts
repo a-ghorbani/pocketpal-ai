@@ -1,8 +1,10 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
+import {LlamaContext} from 'llama.rn';
 import {Platform} from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
+import {downloadManager} from '../../services/downloads';
 import {readDeviceSignals} from '../../services/deviceRules/signals';
 import {Model, ModelOrigin} from '../../utils/types';
 import {createModel} from '../../../jest/fixtures/models';
@@ -32,6 +34,8 @@ const DOCS = RNFS.DocumentDirectoryPath;
 const MODELS_DIR = `${DOCS}/models`;
 const FLAG = {NSURLIsExcludedFromBackupKey: true};
 const legacy = (filename: string) => `${DOCS}/${filename}`;
+const target = (author: string, filename: string) =>
+  `${MODELS_DIR}/preset/${author}/${filename}`;
 
 let files: Set<string>;
 let warn: jest.SpyInstance;
@@ -47,6 +51,8 @@ const preset = (overrides: Partial<Model> = {}): Model =>
     isDownloaded: true,
     ...overrides,
   }) as Model;
+
+const storeModel = (id: string) => modelStore.models.find(m => m.id === id);
 
 const launch = async (models: Model[], version = MODEL_LIST_VERSION) => {
   runInAction(() => {
@@ -134,5 +140,167 @@ describe('models folder backup flag at launch', () => {
     expect(RNFS.mkdir).not.toHaveBeenCalled();
     expect(RNFS.moveFile).not.toHaveBeenCalled();
     expect(files.has(legacy('x.gguf'))).toBe(true);
+  });
+});
+
+describe('legacy preset relocation at launch', () => {
+  it('moves an idle legacy file to models/preset/<author>/<filename>', async () => {
+    files.add(legacy('x.gguf'));
+
+    await launch([preset()]);
+
+    expect(RNFS.moveFile).toHaveBeenCalledWith(
+      legacy('x.gguf'),
+      target('a', 'x.gguf'),
+    );
+    expect(RNFS.mkdir).toHaveBeenCalledWith(`${MODELS_DIR}/preset/a`);
+    expect(files).toEqual(new Set([target('a', 'x.gguf')]));
+    const model = storeModel('a/r/x.gguf')!;
+    expect(model.isDownloaded).toBe(true);
+    await expect(modelStore.getModelFullPath(model)).resolves.toBe(
+      target('a', 'x.gguf'),
+    );
+  });
+
+  it('uses "unknown" when the author is missing', async () => {
+    files.add(legacy('x.gguf'));
+
+    await launch([preset({author: undefined})]);
+
+    expect(files).toEqual(new Set([target('unknown', 'x.gguf')]));
+  });
+
+  it('moves even when a copy sits at the repo-level path', async () => {
+    const repoLevel = `${MODELS_DIR}/preset/a/r/x.gguf`;
+    files.add(legacy('x.gguf'));
+    files.add(repoLevel);
+
+    await launch([preset()]);
+
+    expect(files).toEqual(new Set([target('a', 'x.gguf'), repoLevel]));
+  });
+
+  it.each([
+    [
+      'a model context is loaded',
+      () => {
+        modelStore.context = {} as LlamaContext;
+      },
+    ],
+    [
+      'a model is loading',
+      () => {
+        modelStore.isContextLoading = true;
+      },
+    ],
+    [
+      'a benchmark is running',
+      () => {
+        modelStore.benchmarkActive = true;
+      },
+    ],
+  ])('moves no file while %s', async (_state, setBusy) => {
+    files.add(legacy('x.gguf'));
+    files.add(legacy('y.gguf'));
+    runInAction(setBusy);
+
+    await launch([preset(), preset({id: 'a/r/y.gguf', filename: 'y.gguf'})]);
+
+    expect(RNFS.moveFile).not.toHaveBeenCalled();
+    expect(files).toEqual(new Set([legacy('x.gguf'), legacy('y.gguf')]));
+  });
+
+  it('skips a model that is downloading and moves the others', async () => {
+    (downloadManager.isDownloading as jest.Mock).mockImplementation(
+      (id: string) => id === 'a/r/x.gguf',
+    );
+    files.add(legacy('x.gguf'));
+    files.add(legacy('y.gguf'));
+
+    await launch([preset(), preset({id: 'a/r/y.gguf', filename: 'y.gguf'})]);
+
+    expect(files).toEqual(new Set([legacy('x.gguf'), target('a', 'y.gguf')]));
+    (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+  });
+
+  it('leaves both files when the target already exists', async () => {
+    files.add(legacy('x.gguf'));
+    files.add(target('a', 'x.gguf'));
+
+    await launch([preset()]);
+
+    expect(RNFS.moveFile).not.toHaveBeenCalled();
+    expect(files).toEqual(new Set([legacy('x.gguf'), target('a', 'x.gguf')]));
+    expect(warn).toHaveBeenCalledWith(
+      expect.any(String),
+      legacy('x.gguf'),
+      target('a', 'x.gguf'),
+    );
+  });
+
+  it.each<[string, Partial<Model>]>([
+    ['author', {author: '..'}],
+    ['filename', {filename: '../x.gguf'}],
+    ['filename', {filename: 'notes.txt'}],
+  ])('moves nothing when the persisted %s is unsafe', async (_f, override) => {
+    const model = preset(override);
+    files.add(legacy(model.filename));
+
+    await launch([model]);
+
+    expect(RNFS.moveFile).not.toHaveBeenCalled();
+    expect(RNFS.mkdir).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the file and its record where they were when the move fails', async () => {
+    (RNFS.moveFile as jest.Mock).mockRejectedValue(new Error('move failed'));
+    files.add(legacy('x.gguf'));
+
+    await launch([preset()]);
+
+    expect(files).toEqual(new Set([legacy('x.gguf')]));
+    const model = storeModel('a/r/x.gguf')!;
+    expect(model.isDownloaded).toBe(true);
+    await expect(modelStore.getModelFullPath(model)).resolves.toBe(
+      legacy('x.gguf'),
+    );
+    expect(warn).toHaveBeenCalledWith(
+      expect.any(String),
+      'a/r/x.gguf',
+      expect.any(Error),
+    );
+  });
+
+  it('keeps the records sharing the file downloaded when a status check straddles the move', async () => {
+    let statusCheck: Promise<void> | undefined;
+    (RNFS.moveFile as jest.Mock).mockImplementation(
+      async (from: string, to: string) => {
+        statusCheck = modelStore.refreshDownloadStatuses();
+        await moveInMemory(from, to);
+      },
+    );
+    files.add(legacy('x.gguf'));
+
+    await launch([preset(), preset({id: 'a/r2/x.gguf', repo: 'r2'})], 0);
+    await statusCheck;
+
+    expect(statusCheck).toBeDefined();
+    expect(storeModel('a/r/x.gguf')?.isDownloaded).toBe(true);
+    expect(storeModel('a/r2/x.gguf')?.isDownloaded).toBe(true);
+  });
+
+  it('re-checks every record that shared the moved file', async () => {
+    files.add(legacy('x.gguf'));
+
+    await launch([
+      preset(),
+      preset({id: 'a/r2/x.gguf', repo: 'r2'}),
+      preset({id: 'b/r/x.gguf', author: 'b'}),
+    ]);
+
+    expect(files).toEqual(new Set([target('a', 'x.gguf')]));
+    expect(storeModel('a/r/x.gguf')?.isDownloaded).toBe(true);
+    expect(storeModel('a/r2/x.gguf')?.isDownloaded).toBe(true);
+    expect(storeModel('b/r/x.gguf')?.isDownloaded).toBe(false);
   });
 });
