@@ -75,6 +75,29 @@ const readyHarness = async (h = createHarness()) => {
   return h;
 };
 
+const launch = async (h: ReturnType<typeof createHarness>) => {
+  let onChange: ((state: string) => void) | undefined;
+  jest
+    .spyOn(AppState, 'addEventListener')
+    .mockImplementationOnce((_event, handler: any) => {
+      onChange = handler;
+      return {remove: jest.fn()} as any;
+    });
+  await h.purchases.start();
+  return {
+    foreground: async () => {
+      const queries = h.store.currentEntitlements.mock.calls.length;
+      onChange?.('active');
+      await until(
+        () => h.store.currentEntitlements.mock.calls.length > queries,
+      );
+      for (let i = 0; i < 10; i++) {
+        await flush();
+      }
+    },
+  };
+};
+
 const allProofs = (calls: unknown[][]) =>
   JSON.stringify(calls.map(call => call[1]));
 
@@ -720,30 +743,6 @@ describe('PurchaseStore Plus', () => {
   });
 
   describe('first launch over an unlock saved by an earlier version', () => {
-    const launch = async (h: ReturnType<typeof createHarness>) => {
-      let onChange: ((state: string) => void) | undefined;
-      const spy = jest
-        .spyOn(AppState, 'addEventListener')
-        .mockImplementation((_event, handler: any) => {
-          onChange = handler;
-          return {remove: jest.fn()} as any;
-        });
-      await h.purchases.start();
-      spy.mockRestore();
-      return {
-        foreground: async () => {
-          const queries = h.store.currentEntitlements.mock.calls.length;
-          onChange?.('active');
-          await until(
-            () => h.store.currentEntitlements.mock.calls.length > queries,
-          );
-          for (let i = 0; i < 10; i++) {
-            await flush();
-          }
-        },
-      };
-    };
-
     beforeEach(() => setOS('android'));
 
     it.each([
@@ -801,22 +800,9 @@ describe('PurchaseStore Plus', () => {
       expect(h.log).toContain('delete:plus');
     });
 
-    it('Android: unlocks again from the store when the saved unlock is gone', async () => {
-      const h = createHarness();
-      h.store.currentEntitlements.mockResolvedValue({
-        ok: true,
-        transactions: [androidPlusTx({unfinished: false})],
-      });
-
-      await launch(h);
-
-      expect(h.purchases.plusUnlocked).toBe(true);
-      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
-    });
-
     it('Android: retries a failed acknowledge on the next foreground', async () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const h = createHarness();
+      const h = ownerHarness();
       h.store.currentEntitlements.mockResolvedValue({
         ok: true,
         transactions: [androidPlusTx()],
@@ -832,6 +818,23 @@ describe('PurchaseStore Plus', () => {
       expect(h.store.finish).toHaveBeenCalledTimes(2);
       expect(h.purchases.plusUnlocked).toBe(true);
       warn.mockRestore();
+    });
+  });
+
+  describe('first launch with no saved unlock', () => {
+    beforeEach(() => setOS('android'));
+
+    it('Android: unlocks again from the store when the saved unlock is gone', async () => {
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx({unfinished: false})],
+      });
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
     });
 
     it('Android: never unlocks for a pending purchase', async () => {
@@ -915,8 +918,14 @@ describe('PurchaseStore Plus', () => {
 
     it('Restore answered OK with no Plus relocks a saved unlock and reports a successful query', async () => {
       const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: false,
+        transactions: [],
+      });
       await h.purchases.loadPlus();
+      await h.purchases.recover();
       expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
 
       await expect(h.purchases.restore()).resolves.toEqual({queryOk: true});
 
