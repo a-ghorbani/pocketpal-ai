@@ -210,6 +210,46 @@ describe('legacy preset relocation at launch', () => {
     expect(files).toEqual(new Set([legacy('x.gguf'), legacy('y.gguf')]));
   });
 
+  it('moves the file before the presets resolve', async () => {
+    files.add(legacy('x.gguf'));
+
+    await launch([preset()]);
+
+    expect(
+      (RNFS.moveFile as jest.Mock).mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      (readDeviceSignals as jest.Mock).mock.invocationCallOrder[0],
+    );
+  });
+
+  it('moves no file when a model starts loading while the move is prepared', async () => {
+    files.add(legacy('x.gguf'));
+    (RNFS.mkdir as jest.Mock).mockImplementation(async (path: string) => {
+      if (path === `${MODELS_DIR}/preset/a`) {
+        runInAction(() => {
+          modelStore.isContextLoading = true;
+        });
+      }
+    });
+
+    await launch([preset()]);
+
+    expect(RNFS.moveFile).not.toHaveBeenCalled();
+    expect(files).toEqual(new Set([legacy('x.gguf')]));
+  });
+
+  it.each([ModelOrigin.HF, ModelOrigin.LOCAL])(
+    'moves no %s model file found in Documents',
+    async origin => {
+      files.add(legacy('x.gguf'));
+
+      await launch([preset({origin})]);
+
+      expect(RNFS.moveFile).not.toHaveBeenCalled();
+      expect(files).toEqual(new Set([legacy('x.gguf')]));
+    },
+  );
+
   it('skips a model that is downloading and moves the others', async () => {
     (downloadManager.isDownloading as jest.Mock).mockImplementation(
       (id: string) => id === 'a/r/x.gguf',
