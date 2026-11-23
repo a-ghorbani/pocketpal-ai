@@ -127,6 +127,70 @@ describe('ModelsScreen', () => {
     });
   });
 
+  describe('iOS backup exclusion of an imported model', () => {
+    const modelsRoot = `${RNFS.DocumentDirectoryPath}/models`;
+    const localDir = `${modelsRoot}/local`;
+    const target = `${localDir}/mockModelFile.gguf`;
+
+    const importWith = async (localDirExists: boolean) => {
+      (pick as jest.Mock).mockResolvedValue([
+        {uri: '/mock/file/path', name: 'mockModelFile.gguf'},
+      ]);
+      (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+        if (path === target) {
+          return false;
+        }
+        if (path === localDir) {
+          return localDirExists;
+        }
+        return true;
+      });
+      const {getByTestId} = render(<ModelsScreen />);
+      fireEvent.press(getByTestId('fab-group'));
+      await waitFor(() =>
+        expect(
+          getByTestId('local-fab', {includeHiddenElements: true}),
+        ).toBeTruthy(),
+      );
+      await act(async () => {
+        fireEvent.press(
+          getByTestId('local-fab', {includeHiddenElements: true}),
+        );
+      });
+      await waitFor(() =>
+        expect(RNFS.copyFile).toHaveBeenCalledWith('/mock/file/path', target),
+      );
+    };
+
+    it.each([
+      ['does not exist yet', false],
+      ['already exists', true],
+    ])(
+      'flags the local models folder before the copy when it %s',
+      async (_state, localDirExists) => {
+        await importWith(localDirExists);
+
+        const mkdirMock = RNFS.mkdir as jest.Mock;
+        const flagged = mkdirMock.mock.calls
+          .map((call, i) => ({
+            path: call[0] as string,
+            excluded: call[1]?.NSURLIsExcludedFromBackupKey === true,
+            order: mkdirMock.mock.invocationCallOrder[i],
+          }))
+          .filter(
+            ({path, excluded}) =>
+              excluded &&
+              path.startsWith(modelsRoot) &&
+              (localDir === path || localDir.startsWith(`${path}/`)),
+          );
+        expect(flagged).not.toHaveLength(0);
+        const copyOrder = (RNFS.copyFile as jest.Mock).mock
+          .invocationCallOrder[0];
+        expect(Math.min(...flagged.map(f => f.order))).toBeLessThan(copyOrder);
+      },
+    );
+  });
+
   describe('picked file name', () => {
     const localDir = `${RNFS.DocumentDirectoryPath}/models/local`;
 

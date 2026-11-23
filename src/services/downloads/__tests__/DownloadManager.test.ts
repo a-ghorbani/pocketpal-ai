@@ -913,4 +913,58 @@ describe('DownloadManager', () => {
     const config = NativeModules.DownloadModule.startDownload.mock.calls[0][1];
     expect(config.authToken).toBeUndefined();
   });
+
+  describe('iOS backup exclusion', () => {
+    const modelsRoot = `${RNFS.DocumentDirectoryPath}/models`;
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+
+    beforeEach(() => {
+      (Platform as any).OS = 'ios';
+      (RNFS.read as jest.Mock).mockResolvedValue('R0dVRg==');
+      (RNFS.downloadFile as jest.Mock).mockReturnValue({
+        jobId: 1,
+        promise: Promise.resolve({
+          statusCode: 200,
+          bytesWritten: basicModel.size,
+        }),
+      });
+      downloadManager.setCallbacks(callbacks);
+    });
+
+    const excludedFolders = () =>
+      (RNFS.mkdir as jest.Mock).mock.calls
+        .filter(([, opts]) => opts?.NSURLIsExcludedFromBackupKey === true)
+        .map(([path]) => path as string);
+
+    it.each([
+      ['a Hugging Face model', `${modelsRoot}/hf/author/repo/model.gguf`],
+      ['a preset model', `${modelsRoot}/preset/author/repo/model.gguf`],
+    ])(
+      'flags the folder holding %s before the download starts',
+      async (_kind, destination) => {
+        await downloadManager.startDownload(basicModel, destination);
+        expect(callbacks.onComplete).toHaveBeenCalledWith(basicModel.id);
+
+        const folder = destination.slice(0, destination.lastIndexOf('/'));
+        const covering = excludedFolders().filter(
+          path =>
+            path.startsWith(modelsRoot) &&
+            (folder === path || folder.startsWith(`${path}/`)),
+        );
+        expect(covering).not.toHaveLength(0);
+
+        const lastFlag = Math.max(
+          ...(RNFS.mkdir as jest.Mock).mock.invocationCallOrder,
+        );
+        const download = (RNFS.downloadFile as jest.Mock).mock
+          .invocationCallOrder[0];
+        expect(lastFlag).toBeLessThan(download);
+      },
+    );
+  });
 });
