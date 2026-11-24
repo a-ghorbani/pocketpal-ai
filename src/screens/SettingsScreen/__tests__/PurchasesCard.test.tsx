@@ -1,8 +1,8 @@
 import React from 'react';
-import {Platform} from 'react-native';
+import {AccessibilityInfo, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render, fireEvent, act} from '../../../../jest/test-utils';
 
 import {PurchasesCard} from '../PurchasesCard';
 import {palStore, purchaseStore} from '../../../store';
@@ -242,5 +242,176 @@ describe('PurchasesCard in a non-store build', () => {
     expect(queryByTestId('purchases-card')).toBeNull();
     expect(queryByTestId('purchase-row-a')).toBeNull();
     expect(queryByTestId('settings-link-purchases')).toBeNull();
+  });
+});
+
+describe('PurchasesCard Restore shows the Plus outcome', () => {
+  const UNLOCKED = 'Plus is unlocked on this device.';
+  const NONE = 'No Plus purchase found.';
+  const FAILED = "Couldn't reach the store. Try again.";
+  const PENDING = 'Waiting for the store to confirm your payment.';
+  const ALL = [UNLOCKED, NONE, FAILED, PENDING];
+
+  const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  type Settle = {
+    plusAfter: boolean;
+    pendingAfter?: boolean;
+    result?: {queryOk: boolean};
+    error?: Error;
+  };
+
+  const holdRestore = (settle: Settle) => {
+    let release!: () => void;
+    purchaseStore.restore.mockImplementationOnce(async () => {
+      runInAction(() => {
+        purchaseStore.isRestoring = true;
+      });
+      await new Promise<void>(resolve => {
+        release = resolve;
+      });
+      runInAction(() => {
+        purchaseStore.plusUnlocked = settle.plusAfter;
+        purchaseStore.plusPending = settle.pendingAfter ?? false;
+        purchaseStore.isRestoring = false;
+      });
+      if (settle.error) {
+        throw settle.error;
+      }
+      return settle.result ?? {queryOk: true};
+    });
+    return () =>
+      act(async () => {
+        release();
+        await flush();
+      });
+  };
+
+  const shownOutcomes = (r: ReturnType<typeof render>) =>
+    ALL.filter(text => r.queryByText(text) !== null);
+
+  beforeEach(() => {
+    (authService as any).isAuthenticated = false;
+    runInAction(() => {
+      (purchaseStore as any).reset();
+      purchaseStore.availability = 'ready';
+    });
+  });
+
+  const cases: [string, boolean, Settle, string][] = [
+    ['Plus unlocks', false, {plusAfter: true}, UNLOCKED],
+    ['Plus was already unlocked', true, {plusAfter: true}, UNLOCKED],
+    ['no Plus purchase, already locked', false, {plusAfter: false}, NONE],
+    ['no Plus purchase, Plus relocks', true, {plusAfter: false}, NONE],
+    [
+      'a Plus payment is pending',
+      false,
+      {plusAfter: false, pendingAfter: true},
+      PENDING,
+    ],
+    [
+      'the store query fails',
+      false,
+      {plusAfter: false, result: {queryOk: false}},
+      FAILED,
+    ],
+    [
+      'restore throws',
+      false,
+      {plusAfter: false, error: new Error('boom')},
+      FAILED,
+    ],
+  ];
+
+  describe.each([false, true])('with Pal rows: %p', withPalRows => {
+    it.each(cases)(
+      'shows exactly one line when %s',
+      async (_name, plusBefore, settle, expected) => {
+        runInAction(() => {
+          purchaseStore.plusUnlocked = plusBefore;
+        });
+        if (withPalRows) {
+          setRecords(rec('a', 'active'));
+        }
+        const release = holdRestore(settle);
+        const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+        expect(shownOutcomes(r)).toEqual([]);
+
+        fireEvent.press(r.getByTestId('settings-restore-purchases'));
+        await act(flush);
+        expect(shownOutcomes(r)).toEqual([]);
+
+        await release();
+
+        expect(shownOutcomes(r)).toEqual([expected]);
+        if (withPalRows) {
+          expect(r.getByText('Purchased · Support code: SUP-a')).toBeTruthy();
+        }
+      },
+    );
+  });
+
+  it('does not leave a rejected restore unhandled', async () => {
+    const unhandled = jest.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      purchaseStore.restore.mockRejectedValueOnce(new Error('boom'));
+      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+      fireEvent.press(r.getByTestId('settings-restore-purchases'));
+      await act(async () => {
+        await flush();
+        await flush();
+      });
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  it('clears the previous line while the next restore runs', async () => {
+    purchaseStore.restore.mockResolvedValueOnce({queryOk: false});
+    const release = holdRestore({plusAfter: false});
+    const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+
+    fireEvent.press(r.getByTestId('settings-restore-purchases'));
+    await act(flush);
+    expect(shownOutcomes(r)).toEqual([FAILED]);
+
+    fireEvent.press(r.getByTestId('settings-restore-purchases'));
+    await act(flush);
+    expect(shownOutcomes(r)).toEqual([]);
+
+    await release();
+    expect(shownOutcomes(r)).toEqual([NONE]);
+  });
+
+  describe('screen readers', () => {
+    const originalOS = Platform.OS;
+    let announceSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      announceSpy = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      (Platform as any).OS = originalOS;
+      announceSpy.mockRestore();
+    });
+
+    it.each([
+      ['ios', [[NONE]]],
+      ['android', []],
+    ])('%s announces the outcome as the Plus screen does', async (os, calls) => {
+      (Platform as any).OS = os;
+      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+
+      fireEvent.press(r.getByTestId('settings-restore-purchases'));
+      await act(flush);
+
+      expect(r.getByText(NONE).props.accessibilityLiveRegion).toBe('polite');
+      expect(announceSpy.mock.calls).toEqual(calls);
+    });
   });
 });
