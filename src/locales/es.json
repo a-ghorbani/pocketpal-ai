@@ -1556,7 +1556,8 @@
     "cameraErrorTitle": "Error de la cámara",
     "cameraErrorMessage": "No se pudo tomar la foto",
     "galleryErrorTitle": "Error de la galería",
-    "galleryErrorMessage": "No se pudieron seleccionar las imágenes"
+    "galleryErrorMessage": "No se pudieron seleccionar las imágenes",
+    "downloadNotTheModel": "El archivo recibido no es el modelo. Comprueba tu conexión e inténtalo de nuevo."
   },
   "simulator": {
     "cameraNotAvailable": "La cámara no está disponible en el simulador. Usa un dispositivo físico."
