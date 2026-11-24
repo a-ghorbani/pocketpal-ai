@@ -9,6 +9,16 @@ import {palStore, purchaseStore} from '../../../store';
 import {authService} from '../../../services';
 import type {LedgerRecord} from '../../../store/PurchaseStore';
 
+let mockIsFocused = true;
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useIsFocused: () => mockIsFocused,
+}));
+
+beforeEach(() => {
+  mockIsFocused = true;
+});
+
 let mockAccountLinkEnabled = true;
 jest.mock('../../../services/iap/accountLink', () => ({
   get ACCOUNT_LINK_ENABLED() {
@@ -370,6 +380,12 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
       {plusAfter: false, pendingAfter: true, result: {queryOk: false}},
       FAILED,
     ],
+    [
+      'Plus stays unlocked although restore throws',
+      true,
+      {plusAfter: true, error: new Error('boom')},
+      UNLOCKED,
+    ],
   ] as [string, boolean, Settle, string][])(
     'follows the Plus screen order when %s',
     async (_name, plusBefore, settle, expected) => {
@@ -424,6 +440,60 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
     expect(shownOutcomes(r)).toEqual([NONE]);
   });
 
+  it('clears the line when Settings loses focus', async () => {
+    const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    fireEvent.press(r.getByTestId('settings-restore-purchases'));
+    await act(flush);
+    expect(shownOutcomes(r)).toEqual([NONE]);
+
+    mockIsFocused = false;
+    r.rerender(<PurchasesCard onSignInPress={jest.fn()} />);
+    mockIsFocused = true;
+    r.rerender(<PurchasesCard onSignInPress={jest.fn()} />);
+
+    expect(shownOutcomes(r)).toEqual([]);
+  });
+
+  it.each([
+    [
+      'Plus relocks',
+      {plusAfter: true},
+      UNLOCKED,
+      () => {
+        purchaseStore.plusUnlocked = false;
+      },
+    ],
+    [
+      'Plus unlocks',
+      {plusAfter: false},
+      NONE,
+      () => {
+        purchaseStore.plusUnlocked = true;
+      },
+    ],
+    [
+      'the pending payment settles',
+      {plusAfter: false, pendingAfter: true},
+      PENDING,
+      () => {
+        purchaseStore.plusPending = false;
+      },
+    ],
+  ] as [string, Settle, string, () => void][])(
+    'hides the line once %s',
+    async (_name, settle, shown, change) => {
+      const release = holdRestore(settle);
+      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+      fireEvent.press(r.getByTestId('settings-restore-purchases'));
+      await release();
+      expect(shownOutcomes(r)).toEqual([shown]);
+
+      act(() => runInAction(change));
+
+      expect(shownOutcomes(r)).toEqual([]);
+    },
+  );
+
   describe('screen readers', () => {
     const originalOS = Platform.OS;
     let announceSpy: jest.SpyInstance;
@@ -455,5 +525,22 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
         expect(announceSpy.mock.calls).toEqual(calls);
       },
     );
+
+    it('shows and announces nothing when Restore settles after Settings lost focus', async () => {
+      (Platform as any).OS = 'ios';
+      const release = holdRestore({plusAfter: false});
+      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+      fireEvent.press(r.getByTestId('settings-restore-purchases'));
+      await act(flush);
+
+      mockIsFocused = false;
+      r.rerender(<PurchasesCard onSignInPress={jest.fn()} />);
+      await release();
+      mockIsFocused = true;
+      r.rerender(<PurchasesCard onSignInPress={jest.fn()} />);
+
+      expect(shownOutcomes(r)).toEqual([]);
+      expect(announceSpy).not.toHaveBeenCalled();
+    });
   });
 });

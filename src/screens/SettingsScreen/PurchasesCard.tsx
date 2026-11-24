@@ -1,6 +1,7 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {AccessibilityInfo, Platform, View} from 'react-native';
 
+import {useIsFocused} from '@react-navigation/native';
 import {observer} from 'mobx-react-lite';
 import {Button, Card, Text} from 'react-native-paper';
 
@@ -32,6 +33,15 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
     const records = purchaseStore.storeOwnedRecords;
     const isReady = purchaseStore.availability === 'ready';
     const [plusOutcome, setPlusOutcome] = useState<PlusOutcome | null>(null);
+    const isFocused = useIsFocused();
+    const isFocusedRef = useRef(isFocused);
+
+    useEffect(() => {
+      isFocusedRef.current = isFocused;
+      if (!isFocused) {
+        setPlusOutcome(null);
+      }
+    }, [isFocused]);
 
     if (!isStoreBuild() || (!isReady && records.length === 0)) {
       return null;
@@ -76,7 +86,23 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
       none: l10n.plus.noPurchaseFound,
     };
 
+    const matchesPlusState = (outcome: PlusOutcome) => {
+      if (outcome === 'unlocked') {
+        return purchaseStore.plusUnlocked;
+      }
+      if (purchaseStore.plusUnlocked) {
+        return false;
+      }
+      return outcome !== 'pending' || purchaseStore.plusPending;
+    };
+
+    const shownOutcome =
+      plusOutcome && matchesPlusState(plusOutcome) ? plusOutcome : null;
+
     const showPlusOutcome = (outcome: PlusOutcome) => {
+      if (!isFocusedRef.current) {
+        return;
+      }
       setPlusOutcome(outcome);
       if (Platform.OS === 'ios') {
         AccessibilityInfo.announceForAccessibility(plusOutcomeText[outcome]);
@@ -97,7 +123,7 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
           showPlusOutcome('none');
         }
       } catch {
-        showPlusOutcome('failed');
+        showPlusOutcome(purchaseStore.plusUnlocked ? 'unlocked' : 'failed');
       }
     };
 
@@ -147,13 +173,13 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
                 {l10n.palsScreen.purchase.restorePurchases}
               </Button>
             )}
-            {plusOutcome && (
+            {shownOutcome && (
               <Text
                 testID="settings-restore-plus-outcome"
                 variant="labelSmall"
                 style={styles.textDescription}
                 accessibilityLiveRegion="polite">
-                {plusOutcomeText[plusOutcome]}
+                {plusOutcomeText[shownOutcome]}
               </Text>
             )}
             {ACCOUNT_LINK_ENABLED && purchaseStore.needsLink && (
