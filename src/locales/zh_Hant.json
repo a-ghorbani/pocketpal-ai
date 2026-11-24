@@ -1389,7 +1389,8 @@
     "authenticationError": "驗證錯誤：Token 遺失或無效",
     "hfAuthorizationError": "抱歉，Hugging Face 授權錯誤：沒有存取此資源的權限",
     "authorizationError": "授權錯誤：沒有存取此資源的權限",
-    "hfServerError": "Hugging Face 伺服器錯誤：API 伺服器問題"
+    "hfServerError": "Hugging Face 伺服器錯誤：API 伺服器問題",
+    "downloadNotTheModel": "收到的檔案不是模型檔案。請檢查您的網路連線並重試。"
   },
   "simulator": {
     "cameraNotAvailable": "模擬器中沒有相機可用。請使用實體設備。"
