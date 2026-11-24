@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "カメラエラー",
     "cameraErrorMessage": "写真撮影に失敗しました",
     "galleryErrorTitle": "ギャラリーエラー",
-    "galleryErrorMessage": "画像選択に失敗しました"
+    "galleryErrorMessage": "画像選択に失敗しました",
+    "downloadNotTheModel": "受信したファイルはモデルファイルではありません。接続を確認してもう一度お試しください。"
   },
   "simulator": {
     "cameraNotAvailable": "シミュレーターではカメラを使用できません、実機をご使用ください"
