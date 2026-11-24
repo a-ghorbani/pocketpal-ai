@@ -1548,7 +1548,8 @@
     "downloadSetupFailedTitle": "다운로드 설정 실패",
     "downloadSetupFailedMessage": "모델 다운로드 준비에 실패했습니다: {{message}}",
     "galleryErrorTitle": "갤러리 오류",
-    "galleryErrorMessage": "이미지 선택에 실패했습니다"
+    "galleryErrorMessage": "이미지 선택에 실패했습니다",
+    "downloadNotTheModel": "받은 파일이 모델 파일이 아닙니다. 연결 상태를 확인하고 다시 시도해 주세요."
   },
   "simulator": {
     "cameraNotAvailable": "시뮬레이터에서는 카메라를 사용할 수 없습니다. 실제 기기를 사용해 주세요."
