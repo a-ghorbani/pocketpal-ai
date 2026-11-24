@@ -1445,7 +1445,8 @@
     "cameraErrorMessage": "Nie udało się zrobić zdjęcia",
     "cameraErrorTitle": "Błąd Aparatu",
     "downloadSetupFailedMessage": "Nie udało się przygotować modelu do pobrania: {{message}}",
-    "downloadSetupFailedTitle": "Błąd Konfiguracji Pobierania"
+    "downloadSetupFailedTitle": "Błąd Konfiguracji Pobierania",
+    "downloadNotTheModel": "Otrzymany plik nie jest plikiem modelu. Sprawdź połączenie i spróbuj ponownie."
   },
   "simulator": {
     "cameraNotAvailable": "Aparat nie jest dostępny w symulatorze. Proszę skorzystać z urządzenia fizycznego."
