@@ -1419,13 +1419,19 @@ describe('ModelStore', () => {
                   hf_repo: string;
                   hf_filename: string;
                   min_app_version?: string;
+                  mmproj?: {hf_repo: string; hf_filename: string};
                 }>;
               }
             >,
           ).flatMap(tier =>
             tier.candidates
               .filter(c => c.min_app_version !== undefined)
-              .map(c => `${c.hf_repo}/${c.hf_filename}`),
+              .flatMap(c => [
+                `${c.hf_repo}/${c.hf_filename}`,
+                ...(c.mmproj
+                  ? [`${c.mmproj.hf_repo}/${c.mmproj.hf_filename}`]
+                  : []),
+              ]),
           ),
         );
         const known: Model[] = await (modelStore as any).resolvePresets();
