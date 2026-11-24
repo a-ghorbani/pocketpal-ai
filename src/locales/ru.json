@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "Ошибка камеры",
     "cameraErrorMessage": "Не удалось сделать фото",
     "galleryErrorTitle": "Ошибка галереи",
-    "galleryErrorMessage": "Не удалось выбрать изображения"
+    "galleryErrorMessage": "Не удалось выбрать изображения",
+    "downloadNotTheModel": "Полученный файл — не файл модели. Проверьте подключение и попробуйте ещё раз."
   },
   "simulator": {
     "cameraNotAvailable": "Камера недоступна в симуляторе. Пожалуйста, используйте физическое устройство."
