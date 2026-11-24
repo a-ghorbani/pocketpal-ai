@@ -263,7 +263,7 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
 
   const holdRestore = (settle: Settle) => {
     let release!: () => void;
-    purchaseStore.restore.mockImplementationOnce(async () => {
+    (purchaseStore.restore as jest.Mock).mockImplementationOnce(async () => {
       runInAction(() => {
         purchaseStore.isRestoring = true;
       });
@@ -351,11 +351,42 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
     );
   });
 
+  it.each([
+    [
+      'Plus stays unlocked although the store query fails',
+      true,
+      {plusAfter: true, result: {queryOk: false}},
+      UNLOCKED,
+    ],
+    [
+      'a Plus payment is pending and the store query fails',
+      false,
+      {plusAfter: false, pendingAfter: true, result: {queryOk: false}},
+      FAILED,
+    ],
+  ] as [string, boolean, Settle, string][])(
+    'follows the Plus screen order when %s',
+    async (_name, plusBefore, settle, expected) => {
+      runInAction(() => {
+        purchaseStore.plusUnlocked = plusBefore;
+      });
+      const release = holdRestore(settle);
+      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+
+      fireEvent.press(r.getByTestId('settings-restore-purchases'));
+      await release();
+
+      expect(shownOutcomes(r)).toEqual([expected]);
+    },
+  );
+
   it('does not leave a rejected restore unhandled', async () => {
     const unhandled = jest.fn();
     process.on('unhandledRejection', unhandled);
     try {
-      purchaseStore.restore.mockRejectedValueOnce(new Error('boom'));
+      (purchaseStore.restore as jest.Mock).mockRejectedValueOnce(
+        new Error('boom'),
+      );
       const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
       fireEvent.press(r.getByTestId('settings-restore-purchases'));
       await act(async () => {
@@ -369,7 +400,9 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
   });
 
   it('clears the previous line while the next restore runs', async () => {
-    purchaseStore.restore.mockResolvedValueOnce({queryOk: false});
+    (purchaseStore.restore as jest.Mock).mockResolvedValueOnce({
+      queryOk: false,
+    });
     const release = holdRestore({plusAfter: false});
     const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
 
@@ -403,15 +436,18 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
     it.each([
       ['ios', [[NONE]]],
       ['android', []],
-    ])('%s announces the outcome as the Plus screen does', async (os, calls) => {
-      (Platform as any).OS = os;
-      const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
+    ])(
+      '%s announces the outcome as the Plus screen does',
+      async (os, calls) => {
+        (Platform as any).OS = os;
+        const r = render(<PurchasesCard onSignInPress={jest.fn()} />);
 
-      fireEvent.press(r.getByTestId('settings-restore-purchases'));
-      await act(flush);
+        fireEvent.press(r.getByTestId('settings-restore-purchases'));
+        await act(flush);
 
-      expect(r.getByText(NONE).props.accessibilityLiveRegion).toBe('polite');
-      expect(announceSpy.mock.calls).toEqual(calls);
-    });
+        expect(r.getByText(NONE).props.accessibilityLiveRegion).toBe('polite');
+        expect(announceSpy.mock.calls).toEqual(calls);
+      },
+    );
   });
 });
