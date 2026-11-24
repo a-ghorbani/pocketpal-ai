@@ -80,9 +80,10 @@ describe('PurchasesCard', () => {
     palStore.userLibrary = [];
   });
 
-  it('restores purchases', () => {
+  it('restores purchases', async () => {
     const {getByTestId} = render(<PurchasesCard onSignInPress={jest.fn()} />);
     fireEvent.press(getByTestId('settings-restore-purchases'));
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
     expect(purchaseStore.restore).toHaveBeenCalled();
   });
 
@@ -341,9 +342,14 @@ describe('PurchasesCard Restore shows the Plus outcome', () => {
         await act(flush);
         expect(shownOutcomes(r)).toEqual([]);
 
+        expect(r.queryByTestId('settings-restore-plus-outcome')).toBeNull();
+
         await release();
 
         expect(shownOutcomes(r)).toEqual([expected]);
+        expect(r.getByTestId('settings-restore-plus-outcome')).toBe(
+          r.getByText(expected),
+        );
         if (withPalRows) {
           expect(r.getByText('Purchased · Support code: SUP-a')).toBeTruthy();
         }
