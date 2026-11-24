@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "Kesalahan Kamera",
     "cameraErrorMessage": "Gagal mengambil foto",
     "galleryErrorTitle": "Kesalahan Galeri",
-    "galleryErrorMessage": "Gagal memilih gambar"
+    "galleryErrorMessage": "Gagal memilih gambar",
+    "downloadNotTheModel": "File yang diterima bukan file model. Periksa koneksi Anda dan coba lagi."
   },
   "simulator": {
     "cameraNotAvailable": "Kamera tidak tersedia di simulator. Harap gunakan perangkat fisik."
