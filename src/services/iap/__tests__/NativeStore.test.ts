@@ -64,9 +64,11 @@ describe('NativeStore', () => {
   });
 
   describe('init', () => {
-    it('reports a connected store', async () => {
+    it('reports a connected store on iOS without querying entitlements', async () => {
+      setOS('ios');
       iap.initConnection.mockResolvedValueOnce(true);
       await expect(store.init()).resolves.toBe(true);
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
     });
 
     it('reports unavailable when the connection throws', async () => {
@@ -88,6 +90,92 @@ describe('NativeStore', () => {
       it('reports unavailable when Play cannot be reached', async () => {
         iap.getAvailablePurchases.mockRejectedValueOnce(PLAY_NOT_CONNECTED);
         await expect(store.init()).resolves.toBe(false);
+      });
+
+      it.each([
+        [
+          'network-error',
+          new Error(
+            '{"code":"network-error","message":"Network connection error","debugMessage":"x"}',
+          ),
+        ],
+        [
+          'billing-unavailable',
+          new Error(
+            '{"code":"billing-unavailable","message":"Billing API version is not supported"}',
+          ),
+        ],
+        [
+          'service-error',
+          new Error(
+            '{"code":"service-error","message":"Timeout communicating with service."}',
+          ),
+        ],
+        [
+          'service-timeout',
+          new Error(
+            '{"code":"service-timeout","message":"The request has reached the maximum timeout"}',
+          ),
+        ],
+        [
+          'query-product',
+          new Error(
+            '{"code":"query-product","message":"Failed to query product","responseCode":-1,"debugMessage":"Service connection is disconnected.","productIds":["plus.1","plus.2","plus.3","plus.4"],"productType":"inapp","isEmptyProductList":true}',
+          ),
+        ],
+        ['a plain error', new Error('boom')],
+        ['a non-error', undefined],
+      ])(
+        'stays available when the entitlement query fails with %s',
+        async (_label, error) => {
+          iap.getAvailablePurchases.mockRejectedValueOnce(error);
+          await expect(store.init()).resolves.toBe(true);
+        },
+      );
+
+      it.each([
+        [
+          'returns false',
+          () => iap.initConnection.mockResolvedValueOnce(false),
+        ],
+        [
+          'throws',
+          () => iap.initConnection.mockRejectedValueOnce(new Error('no play')),
+        ],
+      ])(
+        'skips the entitlement query when the connection %s',
+        async (_label, arrange) => {
+          arrange();
+          await expect(store.init()).resolves.toBe(false);
+          expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+        },
+      );
+
+      it('settles only after the entitlement query, calling nothing else', async () => {
+        let answer: (purchases: unknown[]) => void = () => {};
+        iap.getAvailablePurchases.mockReturnValueOnce(
+          new Promise(resolve => {
+            answer = resolve;
+          }),
+        );
+        let settled = false;
+        const pending = store.init().then(result => {
+          settled = true;
+          return result;
+        });
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(settled).toBe(false);
+        const called = Object.entries(iap)
+          .filter(([, fn]) => jest.isMockFunction(fn) && fn.mock.calls.length)
+          .map(([name]) => name);
+        expect(called.sort()).toEqual([
+          'getAvailablePurchases',
+          'initConnection',
+        ]);
+
+        answer([]);
+        await expect(pending).resolves.toBe(true);
       });
     });
   });
