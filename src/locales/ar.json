@@ -1556,7 +1556,8 @@
     "cameraErrorTitle": "خطأ في الكاميرا",
     "cameraErrorMessage": "تعذّر التقاط الصورة",
     "galleryErrorTitle": "خطأ في المعرض",
-    "galleryErrorMessage": "تعذّر تحديد الصور"
+    "galleryErrorMessage": "تعذّر تحديد الصور",
+    "downloadNotTheModel": "الملف الذي تم تنزيله ليس ملف النموذج. تحقق من اتصالك بالإنترنت وحاول مرة أخرى."
   },
   "simulator": {
     "cameraNotAvailable": "‪الكاميرا غير متاحة في المحاكي. يرجى استخدام جهاز فعلي."

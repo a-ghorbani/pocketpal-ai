@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "摄像头错误",
     "cameraErrorMessage": "拍照失败",
     "galleryErrorTitle": "图库错误",
-    "galleryErrorMessage": "选择图片失败"
+    "galleryErrorMessage": "选择图片失败",
+    "downloadNotTheModel": "收到的文件不是模型文件，请检查网络连接并重试。"
   },
   "simulator": {
     "cameraNotAvailable": "模拟器无法调用相机，请使用实体设备运行。"

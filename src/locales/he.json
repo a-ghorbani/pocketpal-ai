@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "שגיאת מצלמה",
     "cameraErrorMessage": "צילום תמונה נכשל",
     "galleryErrorTitle": "שגיאת גלריה",
-    "galleryErrorMessage": "בחירת תמונות נכשלה"
+    "galleryErrorMessage": "בחירת תמונות נכשלה",
+    "downloadNotTheModel": "הקובץ שהתקבל אינו קובץ המודל. בדוק את החיבור ונסה שוב."
   },
   "simulator": {
     "cameraNotAvailable": "מצלמה אינה זמינה בסימולטור. אנא השתמש במכשיר פיזי."

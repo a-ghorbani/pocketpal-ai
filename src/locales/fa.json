@@ -1548,7 +1548,8 @@
     "cameraErrorTitle": "خطای دوربین",
     "cameraErrorMessage": "گرفتن عکس ناموفق بود",
     "galleryErrorTitle": "خطای گالری",
-    "galleryErrorMessage": "انتخاب تصاویر ناموفق بود"
+    "galleryErrorMessage": "انتخاب تصاویر ناموفق بود",
+    "downloadNotTheModel": "فایلی که دریافت شد، فایل مدل نیست. اتصال خود را بررسی کرده و دوباره تلاش کنید."
   },
   "simulator": {
     "cameraNotAvailable": "دوربین در شبیه‌ساز در دسترس نیست. لطفاً از دستگاه واقعی استفاده کنید."
