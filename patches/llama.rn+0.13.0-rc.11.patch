@@ -1,8 +1,23 @@
+diff --git a/node_modules/llama.rn/android/src/main/java/com/rnllama/RNLlama.java b/node_modules/llama.rn/android/src/main/java/com/rnllama/RNLlama.java
+index da47b6c..974f9bf 100644
+--- a/node_modules/llama.rn/android/src/main/java/com/rnllama/RNLlama.java
++++ b/node_modules/llama.rn/android/src/main/java/com/rnllama/RNLlama.java
+@@ -33,8 +33,8 @@ public class RNLlama {
+   private static final Pattern QUALCOMM_HINT_PATTERN =
+     Pattern.compile("(adreno|qcom|qualcomm|snapdragon)", Pattern.CASE_INSENSITIVE);
+   private static final Pattern KNOWN_HEXAGON_SOC_PATTERN =
+-    Pattern.compile("\\b(SM8450|SM8550|SM8635|SM8650|SM8750|SM8845|SM8850)\\b");
+-  private static final Pattern SNAPDRAGON_8_SERIES_SOC_PATTERN = Pattern.compile("\\bSM8\\d{3}\\b");
++    Pattern.compile("\\b(SM8450|SM8550|SM8635|SM8650|SM8750|SM8845|SM8850)[A-Z]?\\b");
++  private static final Pattern SNAPDRAGON_8_SERIES_SOC_PATTERN = Pattern.compile("\\bSM8\\d{3}[A-Z]?\\b");
+   private static final Pattern SNAPDRAGON_8_SERIES_NAME_PATTERN =
+     Pattern.compile("SNAPDRAGON\\s*8");
+   private static final Pattern HEXAGON_CODENAME_PATTERN =
 diff --git a/node_modules/llama.rn/cpp/jsi/JSICompletion.h b/node_modules/llama.rn/cpp/jsi/JSICompletion.h
-index d6cf4b6..e0e4218 100644
+index 635965a..ef07cc8 100644
 --- a/node_modules/llama.rn/cpp/jsi/JSICompletion.h
 +++ b/node_modules/llama.rn/cpp/jsi/JSICompletion.h
-@@ -161,7 +161,7 @@ namespace rnllama_jsi {
+@@ -165,7 +165,7 @@ namespace rnllama_jsi {
          res["draft_tokens_accepted"] = c.num_draft_tokens_accepted;
          res["truncated"] = c.truncated;
          res["context_full"] = c.context_full;
@@ -215,10 +230,10 @@ index 13ffe4b..57b06a4 100644
          int totalTasks = 0;
          std::atomic<bool> shuttingDown{false};
 diff --git a/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp b/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
-index a61f5e9..a0ef6b4 100644
+index 8ec4335..ae50005 100644
 --- a/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
 +++ b/node_modules/llama.rn/cpp/jsi/JSIUtils.cpp
-@@ -159,8 +159,7 @@ namespace rnllama_jsi {
+@@ -165,8 +165,7 @@ namespace rnllama_jsi {
                              }
                          }
  
@@ -228,7 +243,7 @@ index a61f5e9..a0ef6b4 100644
                          if (!invokeScheduled && shouldTrack) {
                              TaskManager::getInstance().finishTask(contextId);
                          }
-@@ -188,7 +187,7 @@ namespace rnllama_jsi {
+@@ -194,7 +193,7 @@ namespace rnllama_jsi {
                  callback(shouldProceed);
              });
          } catch (...) {
@@ -250,7 +265,7 @@ index eb52272..9ff97ad 100644
      void invokeAsyncTracked(
          std::shared_ptr<react::CallInvoker> callInvoker,
 diff --git a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
-index ffd7942..a2c5190 100644
+index 4699569..3759fd2 100644
 --- a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
 +++ b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
 @@ -13,11 +13,13 @@
@@ -286,35 +301,7 @@ index ffd7942..a2c5190 100644
          explicit ContextClaim(rnllama::llama_rn_context* ctx) : ctx_(ctx) {
              bool expected = false;
              if (!ctx_->is_claimed.compare_exchange_strong(expected, true)) {
-@@ -224,6 +231,27 @@ namespace rnllama_jsi {
-         rnllama::llama_rn_context* ctx_;
-     };
- 
-+    // Ends a completion on every exit, so a throw from the token loop does not
-+    // leave the context marked as predicting
-+    class CompletionScope {
-+    public:
-+        explicit CompletionScope(rnllama::llama_rn_context_completion* completion) : completion_(completion) {}
-+        CompletionScope(const CompletionScope&) = delete;
-+        CompletionScope& operator=(const CompletionScope&) = delete;
-+
-+        ~CompletionScope() {
-+            if (completion_) completion_->endCompletion();
-+        }
-+
-+        void end() {
-+            completion_->endCompletion();
-+            completion_ = nullptr;
-+        }
-+
-+    private:
-+        rnllama::llama_rn_context_completion* completion_;
-+    };
-+
-     static void ensureBackendInitialized() {
-         std::call_once(backend_init_once, []() {
-             llama_backend_init();
-@@ -526,20 +554,40 @@ namespace rnllama_jsi {
+@@ -534,20 +541,40 @@ namespace rnllama_jsi {
          }
      }
  
@@ -364,7 +351,7 @@ index ffd7942..a2c5190 100644
      }
  
      void installJSIBindings(
-@@ -732,7 +780,8 @@ namespace rnllama_jsi {
+@@ -740,7 +767,8 @@ namespace rnllama_jsi {
                               }
                           }
  
@@ -374,7 +361,7 @@ index ffd7942..a2c5190 100644
  
                           std::string androidLibName = "";
                           #if defined(__ANDROID__)
-@@ -743,7 +792,7 @@ namespace rnllama_jsi {
+@@ -751,7 +779,7 @@ namespace rnllama_jsi {
                               {"reasonNoGPU", reasonNoGPU},
                               {"systemInfo", common_params_get_system_info(ctx->params)},
                               // Model metadata and chat template capabilities
@@ -383,7 +370,7 @@ index ffd7942..a2c5190 100644
                               {"devices", usedDevices},
                               {"androidLib", androidLibName},
                           });
-@@ -811,7 +860,7 @@ namespace rnllama_jsi {
+@@ -819,7 +847,7 @@ namespace rnllama_jsi {
                  return createPromiseTask(runtime, callInvoker, [contextId, path]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      ContextClaim claim(ctx);
@@ -392,7 +379,7 @@ index ffd7942..a2c5190 100644
                      return [result](jsi::Runtime& rt) {
                          return fromJson(rt, result);
                      };
-@@ -831,7 +880,7 @@ namespace rnllama_jsi {
+@@ -839,7 +867,7 @@ namespace rnllama_jsi {
                  return createPromiseTask(runtime, callInvoker, [contextId, path, size]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      ContextClaim claim(ctx);
@@ -401,16 +388,16 @@ index ffd7942..a2c5190 100644
                      return [tokens_saved](jsi::Runtime& rt) {
                          return jsi::Value(tokens_saved);
                      };
-@@ -1122,7 +1171,7 @@ namespace rnllama_jsi {
+@@ -1134,7 +1162,7 @@ namespace rnllama_jsi {
                  ContextClaim claim(ctx);
                  ctx->completion->rewind();
  
--                parseCompletionParams(params, ctx);
-+                parseCompletionParams(params, ctx.get());
+-                parseCompletionParams(params, ctx, hasLogitBiasTable ? &logitBiasTable : nullptr);
++                parseCompletionParams(params, ctx.get(), hasLogitBiasTable ? &logitBiasTable : nullptr);
  
                  std::vector<std::string> mediaPaths;
                  // media_paths: string | string[]
-@@ -1147,7 +1196,7 @@ namespace rnllama_jsi {
+@@ -1159,7 +1187,7 @@ namespace rnllama_jsi {
  
                  jsi::Value promise = createPromiseTask(runtime, callInvoker, [runtimePtr = std::shared_ptr<jsi::Runtime>(&runtime, [](jsi::Runtime*){}), contextId, onToken, emitPartial, mediaPaths, chat_format, reasoning_format, generation_prompt, chat_parser, prefill_text, callInvoker]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
@@ -419,29 +406,17 @@ index ffd7942..a2c5190 100644
  
                      if (ctx->completion == nullptr) {
                          throw std::runtime_error("Completion not initialized");
-@@ -1187,6 +1236,7 @@ namespace rnllama_jsi {
+@@ -1235,7 +1263,7 @@ namespace rnllama_jsi {
  
-                     size_t sent_count = 0;
- 
-+                    CompletionScope completionScope(ctx->completion);
-                     while (ctx->completion->has_next_token && !ctx->completion->is_interrupted) {
-                         const rnllama::completion_token_output token_with_probs = ctx->completion->doCompletion();
-                         if (token_with_probs.tok == -1 || ctx->completion->incomplete) {
-@@ -1228,7 +1278,7 @@ namespace rnllama_jsi {
- 
-                                 auto runtime = runtimePtr;
-                                 if (runtime) {
--                                    json tokenResult = tokenResultJson(ctx, output_copy);
-+                                    json tokenResult = tokenResultJson(ctx.get(), output_copy);
-                                     if (has_partial_output) {
-                                         addChatOutputFields(tokenResult, partial_output);
-                                     }
-@@ -1246,10 +1296,10 @@ namespace rnllama_jsi {
-                     }
- 
-                     common_perf_print(ctx->ctx, ctx->completion->ctx_sampling);
--                    ctx->completion->endCompletion();
-+                    completionScope.end();
+                                     auto runtime = runtimePtr;
+                                     if (runtime) {
+-                                        json tokenResult = tokenResultJson(ctx, output_copy);
++                                        json tokenResult = tokenResultJson(ctx.get(), output_copy);
+                                         if (has_partial_output) {
+                                             addChatOutputFields(tokenResult, partial_output);
+                                         }
+@@ -1263,7 +1291,7 @@ namespace rnllama_jsi {
+                     ctx->completion->endCompletion();
  
                      // Snapshot the result here, before another task can touch the context
 -                    CompletionResult result = completionResult(ctx);
@@ -449,16 +424,16 @@ index ffd7942..a2c5190 100644
  
                      return [contextId, result](jsi::Runtime& rt) -> jsi::Value {
                          if (!g_llamaContexts.get(contextId)) {
-@@ -1363,7 +1413,7 @@ namespace rnllama_jsi {
+@@ -1381,7 +1409,7 @@ namespace rnllama_jsi {
                      throw jsi::JSError(runtime, "This model only answers decisions, see decide()");
                  }
                  auto originalParams = ctxPtr->params;
--                parseCompletionParams(params, ctxPtr);
-+                parseCompletionParams(params, ctxPtr.get());
+-                parseCompletionParams(params, ctxPtr, hasLogitBiasTable ? &logitBiasTable : nullptr);
++                parseCompletionParams(params, ctxPtr.get(), hasLogitBiasTable ? &logitBiasTable : nullptr);
                  common_params cparams = ctxPtr->params;
                  ctxPtr->params = originalParams;
  
-@@ -1402,7 +1452,14 @@ namespace rnllama_jsi {
+@@ -1420,7 +1448,14 @@ namespace rnllama_jsi {
                      auto tokenizeResult = ctx->tokenize(cparams.prompt, mediaPaths);
                      std::vector<llama_token> tokens = tokenizeResult.tokens;
  
@@ -474,7 +449,7 @@ index ffd7942..a2c5190 100644
                          int requestId = token.request_id;
                          rnllama::completion_chat_output parsed_output;
                          bool has_parsed_output = false;
-@@ -1420,7 +1477,7 @@ namespace rnllama_jsi {
+@@ -1438,7 +1473,7 @@ namespace rnllama_jsi {
  
                          auto callbacks = RequestManager::getInstance().getRequest(contextId, requestId);
                          if (callbacks.onToken) {
@@ -483,7 +458,7 @@ index ffd7942..a2c5190 100644
                              if (has_parsed_output) {
                                  addChatOutputFields(tokenResult, parsed_output);
                              }
-@@ -1496,7 +1553,7 @@ namespace rnllama_jsi {
+@@ -1514,7 +1549,7 @@ namespace rnllama_jsi {
                      if (result == rnllama::llama_rn_cancel_result::QUEUED) {
                          auto callbacks = RequestManager::getInstance().takeRequest(contextId, requestId);
                          if (callbacks.onComplete) {
@@ -492,7 +467,7 @@ index ffd7942..a2c5190 100644
                              callbacks.onComplete->call(runtime, fromJson(runtime, response));
                          }
                      }
-@@ -1756,12 +1813,9 @@ namespace rnllama_jsi {
+@@ -1774,12 +1809,9 @@ namespace rnllama_jsi {
                  int contextId = (int)arguments[0].asNumber();
                  int subscriberId = (int)arguments[1].asNumber();
  
@@ -508,7 +483,7 @@ index ffd7942..a2c5190 100644
                  }
  
                  return jsi::Value::undefined();
-@@ -1776,33 +1830,17 @@ namespace rnllama_jsi {
+@@ -1794,33 +1826,17 @@ namespace rnllama_jsi {
                   int contextId = (int)arguments[0].asNumber();
                   return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
                       RequestManager::getInstance().clearContext(contextId);
@@ -547,7 +522,7 @@ index ffd7942..a2c5190 100644
                       }
                       return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
                   }, contextId, false);  // trackTask=false - release should not count itself
-@@ -1817,33 +1855,18 @@ namespace rnllama_jsi {
+@@ -1835,33 +1851,18 @@ namespace rnllama_jsi {
                   return createPromiseTask(runtime, callInvoker, []() -> PromiseResultGenerator {
                       RequestManager::getInstance().clearAll();
  
@@ -587,16 +562,16 @@ index ffd7942..a2c5190 100644
                       return [](jsi::Runtime& rt) { return jsi::Value::undefined(); };
                   }, -1, false);  // contextId=-1 (not tracked), trackTask=false
              }
-@@ -2040,7 +2063,7 @@ namespace rnllama_jsi {
+@@ -2062,7 +2063,7 @@ namespace rnllama_jsi {
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
--                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx, speaker, textToSpeak, speakerId);
-+                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx.get(), speaker, textToSpeak, speakerId);
+-                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx, speaker, textToSpeak, speakerId, instruct);
++                        auto audio_result = ctx->tts_wrapper->getFormattedAudioCompletion(ctx.get(), speaker, textToSpeak, speakerId, instruct);
                          json res = json::object({{"prompt", audio_result.prompt}});
                          if (!audio_result.grammar.empty()) {
                              res["grammar"] = audio_result.grammar;
-@@ -2066,7 +2089,7 @@ namespace rnllama_jsi {
+@@ -2095,7 +2096,7 @@ namespace rnllama_jsi {
                  return createPromiseTask(runtime, callInvoker, [contextId]() -> PromiseResultGenerator {
                      auto ctx = getContextOrThrow(contextId);
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
@@ -605,7 +580,7 @@ index ffd7942..a2c5190 100644
                      json res = json::object({
                          {"type", cap.type},
                          {"promptKind", cap.prompt_kind},
-@@ -2095,7 +2118,7 @@ namespace rnllama_jsi {
+@@ -2129,7 +2130,7 @@ namespace rnllama_jsi {
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
@@ -614,16 +589,7 @@ index ffd7942..a2c5190 100644
                          return [audio_data](jsi::Runtime& rt) {
                              return makeFloat32Array(rt, audio_data);
                          };
-@@ -2158,7 +2181,7 @@ namespace rnllama_jsi {
-                     }
- 
-                     try {
--                        auto r = ctx->tts_wrapper->generateAudioCodes(ctx, opts, cb);
-+                        auto r = ctx->tts_wrapper->generateAudioCodes(ctx.get(), opts, cb);
-                         json res = json::object({
-                             {"codes", r.codes},
-                             {"nCodebook", r.n_codebook},
-@@ -2195,14 +2218,14 @@ namespace rnllama_jsi {
+@@ -2158,14 +2159,14 @@ namespace rnllama_jsi {
                      auto ctx = getContextOrThrow(contextId);
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
@@ -637,28 +603,28 @@ index ffd7942..a2c5190 100644
                      const int speakerId = ctx->tts_wrapper->createSpeaker(
 -                        ctx, pcm, opts.inputSampleRate, opts.refText,
 +                        ctx.get(), pcm, opts.inputSampleRate, opts.refText,
-                         has_emotion ? opts.emotion : 0.5f, has_emotion, opts.bake);
+                         has_emotion ? opts.emotion : 0.5f, has_emotion);
  
-                     const rnllama::rn_speaker * spk = ctx->tts_wrapper->getSpeaker(speakerId);
-@@ -2234,7 +2257,7 @@ namespace rnllama_jsi {
-                     auto ctx = getContextOrThrow(contextId);
-                     if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
- 
--                    ctx->tts_wrapper->bakeSpeaker(ctx, speakerId);
-+                    ctx->tts_wrapper->bakeSpeaker(ctx.get(), speakerId);
- 
-                     const rnllama::rn_speaker * spk = ctx->tts_wrapper->getSpeaker(speakerId);
-                     if (!spk) throw std::runtime_error("bakeSpeaker: speaker id not found");
-@@ -2283,7 +2306,7 @@ namespace rnllama_jsi {
+                     json res = json::object({{"id", speakerId}, {"family", family}});
+@@ -2216,7 +2217,7 @@ namespace rnllama_jsi {
+                     const int speakerId = ctx->tts_wrapper->loadSpeaker(path, name);
+                     json res = json::object({
+                         {"id", speakerId},
+-                        {"family", ctx->tts_wrapper->getTTSCapabilities(ctx).family},
++                        {"family", ctx->tts_wrapper->getTTSCapabilities(ctx.get()).family},
+                     });
+                     return [res](jsi::Runtime& rt) {
+                         return fromJson(rt, res);
+@@ -2283,7 +2284,7 @@ namespace rnllama_jsi {
                      if (!ctx->isVocoderEnabled()) throw std::runtime_error("Vocoder is not enabled");
  
                      try {
--                        auto audio_data = ctx->tts_wrapper->decodeAudioEmbeddings(ctx, embeddings, embeddingDim);
-+                        auto audio_data = ctx->tts_wrapper->decodeAudioEmbeddings(ctx.get(), embeddings, embeddingDim);
+-                        auto audio_data = ctx->tts_wrapper->decodeAudioLatents(ctx, latents);
++                        auto audio_data = ctx->tts_wrapper->decodeAudioLatents(ctx.get(), latents);
                          return [audio_data](jsi::Runtime& rt) {
                              return makeFloat32Array(rt, audio_data);
                          };
-@@ -2358,19 +2381,9 @@ namespace rnllama_jsi {
+@@ -2358,19 +2359,9 @@ namespace rnllama_jsi {
          llama_log_set(llama_log_callback_default, nullptr);
  
          RequestManager::getInstance().clearAll();
@@ -681,7 +647,7 @@ index ffd7942..a2c5190 100644
          }
  
          if (contexts.empty()) {
-@@ -2379,12 +2392,9 @@ namespace rnllama_jsi {
+@@ -2379,12 +2370,9 @@ namespace rnllama_jsi {
          }
          ThreadPool::getInstance().shutdown();
  
@@ -711,10 +677,10 @@ index 7a065cb..5012051 100644
  #if defined(__ANDROID__)
      void setAndroidLoadedLibrary(const std::string& name);
 diff --git a/node_modules/llama.rn/cpp/rn-completion.cpp b/node_modules/llama.rn/cpp/rn-completion.cpp
-index 11141fd..b362862 100644
+index ae9eed9..2a08560 100644
 --- a/node_modules/llama.rn/cpp/rn-completion.cpp
 +++ b/node_modules/llama.rn/cpp/rn-completion.cpp
-@@ -610,7 +610,17 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
+@@ -631,7 +631,17 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
          );
      } else {
          // Multimodal path - process all media paths
@@ -733,7 +699,7 @@ index 11141fd..b362862 100644
          num_prompt_tokens = embd.size();
          // Placeholder tokens are not vocab ids; no delimiter scan on media prompts.
          boundary_ckpts.clear();
-@@ -677,6 +687,8 @@ void llama_rn_context_completion::beginCompletion(int chat_format, common_reason
+@@ -698,6 +708,8 @@ void llama_rn_context_completion::beginCompletion(int chat_format, common_reason
      llama_perf_context_reset(parent_ctx->ctx);
      resetGenerationTimings();
      is_predicting = true;
@@ -742,7 +708,7 @@ index 11141fd..b362862 100644
  
      current_chat_format = chat_format;
      current_reasoning_format = reasoning_format;
-@@ -687,12 +699,62 @@ void llama_rn_context_completion::beginCompletion(int chat_format, common_reason
+@@ -708,12 +720,62 @@ void llama_rn_context_completion::beginCompletion(int chat_format, common_reason
  void llama_rn_context_completion::endCompletion() {
      generated_text += utf8_gate.finish();
      incomplete = false;
@@ -808,7 +774,7 @@ index 11141fd..b362862 100644
  }
  
  void llama_rn_context_completion::resetGenerationTimings() {
-@@ -1516,12 +1578,14 @@ completion_token_output llama_rn_context_completion::nextToken()
+@@ -1316,12 +1378,14 @@ completion_token_output llama_rn_context_completion::nextToken()
          } else {
              if (llama_decode(parent_ctx->ctx, llama_batch_get_one(&embd[n_past], n_eval)))
              {
@@ -829,7 +795,7 @@ index 11141fd..b362862 100644
                  // Trim embd to what the memory actually contains so a later prefix
                  // match can't claim never-written cells.
                  embd.resize(n_past);
-@@ -1790,7 +1854,18 @@ size_t llama_rn_context_completion::findStoppingStrings(const std::string &text,
+@@ -1490,7 +1554,18 @@ size_t llama_rn_context_completion::findStoppingStrings(const std::string &text,
  
  completion_token_output llama_rn_context_completion::doCompletion()
  {
@@ -850,7 +816,7 @@ index 11141fd..b362862 100644
      const std::string token_text = token_with_probs.tok == -1 ? "" : common_token_to_piece(parent_ctx->ctx, token_with_probs.tok);
      generated_text += utf8_gate.feed(token_text);
 diff --git a/node_modules/llama.rn/cpp/rn-completion.h b/node_modules/llama.rn/cpp/rn-completion.h
-index d152478..13c490f 100644
+index 2234853..f3205fe 100644
 --- a/node_modules/llama.rn/cpp/rn-completion.h
 +++ b/node_modules/llama.rn/cpp/rn-completion.h
 @@ -79,7 +79,7 @@ struct llama_rn_context_completion {
@@ -862,7 +828,7 @@ index d152478..13c490f 100644
      bool has_next_token = false;
      std::string prefill_text;
      std::string generated_text;
-@@ -193,6 +193,7 @@ struct llama_rn_context_completion {
+@@ -198,6 +198,7 @@ struct llama_rn_context_completion {
      void beginCompletion();
      void beginCompletion(int chat_format, common_reasoning_format reasoning_format, const std::string &generation_prompt = "", const std::string &chat_parser = "");
      void endCompletion();
@@ -871,10 +837,10 @@ index d152478..13c490f 100644
      void startGenerationTiming();
      void updateGenerationTiming();
 diff --git a/node_modules/llama.rn/cpp/rn-llama.cpp b/node_modules/llama.rn/cpp/rn-llama.cpp
-index 87e7ec8..d3634c2 100644
+index acc77f1..7182824 100644
 --- a/node_modules/llama.rn/cpp/rn-llama.cpp
 +++ b/node_modules/llama.rn/cpp/rn-llama.cpp
-@@ -128,6 +128,28 @@ void install_ggml_abort_handler() {
+@@ -163,6 +163,28 @@ void install_ggml_abort_handler() {
      ggml_set_abort_callback(ggml_abort_log_callback);
  }
  
@@ -903,7 +869,7 @@ index 87e7ec8..d3634c2 100644
  static const std::vector<ggml_type> kv_cache_types = {
      GGML_TYPE_F32,
      GGML_TYPE_F16,
-@@ -519,6 +541,13 @@ bool llama_rn_context::attachThreadpoolsIfAvailable() {
+@@ -554,6 +576,13 @@ bool llama_rn_context::attachThreadpoolsIfAvailable() {
  }
  
  llama_rn_context::~llama_rn_context() {
@@ -917,17 +883,17 @@ index 87e7ec8..d3634c2 100644
      // Disable parallel mode first (cleans up slot_manager)
      disableParallelMode();
  
-@@ -570,6 +599,7 @@ bool llama_rn_context::loadModel(common_params &params_)
+@@ -605,6 +634,7 @@ bool llama_rn_context::loadModel(common_params &params_)
          }
          return false;
      }
 +    llama_set_abort_callback(ctx, llama_rn_abort_callback, this);
- 
-     // Load the draft model for embedded MTP drafts and for classic standalone draft models
-     // (draft-simple) alike. Gating this on MTP alone silently disabled speculation for
-@@ -724,7 +754,13 @@ llama_context * llama_rn_context::createMTPDraftContext(const common_params &par
-     cparams.type_k = params_for_context.speculative.draft.cache_type_k;
-     cparams.type_v = params_for_context.speculative.draft.cache_type_v;
+     default_samplers = params.sampling.samplers;
+     {
+         const llama_vocab * vocab = llama_model_get_vocab(model);
+@@ -765,7 +795,13 @@ llama_context * llama_rn_context::createMTPDraftContext(const common_params &par
+         cparams.ctx_other = ctx;
+     }
  
 -    return llama_init_from_model(model_dft, cparams);
 +    llama_context * draft_ctx = llama_init_from_model(model_dft, cparams);
@@ -941,10 +907,10 @@ index 87e7ec8..d3634c2 100644
  
  
 diff --git a/node_modules/llama.rn/cpp/rn-llama.h b/node_modules/llama.rn/cpp/rn-llama.h
-index 8236f13..0bbb907 100644
+index a3bea02..669b6f7 100644
 --- a/node_modules/llama.rn/cpp/rn-llama.h
 +++ b/node_modules/llama.rn/cpp/rn-llama.h
-@@ -222,6 +222,13 @@ struct llama_rn_context {
+@@ -247,6 +247,13 @@ struct llama_rn_context {
  
      // Cache management
      void clearCache(bool clear_data = false);
@@ -959,10 +925,10 @@ index 8236f13..0bbb907 100644
  
  // Utility functions
 diff --git a/node_modules/llama.rn/cpp/rn-mtmd.hpp b/node_modules/llama.rn/cpp/rn-mtmd.hpp
-index 0065b43..122681f 100644
+index 3dc7e18..7ea9e62 100644
 --- a/node_modules/llama.rn/cpp/rn-mtmd.hpp
 +++ b/node_modules/llama.rn/cpp/rn-mtmd.hpp
-@@ -658,6 +658,10 @@ inline void llama_rn_context_mtmd::processMedia(
+@@ -657,6 +657,10 @@ inline void llama_rn_context_mtmd::processMedia(
              );
              if (res != 0) {
                  mtmd_input_chunks_free(chunks);
@@ -974,7 +940,7 @@ index 0065b43..122681f 100644
              }
              n_past = new_n_past;
 diff --git a/node_modules/llama.rn/llama-rn.podspec b/node_modules/llama.rn/llama-rn.podspec
-index 1362325..1542d02 100644
+index dbe5f29..e4acb67 100644
 --- a/node_modules/llama.rn/llama-rn.podspec
 +++ b/node_modules/llama.rn/llama-rn.podspec
 @@ -7,12 +7,12 @@ base_compiler_flags = "-fno-objc-arc -fvisibility-inlines-hidden -DGGML_USE_CPU
@@ -1002,10 +968,10 @@ index 1362325..1542d02 100644
        "#{llama_cpp}/common/**/*.{h,cpp}",
        "#{llama_cpp}/tools/mtmd/**/*.{h,cpp}",
 diff --git a/node_modules/llama.rn/src/index.ts b/node_modules/llama.rn/src/index.ts
-index 039933f..1fdd5d4 100644
+index dcc2b44..ae2cd3c 100644
 --- a/node_modules/llama.rn/src/index.ts
 +++ b/node_modules/llama.rn/src/index.ts
-@@ -432,6 +432,10 @@ export class LlamaSpeaker {
+@@ -412,6 +412,10 @@ export class LlamaSpeaker {
  export class LlamaContext {
    id: number
  
@@ -1016,15 +982,15 @@ index 039933f..1fdd5d4 100644
    gpu: boolean = false
  
    reasonNoGPU: string = ''
-@@ -911,6 +915,7 @@ export class LlamaContext {
-     params: CompletionParams & { speaker?: LlamaSpeaker },
+@@ -894,6 +898,7 @@ export class LlamaContext {
+     params: CompletionParams & { speaker?: string | LlamaSpeaker },
      callback?: (data: TokenData) => void,
    ): Promise<NativeCompletionResult> {
 +    const stopRequestsAtStart = this.stopRequests
+     const { speaker, ...rest } = params
      const nativeParams: NativeCompletionRequestParams & {
        speakerId?: number
-     } = {
-@@ -998,11 +1003,16 @@ export class LlamaContext {
+@@ -982,11 +987,16 @@ export class LlamaContext {
      if (!nativeParams.prompt && !params.embedding && !nativeParams.media_paths)
        throw new Error('Prompt is required')
  
@@ -1044,7 +1010,7 @@ index 039933f..1fdd5d4 100644
      return llamaStopCompletion(this.id)
    }
 diff --git a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
-index 451f652..54fb9ff 100644
+index 0a07a76..64595da 100644
 --- a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
 +++ b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m
 @@ -508,10 +508,10 @@ ggml_metal_library_t ggml_metal_library_init(ggml_metal_device_t dev) {
@@ -1070,10 +1036,10 @@ index 451f652..54fb9ff 100644
      NSString * path_resource = [[NSProcessInfo processInfo].environment objectForKey:@"GGML_METAL_PATH_RESOURCES"];
      if (path_resource) {
 diff --git a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
-index 6724826..9dc1388 100644
+index e0b4164..18b0e5c 100644
 --- a/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
 +++ b/node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-opencl/ggml-opencl.cpp
-@@ -4301,7 +4301,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+@@ -5074,7 +5074,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
      }
  
      // gemm_noshuffle_q3_k_q8_1_dp4a
@@ -1082,3 +1048,84 @@ index 6724826..9dc1388 100644
  #ifdef GGML_OPENCL_EMBED_KERNELS
          const std::string kernel_src {
              #include "gemm_noshuffle_q3_k_q8_1_dp4a.cl.h"
+@@ -5092,7 +5092,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_q2_0_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_q2_0_q8_1_dp4a.cl.h"
+@@ -5110,7 +5110,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq4_xs_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq4_xs_q8_1_dp4a.cl.h"
+@@ -5232,7 +5232,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq1_s_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq1_s_q8_1_dp4a.cl.h"
+@@ -5319,7 +5319,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq1_m_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq1_m_q8_1_dp4a.cl.h"
+@@ -5387,7 +5387,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq3_s_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq3_s_q8_1_dp4a.cl.h"
+@@ -5474,7 +5474,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq3_xxs_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq3_xxs_q8_1_dp4a.cl.h"
+@@ -5561,7 +5561,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq2_s_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq2_s_q8_1_dp4a.cl.h"
+@@ -5579,7 +5579,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq2_xs_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq2_xs_q8_1_dp4a.cl.h"
+@@ -5597,7 +5597,7 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     }
+ 
+     // gemm_noshuffle_iq2_xxs_q8_1_dp4a
+-    {
++    if (backend_ctx->has_integer_dot) {
+ #ifdef GGML_OPENCL_EMBED_KERNELS
+         const std::string kernel_src {
+             #include "gemm_noshuffle_iq2_xxs_q8_1_dp4a.cl.h"

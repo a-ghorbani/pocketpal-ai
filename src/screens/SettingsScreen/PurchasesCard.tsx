@@ -1,6 +1,7 @@
-import React, {useContext} from 'react';
-import {View} from 'react-native';
+import React, {useContext, useEffect, useRef, useState} from 'react';
+import {AccessibilityInfo, Platform, View} from 'react-native';
 
+import {useIsFocused} from '@react-navigation/native';
 import {observer} from 'mobx-react-lite';
 import {Button, Card, Text} from 'react-native-paper';
 
@@ -11,6 +12,7 @@ import {t} from '../../locales';
 import {L10nContext} from '../../utils';
 import {authService} from '../../services';
 import {ACCOUNT_LINK_ENABLED} from '../../services/iap/accountLink';
+import {isStoreBuild} from '../../services/plus/gate';
 import {purchaseStore} from '../../store';
 import type {LedgerRecord} from '../../store/PurchaseStore';
 
@@ -20,6 +22,8 @@ interface PurchasesCardProps {
   onSignInPress: () => void;
 }
 
+type PlusOutcome = 'unlocked' | 'failed' | 'pending' | 'none';
+
 export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
   ({onSignInPress}) => {
     const theme = useTheme();
@@ -28,8 +32,18 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
     const copy = l10n.settings.purchases;
     const records = purchaseStore.storeOwnedRecords;
     const isReady = purchaseStore.availability === 'ready';
+    const [plusOutcome, setPlusOutcome] = useState<PlusOutcome | null>(null);
+    const isFocused = useIsFocused();
+    const isFocusedRef = useRef(isFocused);
 
-    if (!isReady && records.length === 0) {
+    useEffect(() => {
+      isFocusedRef.current = isFocused;
+      if (!isFocused) {
+        setPlusOutcome(null);
+      }
+    }, [isFocused]);
+
+    if (!isStoreBuild() || (!isReady && records.length === 0)) {
       return null;
     }
 
@@ -63,6 +77,54 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
             code: record.supportCode,
           })}`
         : status;
+    };
+
+    const plusOutcomeText = {
+      unlocked: l10n.plus.thanksSubline,
+      failed: l10n.plus.restoreFailed,
+      pending: l10n.plus.pendingTitle,
+      none: l10n.plus.noPurchaseFound,
+    };
+
+    const matchesPlusState = (outcome: PlusOutcome) => {
+      if (outcome === 'unlocked') {
+        return purchaseStore.plusUnlocked;
+      }
+      if (purchaseStore.plusUnlocked) {
+        return false;
+      }
+      return outcome !== 'pending' || purchaseStore.plusPending;
+    };
+
+    const shownOutcome =
+      plusOutcome && matchesPlusState(plusOutcome) ? plusOutcome : null;
+
+    const showPlusOutcome = (outcome: PlusOutcome) => {
+      if (!isFocusedRef.current) {
+        return;
+      }
+      setPlusOutcome(outcome);
+      if (Platform.OS === 'ios') {
+        AccessibilityInfo.announceForAccessibility(plusOutcomeText[outcome]);
+      }
+    };
+
+    const handleRestore = async () => {
+      setPlusOutcome(null);
+      try {
+        const {queryOk} = await purchaseStore.restore();
+        if (purchaseStore.plusUnlocked) {
+          showPlusOutcome('unlocked');
+        } else if (!queryOk) {
+          showPlusOutcome('failed');
+        } else if (purchaseStore.plusPending) {
+          showPlusOutcome('pending');
+        } else {
+          showPlusOutcome('none');
+        }
+      } catch {
+        showPlusOutcome(purchaseStore.plusUnlocked ? 'unlocked' : 'failed');
+      }
     };
 
     const handleLink = () => {
@@ -104,12 +166,21 @@ export const PurchasesCard: React.FC<PurchasesCardProps> = observer(
               <Button
                 testID="settings-restore-purchases"
                 mode="outlined"
-                onPress={() => purchaseStore.restore()}
+                onPress={handleRestore}
                 loading={purchaseStore.isRestoring}
                 disabled={purchaseStore.isRestoring}
                 style={styles.menuButton}>
                 {l10n.palsScreen.purchase.restorePurchases}
               </Button>
+            )}
+            {shownOutcome && (
+              <Text
+                testID="settings-restore-plus-outcome"
+                variant="labelSmall"
+                style={styles.textDescription}
+                accessibilityLiveRegion="polite">
+                {plusOutcomeText[shownOutcome]}
+              </Text>
             )}
             {ACCOUNT_LINK_ENABLED && purchaseStore.needsLink && (
               <Button

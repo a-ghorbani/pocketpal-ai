@@ -51,7 +51,8 @@ import hfGemma3VisionRepos from '../../../jest/fixtures/hfGemma3VisionRepos.json
 import {hfAsModel} from '../../utils';
 import {processHFSearchResults} from '../../utils/hf';
 import type {HuggingFaceModel, ModelFile} from '../../utils/types';
-import {t} from '../../locales';
+import {l10n, t} from '../../locales';
+import {NetworkError} from '../../utils/errors';
 import {
   getCpuCoreCount,
   getRecommendedThreadCount,
@@ -2814,6 +2815,22 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].progress).toBe(40);
       expect(modelStore.models[0].isDownloaded).toBe(false);
       expect(modelStore.downloadError?.metadata?.modelId).toBe(model.id);
+    });
+
+    it('shows a not-the-model failure as a network error with its message', () => {
+      const model = {...presetModelFixture, isDownloaded: false};
+      modelStore.models = [model];
+
+      registeredDownloadCallbacks.onError(
+        model.id,
+        new NetworkError(l10n.en.errors.downloadNotTheModel),
+      );
+
+      expect(modelStore.downloadError?.code).toBe('network');
+      expect(modelStore.downloadError?.message).toBe(
+        l10n.en.errors.downloadNotTheModel,
+      );
+      expect(modelStore.models[0].isDownloaded).toBe(false);
     });
 
     it('resets progress when a failed download kept no bytes', () => {

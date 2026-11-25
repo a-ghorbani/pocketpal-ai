@@ -56,8 +56,9 @@ export class ASRStore {
 
   // Persisted: the in-use tier, shared by dictation and voice mode.
   selectedTier: AsrTier = ASR_DEFAULT_TIER;
-  // Persisted: the language whisper detected on the first transcription,
-  // passed on every later one. null = detect on the next transcription.
+  // Persisted: the language whisper detected in the first dictation segment
+  // that passes energyVad, passed on every later decode, dictation and voice
+  // mode. null = auto-detect.
   spokenLanguage: string | null = null;
 
   // Per-tier model lifecycle — derived from disk on init(), NOT persisted.

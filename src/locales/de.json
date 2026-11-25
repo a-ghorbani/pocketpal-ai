@@ -246,6 +246,9 @@
       "signInAgain": "Bitte melden Sie sich erneut an",
       "creatorSupport": "Creator-Konten werden von unserem Support-Team gelöscht: {{contact}}",
       "failed": "Löschen nicht möglich, bitte erneut versuchen"
+    },
+    "localApiServer": {
+      "title": "Lokaler API-Server"
     }
   },
   "memory": {

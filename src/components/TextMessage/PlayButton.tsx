@@ -9,14 +9,6 @@ import {assistant, derivedText} from '../../utils/chat';
 import {PlayIcon, StopIcon} from '../../assets/icons';
 import type {MessageType} from '../../utils/types';
 
-const countWords = (text: string): number => {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) {
-    return 0;
-  }
-  return trimmed.split(/\s+/).length;
-};
-
 const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
@@ -36,7 +28,7 @@ export const shouldShowPlayButton = (message: MessageType.Any): boolean => {
     return false;
   }
 
-  if (countWords(derivedText(message)) <= 1) {
+  if (derivedText(message).trim().length === 0) {
     return false;
   }
 

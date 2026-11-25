@@ -559,6 +559,8 @@ export const getSHA256Hash = async (filePath: string): Promise<string> => {
   }
 };
 
+export const MODEL_SIZE_TOLERANCE = 0.001;
+
 /**
  * Checks if a model's file integrity is valid by comparing  file size. Hash doesn't seem to be reliable, and expensive.
  * see: https://github.com/birdofpreyru/react-native-fs/issues/99
@@ -591,7 +593,7 @@ export const checkModelFileIntegrity = async (
         Math.abs(actualSize - expectedSize) / expectedSize;
 
       // If size difference is more than 0.1% and hash doesn't match, consider it corrupted
-      if (sizeDiffPercentage > 0.001) {
+      if (sizeDiffPercentage > MODEL_SIZE_TOLERANCE) {
         modelStore.updateModelHash(model.id, false);
 
         // If hash matches, consider it valid

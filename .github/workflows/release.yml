@@ -26,7 +26,7 @@ jobs:
   # Job 1: Version Bumping and Android Build
   build_android:
     if: ${{ !inputs.ios_only }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ruby-builder has no Ruby 3.2.3 for ubuntu-26.04
     permissions:
       contents: 'write' # Allows workflow to checkout repository code
       id-token: 'write' # Required for Google Cloud Workload Identity Federation authentication (OIDC token generation)
@@ -39,7 +39,6 @@ jobs:
       # builds no iOS target, so the postinstall download has nothing to supply.
       # The DSP libraries under bin/ are tarball content and arrive regardless.
       RNLLAMA_SKIP_POSTINSTALL: '1'
-      PLUS_STORE_GATE: 'true'
 
     steps:
       # Step 1: Checkout the code
@@ -187,7 +186,8 @@ jobs:
             echo "::error::ORG_GRADLE_PROJECT_rnllamaBuildFromSource is '${ORG_GRADLE_PROJECT_rnllamaBuildFromSource:-<unset>}', expected 'true'. Building from prebuilts is the documented escape hatch, but it must be a deliberate edit to this workflow."
             exit 1
           fi
-          bundle exec fastlane build_android_release 2>&1 | tee android-build.log
+          PLUS_STORE_GATE=false bundle exec fastlane build_android_apk 2>&1 | tee android-build.log
+          PLUS_STORE_GATE=true bundle exec fastlane build_android_aab 2>&1 | tee -a android-build.log
 
       # COUPLING: the string grepped for below is upstream's, printed by
       # node_modules/llama.rn/android/build.gradle next to its rnllamaVariants
@@ -223,7 +223,7 @@ jobs:
 
       - name: Verify the Plus store gate
         run: |
-          scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --gated
+          scripts/verify-plus-gate.sh android/app/build/outputs/apk/prod/release/app-prod-release.apk --ungated
           scripts/verify-plus-gate.sh android/app/build/outputs/bundle/prodRelease/app-prod-release.aab --gated
 
       - name: Upload payload report

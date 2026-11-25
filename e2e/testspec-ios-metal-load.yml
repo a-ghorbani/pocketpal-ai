@@ -1,0 +1,77 @@
+version: 0.1
+
+# AWS Device Farm test spec: one Metal load probe (specs/diagnostics/metal-load.spec.ts)
+# on one iOS device. Runs wdio directly (not run-e2e.ts) so the spec writes into
+# Device Farm's own DEVICEFARM_LOG_DIR, which comes back as Customer_Artifacts.zip.
+#
+# The METAL_LOAD_DEVICE placeholder in the test phase is set with
+# run-aws-device-farm.ts --var METAL_LOAD_DEVICE=auto|cpu; an unset one stops the run.
+
+# macOS Tahoe host: supports iOS 17 to 27 devices.
+ios_test_host: macos_tahoe
+
+phases:
+  install:
+    commands:
+      - devicefarm-cli use node 18
+      - devicefarm-cli use appium 2
+      - /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium driver install xcuitest@7.27.0
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - npm install --legacy-peer-deps
+
+  pre_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - >-
+        /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium
+        --base-path /wd/hub
+        --port 4723
+        --use-drivers xcuitest
+        --default-capabilities "{\"appium:derivedDataPath\": \"$DEVICEFARM_APPIUM_WDA_DERIVED_DATA_PATH_V9\"}" &
+      - sleep 15
+      - curl -s http://127.0.0.1:4723/wd/hub/status || echo "Appium status check failed"
+      # devicectl is the crash and Jetsam source (Appium's crashlog needs
+      # pyidevice, which this host lacks). Log whether it exists and sees the device.
+      - xcrun --find devicectl || echo "DEVICECTL MISSING"
+      - xcrun devicectl list devices 2>&1 | grep -i "$DEVICEFARM_DEVICE_UDID" || echo "DEVICECTL DOES NOT LIST $DEVICEFARM_DEVICE_UDID"
+      # Crash reports already on the device, so post_test copies only new ones.
+      - >-
+        xcrun devicectl device info files --device $DEVICEFARM_DEVICE_UDID
+        --domain-type systemCrashLogs --json-output $DEVICEFARM_LOG_DIR/crash-list-before.json
+        > /dev/null 2>&1 && echo "devicectl crash list: ok" || echo "DEVICECTL CRASH LIST FAILED"
+
+  test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - >-
+        APPIUM_HOST=127.0.0.1
+        APPIUM_PORT=4723
+        METAL_LOAD_DEVICE=__METAL_LOAD_DEVICE__
+        npx wdio wdio.ios.conf.ts --spec specs/diagnostics/metal-load.spec.ts
+
+  post_test:
+    commands:
+      - cat $DEVICEFARM_LOG_DIR/metal-load-report.json 2>/dev/null || echo "No metal-load report"
+      # Primary crash and Jetsam source: new PocketPal / JetsamEvent / panic /
+      # ExcResource reports. Without both lists the count is unknown, not 0.
+      # Then the app's memory snapshots (needs a debuggable signature).
+      - |-
+        mkdir -p $DEVICEFARM_LOG_DIR/crashes
+        sleep 15
+        xcrun devicectl device info files --device $DEVICEFARM_DEVICE_UDID --domain-type systemCrashLogs --json-output $DEVICEFARM_LOG_DIR/crash-list-after.json > /dev/null 2>&1 || true
+        if [ ! -s $DEVICEFARM_LOG_DIR/crash-list-before.json ] || [ ! -s $DEVICEFARM_LOG_DIR/crash-list-after.json ]; then echo unknown > $DEVICEFARM_LOG_DIR/crashes/count.txt; fi
+        python3 -c 'import json,sys
+        def names(p):
+            try: return {f.get("relativePath") or f.get("name") for f in json.load(open(p))["result"]["files"]}
+            except Exception: return set()
+        d=sys.argv[1]
+        for n in sorted(names(d+"/crash-list-after.json")-names(d+"/crash-list-before.json")):
+            if any(k in n for k in ("PocketPal","JetsamEvent","panic","ExcResource")): print(n)' $DEVICEFARM_LOG_DIR > $DEVICEFARM_LOG_DIR/crashes/new.txt || true
+        while read -r f; do [ -n "$f" ] && xcrun devicectl device copy from --device $DEVICEFARM_DEVICE_UDID --domain-type systemCrashLogs --source "$f" --destination "$DEVICEFARM_LOG_DIR/crashes/$(basename "$f")" > /dev/null 2>&1; done < $DEVICEFARM_LOG_DIR/crashes/new.txt
+        [ -s $DEVICEFARM_LOG_DIR/crashes/count.txt ] || wc -l < $DEVICEFARM_LOG_DIR/crashes/new.txt | tr -d ' ' > $DEVICEFARM_LOG_DIR/crashes/count.txt
+        echo "new crash/jetsam reports (devicectl): $(cat $DEVICEFARM_LOG_DIR/crashes/count.txt)"
+        xcrun devicectl device copy from --device $DEVICEFARM_DEVICE_UDID --domain-type appDataContainer --domain-identifier ai.pocketpal --source Documents/memory-snapshots.json --destination $DEVICEFARM_LOG_DIR/memory-snapshots.json > /dev/null 2>&1 || echo "memory snapshots not readable"
+
+artifacts:
+  - $DEVICEFARM_LOG_DIR
+  - $DEVICEFARM_SCREENSHOT_PATH

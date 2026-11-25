@@ -25,6 +25,8 @@ export const isPlusAvailable = (): boolean =>
 export const isPlusUnlocked = (): boolean =>
   !__PLUS_STORE_GATE__ || purchaseStore.plusUnlocked;
 
+export const isStoreBuild = (): boolean => __PLUS_STORE_GATE__;
+
 export const PLUS_STORE_GATE_MARKER = __PLUS_STORE_GATE__
   ? 'PLUS_STORE_GATE_ON'
   : null;

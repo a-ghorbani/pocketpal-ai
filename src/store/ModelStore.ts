@@ -46,6 +46,7 @@ import {
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {isModelFilePath} from '../utils/pathGuard';
+import {excludeModelsFromBackup} from '../utils/backupExclusion';
 import {isDraftOnlyModel} from '../utils/mtp';
 import {getOriginalModelName} from '../utils/formatters';
 import {stopQuietly} from '../utils/stopQuietly';
@@ -833,6 +834,57 @@ class ModelStore {
     });
   };
 
+  private relocateLegacyPresetFiles = async () => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+    const documents = RNFS.DocumentDirectoryPath;
+    const legacyPathOf = (model: Model) => `${documents}/${model.filename}`;
+    const presets = this.models.filter(
+      model => model.origin === ModelOrigin.PRESET && model.filename,
+    );
+    for (const model of presets) {
+      const legacyPath = legacyPathOf(model);
+      const targetDir = `${documents}/models/preset/${model.author || 'unknown'}`;
+      const targetPath = `${targetDir}/${model.filename}`;
+      if (!isModelFilePath(legacyPath) || !isModelFilePath(targetPath)) {
+        continue;
+      }
+      try {
+        if (
+          !(await RNFS.exists(legacyPath)) ||
+          downloadManager.isDownloading(model.id)
+        ) {
+          continue;
+        }
+        if (await RNFS.exists(targetPath)) {
+          console.warn(
+            '[ModelStore] Legacy preset not moved, target exists:',
+            legacyPath,
+            targetPath,
+          );
+          continue;
+        }
+        await RNFS.mkdir(targetDir);
+        if (this.context || this.isContextLoading || this.benchmarkActive) {
+          return;
+        }
+        await RNFS.moveFile(legacyPath, targetPath);
+        for (const sharer of presets) {
+          if (legacyPathOf(sharer) === legacyPath) {
+            await this.checkFileExists(sharer);
+          }
+        }
+      } catch (error) {
+        console.warn(
+          '[ModelStore] Legacy preset relocation failed:',
+          model.id,
+          error,
+        );
+      }
+    }
+  };
+
   initializeStore = async () => {
     const storedVersion = this.version || 0;
     console.log('models: ', this.models);
@@ -850,6 +902,9 @@ class ModelStore {
     } catch (error) {
       console.warn('[ModelStore] projection cleanup drain failed:', error);
     }
+
+    await excludeModelsFromBackup();
+    await this.relocateLegacyPresetFiles();
 
     // Apply the bundled offline floor immediately (no network) so the list is
     // never empty while a slow rules fetch is in flight, then merge/reconcile.

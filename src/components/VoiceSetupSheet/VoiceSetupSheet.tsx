@@ -28,13 +28,13 @@ const voiceKey = (voice: Voice | null) =>
 interface VoiceSetupSheetProps {
   isVisible: boolean;
   onClose: () => void;
-  /** Called once whisper, a neural voice and the mic are all ready. */
+  /** Called once whisper, a voice and the mic are all ready. */
   onDone: () => void;
 }
 
 /**
  * First-use setup for voice mode: the in-use whisper tier (the default when
- * none is installed), a neural voice, then microphone access.
+ * none is installed), a voice, then microphone access.
  */
 export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
   ({isVisible, onClose, onDone}) => {
@@ -163,7 +163,7 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
 
     const voiceStatus = () => {
       if (!voiceReady) {
-        return strings.voiceRowMissing;
+        return strings.voiceRowChoose;
       }
       switch (file) {
         case null:
@@ -222,6 +222,14 @@ export const VoiceSetupSheet: React.FC<VoiceSetupSheetProps> = observer(
                   }}>
                   {voiceStatus()}
                 </Text>
+                {voiceReady && voice.requiresNetwork ? (
+                  <Text
+                    variant="bodySmall"
+                    testID="voice-setup-voice-network"
+                    style={{color: theme.colors.onSurfaceVariant}}>
+                    {l10n.voiceAndSpeech.systemNeedsInternet}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </View>

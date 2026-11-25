@@ -29,7 +29,7 @@
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
 		A862F7232EE04CE50062E673 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A862F7222EE04CE50062E673 /* GoogleService-Info.plist */; };
-		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../node_modules/llama.rn/cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/common\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/tools/mtmd\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor/hash\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/common\" -I\"$(PODS_ROOT)/Headers/Private/Yoga\" -I\"${PODS_ROOT}/React-graphics\" -I\"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios\" -I\"${PODS_ROOT}/React-Fabric\" -I\"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx\" -I\"${PODS_ROOT}/React-FabricImage\" -I\"${PODS_ROOT}/ReactCommon\" -I\"${PODS_ROOT}/ReactCommon/react/nativemodule/core\" -I\"${PODS_ROOT}/React-runtimeexecutor\" -I\"${PODS_ROOT}/React-runtimeexecutor/platform/ios\" -I\"${PODS_ROOT}/React-NativeModulesApple\" -I\"${PODS_ROOT}/React-RCTFabric\" -I\"${PODS_ROOT}/React-utils\" -I\"${PODS_ROOT}/React-featureflags\" -I\"${PODS_ROOT}/React-debug\" -I\"${PODS_ROOT}/React-ImageManager\" -I\"${PODS_ROOT}/React-rendererdebug\" -I\"${PODS_ROOT}/React-renderercss\" -I\"$(PODS_ROOT)/ReactNativeDependencies/Headers\""; }; };
+		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../node_modules/llama.rn/cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/common\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/src\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/ggml/src/ggml-cpu\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/tools/mtmd\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/llama.cpp/vendor/hash\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/include\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/common\" -I\"$(SRCROOT)/../node_modules/llama.rn/vendor/codec.cpp/src\" -I\"$(PODS_ROOT)/Headers/Private/Yoga\" -I\"${PODS_ROOT}/React-graphics\" -I\"${PODS_ROOT}/React-graphics/react/renderer/graphics/platform/ios\" -I\"${PODS_ROOT}/React-Fabric\" -I\"${PODS_ROOT}/React-Fabric/react/renderer/components/view/platform/cxx\" -I\"${PODS_ROOT}/React-FabricImage\" -I\"${PODS_ROOT}/ReactCommon\" -I\"${PODS_ROOT}/ReactCommon/react/nativemodule/core\" -I\"${PODS_ROOT}/React-runtimeexecutor\" -I\"${PODS_ROOT}/React-runtimeexecutor/platform/ios\" -I\"${PODS_ROOT}/React-NativeModulesApple\" -I\"${PODS_ROOT}/React-RCTFabric\" -I\"${PODS_ROOT}/React-utils\" -I\"${PODS_ROOT}/React-featureflags\" -I\"${PODS_ROOT}/React-debug\" -I\"${PODS_ROOT}/React-ImageManager\" -I\"${PODS_ROOT}/React-rendererdebug\" -I\"${PODS_ROOT}/React-renderercss\" -I\"$(PODS_ROOT)/ReactNativeDependencies/Headers\""; }; };
 		A86CF0D62EA9567800BFFCEE /* MustacheRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D52EA9567800BFFCEE /* MustacheRenderer.swift */; };
 		A8B4FFD32EA5731700CD3B4C /* LlamaInferenceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */; };
 		A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */; };
@@ -632,7 +632,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = PocketPal/Info.plist;
@@ -641,7 +641,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -671,7 +671,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -679,7 +679,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -935,14 +935,14 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
@@ -969,14 +969,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1105,7 +1105,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -1113,7 +1113,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -1147,14 +1147,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.23.0;
+				MARKETING_VERSION = 1.24.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -771,6 +771,30 @@
       "usingServerDefaultUnreported": "서버 기본값 사용 중 (값 알 수 없음)",
       "resetToServerDefault": "서버 기본값: {{value}} · 재설정",
       "resetToServerDefaultAccessibilityLabel": "{{name}} 설정을 서버 기본값 {{value}}(으)로 재설정"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "추가 작업",
+      "openMenuAction": "메시지 메뉴 열기"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "복사",
+        "copyAsMarkdown": "Markdown으로 복사",
+        "copyImageUrl": "이미지 URL 복사",
+        "copyImageUrls": "이미지 URL {{count}}개 복사"
+      },
+      "accessibility": {
+        "bulletPoint": "목록 항목",
+        "nestedBulletPoint": "중첩 목록 항목",
+        "orderedItem": "목록 항목 {{n}}",
+        "nestedOrderedItem": "중첩 목록 항목 {{n}}",
+        "quote": "인용 블록",
+        "nestedQuote": "중첩 인용 블록",
+        "tableRow": "{{n}}행: {{content}}",
+        "rotorHeadings": "제목",
+        "rotorLinks": "링크",
+        "rotorImages": "이미지"
+      }
     }
   },
   "feedback": {
@@ -974,6 +998,12 @@
         "memoryWarningButton": "메모리 경고 세부정보 보기",
         "integrityWarningButton": "무결성 경고 세부정보 보기",
         "memoryWarningSnackbar": "메모리 경고 알림"
+      },
+      "projectorOffer": {
+        "rowTitle": "시각 기능에는 프로젝션 모델이 필요합니다",
+        "download": "다운로드",
+        "downloading": "프로젝션 모델 다운로드 중 · {{progress}}%",
+        "a11yWithSize": "프로젝션 모델 다운로드, {{size}}"
       }
     },
     "modelSettings": {
@@ -1292,6 +1322,39 @@
       "signInAgain": "다시 로그인해 주세요",
       "creatorSupport": "크리에이터 계정은 고객지원팀에서 삭제해 드립니다: {{contact}}",
       "failed": "삭제하지 못했습니다. 다시 시도해 주세요"
+    },
+    "localApiServer": {
+      "title": "로컬 API 서버",
+      "enable": "로드된 모델 제공하기",
+      "enableDescription": "다른 앱에서 OpenAI 호환 API로 로드된 모델을 사용할 수 있습니다. 요청은 내 채팅과 같은 대기열에서 차례대로 처리됩니다.",
+      "starting": "시작 중…",
+      "url": "서버 URL",
+      "copyUrl": "URL 복사",
+      "servedModel": "{{model}} 제공 중",
+      "noModel": "로드된 모델이 없습니다. 모델을 로드하기 전까지 요청은 실패합니다.",
+      "port": "포트",
+      "portInvalid": "1024~65535 사이의 포트를 사용해 주세요",
+      "lan": "네트워크의 다른 기기 허용하기",
+      "lanWarning": "이 기기가 연결된 모든 네트워크에서 서버에 접근할 수 있습니다: Wi-Fi, 모바일 데이터, 핫스팟, VPN. 사용할 수 있는 대상을 제한하려면 API 키를 설정해 주세요.",
+      "notOnWifi": "Wi-Fi에 연결되어 있지 않아 네트워크 URL이 표시되지 않습니다.",
+      "apiKey": "API 키",
+      "apiKeySet": "요청에 이 키를 함께 보내야 합니다",
+      "apiKeyNotSet": "키 없음: 브라우저 페이지를 제외하고, 서버에 접근할 수 있는 모든 앱이 사용할 수 있습니다.",
+      "setApiKey": "키 설정",
+      "clearApiKey": "키 삭제",
+      "apiKeyPlaceholder": "API 키 입력",
+      "stopToEdit": "이 설정을 변경하려면 서버를 꺼 주세요.",
+      "lockedHint": "Plus 기능입니다. 세부정보가 열립니다.",
+      "teaserTitle": "로컬 API 서버는 Plus 기능입니다",
+      "teaserBody": "이 기기에 로드된 모델을 다른 앱에서도 사용해 보세요.",
+      "teaserGetPlus": "Plus 구매",
+      "teaserNotNow": "나중에",
+      "errors": {
+        "portInUse": "{{port}} 포트는 이미 사용 중입니다. 서버를 끄고 다른 포트를 선택해 주세요.",
+        "listenFailed": "서버를 시작할 수 없습니다. 서버를 껐다가 다시 켜거나, 다른 포트를 선택해 주세요.",
+        "stoppedListening": "서버가 예기치 않게 중지되었습니다. 서버를 껐다가 다시 켜 주세요.",
+        "keyUnavailable": "API 키를 읽을 수 없습니다. 기기 잠금을 해제한 뒤 서버를 껐다가 다시 켜 주세요."
+      }
     }
   },
   "storage": {
@@ -1423,7 +1486,8 @@
         "startChat": "채팅 시작",
         "needsMemory": "이 Pal의 가장 작은 모델을 사용하려면 메모리가 {{size}} 이상인 기기가 필요합니다.",
         "noModelFits": "이 기기는 이 Pal을 실행할 메모리가 부족합니다."
-      }
+      },
+      "storeOnly": "Google Play / App Store 버전 앱에서만 사용할 수 있습니다"
     }
   },
   "video": {
@@ -1571,7 +1635,21 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "빠른 구동 속도. 적은 RAM 사용. 영어만 지원.",
     "enginePhononCredit": "모델과 음성은 Gradium 제작 (Apache-2.0), Kyutai의 Mimi 기반.",
-    "engineTierNatural": "자연스러운 영어"
+    "engineTierNatural": "자연스러운 영어",
+    "systemNeedsInternet": "인터넷 필요",
+    "systemVoiceNumber": "음성 {{number}}",
+    "systemQualityEnhanced": "향상됨",
+    "systemOnDeviceSection": "이 휴대폰에 설치됨",
+    "systemLanguagesLabel": "언어",
+    "systemGetMoreVoices": "음성 더 받기",
+    "systemNoVoicesForLanguage": "이 휴대폰에 아직 {{language}} 음성이 없습니다.",
+    "systemIosSettingsHint": "설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성에서 새 음성을 추가할 수 있습니다.",
+    "systemLanguageSheetTitle": "음성 언어",
+    "systemLanguageSearchPlaceholder": "언어 검색",
+    "speakingNotificationTitle": "PocketPal이 말하는 중",
+    "speakingNotificationStop": "중지",
+    "speakingNotificationChannel": "음성 읽기",
+    "systemIosReadAndSpeakHint": "설정 > 손쉬운 사용 > 읽기 및 말하기 > 음성에서 새 음성을 추가할 수 있습니다."
   },
   "htmlPreview": {
     "defaultTitle": "미리보기",
@@ -1705,7 +1783,7 @@
     "errorPermissionBlocked": "마이크 접근 권한이 차단되어 있습니다. 설정에서 허용해 주세요.",
     "errorTranscribeFailed": "텍스트로 변환하지 못했습니다. 다시 시도해 주세요.",
     "errorNotInstalled": "음성 입력을 사용하려면 음성 모델을 다운로드해 주세요.",
-    "errorInsufficientMemory": "이 채팅 모델과 함께 음성 입력을 사용하기에는 메모리가 부족합니다. 더 작은 모델을 사용해 보세요.",
+    "errorInsufficientMemory": "이 채팅 모델과 음성 입력에 필요한 메모리가 이 기기의 메모리보다 많습니다. 더 작은 모델을 사용해 보세요.",
     "errorMicUnavailable": "마이크가 응답하지 않습니다. 다시 시도하거나 더 작은 채팅 모델로 바꿔 보세요.",
     "errorTranscriptPartial": "말한 내용 중 일부를 텍스트로 변환하지 못했습니다.",
     "openSettingsLabel": "설정 열기",
@@ -1808,7 +1886,6 @@
     "installedLabel": "설치됨",
     "voiceRowTitle": "음성",
     "voiceRowReady": "{{voice}} · 사용 가능",
-    "voiceRowMissing": "자연스러운 음성을 선택해 주세요. 음성 모드에서는 시스템 음성을 사용할 수 없습니다.",
     "chooseVoiceCta": "음성 선택",
     "micNote": "다음 단계에서 마이크 접근 권한을 요청합니다.",
     "micDenied": "음성 모드를 사용하려면 마이크 접근 권한이 필요합니다.",
@@ -1816,7 +1893,7 @@
     "memoryTightTitle": "메모리 여유가 적습니다",
     "memoryTightBody": "음성 모드는 모델 세 개를 동시에 메모리에 올려 둡니다. 이 기기에서는 느려지거나 앱이 종료될 수 있습니다.",
     "memoryWontFitTitle": "메모리가 부족합니다",
-    "memoryWontFitBody": "이 채팅 모델과 함께 음성 인식을 올릴 메모리가 부족합니다. 음성 모드를 사용하려면 더 작은 모델을 선택해 주세요.",
+    "memoryWontFitBody": "이 모델들에 필요한 메모리가 이 기기의 메모리보다 많습니다. 음성 모드를 사용하려면 더 작은 모델을 선택해 주세요.",
     "memoryChatRow": "채팅 모델 · {{name}}",
     "memorySttRowModel": "음성 인식 · Whisper {{tier}}",
     "memoryVoiceRow": "음성 · {{name}}",
@@ -1832,6 +1909,7 @@
     "teaserKeepTyping": "무료로 계속 입력하기",
     "voiceRowFileMissing": "{{voice}} 음성은 아직 다운로드되지 않았습니다. 계속 버튼을 누르면 다운로드합니다.",
     "voiceRowFileFailed": "{{voice}} 음성을 다운로드하지 못했습니다. 인터넷에 연결한 뒤 다시 시도해 주세요.",
-    "memoryNeededOfTotal": "이 기기의 {{total}} 중 {{needed}}"
+    "memoryNeededOfTotal": "이 기기의 {{total}} 중 {{needed}}",
+    "voiceRowChoose": "답변을 읽어 줄 음성을 선택하세요."
   }
 }

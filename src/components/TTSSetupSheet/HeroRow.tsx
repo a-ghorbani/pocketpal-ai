@@ -5,11 +5,12 @@ import {observer} from 'mobx-react';
 
 import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 
-import {ChevronDownIcon} from '../../assets/icons';
+import {ChevronDownIcon, CloudIcon} from '../../assets/icons';
 import {Pressable} from '../ui/primitives/Pressable';
 import {SearchableSelectSheet} from '../SearchableSelectSheet';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
+import {languageLabel, systemShortLabel} from '../../services/tts';
 import type {EngineId, SupertonicSteps} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
@@ -95,8 +96,10 @@ export const HeroRow: React.FC = observer(() => {
   const languageTriggerLabel =
     selectedLanguage?.label ?? l10n.voiceAndSpeech.supertonicLanguageAuto;
 
+  const isSystem = current.engine === 'system';
   const subtitleParts = [
     l10n.voiceAndSpeech[engineChipKey[current.engine]],
+    isSystem && current.language ? languageLabel(current.language) : null,
     showSupertonicQuality
       ? t(l10n.voiceAndSpeech.stepsCount, {steps: ttsStore.supertonicSteps})
       : null,
@@ -112,7 +115,7 @@ export const HeroRow: React.FC = observer(() => {
         </View>
         <View style={styles.heroRowMain}>
           <Text style={styles.heroRowName} testID="tts-hero-voice-name">
-            {current.name}
+            {isSystem ? systemShortLabel(current) : current.name}
           </Text>
           <Text style={styles.heroSubtitle}>{subtitleParts.join('  ·  ')}</Text>
         </View>
@@ -131,6 +134,18 @@ export const HeroRow: React.FC = observer(() => {
           style={styles.heroPreviewButton}
         />
       </View>
+      {current.requiresNetwork ? (
+        <View style={styles.heroNetworkStrip} testID="tts-hero-network">
+          <CloudIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+          <Text style={styles.heroNetworkStripText}>
+            {l10n.voiceAndSpeech.systemNeedsInternet}
+          </Text>
+        </View>
+      ) : null}
       {showSupertonicQuality ? (
         <View style={styles.heroQualityBlock}>
           <Text style={styles.heroQualityLabel}>

@@ -66,7 +66,7 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - llama-rn (0.13.0-rc.9):
+  - llama-rn (0.13.0-rc.11):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2413,7 +2413,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeech (2.8.2):
+  - RNSpeech (2.11.4):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2435,7 +2435,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSpeechPhonon (0.1.3):
+  - RNSpeechPhonon (0.2.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2673,6 +2673,7 @@ DEPENDENCIES:
   - llama-rn (from `../node_modules/llama.rn`)
   - NitroIap (from `../node_modules/react-native-iap`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
+  - onnxruntime-c (from `onnxruntime-c.podspec.json`)
   - onnxruntime-react-native (from `../node_modules/onnxruntime-react-native`)
   - RCT-Folly (from `build/rndeps-facades/RCT-Folly`)
   - RCTDeprecation (from `build/rncore-facades/RCTDeprecation`)
@@ -2806,7 +2807,6 @@ SPEC REPOS:
     - GRMustache.swift
     - GTMAppAuth
     - GTMSessionFetcher
-    - onnxruntime-c
     - openiap
     - PromisesObjC
 
@@ -2834,6 +2834,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-iap"
   NitroModules:
     :path: "../node_modules/react-native-nitro-modules"
+  onnxruntime-c:
+    :podspec: onnxruntime-c.podspec.json
   onnxruntime-react-native:
     :path: "../node_modules/onnxruntime-react-native"
   RCT-Folly:
@@ -3089,10 +3091,10 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  llama-rn: 7ee4ba3920d9678a536a059c1e2c156f8a9d96f1
+  llama-rn: 70b50b239d10c4f769fd6f94ec1d36b52e78ff7d
   NitroIap: 9298750287e22c634e0cd7c62a24d88358772f53
   NitroModules: d7b6cfed1591a4f067ccfd834c031945763bebc9
-  onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
+  onnxruntime-c: 8eef38823e60ecfb1c0102f001a621a330fcb528
   onnxruntime-react-native: 30fc2e0ea033c986501df7ccc7b06f849ef29d57
   openiap: 253070b2afe71078a2cae63a2b8e282bdd44a059
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
@@ -3178,7 +3180,7 @@ SPEC CHECKSUMS:
   React-viewtransitionnativemodule: 5170118f502bedac6bba2799bc3e8a5f73e94d38
   React-webperformancenativemodule: dda24c58337e22a47172749161b177bdc1733178
   ReactAppDependencyProvider: 3949ea6b2df0d96295128aae79f068cb6c5f81dc
-  ReactCodegen: ace3a7c5e1e7138e163488719387e556fcb02dea
+  ReactCodegen: 87664bdb7dd28f7549706c4b0f754c6fd50a6fd0
   ReactCommon: 749169e12aa3461a3df3656a00e48dbe0456b2d6
   ReactNativeDependencies: 94c922c39e0e6150ee9ad05e2ca1946e0ef55783
   ReactNativeEnrichedMarkdown: bb08c676c95f17b01b4d8b4a6487bbc887755369
@@ -3200,8 +3202,8 @@ SPEC CHECKSUMS:
   RNReanimated: 61460cb633e8f22b3049882003d193ee86a3897a
   RNScreens: 4bac14b997bcf160be0a967bfdae27956847f289
   RNShare: 765191a3c96beb2955ed961643db333b1ddf257a
-  RNSpeech: e1e61c20899aa70ea07cd7ed40a39e3d0189b40e
-  RNSpeechPhonon: d956216a184b84ea08a09a333b8817a649d56049
+  RNSpeech: 28c1ba2b95f8a88adfe5eed429e842d62599cf5a
+  RNSpeechPhonon: 44cb2cc6f32fc1922828e288836736fb8903ee3f
   RNSVG: ea960a71afc1707bd14dead3ec578763321f7096
   RNVectorIcons: c7cd45980aad8bbd77a47b906f62957c9494dcb6
   RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e
@@ -3212,6 +3214,6 @@ SPEC CHECKSUMS:
   whisper-rn: 19c8e9f7e968c2f9dfddf77ff364f0340925d76b
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 6072d4b8b7daf77e02888e228d992286b9e89072
+PODFILE CHECKSUM: c3e9ae92f5adfbe33e4863498ceb5ea3bda835ed
 
 COCOAPODS: 1.15.2

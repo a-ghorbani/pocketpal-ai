@@ -1,4 +1,4 @@
-import {Platform} from 'react-native';
+import {AppState, Platform} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {refreshBody} from '../../services/iap/iapWire';
@@ -15,7 +15,7 @@ import {
   stopAll,
   tx,
 } from './purchaseTestHarness';
-import type {StoreTransaction} from '../../services/iap/StorePort';
+import type {StoreQuery, StoreTransaction} from '../../services/iap/StorePort';
 
 jest.mock('../PalStore', () => ({
   palStore: {
@@ -73,6 +73,29 @@ const readyHarness = async (h = createHarness()) => {
     tx: plusTx({productId}),
   }));
   return h;
+};
+
+const launch = async (h: ReturnType<typeof createHarness>) => {
+  let onChange: ((state: string) => void) | undefined;
+  jest
+    .spyOn(AppState, 'addEventListener')
+    .mockImplementationOnce((_event, handler: any) => {
+      onChange = handler;
+      return {remove: jest.fn()} as any;
+    });
+  await h.purchases.start();
+  return {
+    foreground: async () => {
+      const queries = h.store.currentEntitlements.mock.calls.length;
+      onChange?.('active');
+      await until(
+        () => h.store.currentEntitlements.mock.calls.length > queries,
+      );
+      for (let i = 0; i < 10; i++) {
+        await flush();
+      }
+    },
+  };
 };
 
 const allProofs = (calls: unknown[][]) =>
@@ -716,6 +739,213 @@ describe('PurchaseStore Plus', () => {
       await until(() => h.purchases.plusChecked);
 
       expect(h.purchases.plusUnlocked).toBe(true);
+    });
+  });
+
+  describe('first launch over an unlock saved by an earlier version', () => {
+    beforeEach(() => setOS('android'));
+
+    it.each([
+      [
+        'billing does not connect',
+        (h: any) => h.store.init.mockResolvedValue(false),
+      ],
+      [
+        'the query fails',
+        (h: any) =>
+          h.store.currentEntitlements.mockResolvedValue({
+            ok: false,
+            transactions: [],
+          }),
+      ],
+      [
+        'the store lists the acknowledged purchase',
+        (h: any) =>
+          h.store.currentEntitlements.mockResolvedValue({
+            ok: true,
+            transactions: [androidPlusTx({unfinished: false})],
+          }),
+      ],
+    ])('Android: stays unlocked when %s', async (_label, arrange) => {
+      const h = ownerHarness();
+      arrange(h);
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+      expect(h.log).not.toContain('delete:plus');
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+
+    it('Android: acknowledges a purchase the store still lists unacknowledged', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx()],
+      });
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+    });
+
+    it('Android: relocks only when a successful query lists no Plus purchase', async () => {
+      const h = ownerHarness();
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.log).toContain('delete:plus');
+    });
+
+    it('Android: retries a failed acknowledge on the next foreground', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx()],
+      });
+      h.store.finish.mockRejectedValueOnce(new Error('network'));
+
+      const app = await launch(h);
+      expect(h.store.finish).toHaveBeenCalledTimes(1);
+      expect(h.purchases.plusUnlocked).toBe(true);
+
+      await app.foreground();
+
+      expect(h.store.finish).toHaveBeenCalledTimes(2);
+      expect(h.purchases.plusUnlocked).toBe(true);
+      warn.mockRestore();
+    });
+  });
+
+  describe('first launch with no saved unlock', () => {
+    beforeEach(() => setOS('android'));
+
+    it('Android: unlocks again from the store when the saved unlock is gone', async () => {
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx({unfinished: false})],
+      });
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+    });
+
+    it('Android: never unlocks for a pending purchase', async () => {
+      const h = createHarness();
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [
+          androidPlusTx({
+            state: 'pending',
+            transactionId: undefined,
+            unfinished: false,
+          }),
+        ],
+      });
+
+      await launch(h);
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.purchases.plusPending).toBe(true);
+      expect(h.storage.plusDoc()).toBeNull();
+      expect(h.store.finish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Android: Play's answer decides a saved unlock", () => {
+    beforeEach(() => setOS('android'));
+
+    it.each([
+      ['fails', {ok: false, transactions: []}, true],
+      ['answers OK with no Plus', {ok: true, transactions: []}, false],
+    ] as const)(
+      'shows the saved unlock during a slow first query, then the query %s',
+      async (_label, answer, unlockedAfter) => {
+        const h = ownerHarness();
+        const query = deferred<StoreQuery>();
+        h.store.currentEntitlements.mockImplementationOnce(() => query.promise);
+
+        const started = h.purchases.start();
+        await until(() => h.store.currentEntitlements.mock.calls.length === 1);
+
+        expect(h.purchases.plusUnlocked).toBe(true);
+        expect(h.purchases.plusChecked).toBe(false);
+
+        query.resolve({...answer, transactions: []});
+        await started;
+
+        expect(h.purchases.plusUnlocked).toBe(unlockedAfter);
+        expect(h.storage.plusDoc() !== null).toBe(unlockedAfter);
+      },
+    );
+
+    it('an OK answer without Plus deletes the saved unlock, so a later offline launch stays locked until Play lists Plus', async () => {
+      const log: string[] = [];
+      const storage = new MemoryStorage(log);
+      storage.seedPlus();
+
+      const otherAccount = createHarness({storage, log});
+      await otherAccount.purchases.start();
+      expect(otherAccount.purchases.plusUnlocked).toBe(false);
+      expect(storage.plusDoc()).toBeNull();
+      otherAccount.purchases.stop();
+
+      const offline = createHarness({storage, log});
+      offline.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+      await offline.purchases.start();
+      expect(offline.purchases.plusUnlocked).toBe(false);
+      offline.purchases.stop();
+
+      const buyerAccount = createHarness({storage, log});
+      buyerAccount.store.currentEntitlements.mockResolvedValue({
+        ok: true,
+        transactions: [androidPlusTx({unfinished: false})],
+      });
+      await buyerAccount.purchases.start();
+      expect(buyerAccount.purchases.plusUnlocked).toBe(true);
+      expect(storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+    });
+
+    it('Restore answered OK with no Plus relocks a saved unlock and reports a successful query', async () => {
+      const h = ownerHarness();
+      h.store.currentEntitlements.mockResolvedValueOnce({
+        ok: false,
+        transactions: [],
+      });
+      await h.purchases.loadPlus();
+      await h.purchases.recover();
+      expect(h.purchases.plusUnlocked).toBe(true);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+
+      await expect(h.purchases.restore()).resolves.toEqual({queryOk: true});
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.storage.plusDoc()).toBeNull();
+    });
+
+    it('a failed read of the saved unlock shows Plus locked for that launch when Play cannot answer, and keeps the saved unlock', async () => {
+      const h = ownerHarness();
+      h.storage.failPlusRead = true;
+      h.store.currentEntitlements.mockResolvedValue({
+        ok: false,
+        transactions: [],
+      });
+
+      await h.purchases.start();
+
+      expect(h.purchases.plusUnlocked).toBe(false);
+      expect(h.storage.plusDoc()).toMatchObject({productId: 'plus.1'});
+      expect(h.log).not.toContain('delete:plus');
     });
   });
 

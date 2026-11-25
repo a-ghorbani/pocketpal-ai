@@ -246,6 +246,39 @@
       "signInAgain": "Zaloguj się ponownie",
       "creatorSupport": "Konta twórców usuwa nasz zespół pomocy: {{contact}}",
       "failed": "Nie udało się usunąć, spróbuj ponownie"
+    },
+    "localApiServer": {
+      "title": "Lokalny serwer API",
+      "enable": "Udostępniaj załadowany model",
+      "enableDescription": "Pozwala innym aplikacjom korzystać z załadowanego modelu przez API zgodne z OpenAI. Żądania czekają w kolejce razem z Twoimi czatami.",
+      "starting": "Uruchamianie…",
+      "url": "URL serwera",
+      "copyUrl": "Skopiuj URL",
+      "servedModel": "Udostępniany model: {{model}}",
+      "noModel": "Nie załadowano żadnego modelu. Żądania będą kończyć się błędem, dopóki go nie załadujesz.",
+      "port": "Port",
+      "portInvalid": "Użyj portu z zakresu od 1024 do 65535",
+      "lan": "Zezwalaj na dostęp z innych urządzeń w sieci",
+      "lanWarning": "Serwer jest dostępny w każdej sieci, z którą ten telefon jest połączony: Wi-Fi, dane mobilne, hotspot i VPN. Ustaw klucz API, aby ograniczyć, kto może z niego korzystać.",
+      "notOnWifi": "Brak połączenia z Wi-Fi, więc adres URL w sieci lokalnej nie jest wyświetlany.",
+      "apiKey": "Klucz API",
+      "apiKeySet": "Żądania muszą zawierać ten klucz",
+      "apiKeyNotSet": "Bez klucza: z serwera może korzystać każda aplikacja, która może się z nim połączyć — z wyjątkiem stron w przeglądarce.",
+      "setApiKey": "Ustaw klucz",
+      "clearApiKey": "Wyczyść klucz",
+      "apiKeyPlaceholder": "Wprowadź klucz API",
+      "stopToEdit": "Aby zmienić te ustawienia, wyłącz serwer.",
+      "lockedHint": "Funkcja Plus. Otwiera szczegóły.",
+      "teaserTitle": "Lokalny serwer API to funkcja Plus",
+      "teaserBody": "Pozwól innym aplikacjom korzystać z modelu załadowanego na tym telefonie.",
+      "teaserGetPlus": "Kup Plus",
+      "teaserNotNow": "Nie teraz",
+      "errors": {
+        "portInUse": "Port {{port}} jest już zajęty. Wyłącz serwer i wybierz inny port.",
+        "listenFailed": "Nie udało się uruchomić serwera. Wyłącz go i włącz ponownie albo wybierz inny port.",
+        "stoppedListening": "Serwer nieoczekiwanie się zatrzymał. Wyłącz go i włącz ponownie.",
+        "keyUnavailable": "Nie udało się odczytać klucza API. Odblokuj telefon, a potem wyłącz i ponownie włącz serwer."
+      }
     }
   },
   "models": {
@@ -431,6 +464,12 @@
         "memoryWarningButton": "Pokaż szczegóły ostrzeżenia dotyczącego pamięci",
         "integrityWarningButton": "Pokaż szczegóły ostrzeżenia dotyczącego integralności",
         "memoryWarningSnackbar": "Powiadomienie o ostrzeżeniu dotyczącym pamięci"
+      },
+      "projectorOffer": {
+        "rowTitle": "Wizja wymaga własnego modelu projekcyjnego",
+        "download": "Pobierz",
+        "downloading": "Pobieranie modelu projekcyjnego · {{progress}}%",
+        "a11yWithSize": "Pobierz model projekcyjny, {{size}}"
       }
     },
     "modelSettings": {
@@ -1061,6 +1100,30 @@
       "usingServerDefaultUnreported": "Używana jest domyślna wartość serwera (nie podano jej)",
       "resetToServerDefault": "Domyślna wartość serwera: {{value}} · Zresetuj",
       "resetToServerDefaultAccessibilityLabel": "Zresetuj {{name}} do domyślnej wartości serwera, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Więcej opcji",
+      "openMenuAction": "Otwórz menu wiadomości"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Kopiuj",
+        "copyAsMarkdown": "Kopiuj jako Markdown",
+        "copyImageUrl": "Kopiuj URL obrazu",
+        "copyImageUrls": "Kopiuj URL obrazów ({{count}})"
+      },
+      "accessibility": {
+        "bulletPoint": "Punkt listy",
+        "nestedBulletPoint": "Zagnieżdżony punkt listy",
+        "orderedItem": "Element listy {{n}}",
+        "nestedOrderedItem": "Zagnieżdżony element listy {{n}}",
+        "quote": "Cytat blokowy",
+        "nestedQuote": "Zagnieżdżony cytat blokowy",
+        "tableRow": "Wiersz {{n}}: {{content}}",
+        "rotorHeadings": "Nagłówki",
+        "rotorLinks": "Linki",
+        "rotorImages": "Obrazy"
+      }
     }
   },
   "palsScreen": {
@@ -1178,7 +1241,8 @@
         "startChat": "Rozpocznij czat",
         "needsMemory": "Najmniejszy model tego Kumpla wymaga urządzenia z co najmniej {{size}} pamięci.",
         "noModelFits": "To urządzenie nie ma wystarczającej ilości pamięci dla tego Kumpla."
-      }
+      },
+      "storeOnly": "Dostępne w wersji aplikacji z Google Play / App Store"
     }
   },
   "validation": {
@@ -1468,7 +1532,21 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Szybki start. Zużywa mało pamięci RAM. Tylko język angielski.",
     "enginePhononCredit": "Model i głosy autorstwa Gradium (Apache-2.0), oparte na Mimi firmy Kyutai.",
-    "engineTierNatural": "naturalny angielski"
+    "engineTierNatural": "naturalny angielski",
+    "systemNeedsInternet": "Wymaga internetu",
+    "systemVoiceNumber": "Głos {{number}}",
+    "systemQualityEnhanced": "Ulepszony",
+    "systemOnDeviceSection": "Na tym telefonie",
+    "systemLanguagesLabel": "Języki",
+    "systemGetMoreVoices": "Pobierz więcej głosów",
+    "systemNoVoicesForLanguage": "{{language}}: na tym telefonie nie ma jeszcze żadnych głosów.",
+    "systemIosSettingsHint": "Dodaj głosy w sekcji Ustawienia > Dostępność > Treść mówiona > Głosy.",
+    "systemLanguageSheetTitle": "Język głosu",
+    "systemLanguageSearchPlaceholder": "Szukaj języków",
+    "speakingNotificationTitle": "PocketPal mówi",
+    "speakingNotificationStop": "Zatrzymaj",
+    "speakingNotificationChannel": "Mowa",
+    "systemIosReadAndSpeakHint": "Dodaj głosy w sekcji Ustawienia > Dostępność > Czytaj i mów > Głosy."
   },
   "onboarding": {
     "screen5": {
@@ -1705,7 +1783,7 @@
     "errorPermissionBlocked": "Dostęp do mikrofonu jest zablokowany. Włącz go w ustawieniach.",
     "errorTranscribeFailed": "Nie udało się wykonać transkrypcji — spróbuj ponownie.",
     "errorNotInstalled": "Pobierz model rozpoznawania mowy, aby korzystać z wprowadzania głosowego.",
-    "errorInsufficientMemory": "Za mało pamięci, aby używać wprowadzania głosowego z tym modelem czatu. Spróbuj użyć mniejszego modelu.",
+    "errorInsufficientMemory": "Ten model czatu i wprowadzanie głosowe potrzebują więcej pamięci, niż ma ten telefon. Spróbuj użyć mniejszego modelu.",
     "errorMicUnavailable": "Mikrofon nie odpowiada. Spróbuj ponownie lub przełącz się na mniejszy model czatu.",
     "errorTranscriptPartial": "Nie udało się wykonać transkrypcji części Twojej wypowiedzi.",
     "openSettingsLabel": "Otwórz ustawienia",
@@ -1722,7 +1800,7 @@
     "inUseLabel": "W użyciu",
     "modelSectionHelper": "Używany przez wprowadzanie głosowe i rozmowę głosową bez rąk.",
     "memoryAlertTitle": "Mało pamięci",
-    "memoryAlertBody": "Wprowadzanie głosowe potrzebuje dodatkowej pamięci obok tego modelu czatu. Może działać bardzo wolno lub aplikacja może się zamknąć.",
+    "memoryAlertBody": "Wprowadzanie głosowe potrzebuje dodatkowej pamięci oprócz tego modelu czatu. Może działać bardzo wolno lub aplikacja może się zamknąć.",
     "memoryAlertTryAnyway": "Spróbuj mimo to"
   },
   "plus": {
@@ -1808,7 +1886,6 @@
     "installedLabel": "Zainstalowano",
     "voiceRowTitle": "Głos",
     "voiceRowReady": "{{voice}} · gotowy",
-    "voiceRowMissing": "Wybierz naturalny głos. Głos systemowy nie działa w trybie głosowym.",
     "chooseVoiceCta": "Wybierz głos",
     "micNote": "W następnym kroku poprosimy o dostęp do mikrofonu.",
     "micDenied": "Tryb głosowy wymaga dostępu do mikrofonu.",
@@ -1816,7 +1893,7 @@
     "memoryTightTitle": "Mało pamięci",
     "memoryTightBody": "Tryb głosowy trzyma w pamięci trzy modele jednocześnie. Na tym telefonie może działać wolno lub aplikacja może się zamknąć.",
     "memoryWontFitTitle": "Za mało pamięci",
-    "memoryWontFitBody": "Rozpoznawanie mowy nie zmieści się obok tego modelu czatu. Wybierz mniejszy model, aby korzystać z trybu głosowego.",
+    "memoryWontFitBody": "Te modele potrzebują więcej pamięci, niż ma ten telefon. Wybierz mniejszy model, aby korzystać z trybu głosowego.",
     "memoryChatRow": "Model czatu · {{name}}",
     "memorySttRowModel": "Rozpoznawanie mowy · Whisper {{tier}}",
     "memoryVoiceRow": "Głos · {{name}}",
@@ -1824,7 +1901,7 @@
     "continueAnywayCta": "Kontynuuj mimo to",
     "chooseSmallerModelCta": "Wybierz mniejszy model",
     "startLabel": "Uruchom tryb głosowy",
-    "startLockedLabel": "Rozmowa głosowa bez rąk, PocketPal Plus",
+    "startLockedLabel": "Rozmowa głosowa bez użycia rąk, PocketPal Plus",
     "startLockedHint": "Otwiera krótkie demo. Pisanie i dyktowanie pozostają darmowe.",
     "teaserTitle": "Rozmowa głosowa to funkcja Plus",
     "teaserBody": "Rozmawiaj bez rąk. Odpowiada na głos.",
@@ -1832,6 +1909,7 @@
     "teaserKeepTyping": "Pisz dalej, za darmo",
     "voiceRowFileMissing": "{{voice}} nie jest jeszcze pobrany. Dotknij Kontynuuj, aby go pobrać.",
     "voiceRowFileFailed": "Nie udało się pobrać {{voice}}. Połącz się z internetem i spróbuj ponownie.",
-    "memoryNeededOfTotal": "{{needed}} z {{total}} na tym telefonie"
+    "memoryNeededOfTotal": "{{needed}} z {{total}} na tym telefonie",
+    "voiceRowChoose": "Wybierz głos do odczytywania odpowiedzi."
   }
 }

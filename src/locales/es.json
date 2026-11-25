@@ -246,6 +246,39 @@
       "signInAgain": "Vuelve a iniciar sesión",
       "creatorSupport": "Las cuentas de creador las elimina nuestro equipo de soporte: {{contact}}",
       "failed": "No se pudo eliminar, inténtalo de nuevo"
+    },
+    "localApiServer": {
+      "title": "Servidor de API local",
+      "enable": "Servir el modelo cargado",
+      "enableDescription": "Permite que otras aplicaciones usen el modelo cargado a través de una API compatible con OpenAI. Las solicitudes esperan su turno junto con tus chats.",
+      "starting": "Iniciando…",
+      "url": "URL del servidor",
+      "copyUrl": "Copiar URL",
+      "servedModel": "Sirviendo {{model}}",
+      "noModel": "No hay ningún modelo cargado. Las solicitudes fallarán hasta que cargues uno.",
+      "port": "Puerto",
+      "portInvalid": "Usa un puerto entre 1024 y 65535",
+      "lan": "Permitir el acceso desde otros dispositivos de la red",
+      "lanWarning": "Se puede acceder al servidor desde cualquier red a la que esté conectado este teléfono: Wi-Fi, datos móviles, punto de acceso y VPN. Establece una clave de API para limitar quién puede usarlo.",
+      "notOnWifi": "No estás conectado a una red Wi-Fi, así que no se muestra ninguna URL de red.",
+      "apiKey": "Clave de API",
+      "apiKeySet": "Las solicitudes deben enviar esta clave",
+      "apiKeyNotSet": "Sin clave: cualquier aplicación que pueda acceder al servidor puede usarlo, excepto las páginas del navegador.",
+      "setApiKey": "Establecer clave",
+      "clearApiKey": "Borrar clave",
+      "apiKeyPlaceholder": "Introduce una clave de API",
+      "stopToEdit": "Desactiva el servidor para cambiar estos ajustes.",
+      "lockedHint": "Función Plus. Abre los detalles.",
+      "teaserTitle": "El servidor de API local es una función Plus",
+      "teaserBody": "Deja que otras aplicaciones usen el modelo cargado en este teléfono.",
+      "teaserGetPlus": "Obtener Plus",
+      "teaserNotNow": "Ahora no",
+      "errors": {
+        "portInUse": "El puerto {{port}} ya está en uso. Desactiva el servidor y elige otro puerto.",
+        "listenFailed": "No se ha podido iniciar el servidor. Desactívalo y vuelve a activarlo, o elige otro puerto.",
+        "stoppedListening": "El servidor se ha detenido de forma inesperada. Desactívalo y vuelve a activarlo.",
+        "keyUnavailable": "No se ha podido leer la clave de API. Desbloquea el teléfono; después, desactiva el servidor y vuelve a activarlo."
+      }
     }
   },
   "memory": {
@@ -465,6 +498,12 @@
         "downloadProjectionModel": "Descargar modelo de proyección",
         "viewModelCardOnHuggingFace": "Ver ficha del modelo en Hugging Face",
         "draftOnlyReason": "Modelo exclusivo para borrador. Selecciónalo en Ajustes → Decodificación especulativa."
+      },
+      "projectorOffer": {
+        "rowTitle": "La visión necesita su modelo de proyección",
+        "download": "Descargar",
+        "downloading": "Descargando el modelo de proyección · {{progress}}%",
+        "a11yWithSize": "Descargar el modelo de proyección, {{size}}"
       }
     },
     "modelSettings": {
@@ -1087,6 +1126,30 @@
       "usingServerDefaultUnreported": "Usando el valor predeterminado del servidor (no indicado)",
       "resetToServerDefault": "Predeterminado del servidor: {{value}} · Restablecer",
       "resetToServerDefaultAccessibilityLabel": "Restablecer {{name}} al valor predeterminado del servidor, {{value}}"
+    },
+    "messageMenuButton": {
+      "accessibilityLabel": "Más acciones",
+      "openMenuAction": "Abrir el menú del mensaje"
+    },
+    "markdownView": {
+      "selectionMenu": {
+        "copy": "Copiar",
+        "copyAsMarkdown": "Copiar como Markdown",
+        "copyImageUrl": "Copiar URL de la imagen",
+        "copyImageUrls": "Copiar {{count}} URL de imágenes"
+      },
+      "accessibility": {
+        "bulletPoint": "Viñeta",
+        "nestedBulletPoint": "Viñeta anidada",
+        "orderedItem": "Elemento de lista {{n}}",
+        "nestedOrderedItem": "Elemento de lista anidada {{n}}",
+        "quote": "Cita",
+        "nestedQuote": "Cita anidada",
+        "tableRow": "Fila {{n}}: {{content}}",
+        "rotorHeadings": "Encabezados",
+        "rotorLinks": "Enlaces",
+        "rotorImages": "Imágenes"
+      }
     }
   },
   "palsScreen": {
@@ -1204,7 +1267,8 @@
         "startChat": "Iniciar chat",
         "needsMemory": "Este Pal necesita un dispositivo con al menos {{size}} de memoria para su modelo más pequeño.",
         "noModelFits": "Este dispositivo no tiene suficiente memoria para este Pal."
-      }
+      },
+      "storeOnly": "Disponible en la versión de Google Play / App Store"
     }
   },
   "validation": {
@@ -1579,7 +1643,21 @@
     "engineChipPhonon": "Phonon",
     "enginePhononTagline": "Inicio rápido y poco consumo de RAM. Solo en inglés.",
     "enginePhononCredit": "Modelo y voces de Gradium (Apache-2.0), basados en Mimi de Kyutai.",
-    "engineTierNatural": "inglés natural"
+    "engineTierNatural": "inglés natural",
+    "systemNeedsInternet": "Necesita internet",
+    "systemVoiceNumber": "Voz {{number}}",
+    "systemQualityEnhanced": "Mejorada",
+    "systemOnDeviceSection": "En este teléfono",
+    "systemLanguagesLabel": "Idiomas",
+    "systemGetMoreVoices": "Obtener más voces",
+    "systemNoVoicesForLanguage": "Este teléfono todavía no tiene voces en {{language}}.",
+    "systemIosSettingsHint": "Añade voces en Ajustes > Accesibilidad > Contenido leído > Voces.",
+    "systemLanguageSheetTitle": "Idioma de la voz",
+    "systemLanguageSearchPlaceholder": "Buscar idiomas",
+    "speakingNotificationTitle": "PocketPal está hablando",
+    "speakingNotificationStop": "Detener",
+    "speakingNotificationChannel": "Voz",
+    "systemIosReadAndSpeakHint": "Añade voces en Ajustes > Accesibilidad > Lectura y voz > Voces."
   },
   "onboarding": {
     "back": "Atrás",
@@ -1705,7 +1783,7 @@
     "errorPermissionBlocked": "El acceso al micrófono está bloqueado. Actívalo en Ajustes.",
     "errorTranscribeFailed": "No se pudo transcribir. Inténtalo de nuevo.",
     "errorNotInstalled": "Descarga un modelo de voz para usar la entrada de voz.",
-    "errorInsufficientMemory": "No hay suficiente memoria para la entrada de voz con este modelo de chat. Prueba con un modelo más pequeño.",
+    "errorInsufficientMemory": "Este modelo de chat y la entrada de voz necesitan más memoria de la que tiene este teléfono. Prueba con un modelo más pequeño.",
     "errorMicUnavailable": "El micrófono no responde. Inténtalo de nuevo o cambia a un modelo de chat más pequeño.",
     "errorTranscriptPartial": "No se pudo transcribir una parte de lo que dictaste.",
     "openSettingsLabel": "Abrir Ajustes",
@@ -1808,7 +1886,6 @@
     "installedLabel": "Instalado",
     "voiceRowTitle": "Voz",
     "voiceRowReady": "{{voice}} · disponible",
-    "voiceRowMissing": "Elige una voz natural. La voz del sistema no puede hablar en el modo de voz.",
     "chooseVoiceCta": "Elegir una voz",
     "micNote": "A continuación te pediremos acceso al micrófono.",
     "micDenied": "El modo de voz necesita acceso al micrófono.",
@@ -1816,7 +1893,7 @@
     "memoryTightTitle": "Memoria ajustada",
     "memoryTightBody": "El modo de voz mantiene tres modelos cargados a la vez. En este teléfono puede ir lento o la aplicación puede cerrarse.",
     "memoryWontFitTitle": "Memoria insuficiente",
-    "memoryWontFitBody": "El reconocimiento de voz no cabe junto a este modelo de chat. Elige un modelo más pequeño para usar el modo de voz.",
+    "memoryWontFitBody": "Estos modelos necesitan más memoria de la que tiene este teléfono. Elige un modelo más pequeño para usar el modo de voz.",
     "memoryChatRow": "Modelo de chat · {{name}}",
     "memorySttRowModel": "Reconocimiento de voz · Whisper {{tier}}",
     "memoryVoiceRow": "Voz · {{name}}",
@@ -1832,6 +1909,7 @@
     "teaserKeepTyping": "Seguir escribiendo, gratis",
     "voiceRowFileMissing": "Aún no has descargado {{voice}}. Toca Continuar para descargarla.",
     "voiceRowFileFailed": "No se pudo descargar {{voice}}. Conéctate a internet e inténtalo de nuevo.",
-    "memoryNeededOfTotal": "{{needed}} de {{total}} en este teléfono"
+    "memoryNeededOfTotal": "{{needed}} de {{total}} en este teléfono",
+    "voiceRowChoose": "Elige una voz para las respuestas habladas."
   }
 }

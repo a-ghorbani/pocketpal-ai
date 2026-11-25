@@ -166,7 +166,8 @@ OPTIONS:
   --skip-build             Skip app build step
   --dry-run                Print matched targets and commands without executing
   --list-models            List all available models
-  --report-dir <path>      Custom report directory (default: e2e/reports/<timestamp>)
+  --report-dir <path>      Custom report directory (default: $DEVICEFARM_LOG_DIR in
+                           device-farm mode when set, else e2e/reports/<timestamp>)
   --appium-port <n>        Base Appium port (default: 4723, or E2E_BASE_APPIUM_PORT).
                            Per-device runs increment from this. Use a free port
                            when another E2E run already holds the default.
@@ -643,7 +644,7 @@ function getRunLabel(
   return parts.join(' / ');
 }
 
-function findJunitFiles(dir: string): string[] {
+function findFiles(dir: string, matches: (name: string) => boolean): string[] {
   const results: string[] = [];
 
   try {
@@ -651,11 +652,8 @@ function findJunitFiles(dir: string): string[] {
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        results.push(...findJunitFiles(fullPath));
-      } else if (
-        entry.name.startsWith('junit-') &&
-        entry.name.endsWith('.xml')
-      ) {
+        results.push(...findFiles(fullPath, matches));
+      } else if (matches(entry.name)) {
         results.push(fullPath);
       }
     }
@@ -664,6 +662,13 @@ function findJunitFiles(dir: string): string[] {
   }
 
   return results;
+}
+
+function findJunitFiles(dir: string): string[] {
+  return findFiles(
+    dir,
+    name => name.startsWith('junit-') && name.endsWith('.xml'),
+  );
 }
 
 function runSingleTest(opts: {
@@ -931,8 +936,31 @@ interface ModelReport {
   success: boolean;
 }
 
+const MODEL_REPORT_FILE = 'all-models-report.json';
+
+export function mergeModelReports(reportDir: string): void {
+  const mergedPath = path.join(reportDir, MODEL_REPORT_FILE);
+  const runReports = findFiles(
+    reportDir,
+    name => name === MODEL_REPORT_FILE,
+  ).filter(file => file !== mergedPath);
+  if (runReports.length === 0) {
+    return;
+  }
+
+  const merged = runReports.flatMap(file => {
+    try {
+      const reports: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return Array.isArray(reports) ? (reports as ModelReport[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  fs.writeFileSync(mergedPath, JSON.stringify(merged, null, 2));
+}
+
 function printModelReports(reportDir: string): void {
-  const reportPath = path.join(reportDir, 'all-models-report.json');
+  const reportPath = path.join(reportDir, MODEL_REPORT_FILE);
   if (!fs.existsSync(reportPath)) {
     return;
   }
@@ -1159,7 +1187,10 @@ async function main(): Promise<void> {
     .toISOString()
     .replace(/[:.]/g, '-')
     .replace('Z', '');
-  const reportDir = args.reportDir || path.join(REPORTS_DIR, timestamp);
+  const reportDir =
+    args.reportDir ||
+    (args.mode === 'device-farm' && process.env.DEVICEFARM_LOG_DIR) ||
+    path.join(REPORTS_DIR, timestamp);
 
   // Resolve platforms
   const platforms: Array<'ios' | 'android'> =
@@ -1255,6 +1286,7 @@ async function main(): Promise<void> {
 
   // Print results
   printSummary(results);
+  mergeModelReports(reportDir);
   printModelReports(reportDir);
   mergeJUnitReports(reportDir);
   writeSummary(reportDir, args, results, gitInfo, timestamp);

@@ -40,6 +40,7 @@ export const writeFile = jest.fn(() => {
   return Promise.resolve();
 });
 export const downloadFile = jest.fn();
+export const read = jest.fn().mockResolvedValue('');
 export const hash = jest.fn();
 // Make DocumentDirectoryPath configurable for tests
 let documentDirectoryPath = '/path/to/documents';
@@ -77,6 +78,7 @@ const RNFS = {
   readFile,
   writeFile,
   downloadFile,
+  read,
   hash,
   DocumentDirectoryPath,
   CachesDirectoryPath,
