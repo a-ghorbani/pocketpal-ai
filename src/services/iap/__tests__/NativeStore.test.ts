@@ -105,6 +105,13 @@ describe('NativeStore', () => {
         await expect(store.init()).resolves.toBe(false);
       });
 
+      it('reports unavailable when Play rejects with a structured error', async () => {
+        iap.getAvailablePurchases.mockRejectedValueOnce(
+          JSON.parse(PLAY_NOT_CONNECTED_ON_DEVICE.split('\n', 1)[0]),
+        );
+        await expect(store.init()).resolves.toBe(false);
+      });
+
       it.each([
         ['network-error', new Error(NETWORK_ERROR)],
         ['billing-unavailable', new Error(BILLING_UNAVAILABLE)],
