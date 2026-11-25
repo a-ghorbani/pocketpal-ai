@@ -100,6 +100,22 @@ describe('resolveThreadDefault', () => {
       });
     });
 
+    it('treats a core at exactly half the top capacity as slow', () => {
+      const caps = [...repeat(512, 4), ...repeat(1024, 4)];
+      expect(android(8, A55_4_4.freqs, caps)).toEqual({
+        threads: 4,
+        settled: true,
+      });
+    });
+
+    it('treats a core just above half the top capacity as fast', () => {
+      const caps = [...repeat(513, 4), ...repeat(1024, 4)];
+      expect(android(8, A55_4_4.freqs, caps)).toEqual({
+        threads: 6,
+        settled: true,
+      });
+    });
+
     it('counts only the leading run in pinning order, ties to the higher index', () => {
       const caps = [...repeat(1024, 4), 300, ...repeat(1024, 5)];
       expect(android(10, repeat(2000000, 10), caps)).toEqual({
@@ -109,11 +125,24 @@ describe('resolveThreadDefault', () => {
     });
   });
 
+  describe('frequency cut at 0.75 of the top core', () => {
+    it('counts a core at exactly 0.75 as fast', () => {
+      const freqs = [...repeat(1800000, 4), ...repeat(2400000, 4)];
+      expect(android(8, freqs)).toEqual({threads: 6, settled: true});
+    });
+
+    it('counts a core just under 0.75 as slow', () => {
+      const freqs = [...repeat(1799999, 4), ...repeat(2400000, 4)];
+      expect(android(8, freqs)).toEqual({threads: 4, settled: true});
+    });
+  });
+
   describe('falls back to the legacy count', () => {
     it.each([
       ['uniform cores', repeat(2000000, 8)],
       ['one fast core', [3000000, ...repeat(1800000, 7)]],
       ['two fast cores', [3000000, 3000000, ...repeat(1800000, 6)]],
+      ['three fast cores', [...repeat(3000000, 3), ...repeat(1800000, 5)]],
     ])('settled: %s', (_label, freqs) => {
       expect(android(8, freqs)).toEqual({threads: 6, settled: true});
     });
@@ -190,6 +219,14 @@ describe('getRecommendedThreadCount', () => {
     Platform.OS = 'android';
     mockCpu({cores: 8});
     expect(await getRecommendedThreadCount()).toBe(6);
+  });
+
+  it('falls back to 4 threads when the CPU read fails', async () => {
+    Platform.OS = 'android';
+    (NativeHardwareInfo.getCPUInfo as jest.Mock).mockRejectedValueOnce(
+      new Error('unavailable'),
+    );
+    expect(await getRecommendedThreadCount()).toBe(4);
   });
 
   it('keeps the legacy count on iOS', async () => {

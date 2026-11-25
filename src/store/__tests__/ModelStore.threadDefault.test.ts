@@ -1,10 +1,12 @@
 jest.unmock('../../store');
 
 import {runInAction} from 'mobx';
+import {makePersistable} from 'mobx-persist-store';
 import {Platform} from 'react-native';
 
 import {modelStore} from '..';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
+import {createDefaultContextInitParams} from '../../utils/contextInitParamsVersions';
 
 jest.mock('../../services/downloads', () => ({
   DownloadCancelledError: class extends Error {},
@@ -30,7 +32,17 @@ const PIXEL_9 = {
   cpuCapacities: [...repeat(191, 4), ...repeat(741, 3), 1024],
 };
 
+const SM8850 = {
+  cores: 8,
+  cpuMaxFreqsKhz: [...repeat(3628800, 6), ...repeat(4608000, 2)],
+  cpuCapacities: [...repeat(762, 6), ...repeat(1024, 2)],
+};
+
 const getCPUInfo = NativeHardwareInfo.getCPUInfo as jest.Mock;
+
+const persistedProperties: string[] = (
+  makePersistable as jest.Mock
+).mock.calls.find(([, options]) => options.name === 'ModelStore')[1].properties;
 
 const initializeThreadCount = (): Promise<void> =>
   (modelStore as any).initializeThreadCount();
@@ -76,6 +88,53 @@ describe('ModelStore.initializeThreadCount', () => {
     expect(modelStore.contextInitParams.n_threads).toBe(4);
     expect(modelStore.threadDefaultVersion).toBe(2);
     expect(modelStore.max_threads).toBe(8);
+  });
+
+  it('fresh install replaces the built-in default even when the rule keeps the legacy count', async () => {
+    getCPUInfo.mockResolvedValue(SM8850);
+    givenStore({
+      version: undefined,
+      threadDefaultVersion: undefined,
+      n_threads: createDefaultContextInitParams().n_threads,
+    });
+
+    await initializeThreadCount();
+
+    expect(modelStore.contextInitParams.n_threads).toBe(6);
+    expect(modelStore.threadDefaultVersion).toBe(2);
+  });
+
+  it('fresh install with a failed CPU read falls back to 4 threads and retries later', async () => {
+    getCPUInfo.mockRejectedValueOnce(new Error('unavailable'));
+    givenStore({
+      version: undefined,
+      threadDefaultVersion: undefined,
+      n_threads: 6,
+    });
+
+    await initializeThreadCount();
+
+    expect(modelStore.contextInitParams.n_threads).toBe(4);
+    expect(modelStore.threadDefaultVersion).toBeUndefined();
+  });
+
+  it('iOS fresh install with a failed CPU read leaves the marker unset', async () => {
+    Platform.OS = 'ios';
+    getCPUInfo.mockRejectedValueOnce(new Error('unavailable'));
+    givenStore({
+      version: undefined,
+      threadDefaultVersion: undefined,
+      n_threads: 6,
+    });
+
+    await initializeThreadCount();
+
+    expect(modelStore.contextInitParams.n_threads).toBe(4);
+    expect(modelStore.threadDefaultVersion).toBeUndefined();
+  });
+
+  it('persists the marker so the move runs once across launches', () => {
+    expect(persistedProperties).toContain('threadDefaultVersion');
   });
 
   it('keeps the value once the marker is set, even while presets never resolved', async () => {
