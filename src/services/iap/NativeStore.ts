@@ -124,6 +124,13 @@ const outcomeFromStoreIOS = async (
 const errorCode = (error: unknown): string | undefined =>
   (error as Partial<PurchaseError> | undefined)?.code;
 
+// An Android rejection's message is openiap's JSON line followed by the Java
+// cause and stack, which the parser can't read as a whole.
+const playErrorCode = (error: unknown): string =>
+  parseErrorStringToJsonObj(
+    error instanceof Error ? error.message.split('\n', 1)[0] : error,
+  ).code;
+
 // On Android, initConnection resolves true before Play is asked anything;
 // only a query shows whether Play can serve this device.
 const playIsUsable = async (): Promise<boolean> => {
@@ -131,9 +138,7 @@ const playIsUsable = async (): Promise<boolean> => {
     await getAvailablePurchases({onlyIncludeActiveItemsIOS: true});
     return true;
   } catch (error) {
-    return (
-      parseErrorStringToJsonObj(error).code !== ErrorCode.ServiceDisconnected
-    );
+    return playErrorCode(error) !== ErrorCode.ServiceDisconnected;
   }
 };
 

@@ -7,6 +7,14 @@ import {
   PURCHASE_SETTLE_GRACE_MS,
 } from '../NativeStore';
 import type {StoreTransaction} from '../StorePort';
+import {
+  BILLING_UNAVAILABLE,
+  NETWORK_ERROR,
+  PLAY_NOT_CONNECTED_ON_DEVICE,
+  SERVICE_ERROR,
+  SERVICE_ERROR_ECHOING_DISCONNECTED,
+  SERVICE_TIMEOUT,
+} from '../../../../jest/fixtures/playBillingErrors';
 
 const iap = RNIap as unknown as Record<string, jest.Mock>;
 const iapMocks = Object.values(iap).filter(fn => jest.isMockFunction(fn));
@@ -17,10 +25,6 @@ const defaultImplementations = new Map(
 type Listener = (value: any) => void;
 
 const originalOS = Platform.OS;
-
-const PLAY_NOT_CONNECTED = new Error(
-  '{"code":"service-disconnected","message":"Play Store service is not connected","debugMessage":"Service connection is disconnected.","subResponseCodeAndroid":"no-applicable-sub-response-code"}',
-);
 
 const setOS = (os: 'ios' | 'android') => {
   (Platform as any).OS = os;
@@ -95,40 +99,20 @@ describe('NativeStore', () => {
       });
 
       it('reports unavailable when Play cannot be reached', async () => {
-        iap.getAvailablePurchases.mockRejectedValueOnce(PLAY_NOT_CONNECTED);
+        iap.getAvailablePurchases.mockRejectedValueOnce(
+          new Error(PLAY_NOT_CONNECTED_ON_DEVICE),
+        );
         await expect(store.init()).resolves.toBe(false);
       });
 
       it.each([
+        ['network-error', new Error(NETWORK_ERROR)],
+        ['billing-unavailable', new Error(BILLING_UNAVAILABLE)],
+        ['service-error', new Error(SERVICE_ERROR)],
+        ['service-timeout', new Error(SERVICE_TIMEOUT)],
         [
-          'network-error',
-          new Error(
-            '{"code":"network-error","message":"Network connection error","debugMessage":"x"}',
-          ),
-        ],
-        [
-          'billing-unavailable',
-          new Error(
-            '{"code":"billing-unavailable","message":"Billing API version is not supported"}',
-          ),
-        ],
-        [
-          'service-error',
-          new Error(
-            '{"code":"service-error","message":"Timeout communicating with service."}',
-          ),
-        ],
-        [
-          'service-timeout',
-          new Error(
-            '{"code":"service-timeout","message":"The request has reached the maximum timeout"}',
-          ),
-        ],
-        [
-          'query-product',
-          new Error(
-            '{"code":"query-product","message":"Failed to query product","responseCode":-1,"debugMessage":"Service connection is disconnected.","productIds":["plus.1","plus.2","plus.3","plus.4"],"productType":"inapp","isEmptyProductList":true}',
-          ),
+          'service-error whose cause repeats service-disconnected',
+          new Error(SERVICE_ERROR_ECHOING_DISCONNECTED),
         ],
         ['a plain error', new Error('boom')],
         ['a non-error', undefined],
