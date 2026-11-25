@@ -1,11 +1,13 @@
 import {Platform} from 'react-native';
 import {
+  ErrorCode,
   fetchProducts,
   finishTransaction,
   getAvailablePurchases,
   getPendingTransactionsIOS,
   getStorefront,
   initConnection,
+  parseErrorStringToJsonObj,
   purchaseErrorListener,
   purchaseUpdatedListener,
   requestPurchase,
@@ -122,13 +124,34 @@ const outcomeFromStoreIOS = async (
 const errorCode = (error: unknown): string | undefined =>
   (error as Partial<PurchaseError> | undefined)?.code;
 
+// An Android rejection's message is openiap's JSON line followed by the Java
+// cause and stack, which the parser can't read as a whole.
+const playErrorCode = (error: unknown): string =>
+  parseErrorStringToJsonObj(
+    error instanceof Error ? error.message.split('\n', 1)[0] : error,
+  ).code;
+
+// On Android, initConnection resolves true before Play is asked anything;
+// only a query shows whether Play can serve this device.
+const playIsUsable = async (): Promise<boolean> => {
+  try {
+    await getAvailablePurchases({onlyIncludeActiveItemsIOS: true});
+    return true;
+  } catch (error) {
+    return playErrorCode(error) !== ErrorCode.ServiceDisconnected;
+  }
+};
+
 export class NativeStore implements StorePort {
   async init(): Promise<boolean> {
     try {
-      return (await initConnection()) === true;
+      if ((await initConnection()) !== true) {
+        return false;
+      }
     } catch {
       return false;
     }
+    return Platform.OS !== 'android' || playIsUsable();
   }
 
   async fetchProducts(productIds: string[]): Promise<StoreProduct[]> {

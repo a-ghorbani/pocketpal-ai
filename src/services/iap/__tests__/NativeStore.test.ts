@@ -7,8 +7,20 @@ import {
   PURCHASE_SETTLE_GRACE_MS,
 } from '../NativeStore';
 import type {StoreTransaction} from '../StorePort';
+import {
+  BILLING_UNAVAILABLE,
+  NETWORK_ERROR,
+  PLAY_NOT_CONNECTED_ON_DEVICE,
+  SERVICE_ERROR,
+  SERVICE_ERROR_ECHOING_DISCONNECTED,
+  SERVICE_TIMEOUT,
+} from '../../../../jest/fixtures/playBillingErrors';
 
 const iap = RNIap as unknown as Record<string, jest.Mock>;
+const iapMocks = Object.values(iap).filter(fn => jest.isMockFunction(fn));
+const defaultImplementations = new Map(
+  iapMocks.map(fn => [fn, fn.getMockImplementation()]),
+);
 
 type Listener = (value: any) => void;
 
@@ -51,6 +63,9 @@ describe('NativeStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    defaultImplementations.forEach((implementation, fn) =>
+      fn.mockReset().mockImplementation(implementation),
+    );
     iap.requestPurchase.mockResolvedValue(null);
     store = new NativeStore();
   });
@@ -60,14 +75,106 @@ describe('NativeStore', () => {
   });
 
   describe('init', () => {
-    it('reports a connected store', async () => {
+    it('reports a connected store on iOS without querying entitlements', async () => {
+      setOS('ios');
       iap.initConnection.mockResolvedValueOnce(true);
       await expect(store.init()).resolves.toBe(true);
+      expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
     });
 
     it('reports unavailable when the connection throws', async () => {
       iap.initConnection.mockRejectedValueOnce(new Error('no play services'));
       await expect(store.init()).resolves.toBe(false);
+    });
+
+    describe('on Android', () => {
+      beforeEach(() => setOS('android'));
+
+      it('reports a connected store when the entitlement query answers', async () => {
+        await expect(store.init()).resolves.toBe(true);
+        expect(iap.getAvailablePurchases).toHaveBeenCalledTimes(1);
+        expect(iap.getAvailablePurchases).toHaveBeenCalledWith({
+          onlyIncludeActiveItemsIOS: true,
+        });
+      });
+
+      it('reports unavailable when Play cannot be reached', async () => {
+        iap.getAvailablePurchases.mockRejectedValueOnce(
+          new Error(PLAY_NOT_CONNECTED_ON_DEVICE),
+        );
+        await expect(store.init()).resolves.toBe(false);
+      });
+
+      it('reports unavailable when Play rejects with a structured error', async () => {
+        iap.getAvailablePurchases.mockRejectedValueOnce(
+          JSON.parse(PLAY_NOT_CONNECTED_ON_DEVICE.split('\n', 1)[0]),
+        );
+        await expect(store.init()).resolves.toBe(false);
+      });
+
+      it.each([
+        ['network-error', new Error(NETWORK_ERROR)],
+        ['billing-unavailable', new Error(BILLING_UNAVAILABLE)],
+        ['service-error', new Error(SERVICE_ERROR)],
+        ['service-timeout', new Error(SERVICE_TIMEOUT)],
+        [
+          'service-error whose cause repeats service-disconnected',
+          new Error(SERVICE_ERROR_ECHOING_DISCONNECTED),
+        ],
+        ['a plain error', new Error('boom')],
+        ['a non-error', undefined],
+      ])(
+        'stays available when the entitlement query fails with %s',
+        async (_label, error) => {
+          iap.getAvailablePurchases.mockRejectedValueOnce(error);
+          await expect(store.init()).resolves.toBe(true);
+        },
+      );
+
+      it.each([
+        [
+          'returns false',
+          () => iap.initConnection.mockResolvedValueOnce(false),
+        ],
+        [
+          'throws',
+          () => iap.initConnection.mockRejectedValueOnce(new Error('no play')),
+        ],
+      ])(
+        'skips the entitlement query when the connection %s',
+        async (_label, arrange) => {
+          arrange();
+          await expect(store.init()).resolves.toBe(false);
+          expect(iap.getAvailablePurchases).not.toHaveBeenCalled();
+        },
+      );
+
+      it('settles only after the entitlement query, calling nothing else', async () => {
+        let answer: (purchases: unknown[]) => void = () => {};
+        iap.getAvailablePurchases.mockReturnValueOnce(
+          new Promise(resolve => {
+            answer = resolve;
+          }),
+        );
+        let settled = false;
+        const pending = store.init().then(result => {
+          settled = true;
+          return result;
+        });
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(settled).toBe(false);
+        const called = Object.entries(iap)
+          .filter(([, fn]) => jest.isMockFunction(fn) && fn.mock.calls.length)
+          .map(([name]) => name);
+        expect(called.sort()).toEqual([
+          'getAvailablePurchases',
+          'initConnection',
+        ]);
+
+        answer([]);
+        await expect(pending).resolves.toBe(true);
+      });
     });
   });
 
