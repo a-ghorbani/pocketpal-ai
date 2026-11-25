@@ -2,8 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/a-ghorbani/pocketpal-device-rules/main/schema/rules.v2.schema.json",
   "schema_version": "2.0.0",
   "platform": "android",
-  "rules_version": "2026-09-24.1",
-  "updated_at": "2026-09-24T00:00:00Z",
+  "rules_version": "2026-11-06.1",
+  "updated_at": "2026-11-06T00:00:00Z",
   "_quant_policy": "Within each tier, candidates are ORDERED — first per model is the primary recommendation. For ≥3B models Q4_0 is primary (Hex 5× PP speedup, lower load mem); sub-1B uses Q4_K_M.",
   "_selection_policy": {
     "rule": "Candidate enters tier T iff (CPU TG on rep_device[T] >= tier_floors_cpu_tg[T]) AND (peak_load_mem fits ram_band[T] with OS-killer margin). Accelerators may exceed floor but don't change membership.",
@@ -311,29 +311,23 @@
           "obs_tg": 10.3
         },
         {
-          "model": "bonsai-1.7b",
-          "display_name": "Bonsai 1.7B",
-          "quant": "q1_0",
-          "hf_repo": "prism-ml/Bonsai-1.7B-gguf",
-          "hf_filename": "Bonsai-1.7B-Q1_0.gguf",
-          "params": 1720028160,
-          "size_bytes": 248302272,
-          "sha256": "3d7c6c90dd98717a203adb22d5eacd2581850e40aa5327e144b97766cae5f7e3",
-          "min_ram_gb": 1.5,
-          "obs_tg": 9.4,
-          "native_low_bit": true
-        },
-        {
-          "model": "qwen3-0.6b",
-          "display_name": "Qwen3 0.6B",
+          "model": "qwen3.5-0.8b",
+          "display_name": "Qwen3.5 0.8B",
           "quant": "q4_k_m",
-          "hf_repo": "bartowski/Qwen_Qwen3-0.6B-GGUF",
-          "hf_filename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-          "params": 751632384,
-          "size_bytes": 484220320,
-          "sha256": "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14",
-          "min_ram_gb": 1.3,
-          "obs_tg": 11.9
+          "hf_repo": "unsloth/Qwen3.5-0.8B-GGUF",
+          "hf_filename": "Qwen3.5-0.8B-Q4_K_M.gguf",
+          "params": 752393024,
+          "size_bytes": 532517120,
+          "sha256": "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+          "min_ram_gb": 2.1,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/Qwen3.5-0.8B-GGUF",
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 204987232,
+            "sha256": "56e4c6cfe73b0c82e3e82bc518d7591997e61d81f723fc41a586f4fa69ea2453",
+            "modalities": ["vision"]
+          }
         },
         {
           "model": "lfm2.5-350m",
@@ -346,6 +340,25 @@
           "sha256": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
           "min_ram_gb": 1.2,
           "obs_tg": 39.1
+        },
+        {
+          "model": "lfm2.5-vl-450m",
+          "display_name": "LFM2.5-VL 450M",
+          "quant": "q4_k_m",
+          "hf_repo": "LiquidAI/LFM2.5-VL-450M-GGUF",
+          "hf_filename": "LFM2.5-VL-450M-Q4_K_M.gguf",
+          "params": 354483968,
+          "size_bytes": 229313568,
+          "sha256": "1093f1331319199bbcacdbd7ecc9aa6e5678db6b55073948d0f508be90c8ab68",
+          "min_ram_gb": 1.3,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "LiquidAI/LFM2.5-VL-450M-GGUF",
+            "hf_filename": "mmproj-LFM2.5-VL-450m-Q8_0.gguf",
+            "size_bytes": 102815168,
+            "sha256": "ebfc428baa37efad8bae93864f914b2634a09009f91ad59f974fe1a1565d8561",
+            "modalities": ["vision"]
+          }
         }
       ]
     },
@@ -365,72 +378,65 @@
           "obs_tg": 8.9
         },
         {
-          "model": "lfm2-2.6b",
-          "display_name": "LFM2 2.6B",
-          "quant": "q4_k_m",
-          "hf_repo": "LiquidAI/LFM2-2.6B-GGUF",
-          "hf_filename": "LFM2-2.6B-Q4_K_M.gguf",
-          "params": 2569272320,
-          "size_bytes": 1563668704,
-          "sha256": "384bc877b6c37064982f96885bef69e4475919f5969218ed4e3b9399ae0340df",
-          "min_ram_gb": 2.5,
-          "obs_tg": 12.3
-        },
-        {
-          "model": "qwen3-1.7b",
-          "display_name": "Qwen3 1.7B",
-          "quant": "q4_k_m",
-          "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
-          "hf_filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
-          "params": 2031739904,
-          "size_bytes": 1282439584,
-          "sha256": "72c5c3cb38fa32d5256e2fe30d03e7a64c6c79e668ad84057e3bd66e250b24fb",
-          "min_ram_gb": 2.1,
-          "obs_tg": 8.5
-        },
-        {
-          "model": "lfm2.5-1.2b",
-          "display_name": "LFM2.5 1.2B",
-          "quant": "q4_k_m",
-          "hf_repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
-          "hf_filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
-          "params": 1170340608,
-          "size_bytes": 730895168,
-          "sha256": "b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5",
-          "min_ram_gb": 1.4,
-          "obs_tg": 21.2
-        },
-        {
-          "model": "lfm2-vl-1.6b",
-          "display_name": "LFM2-VL 1.6B",
+          "model": "lfm2.5-2.6b",
+          "display_name": "LFM2.5 2.6B",
           "quant": "q4_0",
-          "hf_repo": "LiquidAI/LFM2-VL-1.6B-GGUF",
-          "hf_filename": "LFM2-VL-1.6B-Q4_0.gguf",
-          "params": 1170340608,
-          "size_bytes": 695750048,
-          "sha256": "ce0d4b122d328d14390ef160785da3a51a527f96844f392a04cb2db96f134e5d",
-          "min_ram_gb": 2.5,
-          "obs_tg": 9.6,
+          "hf_repo": "LiquidAI/LFM2.5-2.6B-GGUF",
+          "hf_filename": "LFM2.5-2.6B-QAD-Q4_0.gguf",
+          "params": 2697198592,
+          "size_bytes": 1593894944,
+          "sha256": "a247afd6414918eac8e520a9e6137dc271235461ecbe1180462221d5b8d40b03",
+          "min_ram_gb": 2.7
+        },
+        {
+          "model": "qwen3.5-2b",
+          "display_name": "Qwen3.5 2B",
+          "quant": "q4_k_m",
+          "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+          "hf_filename": "Qwen3.5-2B-Q4_K_M.gguf",
+          "params": 1881825088,
+          "size_bytes": 1280835840,
+          "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+          "min_ram_gb": 3.7,
           "multimodal": true,
           "mmproj": {
-            "hf_repo": "LiquidAI/LFM2-VL-1.6B-GGUF",
-            "hf_filename": "mmproj-LFM2-VL-1.6B-Q8_0.gguf",
-            "size_bytes": 564115648,
+            "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 668227264,
             "modalities": ["vision"]
           }
         },
         {
-          "model": "bonsai-8b",
-          "display_name": "Bonsai 8B",
-          "quant": "q1_0",
-          "hf_repo": "prism-ml/Bonsai-8B-gguf",
-          "hf_filename": "Bonsai-8B-Q1_0.gguf",
-          "params": 8188548096,
-          "size_bytes": 1158654496,
-          "sha256": "284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54",
-          "min_ram_gb": 2.3,
-          "obs_tg": 3.6,
-          "native_low_bit": true
+          "model": "lfm3-1.7b",
+          "display_name": "LFM3 1.7B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-1.7B-GGUF",
+          "hf_filename": "LFM3-1.7B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615680,
+          "sha256": "43a7d09a0e9cba91b63eb7052488b9564569bddfd65754d2e426465e572a7452",
+          "min_ram_gb": 2.1,
+          "min_app_version": "1.22.0"
+        },
+        {
+          "model": "lfm3-vl-2b",
+          "display_name": "LFM3-VL 2B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+          "hf_filename": "LFM3-VL-2B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615648,
+          "sha256": "621c455376cb96a20891697deb9975c6fb47dd5ea98ed3ad1f3b7e8f24f0b1e6",
+          "min_ram_gb": 2.7,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+            "hf_filename": "mmproj-LFM3-VL-2B-Q8_0.gguf",
+            "size_bytes": 203031872,
+            "sha256": "c5c5b58d544a18da919172d2d0368090ea1a4a351b6feb7f8a326a264a5918ab",
+            "modalities": ["vision"]
+          }
         },
         {
           "model": "gemma-3-1b",
@@ -445,21 +451,42 @@
           "obs_tg": 11.2
         },
         {
-          "model": "spark-x2.5-1.7b",
-          "display_name": "Spark-X2.5 1.7B",
+          "model": "spark-x2.6-1.7b",
+          "display_name": "Spark-X2.6 1.7B",
           "quant": "q4_k_m",
-          "hf_repo": "XHToken/Spark-X2.5-1.7B-GGUF",
-          "hf_filename": "Spark-X2.5-1.7B-Q4_K_M.gguf",
-          "params": 1707657216,
-          "size_bytes": 1107457856,
-          "sha256": "902bde2522394954ac17821b3e5fd0df02defbc6944f122253f2580acf0503f4",
-          "min_ram_gb": 2.2,
+          "hf_repo": "XHToken/Spark-X2.6-1.7B-GGUF",
+          "hf_filename": "Spark-X2.6-1.7B-Q4_K_M.gguf",
+          "params": 1976092672,
+          "size_bytes": 1768720512,
+          "sha256": "7abd9859c10924be3c583945456fa9b25d0569484876105a7b7376f7938fffb7",
+          "min_ram_gb": 2.6,
           "min_app_version": "1.17.3"
+        },
+        {
+          "model": "ternary-bonsai-2-2b",
+          "display_name": "Ternary Bonsai 2 2B",
+          "quant": "q2_0",
+          "hf_repo": "prism-ml/Ternary-Bonsai-2-2B-gguf",
+          "hf_filename": "Ternary-Bonsai-2-2B-Q2_0.gguf",
+          "params": 1881825088,
+          "size_bytes": 546689504,
+          "sha256": "c2893fa6f951daee8b7263d5f49b455e57989ef56417a22125b03566dc560650",
+          "min_ram_gb": 2.2,
+          "native_low_bit": true,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "prism-ml/Ternary-Bonsai-2-2B-gguf",
+            "hf_filename": "Ternary-Bonsai-2-2B-mmproj-Q8_0.gguf",
+            "size_bytes": 364664352,
+            "sha256": "ac9934e8d7966d0d62442c202ec8fdad99a045dea79366c1a4a246a46f5c0533",
+            "modalities": ["vision"]
+          }
         }
       ]
     },
     "high": {
-      "description": "7 candidate(s); primary: gemma-3-4b. Validated against community benchmarks.",
+      "description": "11 candidate(s); primary: gemma-3-4b. Validated against community benchmarks.",
       "candidates": [
         {
           "model": "gemma-3-4b",
@@ -480,8 +507,8 @@
           "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
           "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
           "params": 4647450147,
-          "size_bytes": 3041376384,
-          "sha256": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
+          "size_bytes": 3041378400,
+          "sha256": "31d3a3c630d4e71a7416498c42660dd3805066948acaec76a47e1ffac7010132",
           "min_ram_gb": 4.5,
           "obs_tg": 7.2,
           "multimodal": true,
@@ -493,17 +520,42 @@
           }
         },
         {
-          "model": "bonsai-8b",
-          "display_name": "Bonsai 8B",
-          "quant": "q1_0",
-          "hf_repo": "prism-ml/Bonsai-8B-gguf",
-          "hf_filename": "Bonsai-8B-Q1_0.gguf",
-          "params": 8188548096,
-          "size_bytes": 1158654496,
-          "sha256": "284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54",
-          "min_ram_gb": 2.3,
-          "obs_tg": 3.6,
-          "native_low_bit": true
+          "model": "qwen3.5-2b",
+          "display_name": "Qwen3.5 2B",
+          "quant": "q4_k_m",
+          "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+          "hf_filename": "Qwen3.5-2B-Q4_K_M.gguf",
+          "params": 1881825088,
+          "size_bytes": 1280835840,
+          "sha256": "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+          "min_ram_gb": 3.7,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 668227264,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "lfm3-vl-2b",
+          "display_name": "LFM3-VL 2B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+          "hf_filename": "LFM3-VL-2B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615648,
+          "sha256": "621c455376cb96a20891697deb9975c6fb47dd5ea98ed3ad1f3b7e8f24f0b1e6",
+          "min_ram_gb": 2.7,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+            "hf_filename": "mmproj-LFM3-VL-2B-Q8_0.gguf",
+            "size_bytes": 203031872,
+            "sha256": "c5c5b58d544a18da919172d2d0368090ea1a4a351b6feb7f8a326a264a5918ab",
+            "modalities": ["vision"]
+          }
         },
         {
           "model": "phi-4-mini-instruct",
@@ -518,16 +570,50 @@
           "obs_tg": 6.2
         },
         {
-          "model": "bonsai-4b",
-          "display_name": "Bonsai 4B",
-          "quant": "q1_0",
-          "hf_repo": "prism-ml/Bonsai-4B-gguf",
-          "hf_filename": "Bonsai-4B-Q1_0.gguf",
-          "params": 4021784576,
-          "size_bytes": 572270624,
-          "sha256": "4524b3f997f0f06444e568d1f26e2efd69effa3218c7ad3047432fb171e42168",
-          "min_ram_gb": 1.6,
-          "native_low_bit": true
+          "model": "tiny-aya-global",
+          "display_name": "Tiny Aya Global 3.35B",
+          "quant": "q4_0",
+          "hf_repo": "CohereLabs/tiny-aya-global-GGUF",
+          "hf_filename": "tiny-aya-global-q4_0.gguf",
+          "params": 3349227520,
+          "size_bytes": 2034490976,
+          "sha256": "18e68eca99e8ce021aaca47bf5cd6a40adafd07d322b8ee9863fb3ba213394d7",
+          "min_ram_gb": 3.7
+        },
+        {
+          "model": "granite-4.2-3b",
+          "display_name": "Granite 4.2 3B",
+          "quant": "q4_0",
+          "hf_repo": "ibm-granite/granite-4.2-3b-GGUF",
+          "hf_filename": "granite-4.2-3b-Q4_0.gguf",
+          "params": 3659737600,
+          "size_bytes": 2129118752,
+          "sha256": "d34a4a7c0b230d3f544eca502beb7e04efc3a0ebd59e2f2df50058f23cc20711",
+          "min_ram_gb": 3.2
+        },
+        {
+          "model": "lfm3-1.7b",
+          "display_name": "LFM3 1.7B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-1.7B-GGUF",
+          "hf_filename": "LFM3-1.7B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615680,
+          "sha256": "43a7d09a0e9cba91b63eb7052488b9564569bddfd65754d2e426465e572a7452",
+          "min_ram_gb": 2.1,
+          "min_app_version": "1.22.0"
+        },
+        {
+          "model": "spark-x2.6-1.7b",
+          "display_name": "Spark-X2.6 1.7B",
+          "quant": "q4_k_m",
+          "hf_repo": "XHToken/Spark-X2.6-1.7B-GGUF",
+          "hf_filename": "Spark-X2.6-1.7B-Q4_K_M.gguf",
+          "params": 1976092672,
+          "size_bytes": 1768720512,
+          "sha256": "7abd9859c10924be3c583945456fa9b25d0569484876105a7b7376f7938fffb7",
+          "min_ram_gb": 2.6,
+          "min_app_version": "1.17.3"
         },
         {
           "model": "gemma-3-1b",
@@ -542,21 +628,30 @@
           "obs_tg": 14.1
         },
         {
-          "model": "spark-x2.5-1.7b",
-          "display_name": "Spark-X2.5 1.7B",
-          "quant": "q4_k_m",
-          "hf_repo": "XHToken/Spark-X2.5-1.7B-GGUF",
-          "hf_filename": "Spark-X2.5-1.7B-Q4_K_M.gguf",
-          "params": 1707657216,
-          "size_bytes": 1107457856,
-          "sha256": "902bde2522394954ac17821b3e5fd0df02defbc6944f122253f2580acf0503f4",
+          "model": "ternary-bonsai-2-2b",
+          "display_name": "Ternary Bonsai 2 2B",
+          "quant": "q2_0",
+          "hf_repo": "prism-ml/Ternary-Bonsai-2-2B-gguf",
+          "hf_filename": "Ternary-Bonsai-2-2B-Q2_0.gguf",
+          "params": 1881825088,
+          "size_bytes": 546689504,
+          "sha256": "c2893fa6f951daee8b7263d5f49b455e57989ef56417a22125b03566dc560650",
           "min_ram_gb": 2.2,
-          "min_app_version": "1.17.3"
+          "native_low_bit": true,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "prism-ml/Ternary-Bonsai-2-2B-gguf",
+            "hf_filename": "Ternary-Bonsai-2-2B-mmproj-Q8_0.gguf",
+            "size_bytes": 364664352,
+            "sha256": "ac9934e8d7966d0d62442c202ec8fdad99a045dea79366c1a4a246a46f5c0533",
+            "modalities": ["vision"]
+          }
         }
       ]
     },
     "flagship": {
-      "description": "8 candidate(s); primary: gemma-3-4b. Validated against community benchmarks.",
+      "description": "14 candidate(s); primary: gemma-3-4b. Validated against community benchmarks.",
       "candidates": [
         {
           "model": "gemma-3-4b",
@@ -577,8 +672,8 @@
           "hf_repo": "unsloth/gemma-4-E4B-it-GGUF",
           "hf_filename": "gemma-4-E4B-it-Q4_0.gguf",
           "params": 7518069290,
-          "size_bytes": 4836000928,
-          "sha256": "d51af14007fe16deb45107de2411660be3b59c9e1c89bbde3bfec8ece65eeedc",
+          "size_bytes": 4836002944,
+          "sha256": "4a403d2e4d80281063e4f517b1c061ded8476b4011a4fc2ba7dbff707075547e",
           "min_ram_gb": 7.9,
           "obs_tg": 6.5,
           "multimodal": true,
@@ -596,8 +691,8 @@
           "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
           "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
           "params": 4647450147,
-          "size_bytes": 3041376384,
-          "sha256": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
+          "size_bytes": 3041378400,
+          "sha256": "31d3a3c630d4e71a7416498c42660dd3805066948acaec76a47e1ffac7010132",
           "min_ram_gb": 4.5,
           "obs_tg": 9.0,
           "multimodal": true,
@@ -620,6 +715,38 @@
           "min_ram_gb": 6.3
         },
         {
+          "model": "lfm3-1.7b",
+          "display_name": "LFM3 1.7B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-1.7B-GGUF",
+          "hf_filename": "LFM3-1.7B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615680,
+          "sha256": "43a7d09a0e9cba91b63eb7052488b9564569bddfd65754d2e426465e572a7452",
+          "min_ram_gb": 2.1,
+          "min_app_version": "1.22.0"
+        },
+        {
+          "model": "lfm3-vl-2b",
+          "display_name": "LFM3-VL 2B",
+          "quant": "q4_0",
+          "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+          "hf_filename": "LFM3-VL-2B-QAD-Q4_0.gguf",
+          "params": 1728801600,
+          "size_bytes": 1049615648,
+          "sha256": "621c455376cb96a20891697deb9975c6fb47dd5ea98ed3ad1f3b7e8f24f0b1e6",
+          "min_ram_gb": 2.7,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "LiquidAI/LFM3-VL-2B-GGUF",
+            "hf_filename": "mmproj-LFM3-VL-2B-Q8_0.gguf",
+            "size_bytes": 203031872,
+            "sha256": "c5c5b58d544a18da919172d2d0368090ea1a4a351b6feb7f8a326a264a5918ab",
+            "modalities": ["vision"]
+          }
+        },
+        {
           "model": "ministral-3-3b",
           "display_name": "Ministral 3 3B",
           "quant": "q4_0",
@@ -630,6 +757,51 @@
           "sha256": "c2993f4b86ddcae94031b2e384169889ceecd51b148ceda30c0f826fcce721c8",
           "min_ram_gb": 3.7,
           "obs_tg": 5.3
+        },
+        {
+          "model": "qwen3.5-4b",
+          "display_name": "Qwen3.5 4B",
+          "quant": "q4_0",
+          "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+          "hf_filename": "Qwen3.5-4B-Q4_0.gguf",
+          "params": 4205751296,
+          "size_bytes": 2583221408,
+          "sha256": "298fcb5fe7a77ccc79745ae24751560c5ac56874caff4bb39b1f2055bd72b8bb",
+          "min_ram_gb": 4.3
+        },
+        {
+          "model": "tiny-aya-global",
+          "display_name": "Tiny Aya Global 3.35B",
+          "quant": "q4_0",
+          "hf_repo": "CohereLabs/tiny-aya-global-GGUF",
+          "hf_filename": "tiny-aya-global-q4_0.gguf",
+          "params": 3349227520,
+          "size_bytes": 2034490976,
+          "sha256": "18e68eca99e8ce021aaca47bf5cd6a40adafd07d322b8ee9863fb3ba213394d7",
+          "min_ram_gb": 3.7
+        },
+        {
+          "model": "granite-4.2-3b",
+          "display_name": "Granite 4.2 3B",
+          "quant": "q4_0",
+          "hf_repo": "ibm-granite/granite-4.2-3b-GGUF",
+          "hf_filename": "granite-4.2-3b-Q4_0.gguf",
+          "params": 3659737600,
+          "size_bytes": 2129118752,
+          "sha256": "d34a4a7c0b230d3f544eca502beb7e04efc3a0ebd59e2f2df50058f23cc20711",
+          "min_ram_gb": 3.2
+        },
+        {
+          "model": "ling-3.0-tiny",
+          "display_name": "Ling 3.0 Tiny (8B-A1B)",
+          "quant": "q4_0",
+          "hf_repo": "bartowski/Ling-3.0-tiny-GGUF",
+          "hf_filename": "Ling-3.0-tiny-Q4_0.gguf",
+          "params": 7893392800,
+          "size_bytes": 4623917248,
+          "sha256": "c1a548fd60cfb5a46d6e5fd7635224dec473664c9320a656132106bf7ce23cfb",
+          "min_ram_gb": 5.6,
+          "min_app_version": "1.17.2"
         },
         {
           "model": "gemma-3-1b",
@@ -644,27 +816,37 @@
           "obs_tg": 23.3
         },
         {
-          "model": "qwen3.5-4b",
-          "display_name": "Qwen3.5 4B",
-          "quant": "q4_0",
-          "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
-          "hf_filename": "Qwen3.5-4B-Q4_0.gguf",
-          "params": 4205751296,
-          "size_bytes": 2583221408,
-          "sha256": "298fcb5fe7a77ccc79745ae24751560c5ac56874caff4bb39b1f2055bd72b8bb",
-          "min_ram_gb": 4.3
+          "model": "spark-x2.6-4b",
+          "display_name": "Spark-X2.6 4B",
+          "quant": "q4_k_m",
+          "hf_repo": "XHToken/Spark-X2.6-4B-GGUF",
+          "hf_filename": "Spark-X2.6-4B-Q4_K_M.gguf",
+          "params": 4447623680,
+          "size_bytes": 3543441312,
+          "sha256": "91cb2811aebb47ac916aa619d27d4cdd7f4143106b7917accb8ead4cd7f5cbd9",
+          "min_ram_gb": 4.6,
+          "min_app_version": "1.17.3"
         },
         {
-          "model": "spark-x2.5-4b",
-          "display_name": "Spark-X2.5 4B",
-          "quant": "q4_k_m",
-          "hf_repo": "XHToken/Spark-X2.5-4B-GGUF",
-          "hf_filename": "Spark-X2.5-4B-Q4_K_M.gguf",
-          "params": 4112079360,
-          "size_bytes": 2600224352,
-          "sha256": "adfcfa19a4ed6a5985da8bf565fe15f8e1a7e131d79bae2d19d48d1c40109428",
-          "min_ram_gb": 4.0,
-          "min_app_version": "1.17.3"
+          "model": "ternary-bonsai-2-4b",
+          "display_name": "Ternary Bonsai 2 4B",
+          "quant": "q2_0",
+          "hf_repo": "prism-ml/Ternary-Bonsai-2-4B-gguf",
+          "hf_filename": "Ternary-Bonsai-2-4B-Q2_0.gguf",
+          "params": 4205751296,
+          "size_bytes": 1212103520,
+          "sha256": "64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4",
+          "min_ram_gb": 3.0,
+          "native_low_bit": true,
+          "min_app_version": "1.22.0",
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "prism-ml/Ternary-Bonsai-2-4B-gguf",
+            "hf_filename": "Ternary-Bonsai-2-4B-mmproj-Q8_0.gguf",
+            "size_bytes": 366894624,
+            "sha256": "db939d5f9b7014137810205e91d05e5f54afd72b0b3af9d33bd7d82f7906a55d",
+            "modalities": ["vision"]
+          }
         }
       ]
     }
