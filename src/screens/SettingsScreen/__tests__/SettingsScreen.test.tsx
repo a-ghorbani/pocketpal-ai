@@ -413,13 +413,22 @@ describe('SettingsScreen', () => {
             id: 'active/target.gguf',
             name: 'Target',
             isDownloaded: true,
-            ggufMetadata: {n_embd: 1024},
+            ggufMetadata: {
+              n_embd: 1024,
+              n_vocab: 32000,
+              n_vocab_is_exact: true,
+            },
           } as any,
           {
             id: 'a/b/draft.gguf',
             name: 'Tiny Draft',
             isDownloaded: true,
-            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+            ggufMetadata: {
+              nextn_predict_layers: 1,
+              n_embd: 1024,
+              n_vocab: 32000,
+              n_vocab_is_exact: true,
+            },
           } as any,
         ];
       });
@@ -876,13 +885,22 @@ describe('SettingsScreen', () => {
             name: 'Target',
             isDownloaded: true,
             defaultDraftModel: 'a/b/draft.gguf',
-            ggufMetadata: {n_embd: 1024},
+            ggufMetadata: {
+              n_embd: 1024,
+              n_vocab: 32000,
+              n_vocab_is_exact: true,
+            },
           } as any,
           {
             id: 'a/b/draft.gguf',
             name: 'Tiny Draft',
             isDownloaded: true,
-            ggufMetadata: {nextn_predict_layers: 1, n_embd: 1024},
+            ggufMetadata: {
+              nextn_predict_layers: 1,
+              n_embd: 1024,
+              n_vocab: 32000,
+              n_vocab_is_exact: true,
+            },
           } as any,
         ];
       });
@@ -1083,7 +1101,11 @@ describe('SettingsScreen', () => {
   });
 
   describe('speculative no-effect advisory note', () => {
-    const mtpMeta = {nextn_predict_layers: 1} as any;
+    const mtpMeta = {
+      nextn_predict_layers: 1,
+      n_vocab: 32000,
+      n_vocab_is_exact: true,
+    } as any;
 
     afterEach(() => {
       runInAction(() => {
@@ -1190,7 +1212,11 @@ describe('SettingsScreen', () => {
             id: 'active/plain.gguf',
             name: 'Plain Active',
             isDownloaded: true,
-            ggufMetadata: {n_embd: 1024},
+            ggufMetadata: {
+              n_embd: 1024,
+              n_vocab: 32000,
+              n_vocab_is_exact: true,
+            },
           } as any,
           {
             id: 'a/b/capable.gguf',

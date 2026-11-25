@@ -27,8 +27,8 @@ export const unpairedDraftCandidate = (
 const isUsableDraft = (draft?: Model): draft is Model =>
   !!draft?.isDownloaded && isMTPCapable(draft);
 
-// A width mismatch on a paired draft is an uncatchable native abort
-// (GGML_ASSERT → SIGABRT in init_mtp), so an unknown width is not paired.
+// Native MTP init asserts paired output width; vocab sizes must also match.
+// Architecture-default counts are estimates, not compatibility evidence.
 export const resolveDraftCandidate = (
   target: Model,
   models: Model[],
@@ -41,12 +41,21 @@ export const resolveDraftCandidate = (
   const draftId = resolveDraftModelId(target, params.selectedDraftModelId);
   const draftModel = draftId ? models.find(m => m.id === draftId) : undefined;
   if (isUsableDraft(draftModel)) {
-    const draftWidth = nEmbdOut(draftModel.ggufMetadata);
-    const targetWidth = target.ggufMetadata?.n_embd;
+    const draftMetadata = draftModel.ggufMetadata;
+    const targetMetadata = target.ggufMetadata;
+    const draftWidth = nEmbdOut(draftMetadata);
+    const targetWidth = targetMetadata?.n_embd;
+    const draftVocab = draftMetadata?.n_vocab;
+    const targetVocab = targetMetadata?.n_vocab;
+    const draftVocabIsExact = draftMetadata?.n_vocab_is_exact === true;
+    const targetVocabIsExact = targetMetadata?.n_vocab_is_exact === true;
     if (
       draftWidth !== undefined &&
       targetWidth !== undefined &&
-      draftWidth === targetWidth
+      draftWidth === targetWidth &&
+      draftVocabIsExact &&
+      targetVocabIsExact &&
+      draftVocab === targetVocab
     ) {
       return {mode: 'paired', draftModel};
     }
