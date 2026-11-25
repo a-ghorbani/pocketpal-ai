@@ -5,6 +5,7 @@ export type SearchProviderId =
   | 'brave'
   | 'exa'
   | 'firecrawl'
+  | 'specstream'
   | 'parallel'
   | 'you';
 
