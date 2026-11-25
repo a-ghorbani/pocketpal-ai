@@ -495,8 +495,7 @@ export async function runMatrix(
   // Resolve the device-appropriate thread count ONCE for the matrix.
   // `getRecommendedThreadCount()` is a pure utility (no modelStore
   // coupling), so the bench's base stays isolated from the user's
-  // persisted Settings while still picking a sensible per-device
-  // default (80% of cores when >4, otherwise all cores).
+  // persisted Settings while still measuring the app's default.
   const recommendedThreads = await getRecommendedThreadCount();
   const benchBase: BenchBaseParams = {
     ...DEFAULT_BENCH_BASE_PARAMS,
