@@ -9,8 +9,6 @@ import {basicModel} from '../../../jest/fixtures/models';
 
 jest.mock('../../utils/deviceCapabilities', () => ({
   ...jest.requireActual('../../utils/deviceCapabilities'),
-  getCpuCoreCount: jest.fn().mockResolvedValue(8),
-  getRecommendedThreadCount: jest.fn().mockResolvedValue(6),
   checkGpuSupport: jest.fn().mockResolvedValue({isSupported: false}),
   isHighEndDevice: jest.fn().mockResolvedValue(false),
 }));
