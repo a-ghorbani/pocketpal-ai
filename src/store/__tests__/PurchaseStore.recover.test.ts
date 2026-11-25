@@ -1203,6 +1203,122 @@ describe('PurchaseStore recovery', () => {
     );
   });
 
+  describe('billing availability', () => {
+    const pendingInit = (h: ReturnType<typeof createHarness>) => {
+      let answer!: (available: boolean) => void;
+      h.store.init.mockReturnValueOnce(
+        new Promise<boolean>(resolve => {
+          answer = resolve;
+        }),
+      );
+      return (available: boolean) => answer(available);
+    };
+
+    const billingCalls = (h: ReturnType<typeof createHarness>) =>
+      [
+        h.store.fetchProducts,
+        h.store.currentEntitlements,
+        h.store.unfinished,
+        h.store.storefront,
+      ].reduce((count, fn) => count + fn.mock.calls.length, 0);
+
+    const foregrounds = () => {
+      let onChange: ((state: string) => void) | undefined;
+      jest
+        .spyOn(AppState, 'addEventListener')
+        .mockImplementation((_event, handler: any) => {
+          onChange = handler;
+          return {remove: jest.fn()} as any;
+        });
+      return async (h: ReturnType<typeof createHarness>) => {
+        onChange?.('active');
+        await flush();
+        await h.purchases.recover();
+      };
+    };
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('makes no other billing call while the first init is pending', async () => {
+      const h = createHarness({observablePals: true});
+      const answer = pendingInit(h);
+
+      const recovering = h.purchases.recover();
+      await flush();
+      runInAction(() => {
+        h.palStore.cachedPalsHubPals.push(hubPal());
+      });
+      h.purchases.retryPlusProducts();
+      await flush();
+
+      expect(h.purchases.availability).toBe('initializing');
+      expect(billingCalls(h)).toBe(0);
+
+      answer(true);
+      await recovering;
+      expect(h.purchases.availability).toBe('ready');
+      expect(h.store.currentEntitlements).toHaveBeenCalled();
+      expect(h.store.fetchProducts).toHaveBeenCalled();
+    });
+
+    it('makes no other billing call while init re-runs from unavailable', async () => {
+      const h = createHarness({observablePals: true});
+      h.store.init.mockResolvedValueOnce(false);
+      await h.purchases.recover();
+      expect(h.purchases.availability).toBe('unavailable');
+      expect(billingCalls(h)).toBe(0);
+
+      const answer = pendingInit(h);
+      const recovering = h.purchases.recover();
+      const restoring = h.purchases.restore();
+      await flush();
+      runInAction(() => {
+        h.palStore.cachedPalsHubPals.push(hubPal());
+      });
+      h.purchases.retryPlusProducts();
+      await flush();
+
+      expect(billingCalls(h)).toBe(0);
+
+      answer(true);
+      await Promise.all([recovering, restoring]);
+      expect(h.purchases.availability).toBe('ready');
+      expect(h.store.currentEntitlements).toHaveBeenCalled();
+      expect(h.store.fetchProducts).toHaveBeenCalled();
+    });
+
+    it('turns ready on the next foreground once init succeeds', async () => {
+      const foreground = foregrounds();
+      const h = createHarness();
+      h.store.init.mockResolvedValueOnce(false);
+      await h.purchases.start({store: h.store});
+      expect(h.purchases.availability).toBe('unavailable');
+      expect(h.store.fetchProducts).not.toHaveBeenCalled();
+
+      await foreground(h);
+
+      expect(h.purchases.availability).toBe('ready');
+      expect(h.store.fetchProducts).toHaveBeenCalled();
+      expect(h.store.currentEntitlements).toHaveBeenCalled();
+    });
+
+    it('turns unavailable on the next foreground once init fails', async () => {
+      const foreground = foregrounds();
+      const h = createHarness();
+      await h.purchases.start({store: h.store});
+      expect(h.purchases.availability).toBe('ready');
+      h.store.currentEntitlements.mockClear();
+
+      h.store.init.mockResolvedValue(false);
+      await foreground(h);
+
+      expect(h.purchases.availability).toBe('unavailable');
+      expect(h.store.currentEntitlements).not.toHaveBeenCalled();
+    });
+  });
+
   describe('start', () => {
     it('restores before init, subscribes, and recovers on foreground', async () => {
       const order: string[] = [];
