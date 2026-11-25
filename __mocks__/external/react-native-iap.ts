@@ -1,19 +1,11 @@
-export enum ErrorCode {
-  AlreadyOwned = 'already-owned',
-  BillingUnavailable = 'billing-unavailable',
-  DeferredPayment = 'deferred-payment',
-  DeveloperError = 'developer-error',
-  DuplicatePurchase = 'duplicate-purchase',
-  FeatureNotSupported = 'feature-not-supported',
-  IapNotAvailable = 'iap-not-available',
-  ItemUnavailable = 'item-unavailable',
-  NetworkError = 'network-error',
-  Pending = 'pending',
-  ServiceError = 'service-error',
-  SkuNotFound = 'sku-not-found',
-  Unknown = 'unknown',
-  UserCancelled = 'user-cancelled',
-}
+type ReactNativeIap = typeof import('react-native-iap');
+
+export const {ErrorCode} = jest.requireActual<
+  Pick<ReactNativeIap, 'ErrorCode'>
+>('react-native-iap-actual-types');
+export const {parseErrorStringToJsonObj} = jest.requireActual<
+  Pick<ReactNativeIap, 'parseErrorStringToJsonObj'>
+>('react-native-iap-actual-error');
 
 export const initConnection = jest.fn(async () => true);
 export const endConnection = jest.fn(async () => true);
