@@ -9,6 +9,10 @@ import {
 import type {StoreTransaction} from '../StorePort';
 
 const iap = RNIap as unknown as Record<string, jest.Mock>;
+const iapMocks = Object.values(iap).filter(fn => jest.isMockFunction(fn));
+const defaultImplementations = new Map(
+  iapMocks.map(fn => [fn, fn.getMockImplementation()]),
+);
 
 type Listener = (value: any) => void;
 
@@ -55,6 +59,9 @@ describe('NativeStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    defaultImplementations.forEach((implementation, fn) =>
+      fn.mockReset().mockImplementation(implementation),
+    );
     iap.requestPurchase.mockResolvedValue(null);
     store = new NativeStore();
   });
