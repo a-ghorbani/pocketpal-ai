@@ -14,6 +14,10 @@ type Listener = (value: any) => void;
 
 const originalOS = Platform.OS;
 
+const PLAY_NOT_CONNECTED = new Error(
+  '{"code":"service-disconnected","message":"Play Store service is not connected","debugMessage":"Service connection is disconnected.","subResponseCodeAndroid":"no-applicable-sub-response-code"}',
+);
+
 const setOS = (os: 'ios' | 'android') => {
   (Platform as any).OS = os;
 };
@@ -68,6 +72,23 @@ describe('NativeStore', () => {
     it('reports unavailable when the connection throws', async () => {
       iap.initConnection.mockRejectedValueOnce(new Error('no play services'));
       await expect(store.init()).resolves.toBe(false);
+    });
+
+    describe('on Android', () => {
+      beforeEach(() => setOS('android'));
+
+      it('reports a connected store when the entitlement query answers', async () => {
+        await expect(store.init()).resolves.toBe(true);
+        expect(iap.getAvailablePurchases).toHaveBeenCalledTimes(1);
+        expect(iap.getAvailablePurchases).toHaveBeenCalledWith({
+          onlyIncludeActiveItemsIOS: true,
+        });
+      });
+
+      it('reports unavailable when Play cannot be reached', async () => {
+        iap.getAvailablePurchases.mockRejectedValueOnce(PLAY_NOT_CONNECTED);
+        await expect(store.init()).resolves.toBe(false);
+      });
     });
   });
 

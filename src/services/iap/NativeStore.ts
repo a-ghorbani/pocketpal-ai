@@ -1,11 +1,13 @@
 import {Platform} from 'react-native';
 import {
+  ErrorCode,
   fetchProducts,
   finishTransaction,
   getAvailablePurchases,
   getPendingTransactionsIOS,
   getStorefront,
   initConnection,
+  parseErrorStringToJsonObj,
   purchaseErrorListener,
   purchaseUpdatedListener,
   requestPurchase,
@@ -122,13 +124,29 @@ const outcomeFromStoreIOS = async (
 const errorCode = (error: unknown): string | undefined =>
   (error as Partial<PurchaseError> | undefined)?.code;
 
+// On Android, initConnection resolves true before Play is asked anything;
+// only a query shows whether Play can serve this device.
+const playIsUsable = async (): Promise<boolean> => {
+  try {
+    await getAvailablePurchases({onlyIncludeActiveItemsIOS: true});
+    return true;
+  } catch (error) {
+    return (
+      parseErrorStringToJsonObj(error).code !== ErrorCode.ServiceDisconnected
+    );
+  }
+};
+
 export class NativeStore implements StorePort {
   async init(): Promise<boolean> {
     try {
-      return (await initConnection()) === true;
+      if ((await initConnection()) !== true) {
+        return false;
+      }
     } catch {
       return false;
     }
+    return Platform.OS !== 'android' || playIsUsable();
   }
 
   async fetchProducts(productIds: string[]): Promise<StoreProduct[]> {
