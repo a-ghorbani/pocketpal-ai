@@ -72,6 +72,8 @@ import iosRulesRaw from './bundledDeviceRules/rules.ios.json';
 // changes. Crossing this version runs the one-time prune-and-reconcile.
 export const MODEL_LIST_VERSION = 15;
 
+export const THREAD_DEFAULT_VERSION = 2;
+
 import {
   getHFDefaultSettings,
   getLocalModelDefaultSettings,
@@ -97,8 +99,9 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {hasEnoughMemory} from '../hooks/useMemoryCheck';
 import {
   isHighEndDevice,
-  getRecommendedThreadCount,
-  getCpuCoreCount,
+  getCpuInfo,
+  legacyThreadCount,
+  resolveThreadDefault,
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {ReasoningCapability} from '../utils/reasoningCapability';
@@ -186,6 +189,9 @@ const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
+  // The default thread rule n_threads was last reconciled with; undefined
+  // before the fast-core rule.
+  threadDefaultVersion: number | undefined = undefined;
   deviceTier: Tier | null = null; // resolved device classification
   rulesVersion: string | null = null; // provenance of the preset list
 
@@ -299,6 +305,7 @@ class ModelStore {
       properties: [
         'models',
         'version',
+        'threadDefaultVersion',
         'deviceTier',
         'rulesVersion',
         'useAutoRelease',
@@ -366,31 +373,39 @@ class ModelStore {
   }
 
   private async initializeThreadCount() {
-    try {
-      const cores = await getCpuCoreCount();
-      runInAction(() => {
-        this.max_threads = cores;
-      });
-
-      // Only set recommended thread count on first launch.
-      // After hydration, this.version is set if the store was previously persisted.
-      // On fresh install, this.version is undefined (default).
-      const isFirstLaunch = this.version === undefined;
-      if (isFirstLaunch) {
-        const threads = await getRecommendedThreadCount();
-        runInAction(() => {
-          this.contextInitParams = {
-            ...this.contextInitParams,
-            n_threads: threads,
-          };
-        });
+    const cpuInfo = await getCpuInfo();
+    runInAction(() => {
+      const cores = cpuInfo?.cores || 4;
+      this.max_threads = cores;
+      if (this.threadDefaultVersion === THREAD_DEFAULT_VERSION) {
+        return;
       }
-    } catch (error) {
-      console.error('Failed to initialize thread count:', error);
-      runInAction(() => {
-        this.max_threads = 4;
-      });
-    }
+      const isFreshInstall =
+        this.version === undefined && this.threadDefaultVersion === undefined;
+      if (!isFreshInstall && !cpuInfo) {
+        return;
+      }
+      const {threads, settled} = resolveThreadDefault(
+        cores,
+        cpuInfo?.cpuMaxFreqsKhz,
+        cpuInfo?.cpuCapacities,
+        Platform.OS,
+      );
+      // An install still on the previous default is treated as untouched
+      // and moves once; any other value is the user's.
+      if (
+        isFreshInstall ||
+        this.contextInitParams.n_threads === legacyThreadCount(cores)
+      ) {
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          n_threads: threads,
+        };
+      }
+      if (cpuInfo && settled) {
+        this.threadDefaultVersion = THREAD_DEFAULT_VERSION;
+      }
+    });
   }
 
   setNThreads = (n_threads: number) => {

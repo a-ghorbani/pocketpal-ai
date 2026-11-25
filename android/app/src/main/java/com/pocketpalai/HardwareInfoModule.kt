@@ -210,7 +210,15 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
         cpuInfo.putString("hardware", it)
       }
 
-      readMaxCpuFreqMhz()?.let { cpuInfo.putInt("maxFreqMhz", it) }
+      val coreCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 16)
+      val maxFreqsKhz = readPerCoreInts(coreCount, "cpufreq/cpuinfo_max_freq")
+      maxFreqsKhz?.maxOrNull()?.takeIf { it > 0 }?.let {
+        cpuInfo.putInt("maxFreqMhz", it / 1000)
+      }
+      maxFreqsKhz?.let { cpuInfo.putArray("cpuMaxFreqsKhz", toWritableArray(it)) }
+      readPerCoreInts(coreCount, "cpu_capacity")?.let {
+        cpuInfo.putArray("cpuCapacities", toWritableArray(it))
+      }
 
       promise.resolve(cpuInfo)
     } catch (e: Exception) {
@@ -257,30 +265,23 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  // Big-core max frequency in MHz, read across all cores' cpufreq nodes.
-  // Some cores can be offline (missing cpufreq node) without being the last
-  // core, so we scan a bounded range and skip gaps rather than stop on the
-  // first absent node. Returns null when no core exposes a readable value.
-  private fun readMaxCpuFreqMhz(): Int? {
+  // One value per core from /sys/devices/system/cpu/cpu<N>/<node>; 0 where
+  // the node is missing (an offline core) or does not parse.
+  private fun readPerCoreInts(coreCount: Int, node: String): List<Int>? {
     return try {
-      var maxKhz = 0L
-      val coreCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 16)
-      for (core in 0 until coreCount) {
-        val node = File("/sys/devices/system/cpu/cpu$core/cpufreq/cpuinfo_max_freq")
-        if (!node.exists()) {
-          continue
-        }
-        node.readText().trim().toLongOrNull()?.let {
-          if (it > maxKhz) {
-            maxKhz = it
-          }
-        }
+      (0 until coreCount).map { core ->
+        File("/sys/devices/system/cpu/cpu$core/$node")
+          .takeIf { it.exists() }
+          ?.readText()?.trim()?.toIntOrNull()
+          ?: 0
       }
-      if (maxKhz > 0L) (maxKhz / 1000).toInt() else null
     } catch (e: Throwable) {
       null
     }
   }
+
+  private fun toWritableArray(values: List<Int>): WritableArray =
+    Arguments.createArray().apply { values.forEach { pushInt(it) } }
 
   private fun readVmRssKb(): Long {
     return try {

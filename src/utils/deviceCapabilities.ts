@@ -43,6 +43,8 @@ export interface CpuInfo {
   hasDotProd?: boolean;
   hasSve?: boolean;
   hasI8mm?: boolean;
+  cpuMaxFreqsKhz?: number[];
+  cpuCapacities?: number[];
 }
 
 /**
@@ -169,6 +171,8 @@ export async function getCpuInfo(): Promise<CpuInfo | null> {
       hasDotProd: info.hasDotProd,
       hasSve: info.hasSve,
       hasI8mm: info.hasI8mm,
+      cpuMaxFreqsKhz: info.cpuMaxFreqsKhz,
+      cpuCapacities: info.cpuCapacities,
     };
   } catch (error) {
     console.warn('Failed to get CPU info:', error);
@@ -185,14 +189,76 @@ export async function getCpuCoreCount(): Promise<number> {
   return cpuInfo?.cores || 4; // fallback to 4
 }
 
+export function legacyThreadCount(cores: number): number {
+  return cores <= 4 ? cores : Math.floor(cores * 0.8);
+}
+
+export interface ThreadDefault {
+  threads: number;
+  /** False when the core layout could not be read, so a later launch retries. */
+  settled: boolean;
+}
+
+const MIN_FAST_CORES = 4;
+
+const hasEntryPerCore = (
+  values: number[] | undefined,
+  cores: number,
+): values is number[] =>
+  values !== undefined &&
+  values.length === cores &&
+  cores > 0 &&
+  values.every(value => value > 0);
+
 /**
- * Get recommended thread count based on CPU cores
- * Uses 80% of cores for devices with more than 4 cores, otherwise uses all cores
+ * Fast cores are counted in llama.rn's pinning order (highest max frequency
+ * first, ties to the higher index), so every thread it pins lands on one.
+ */
+export function resolveThreadDefault(
+  cores: number,
+  freqsKhz: number[] | undefined,
+  capacities: number[] | undefined,
+  platform: typeof Platform.OS,
+): ThreadDefault {
+  const legacy = legacyThreadCount(cores);
+  if (platform !== 'android') {
+    return {threads: legacy, settled: true};
+  }
+  if (!hasEntryPerCore(freqsKhz, cores)) {
+    return {threads: legacy, settled: false};
+  }
+  const caps = hasEntryPerCore(capacities, cores) ? capacities : undefined;
+  const maxCap = caps ? Math.max(...caps) : 0;
+
+  const order = freqsKhz
+    .map((freq, index) => ({freq, index}))
+    .sort((a, b) => b.freq - a.freq || b.index - a.index);
+  const maxFreq = order[0].freq;
+  const firstSlow = order.findIndex(
+    ({freq, index}) =>
+      freq * 4 < maxFreq * 3 ||
+      (caps !== undefined && caps[index] * 2 <= maxCap),
+  );
+  const fast = firstSlow === -1 ? cores : firstSlow;
+
+  if (fast < MIN_FAST_CORES) {
+    return {threads: legacy, settled: true};
+  }
+  return {threads: Math.min(fast, legacy), settled: true};
+}
+
+/**
+ * Get the default thread count for this device (see `resolveThreadDefault`).
  * @returns Promise<number> Recommended thread count
  */
 export async function getRecommendedThreadCount(): Promise<number> {
-  const cores = await getCpuCoreCount();
-  return cores <= 4 ? cores : Math.floor(cores * 0.8);
+  const cpuInfo = await getCpuInfo();
+  return resolveThreadDefault(
+    cpuInfo?.cores || 4,
+    cpuInfo?.cpuMaxFreqsKhz,
+    cpuInfo?.cpuCapacities,
+    Platform.OS,
+  ).threads;
 }
 
 /**

@@ -19,6 +19,9 @@ export interface CPUInfo {
   socModel?: string;
   hardware?: string;
   maxFreqMhz?: number;
+  // Android, per core 0..min(cores, 16)-1; 0 where the node is missing
+  cpuMaxFreqsKhz?: number[];
+  cpuCapacities?: number[];
 }
 
 export interface GPUInfo {
