@@ -114,11 +114,16 @@ import {
   createDefaultContextInitParams,
 } from '../utils/contextInitParamsVersions';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import {defaultFlashAttnType} from '../utils/flashAttnCompatibility';
 import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
+  needsGGUFMetadata,
+  parseGGUFMetadata,
   stateCacheBudgetMb,
+  tiedEmbeddingBytes,
 } from '../utils/memoryEstimator';
+import {readLocalGGUFEmbeddingTensors} from '../utils/ggufHeader';
 import {loadLlamaModelInfo} from 'llama.rn';
 
 /**
@@ -182,6 +187,33 @@ const isRegularFile = async (path: string): Promise<boolean> => {
 
 const pairedDraftModel = (config?: DraftConfig): Model | undefined =>
   config?.mode === 'paired' ? config.draftModel : undefined;
+
+const readTiedEmbeddingBytes = async (
+  filePath: string,
+  modelInfo: Record<string, unknown>,
+  modelSize: number,
+): Promise<number | undefined> => {
+  try {
+    const bytes = tiedEmbeddingBytes(
+      await readLocalGGUFEmbeddingTensors(filePath, {
+        version: Number(modelInfo.version),
+        alignment: Number(modelInfo.alignment),
+        dataOffset: Number(modelInfo.data_offset),
+      }),
+      modelSize,
+    );
+    if (bytes === undefined) {
+      throw new Error('unrecognised token_embd tensor');
+    }
+    return bytes;
+  } catch (error) {
+    console.warn(
+      '[ModelStore] GGUF tensor scan failed; the estimate counts its bound:',
+      error,
+    );
+    return undefined;
+  }
+};
 
 class ModelStore {
   models: Model[] = [];
@@ -595,17 +627,8 @@ class ModelStore {
     const mode = draftConfig?.mode ?? 'off';
     const speculative = mode !== 'off';
 
-    // Handle flash_attn_type (v2.0) - platform-specific default
-    const flashAttnModeDefault =
-      mode === 'paired'
-        ? 'off'
-        : mode === 'embedded'
-          ? 'auto'
-          : Platform.OS === 'ios'
-            ? 'auto'
-            : 'off';
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ?? flashAttnModeDefault;
+      this.contextInitParams.flash_attn_type ?? defaultFlashAttnType(mode);
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {
@@ -2004,97 +2027,25 @@ class ModelStore {
         return;
       }
 
-      // Default vocab sizes by architecture (matches Python memory_estimator.py)
-      const ARCH_DEFAULT_VOCAB: Record<string, number> = {
-        llama: 128256,
-        gemma2: 256000,
-        gemma3n: 262144,
-        qwen2: 151936,
-        qwen3: 151936,
-        lfm2: 65536,
-        phi3: 32064,
-        mistral: 32000,
-        deepseek2: 102400,
-        clip: 49408, // CLIP models have smaller vocab
-      };
-
-      // Get the architecture to determine the correct key prefix
-      const architecture: string =
-        (modelInfo as any)['general.architecture'] || 'llama';
-
-      // Helper to get architecture-specific value with fallback (matches Python get_arch_value)
-      const getArchValue = (
-        field: string,
-        defaultValue?: number,
-      ): number | undefined => {
-        const key = `${architecture}.${field}`;
-        const value = (modelInfo as any)[key];
-        if (value !== undefined && value !== null) {
-          // Handle string values (GGUF sometimes returns strings)
-          if (typeof value === 'string') {
-            const parsed = value.includes('.')
-              ? parseFloat(value)
-              : parseInt(value, 10);
-            return isNaN(parsed) ? defaultValue : parsed;
-          }
-          return typeof value === 'number' ? value : defaultValue;
-        }
-        return defaultValue;
-      };
-
-      // Extract core fields (these are required)
-      const n_layers = getArchValue('block_count');
-      const n_embd = getArchValue('embedding_length');
-      const n_head = getArchValue('attention.head_count');
-
-      // Validate core fields exist - without these we can't estimate memory
-      if (!n_layers || !n_embd || !n_head) {
+      const metadata = parseGGUFMetadata(modelInfo as Record<string, unknown>);
+      if (!metadata) {
         return;
       }
-
-      // Extract optional fields with fallbacks (matches Python ModelInfo.__post_init__)
-      const n_head_kv = getArchValue('attention.head_count_kv', n_head); // fallback to n_head
-      const n_vocab =
-        getArchValue('vocab_size') ||
-        ARCH_DEFAULT_VOCAB[architecture] ||
-        128000;
-
-      // Derive head dimensions if not present (matches Python)
-      const n_embd_head_k =
-        getArchValue('attention.key_length') || Math.floor(n_embd / n_head);
-      const n_embd_head_v =
-        getArchValue('attention.value_length') || Math.floor(n_embd / n_head);
-
-      // SWA (Sliding Window Attention) - optional
-      const sliding_window = getArchValue('attention.sliding_window');
-
-      // Context length from GGUF
-      const context_length = getArchValue('context_length');
-
-      const nextn_predict_layers = getArchValue('nextn_predict_layers');
-      const embedding_length_out = getArchValue('embedding_length_out');
-
-      const metadata = {
-        architecture,
-        n_layers,
-        n_embd,
-        n_head,
-        n_head_kv: n_head_kv!,
-        n_vocab,
-        n_embd_head_k,
-        n_embd_head_v,
-        sliding_window,
-        context_length,
-        nextn_predict_layers,
-        embedding_length_out,
-      };
+      const tied_embd_bytes =
+        Platform.OS === 'android'
+          ? await readTiedEmbeddingBytes(
+              filePath,
+              modelInfo as Record<string, unknown>,
+              model.size,
+            )
+          : undefined;
 
       const paramCount = parseSizeLabel(
         (modelInfo as any)['general.size_label'],
       );
 
       runInAction(() => {
-        model.ggufMetadata = metadata;
+        model.ggufMetadata = {...metadata, tied_embd_bytes};
         if (!model.params && paramCount) {
           model.params = paramCount;
         }
@@ -2105,16 +2056,12 @@ class ModelStore {
   };
 
   /**
-   * Load GGUF metadata for downloaded models that don't have it yet.
+   * Load GGUF metadata for downloaded models whose stored metadata is missing
+   * or out of date.
    * Runs in background, doesn't block startup.
    */
   private loadMissingGGUFMetadata = () => {
-    const modelsNeedingMetadata = this.models.filter(
-      m =>
-        m.isDownloaded &&
-        !m.ggufMetadata &&
-        m.modelType !== ModelType.PROJECTION,
-    );
+    const modelsNeedingMetadata = this.models.filter(needsGGUFMetadata);
 
     if (modelsNeedingMetadata.length === 0) {
       return;

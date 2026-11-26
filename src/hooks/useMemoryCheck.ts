@@ -7,6 +7,7 @@ import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {
   getModelMemoryRequirement,
   MemoryEstimateSettings,
+  needsGGUFMetadata,
 } from '../utils/memoryEstimator';
 // Note: This creates a circular dependency with ModelStore (which imports hasEnoughMemory).
 // This is intentional and runtime-safe because:
@@ -30,10 +31,8 @@ export const hasEnoughMemory = async (
   projectionModel?: Model,
   draftModel?: Model,
 ): Promise<boolean> => {
-  // Try to fetch GGUF metadata if not available but model is downloaded
-  // After fetching, get the updated model from store (if it exists there)
   let modelForCalc = model;
-  if (!model.ggufMetadata && model.isDownloaded) {
+  if (needsGGUFMetadata(model)) {
     try {
       await modelStore.fetchAndPersistGGUFMetadata(model);
       // Get updated model from store (metadata is persisted there)

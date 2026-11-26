@@ -113,6 +113,7 @@ class MockModelStore {
   acquireGeneration: jest.Mock;
   tryAcquireGeneration: jest.Mock;
   abortActiveGeneration: jest.Mock;
+  fetchAndPersistGGUFMetadata: jest.Mock;
   // A real slot, so lease ordering behaves as in the store.
   generationSlot = new GenerationSlot();
   benchmarkActive: boolean = false;
@@ -178,6 +179,7 @@ class MockModelStore {
       acquireGeneration: false,
       tryAcquireGeneration: false,
       abortActiveGeneration: false,
+      fetchAndPersistGGUFMetadata: false,
       generationSlot: false,
       isGenerationBusy: false,
       contextId: computed,
@@ -193,6 +195,7 @@ class MockModelStore {
       activeDownloads: false,
     });
     this.refreshDownloadStatuses = jest.fn();
+    this.fetchAndPersistGGUFMetadata = jest.fn().mockResolvedValue(undefined);
     this.retryDownload = jest.fn();
     this.clearDownloadError = jest.fn();
     this.addLocalModel = jest.fn();

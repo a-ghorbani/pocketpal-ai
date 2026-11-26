@@ -1,8 +1,14 @@
 import {
   getModelMemoryRequirement,
+  parseGGUFMetadata,
   stateCacheBudgetMb,
+  tiedEmbeddingBytes,
 } from '../memoryEstimator';
-import {Model} from '../types';
+import {runInAction} from 'mobx';
+import * as ReactNative from 'react-native';
+import {CacheType, GGUFMetadata, Model} from '../types';
+import {ggufFileSize, ggufMetadata} from '../../../jest/fixtures/ggufMemory';
+import {modelStore} from '../../store';
 import {createDefaultContextInitParams} from '../contextInitParamsVersions';
 
 describe('memoryEstimator', () => {
@@ -399,6 +405,817 @@ describe('memoryEstimator', () => {
           draftModel,
         ),
       ).toBe(base + 64 * MiB);
+    });
+  });
+
+  describe('hostile metadata', () => {
+    const size = 2 * 1e9;
+    const sizePath = size * 1.2;
+    const llamaInfo = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'llama',
+      'llama.block_count': '2',
+      'llama.embedding_length': '1024',
+      'llama.attention.head_count': '8',
+      'llama.attention.head_count_kv': '4',
+      'llama.vocab_size': '32000',
+      'llama.context_length': '4096',
+      ...overrides,
+    });
+    const estimate = (
+      metadata: GGUFMetadata | undefined,
+      settings = contextSettings,
+    ) =>
+      getModelMemoryRequirement(
+        {...baseModel, size, ggufMetadata: metadata} as Model,
+        undefined,
+        settings,
+      );
+    const storedMetadata = (overrides: Partial<GGUFMetadata>) =>
+      ({...parseGGUFMetadata(llamaInfo())!, ...overrides}) as GGUFMetadata;
+
+    it.each(['2147483648', '513', '0', '-4', '1e309', '12.5', 'x'])(
+      'returns no metadata for block_count %s',
+      blockCount => {
+        expect(
+          parseGGUFMetadata(llamaInfo({'llama.block_count': blockCount})),
+        ).toBeUndefined();
+      },
+    );
+
+    it.each([
+      ['non-numeric', '[4, x]'],
+      ['wrong length', '[4, 4, 4]'],
+      ['out of range', '[4, 2097152]'],
+      ['unterminated', '[4, 4'],
+      ['non-numeric scalar', 'four'],
+    ])('takes the size path for a %s head_count_kv', (_case, value) => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.attention.head_count_kv': value}),
+      );
+
+      expect(metadata?.n_head_kv).toBe(0);
+      expect(estimate(metadata)).toBe(sizePath);
+    });
+
+    it('keeps the other fields but takes the size path without a vocabulary size', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.vocab_size': undefined}),
+      );
+
+      expect(metadata).toMatchObject({n_vocab: 0, context_length: 4096});
+      expect(estimate(metadata)).toBe(sizePath);
+    });
+
+    it('reads the vocabulary from the tokenizer length when vocab_size is absent', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({
+          'llama.vocab_size': undefined,
+          'tokenizer.ggml.tokens.length': 151936,
+        }),
+      );
+
+      expect(metadata?.n_vocab).toBe(151936);
+    });
+
+    it.each([
+      ['llama.attention.sliding_window', '-4', 'sliding_window'],
+      ['llama.context_length', '1e309', 'context_length'],
+      ['llama.shortconv.l_cache', '0.5', 'shortconv_l_cache'],
+      ['llama.shortconv.l_cache', '0', 'shortconv_l_cache'],
+    ] as const)('drops %s %s', (key, value, field) => {
+      expect(parseGGUFMetadata(llamaInfo({[key]: value}))?.[field]).toBe(
+        undefined,
+      );
+    });
+
+    it('derives the head dimension from the first layer, as llama.cpp does', () => {
+      const metadata = parseGGUFMetadata(
+        llamaInfo({'llama.attention.head_count': '[4, 8]'}),
+      );
+
+      expect(metadata).toMatchObject({
+        n_head: 8,
+        n_embd_head_k: 256,
+        n_embd_head_v: 256,
+      });
+    });
+
+    it('never goes below the file size for a crafted hybrid with a fractional conv cache', () => {
+      const info = {
+        'general.architecture': 'lfm2',
+        'lfm2.block_count': '512',
+        'lfm2.embedding_length': '1000000000',
+        'lfm2.attention.head_count': '1',
+        'lfm2.attention.head_count_kv': `[8${', 0'.repeat(511)}]`,
+        'lfm2.attention.key_length': '1',
+        'lfm2.attention.value_length': '1',
+        'lfm2.feed_forward_length': '1',
+        'lfm2.shortconv.l_cache': '0.5',
+        'lfm2.vocab_size': '1',
+      };
+      const settings = {...contextSettings, n_batch: 1, n_ubatch: 1};
+      const metadata = parseGGUFMetadata(info);
+
+      expect(metadata).toMatchObject({n_embd: 1e9, n_head_kv: 8});
+      expect(metadata?.shortconv_l_cache).toBeUndefined();
+      expect(estimate(metadata, settings)).toBe(sizePath);
+      expect(
+        estimate(
+          {...metadata!, n_embd: 2 ** 20, shortconv_l_cache: 0.5},
+          settings,
+        ),
+      ).toBeGreaterThanOrEqual(size);
+    });
+
+    it.each<[string, Partial<GGUFMetadata>]>([
+      ['n_layers 2^31', {n_layers: 2 ** 31}],
+      ['n_head_kv above 2^20', {n_head_kv: 2 ** 21}],
+      ['n_embd 1e9', {n_embd: 1e9}],
+      ['n_vocab 1e9', {n_vocab: 1e9}],
+      ['a head dimension above 2^20', {n_embd_head_k: 2 ** 21}],
+      ['a per-layer KV array of the wrong length', {n_head_kv_layers: [4]}],
+      ['a negative per-layer KV entry', {n_head_kv_layers: [4, -4]}],
+    ])('takes the size path for a stored record with %s', (_case, fields) => {
+      expect(estimate(storedMetadata(fields))).toBe(sizePath);
+    });
+  });
+
+  describe('layer layout', () => {
+    const size = 1e9;
+    const at16k = {
+      ...contextSettings,
+      n_ctx: 16384,
+      flash_attn_type: 'on',
+    } as const;
+    const need = (info: Record<string, unknown>) =>
+      getModelMemoryRequirement(
+        {...baseModel, size, ggufMetadata: parseGGUFMetadata(info)} as Model,
+        undefined,
+        at16k,
+      );
+    const qwen35 = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'qwen35',
+      'qwen35.block_count': '8',
+      'qwen35.embedding_length': '1024',
+      'qwen35.attention.head_count': '8',
+      'qwen35.attention.head_count_kv': '2',
+      'qwen35.attention.key_length': '256',
+      'qwen35.attention.value_length': '256',
+      'tokenizer.ggml.tokens.length': 248320,
+      ...overrides,
+    });
+    const swaModel = (architecture: string, overrides = {}) => ({
+      'general.architecture': architecture,
+      [`${architecture}.block_count`]: '12',
+      [`${architecture}.embedding_length`]: '1024',
+      [`${architecture}.attention.head_count`]: '8',
+      [`${architecture}.attention.head_count_kv`]: '4',
+      [`${architecture}.attention.key_length`]: '256',
+      [`${architecture}.attention.value_length`]: '256',
+      'tokenizer.ggml.tokens.length': 262144,
+      ...overrides,
+    });
+
+    it('defaults Qwen3.5 to one full-attention layer in four', () => {
+      expect(need(qwen35())).toBe(
+        need(qwen35({'qwen35.full_attention_interval': '4'})),
+      );
+      expect(need(qwen35())).toBeLessThan(
+        need(qwen35({'qwen35.full_attention_interval': '2'})),
+      );
+    });
+
+    it('lets attention.recurrent_layers win over the interval', () => {
+      const interval = {'qwen35.full_attention_interval': '4'};
+
+      expect(
+        need(
+          qwen35({
+            ...interval,
+            'qwen35.attention.recurrent_layers': '[1, 1, 1, 1, 1, 1, 1, 0]',
+          }),
+        ),
+      ).toBeLessThan(need(qwen35(interval)));
+    });
+
+    it('falls back to the interval when attention.recurrent_layers is malformed', () => {
+      const interval = {'qwen35.full_attention_interval': '4'};
+
+      expect(
+        need(
+          qwen35({...interval, 'qwen35.attention.recurrent_layers': '[1, 0]'}),
+        ),
+      ).toBe(need(qwen35(interval)));
+    });
+
+    it('expands a scalar attention.recurrent_layers to every layer', () => {
+      expect(
+        parseGGUFMetadata(qwen35({'qwen35.attention.recurrent_layers': '1'}))
+          ?.recurrent_layers,
+      ).toEqual(new Array(8).fill(1));
+    });
+
+    it('takes the default sliding-window period of a known architecture', () => {
+      const window = {'gemma3.attention.sliding_window': '1024'};
+
+      expect(need(swaModel('gemma3', window))).toBe(
+        need(
+          swaModel('gemma3', {
+            ...window,
+            'gemma3.attention.sliding_window_pattern': '6',
+          }),
+        ),
+      );
+      expect(need(swaModel('gemma3', window))).toBeLessThan(
+        need(swaModel('gemma3')),
+      );
+    });
+
+    it('falls back to the default period when the pattern array is malformed', () => {
+      const window = {'gemma3.attention.sliding_window': '1024'};
+
+      expect(
+        need(
+          swaModel('gemma3', {
+            ...window,
+            'gemma3.attention.sliding_window_pattern': '[true, false]',
+          }),
+        ),
+      ).toBe(need(swaModel('gemma3', window)));
+    });
+
+    it('counts every layer as global for an architecture with a window but no pattern', () => {
+      expect(
+        need(swaModel('phi3', {'phi3.attention.sliding_window': '1024'})),
+      ).toBe(need(swaModel('phi3')));
+    });
+
+    it('gives shared-KV layers no cache of their own', () => {
+      expect(
+        need(swaModel('llama', {'llama.attention.shared_kv_layers': '4'})),
+      ).toBeLessThan(need(swaModel('llama')));
+    });
+  });
+
+  describe('tied embedding copy', () => {
+    const MiB = 1024 * 1024;
+    // Gemma 3 4B Q4_0: no output.weight, token_embd Q6_K [2560, 262208].
+    const gemma3 = {
+      ...baseModel,
+      size: ggufFileSize('gemma-3-4b-it-Q4_0'),
+      ggufMetadata: parseGGUFMetadata(ggufMetadata('gemma-3-4b-it-Q4_0')),
+    } as Model;
+    const tokenEmbd = {type: 14, dims: [2560, 262208]};
+    const copy = 2560 * 262208 * (210 / 256);
+    const withCopy = (tied_embd_bytes: number | undefined) =>
+      ({
+        ...gemma3,
+        ggufMetadata: {...gemma3.ggufMetadata!, tied_embd_bytes},
+      }) as Model;
+    const at2k = {...contextSettings, flash_attn_type: 'off' as const};
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+
+    afterEach(() => setOS(originalOS));
+
+    describe('tiedEmbeddingBytes', () => {
+      it('is the embedding bytes when there is no output matrix', () => {
+        expect(tiedEmbeddingBytes({tokenEmbd, hasOutput: false}, 5e9)).toBe(
+          copy,
+        );
+        expect(copy / MiB).toBeCloseTo(525.1, 1);
+      });
+
+      it('is 0 when the GGUF carries output.weight', () => {
+        expect(tiedEmbeddingBytes({tokenEmbd, hasOutput: true}, 5e9)).toBe(0);
+      });
+
+      it.each([
+        ['F16, never repacked on ARM', {type: 1, dims: [2560, 262208]}],
+        ['Q4_1, never repacked on ARM', {type: 3, dims: [2560, 262208]}],
+        [
+          'Q6_K with rows not a multiple of 8',
+          {type: 14, dims: [2560, 262204]},
+        ],
+        ['Q8_0 with rows not a multiple of 4', {type: 8, dims: [2560, 262202]}],
+      ])('is 0 for %s', (_case, embedding) => {
+        expect(
+          tiedEmbeddingBytes({tokenEmbd: embedding, hasOutput: false}, 5e9),
+        ).toBe(0);
+      });
+
+      it.each([
+        ['no token_embd tensor', undefined],
+        ['an unknown type id', {type: 9999, dims: [2560, 262208]}],
+        ['a removed type id', {type: 4, dims: [2560, 262208]}],
+        ['five dims', {type: 14, dims: [256, 2, 2, 2, 2]}],
+        ['a zero dim', {type: 14, dims: [2560, 0]}],
+        ['a fractional dim', {type: 14, dims: [2560.5, 262208]}],
+        ['dims overflowing 2^53', {type: 14, dims: [2 ** 40, 2 ** 40]}],
+        ['a row not a whole number of blocks', {type: 14, dims: [100, 262208]}],
+        ['more bytes than the file', {type: 14, dims: [2560, 2621440]}],
+      ])('is undefined (a failed scan) for %s', (_case, embedding) => {
+        expect(
+          tiedEmbeddingBytes({tokenEmbd: embedding, hasOutput: false}, 5e9),
+        ).toBeUndefined();
+      });
+    });
+
+    it('adds the copy on Android and nothing on iOS', () => {
+      setOS('android');
+      const android = getModelMemoryRequirement(
+        withCopy(copy),
+        undefined,
+        at2k,
+      );
+      const androidWithout = getModelMemoryRequirement(
+        withCopy(0),
+        undefined,
+        at2k,
+      );
+      setOS('ios');
+
+      expect(android - androidWithout).toBe(copy);
+      expect(getModelMemoryRequirement(withCopy(copy), undefined, at2k)).toBe(
+        getModelMemoryRequirement(withCopy(0), undefined, at2k),
+      );
+    });
+
+    it('adds nothing when extra buffer types are off, since nothing is repacked', () => {
+      setOS('android');
+
+      expect(
+        getModelMemoryRequirement(withCopy(copy), undefined, {
+          ...at2k,
+          no_extra_bufts: true,
+        }),
+      ).toBe(
+        getModelMemoryRequirement(withCopy(0), undefined, {
+          ...at2k,
+          no_extra_bufts: true,
+        }),
+      );
+    });
+
+    it.each([
+      ['absent (a failed scan)', undefined],
+      ['NaN', NaN],
+      ['negative', -1],
+      ['above the file size', 1e12],
+    ])(
+      'counts the Q8_0 bound V x E x 34/32 when the stored copy is %s',
+      (_case, stored) => {
+        setOS('android');
+
+        expect(
+          getModelMemoryRequirement(withCopy(stored), undefined, at2k) -
+            getModelMemoryRequirement(withCopy(0), undefined, at2k),
+        ).toBeCloseTo(262208 * 2560 * (34 / 32), 0);
+      },
+    );
+
+    it('caps the bound at the file size', () => {
+      setOS('android');
+      const small = {...withCopy(undefined), size: 100 * MiB};
+
+      expect(
+        getModelMemoryRequirement(small, undefined, at2k) -
+          getModelMemoryRequirement(
+            {
+              ...small,
+              ggufMetadata: {...small.ggufMetadata!, tied_embd_bytes: 0},
+            },
+            undefined,
+            at2k,
+          ),
+      ).toBe(100 * MiB);
+    });
+  });
+
+  describe('compute on Android', () => {
+    const UB = 512;
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+    const dense = (vocab: number) =>
+      ({
+        ...baseModel,
+        size: 1e9,
+        ggufMetadata: {
+          ...parseGGUFMetadata({
+            'general.architecture': 'llama',
+            'llama.block_count': '4',
+            'llama.embedding_length': '1024',
+            'llama.attention.head_count': '8',
+            'llama.attention.head_count_kv': '2',
+            'llama.attention.key_length': '128',
+            'llama.attention.value_length': '128',
+            'llama.feed_forward_length': '4096',
+            'tokenizer.ggml.tokens.length': vocab,
+          })!,
+          tied_embd_bytes: 0,
+        },
+      }) as Model;
+    const at = (flash_attn_type: 'on' | 'off') => ({
+      ...contextSettings,
+      n_ctx: 2048,
+      n_batch: UB,
+      n_ubatch: UB,
+      flash_attn_type,
+    });
+
+    afterEach(() => setOS(originalOS));
+
+    it('counts one logits row per vocabulary token, not a row per ubatch slot', () => {
+      setOS('android');
+      const perToken =
+        getModelMemoryRequirement(dense(200000), undefined, at('on')) -
+        getModelMemoryRequirement(dense(100000), undefined, at('on'));
+
+      // Compute adds 4 B per token; the overhead 384 B.
+      expect(perToken).toBe(100000 * (4 + 384));
+    });
+
+    it('adds the attention matrix on top of the logits row instead of taking the larger', () => {
+      setOS('android');
+      const attentionMatrix = 2048 * 8 * UB * 4;
+      const maskDifference = 2048 * UB * (4 - 2);
+
+      expect(
+        getModelMemoryRequirement(dense(151936), undefined, at('off')) -
+          getModelMemoryRequirement(dense(151936), undefined, at('on')),
+      ).toBe(attentionMatrix + maskDifference);
+    });
+
+    it('keeps the reserved logits rows on iOS', () => {
+      setOS('ios');
+      const perToken =
+        getModelMemoryRequirement(dense(200000), undefined, at('on')) -
+        getModelMemoryRequirement(dense(100000), undefined, at('on'));
+
+      expect(perToken).toBe(100000 * (UB * 4 + 384));
+    });
+  });
+
+  describe('formula terms, with iOS compute', () => {
+    const originalOS = ReactNative.Platform.OS;
+    beforeEach(() =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => 'ios',
+        configurable: true,
+      }),
+    );
+    afterEach(() =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => originalOS,
+        configurable: true,
+      }),
+    );
+
+    const size = 1e9;
+    const UB = 512;
+    const settings = (
+      n_ctx: number,
+      flash_attn_type: 'on' | 'off',
+      overrides = {},
+    ) => ({
+      ...contextSettings,
+      n_ctx,
+      n_batch: UB,
+      n_ubatch: UB,
+      cache_type_k: CacheType.F16,
+      cache_type_v: CacheType.F16,
+      flash_attn_type,
+      ...overrides,
+    });
+    const need = (
+      info: Record<string, unknown>,
+      s: ReturnType<typeof settings>,
+      modelSize = size,
+    ) =>
+      getModelMemoryRequirement(
+        {
+          ...baseModel,
+          size: modelSize,
+          ggufMetadata: parseGGUFMetadata(info),
+        } as Model,
+        undefined,
+        s,
+      );
+    const dense = (overrides: Record<string, unknown> = {}) => ({
+      'general.architecture': 'llama',
+      'llama.block_count': '4',
+      'llama.embedding_length': '1024',
+      'llama.attention.head_count': '8',
+      'llama.attention.head_count_kv': '2',
+      'llama.attention.key_length': '128',
+      'llama.attention.value_length': '128',
+      'llama.feed_forward_length': '4096',
+      'tokenizer.ggml.tokens.length': 151936,
+      ...overrides,
+    });
+
+    it('counts n_embd x (l_cache - 1) f32 of short-convolution state per recurrent layer', () => {
+      const lfm2 = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'lfm2',
+        'lfm2.block_count': '4',
+        'lfm2.embedding_length': '1024',
+        'lfm2.attention.head_count': '8',
+        'lfm2.attention.head_count_kv': '[0, 0, 0, 2]',
+        'lfm2.feed_forward_length': '4096',
+        'tokenizer.ggml.tokens.length': 65536,
+        ...overrides,
+      });
+      const at2k = settings(2048, 'on');
+
+      expect(need(lfm2({'lfm2.shortconv.l_cache': '3'}), at2k)).toBe(
+        need(lfm2(), at2k) + 3 * 1024 * (3 - 1) * 4,
+      );
+    });
+
+    it('counts the gated-delta state, d_state x d_inner included, per recurrent layer', () => {
+      const qwen35 = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'qwen35',
+        'qwen35.block_count': '8',
+        'qwen35.embedding_length': '1024',
+        'qwen35.attention.head_count': '8',
+        'qwen35.attention.head_count_kv': '2',
+        'qwen35.attention.key_length': '256',
+        'qwen35.attention.value_length': '256',
+        'tokenizer.ggml.tokens.length': 248320,
+        ...overrides,
+      });
+      const ssm = {
+        'qwen35.ssm.conv_kernel': '4',
+        'qwen35.ssm.state_size': '128',
+        'qwen35.ssm.group_count': '16',
+        'qwen35.ssm.inner_size': '2048',
+      };
+      const perLayer = (4 - 1) * (2048 + 2 * 16 * 128) + 128 * 2048;
+      const at2k = settings(2048, 'on');
+
+      // Interval 4 over 8 layers leaves 6 recurrent layers.
+      expect(need(qwen35(ssm), at2k)).toBe(
+        need(qwen35(), at2k) + 6 * perLayer * 4,
+      );
+    });
+
+    it('marks the layer before each interval boundary as full attention', () => {
+      const qwen35 = (overrides: Record<string, unknown>) => ({
+        'general.architecture': 'qwen35',
+        'qwen35.block_count': '8',
+        'qwen35.embedding_length': '1024',
+        'qwen35.attention.head_count': '8',
+        'qwen35.attention.head_count_kv': '[2, 2, 2, 4, 2, 2, 2, 4]',
+        'qwen35.attention.key_length': '256',
+        'qwen35.attention.value_length': '256',
+        'tokenizer.ggml.tokens.length': 248320,
+        ...overrides,
+      });
+      const at16k = settings(16384, 'on');
+
+      expect(need(qwen35({}), at16k)).toBe(
+        need(
+          qwen35({
+            'qwen35.attention.recurrent_layers': '[1, 1, 1, 0, 1, 1, 1, 0]',
+          }),
+          at16k,
+        ),
+      );
+    });
+
+    it('counts the feed-forward graph term as 2 x n_ff x ubatch f32', () => {
+      const at2k = settings(2048, 'on');
+
+      expect(need(dense({'llama.feed_forward_length': '5120'}), at2k)).toBe(
+        need(dense(), at2k) + 2 * 1024 * UB * 4,
+      );
+    });
+
+    it('counts the mask at 4 B per cell with the attention matrix and 2 B without', () => {
+      // Logits dominate the attention matrix here, so only the mask differs.
+      expect(
+        need(dense(), settings(2048, 'off')) -
+          need(dense(), settings(2048, 'on')),
+      ).toBe(2048 * UB * (4 - 2));
+    });
+
+    it('counts both global and sliding-window cells in the mask', () => {
+      const allSwa = {
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '256',
+        'gemma3.attention.value_length': '256',
+        'gemma3.attention.sliding_window': '1024',
+        'gemma3.attention.sliding_window_pattern': '0',
+        'tokenizer.ggml.tokens.length': 262144,
+      };
+      const globalCells = 16384;
+      const swaCells = 1024 + 512;
+
+      expect(
+        need(allSwa, settings(16384, 'off')) -
+          need(allSwa, settings(16384, 'on')),
+      ).toBe((globalCells + swaCells) * UB * (4 - 2));
+    });
+
+    it('treats a sliding-window period of 0 as every layer sliding', () => {
+      const gemma3 = (pattern: string) => ({
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '256',
+        'gemma3.attention.value_length': '256',
+        'gemma3.attention.sliding_window': '1024',
+        'gemma3.attention.sliding_window_pattern': pattern,
+        'tokenizer.ggml.tokens.length': 262144,
+      });
+      const at16k = settings(16384, 'on');
+
+      expect(need(gemma3('0'), at16k)).toBe(
+        need(gemma3('[1, 1, 1, 1, 1, 1]'), at16k),
+      );
+    });
+
+    it('sizes sliding-window layers with the sliding-window K and V lengths', () => {
+      const gemma = (overrides: Record<string, unknown> = {}) => ({
+        'general.architecture': 'gemma3',
+        'gemma3.block_count': '6',
+        'gemma3.embedding_length': '1024',
+        'gemma3.attention.head_count': '8',
+        'gemma3.attention.head_count_kv': '1',
+        'gemma3.attention.key_length': '512',
+        'gemma3.attention.value_length': '512',
+        'gemma3.attention.sliding_window': '512',
+        'tokenizer.ggml.tokens.length': 262144,
+        ...overrides,
+      });
+      const at16k = settings(16384, 'on');
+      // Period 6: layers 0-4 slide over min(n_ctx, pad256(512 + 512)) cells.
+      const swaLayers = 5;
+      const swaCells = 1024;
+
+      expect(
+        need(gemma(), at16k) -
+          need(
+            gemma({
+              'gemma3.attention.key_length_swa': '256',
+              'gemma3.attention.value_length_swa': '256',
+            }),
+            at16k,
+          ),
+      ).toBe(swaLayers * swaCells * ((512 - 256) * 2 + (512 - 256) * 2));
+    });
+
+    it('leaves the nextn prediction layers out of the KV cache', () => {
+      const at16k = settings(16384, 'on');
+
+      expect(
+        need(
+          dense({
+            'llama.block_count': '5',
+            'llama.nextn_predict_layers': '1',
+          }),
+          at16k,
+        ),
+      ).toBe(need(dense(), at16k));
+    });
+
+    it('takes the size path when corrupt settings would put the need below the file size', () => {
+      const modelSize = 1e6;
+
+      expect(
+        need(
+          dense({'tokenizer.ggml.tokens.length': 1000}),
+          settings(2048, 'off', {n_ubatch: -512}),
+          modelSize,
+        ),
+      ).toBe(modelSize * 1.2);
+    });
+  });
+
+  describe('paired draft', () => {
+    const fixtureModel = (
+      name: 'Qwen_Qwen3-4B-Q4_K_M' | 'Qwen_Qwen3-1.7B-Q4_K_M',
+    ) =>
+      ({
+        ...baseModel,
+        id: name,
+        size: ggufFileSize(name),
+        ggufMetadata: parseGGUFMetadata(ggufMetadata(name)),
+      }) as Model;
+    const target = fixtureModel('Qwen_Qwen3-4B-Q4_K_M');
+    const draft = fixtureModel('Qwen_Qwen3-1.7B-Q4_K_M');
+    const quantizedDraft = {
+      ...contextSettings,
+      n_ctx: 4096,
+      spec_draft_cache_type_k: CacheType.Q8_0,
+      spec_draft_cache_type_v: CacheType.Q8_0,
+    };
+    // Qwen3-1.7B: 28 layers, 8 KV heads, 128-wide K and V, 4096 cells.
+    const draftKv = (bytesK: number, bytesV: number) =>
+      28 * 4096 * 8 * (128 * bytesK + 128 * bytesV);
+    const originalOS = ReactNative.Platform.OS;
+    const setOS = (os: string) =>
+      Object.defineProperty(ReactNative.Platform, 'OS', {
+        get: () => os,
+        configurable: true,
+      });
+
+    afterEach(() => setOS(originalOS));
+
+    it('resolves an unset flash attention to off, counting the attention matrix', () => {
+      setOS('ios');
+      const unset = {...quantizedDraft, flash_attn_type: undefined};
+
+      expect(getModelMemoryRequirement(target, undefined, unset, draft)).toBe(
+        getModelMemoryRequirement(
+          target,
+          undefined,
+          {...unset, flash_attn_type: 'off'},
+          draft,
+        ),
+      );
+      expect(getModelMemoryRequirement(target, undefined, unset)).toBe(
+        getModelMemoryRequirement(target, undefined, {
+          ...unset,
+          flash_attn_type: 'auto',
+        }),
+      );
+    });
+
+    it('adds (draft size + draft KV) x 1.1, with V clamped to f16 when flash attention is off', () => {
+      const off = {...quantizedDraft, flash_attn_type: 'off'} as const;
+
+      expect(
+        getModelMemoryRequirement(target, undefined, off, draft) -
+          getModelMemoryRequirement(target, undefined, off),
+      ).toBeCloseTo((draft.size + draftKv(1.0625, 2)) * 1.1, 0);
+    });
+
+    it('keeps a quantized draft V when flash attention is on', () => {
+      const on = {...quantizedDraft, flash_attn_type: 'on'} as const;
+
+      expect(
+        getModelMemoryRequirement(target, undefined, on, draft) -
+          getModelMemoryRequirement(target, undefined, on),
+      ).toBeCloseTo((draft.size + draftKv(1.0625, 1.0625)) * 1.1, 0);
+    });
+  });
+
+  describe('purity', () => {
+    it('reads neither the store nor native modules', () => {
+      const target = {
+        ...baseModel,
+        size: ggufFileSize('Qwen_Qwen3-4B-Q4_K_M'),
+        ggufMetadata: parseGGUFMetadata(ggufMetadata('Qwen_Qwen3-4B-Q4_K_M')),
+      } as Model;
+      const projector = {size: 300 * 1e6} as Model;
+      const estimate = () =>
+        getModelMemoryRequirement(target, projector, contextSettings);
+      const first = estimate();
+      const {
+        largestSuccessfulLoad,
+        availableMemoryCeiling,
+        deviceTier,
+        activeModelId,
+      } = modelStore;
+      const nativeModules = jest
+        .spyOn(ReactNative, 'NativeModules', 'get')
+        .mockImplementation(() => {
+          throw new Error('native module read');
+        });
+
+      try {
+        runInAction(() => {
+          modelStore.largestSuccessfulLoad = 1;
+          modelStore.availableMemoryCeiling = 1;
+          modelStore.deviceTier = 'flagship';
+          modelStore.activeModelId = 'another-model';
+        });
+
+        expect(estimate()).toBe(first);
+      } finally {
+        nativeModules.mockRestore();
+        runInAction(() => {
+          modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
+          modelStore.availableMemoryCeiling = availableMemoryCeiling;
+          modelStore.deviceTier = deviceTier;
+          modelStore.activeModelId = activeModelId;
+        });
+      }
     });
   });
 });

@@ -558,15 +558,30 @@ export enum ModelType {
  * Parsed from model file using llama.rn's loadLlamaModelInfo()
  */
 export interface GGUFMetadata {
+  metadataVersion?: number; // absent on records parsed before per-layer fields existed
   architecture: string;
   n_layers: number;
   n_embd: number;
-  n_head: number;
-  n_head_kv: number;
-  n_vocab: number;
+  n_head: number; // max over layers when per-layer
+  n_head_kv: number; // max over layers when per-layer; 0 when malformed
+  n_head_kv_layers?: number[]; // per layer, when the GGUF stores an array (0 = no KV)
+  n_vocab: number; // 0 when the GGUF names no vocabulary size
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
+  n_embd_head_k_swa?: number;
+  n_embd_head_v_swa?: number;
   sliding_window?: number; // For SWA models
+  sliding_window_pattern?: number | number[]; // period, or per layer 1 = SWA
+  recurrent_layers?: number[]; // per layer 1 = recurrent
+  full_attention_interval?: number;
+  shared_kv_layers?: number; // trailing layers that reuse earlier layers' KV
+  shortconv_l_cache?: number;
+  ssm_conv_kernel?: number;
+  ssm_state_size?: number;
+  ssm_group_count?: number;
+  ssm_inner_size?: number;
+  n_ff?: number; // max over layers when per-layer
+  tied_embd_bytes?: number; // second token_embd copy on an Android CPU load; absent when the tensor scan failed
   context_length?: number; // Native context length from GGUF
   nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers
   embedding_length_out?: number; // <arch>.embedding_length_out; draft output width (n_embd_out)

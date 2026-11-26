@@ -17,7 +17,13 @@
  * and frozen at the container level: llama.cpp cannot change the layout
  * without breaking every reader in the ecosystem. Any structural anomaly
  * throws — the probe maps that to `unknown`, never to a false negative.
+ *
+ * `readLocalGGUFEmbeddingTensors` reads a downloaded file's embedding tensor
+ * descriptors, which `loadLlamaModelInfo` does not return.
  */
+
+import * as RNFS from '@dr.pogodin/react-native-fs';
+import {toByteArray} from 'base64-js';
 
 const GGUF_MAGIC = 0x46554747; // "GGUF" read as LE u32
 
@@ -342,4 +348,251 @@ export const readGGUFHeaderForMTP = async (
   }
 
   return {nextnPredictLayers, hasNextnTensor: false};
+};
+
+export interface GGUFTensorDescriptor {
+  type: number;
+  dims: number[];
+}
+
+export interface GGUFEmbeddingTensors {
+  tokenEmbd?: GGUFTensorDescriptor;
+  hasOutput: boolean;
+}
+
+/** What `loadLlamaModelInfo` reports about a file's layout. */
+export interface GGUFLayout {
+  version: number;
+  alignment: number;
+  dataOffset: number;
+}
+
+const LOCAL_PREFIX_BYTES = 24; // magic, version, tensor count, KV count
+const MAX_LOCAL_DATA_OFFSET = 64 * 1024 * 1024;
+const MAX_LOCAL_TENSORS = 1024;
+const MAX_LOCAL_ALIGNMENT = 1024;
+// gguf.cpp rejects names of GGML_MAX_NAME (64) bytes or more and more than
+// GGML_MAX_DIMS (4) dims.
+const MAX_TENSOR_NAME = 63;
+const MAX_TENSOR_DIMS = 4;
+// name length, name, n_dims, dims, type, data offset
+const MAX_TENSOR_INFO_BYTES =
+  8 + MAX_TENSOR_NAME + 4 + 8 * MAX_TENSOR_DIMS + 12;
+
+const TOKEN_EMBD = Array.from('token_embd.weight', c => c.charCodeAt(0));
+const OUTPUT = Array.from('output.weight', c => c.charCodeAt(0));
+
+const isPowerOfTwo = (value: number): boolean => {
+  let rest = value;
+  while (rest > 1 && rest % 2 === 0) {
+    rest /= 2;
+  }
+  return rest === 1;
+};
+
+const readLocalBytes = async (
+  path: string,
+  length: number,
+  position: number,
+): Promise<Uint8Array> => {
+  const bytes = toByteArray(await RNFS.read(path, length, position, 'base64'));
+  if (bytes.length !== length) {
+    throw new Error('gguf local read returned fewer bytes than requested');
+  }
+  return bytes;
+};
+
+interface TensorInfoEntry {
+  start: number;
+  offset: number;
+  nDims: number;
+  nameAt: number;
+  nameLength: number;
+}
+
+/**
+ * Parses the tensor-info section backwards from its end, the last byte of
+ * `bytes`, which lies within `alignment` bytes of the data. Exactly one
+ * candidate end must have `tensorCount` entries behind it, offsets falling
+ * going back, the last of them at data offset 0. Each position is parsed once
+ * and its chain facts cached, so the work is linear in the window.
+ */
+const parseTensorInfoTail = (
+  bytes: Uint8Array,
+  tensorCount: number,
+  alignment: number,
+): GGUFEmbeddingTensors => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u64 = (at: number) =>
+    view.getUint32(at + 4, true) * 2 ** 32 + view.getUint32(at, true);
+  const isName = (at: number, name: number[]) =>
+    name.every((code, i) => bytes[at + i] === code);
+
+  const parseEntryEndingAt = (end: number): TensorInfoEntry | null => {
+    if (end - 12 < 0) {
+      return null;
+    }
+    const offset = u64(end - 8);
+    if (offset % alignment !== 0) {
+      return null;
+    }
+    let entry: TensorInfoEntry | null = null;
+    let matches = 0;
+    for (let nDims = 0; nDims <= MAX_TENSOR_DIMS && matches < 2; nDims++) {
+      const nDimsAt = end - 16 - 8 * nDims;
+      if (nDimsAt < 0 || view.getUint32(nDimsAt, true) !== nDims) {
+        continue;
+      }
+      for (let nameLength = 1; nameLength <= MAX_TENSOR_NAME; nameLength++) {
+        const nameAt = nDimsAt - nameLength;
+        if (nameAt < 8 || bytes[nameAt] < 0x21 || bytes[nameAt] > 0x7e) {
+          break;
+        }
+        if (
+          view.getUint32(nameAt - 4, true) === 0 &&
+          view.getUint32(nameAt - 8, true) === nameLength
+        ) {
+          entry = {start: nameAt - 8, offset, nDims, nameAt, nameLength};
+          matches++;
+        }
+      }
+    }
+    return matches === 1 ? entry : null;
+  };
+
+  const entries = new Map<number, TensorInfoEntry | null>();
+  const entryEndingAt = (end: number): TensorInfoEntry | null => {
+    let entry = entries.get(end);
+    if (entry === undefined) {
+      entry = parseEntryEndingAt(end);
+      entries.set(end, entry);
+    }
+    return entry;
+  };
+
+  // From an end, walking back: how many entries chain with non-increasing
+  // offsets, and the depth of the first one at offset 0 (0 for none).
+  const chainLength = new Map<number, number>();
+  const zeroDepth = new Map<number, number>();
+  const chainFrom = (end: number) => {
+    const unresolved: number[] = [];
+    let at = end;
+    while (!chainLength.has(at)) {
+      const entry = entryEndingAt(at);
+      if (!entry) {
+        chainLength.set(at, 0);
+        zeroDepth.set(at, 0);
+        break;
+      }
+      unresolved.push(at);
+      at = entry.start;
+    }
+    for (let i = unresolved.length - 1; i >= 0; i--) {
+      const entry = entryEndingAt(unresolved[i])!;
+      const previous = entryEndingAt(entry.start);
+      const chained = previous !== null && previous.offset <= entry.offset;
+      const previousZero = chained ? zeroDepth.get(entry.start)! : 0;
+      chainLength.set(
+        unresolved[i],
+        1 + (chained ? chainLength.get(entry.start)! : 0),
+      );
+      zeroDepth.set(
+        unresolved[i],
+        entry.offset === 0 ? 1 : previousZero > 0 ? previousZero + 1 : 0,
+      );
+    }
+    return {length: chainLength.get(end)!, zero: zeroDepth.get(end)!};
+  };
+
+  let sectionEnd = -1;
+  for (let end = bytes.length; end > bytes.length - alignment; end--) {
+    const {length, zero} = chainFrom(end);
+    if (zero > 0 && zero <= tensorCount && tensorCount <= length) {
+      if (sectionEnd >= 0) {
+        throw new Error('gguf tensor info: more than one consistent end');
+      }
+      sectionEnd = end;
+    }
+  }
+  if (sectionEnd < 0) {
+    throw new Error('gguf tensor info: no consistent end');
+  }
+
+  const result: GGUFEmbeddingTensors = {hasOutput: false};
+  let at = sectionEnd;
+  for (let i = 0; i < tensorCount; i++) {
+    const {start, nDims, nameAt, nameLength} = entryEndingAt(at)!;
+    if (nameLength === TOKEN_EMBD.length && isName(nameAt, TOKEN_EMBD)) {
+      const dims: number[] = [];
+      for (let d = 0; d < nDims; d++) {
+        dims.push(u64(nameAt + nameLength + 4 + 8 * d));
+      }
+      result.tokenEmbd = {type: view.getUint32(at - 12, true), dims};
+    } else if (nameLength === OUTPUT.length && isName(nameAt, OUTPUT)) {
+      result.hasOutput = true;
+    }
+    at = start;
+  }
+  return result;
+};
+
+/**
+ * `token_embd.weight`'s descriptor and whether `output.weight` exists, from
+ * the tensor-info section of a local GGUF, read back from `dataOffset`. Two
+ * reads: the 24-byte prefix, and at most `tensorCount` maximal entries plus
+ * `alignment` bytes of padding below the data. Any anomaly throws.
+ */
+export const readLocalGGUFEmbeddingTensors = async (
+  path: string,
+  {version, alignment, dataOffset}: GGUFLayout,
+): Promise<GGUFEmbeddingTensors> => {
+  if (version !== 2 && version !== 3) {
+    throw new Error(`gguf version ${version} out of range`);
+  }
+  if (
+    !Number.isInteger(alignment) ||
+    alignment > MAX_LOCAL_ALIGNMENT ||
+    !isPowerOfTwo(alignment)
+  ) {
+    throw new Error(`gguf alignment ${alignment} out of range`);
+  }
+  if (
+    !Number.isInteger(dataOffset) ||
+    dataOffset < LOCAL_PREFIX_BYTES ||
+    dataOffset > MAX_LOCAL_DATA_OFFSET
+  ) {
+    throw new Error(`gguf data offset ${dataOffset} out of range`);
+  }
+
+  const prefixBytes = await readLocalBytes(path, LOCAL_PREFIX_BYTES, 0);
+  const prefix = new DataView(
+    prefixBytes.buffer,
+    prefixBytes.byteOffset,
+    prefixBytes.byteLength,
+  );
+  if (
+    prefix.getUint32(0, true) !== GGUF_MAGIC ||
+    prefix.getUint32(4, true) !== version
+  ) {
+    throw new Error('gguf prefix does not match the reported layout');
+  }
+  const tensorCount = prefix.getUint32(8, true);
+  if (
+    prefix.getUint32(12, true) !== 0 ||
+    tensorCount < 1 ||
+    tensorCount > MAX_LOCAL_TENSORS
+  ) {
+    throw new Error('gguf tensor count out of range');
+  }
+
+  const windowLength = Math.min(
+    dataOffset - LOCAL_PREFIX_BYTES,
+    tensorCount * MAX_TENSOR_INFO_BYTES + alignment,
+  );
+  const tail = await readLocalBytes(
+    path,
+    windowLength,
+    dataOffset - windowLength,
+  );
+  return parseTensorInfoTail(tail, tensorCount, alignment);
 };

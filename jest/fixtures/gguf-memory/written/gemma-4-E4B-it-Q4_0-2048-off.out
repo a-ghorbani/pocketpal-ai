@@ -1,0 +1,2 @@
+FILL n_ctx=2048 n_fill=2040 model_buf=4820176192 ctx_buf=96468992 compute_buf=599810048 | load rss+4921143296 | ctx_init rss+101670912 heap+5739472832 | after fill rss+147378176 heap+8791648 | rss_after_fill_minus_all_buffers=-346262848
+COMPUTE_TOUCHED n_ctx=2048 n_fill=2040 fa=off compute_buf_mib=572.0 touched_mib=-0.0

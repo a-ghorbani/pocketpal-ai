@@ -4,11 +4,26 @@
  */
 
 import {Platform} from 'react-native';
-import {CacheType} from './types';
+import {CacheType, DraftConfig} from './types';
 import {getAvailableDevices} from './deviceSelection';
 
 export type FlashAttnType = 'auto' | 'on' | 'off';
 export type BackendType = 'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas';
+
+/**
+ * The flash-attention type a load sends when the user has not set one.
+ */
+export function defaultFlashAttnType(
+  draftMode: DraftConfig['mode'],
+): FlashAttnType {
+  if (draftMode === 'paired') {
+    return 'off';
+  }
+  if (draftMode === 'embedded') {
+    return 'auto';
+  }
+  return Platform.OS === 'ios' ? 'auto' : 'off';
+}
 
 /**
  * Determines the backend type based ONLY on the devices array

@@ -24,7 +24,10 @@ import {
   ServerConfig,
 } from '../../utils/types';
 import {getDisplayNameFromFilename} from '../../utils/formatters';
-import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
+import {
+  getModelMemoryRequirement,
+  parseGGUFMetadata,
+} from '../../utils/memoryEstimator';
 import {hasEnoughMemory} from '../../hooks/useMemoryCheck';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {
@@ -5777,6 +5780,73 @@ describe('ModelStore', () => {
         modelStore.deviceTier = null;
       });
     });
+
+    it.each(['ios', 'android'])(
+      'on %s, records the estimate a reload of the same model re-checks against',
+      async os => {
+        const originalOS = Platform.OS;
+        const originalParams = modelStore.contextInitParams;
+        const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
+        Object.defineProperty(Platform, 'OS', {
+          get: () => os,
+          configurable: true,
+        });
+        try {
+          const model = {
+            ...basicModel,
+            size: 2497280960,
+            ggufMetadata: parseGGUFMetadata({
+              'general.architecture': 'qwen3',
+              'qwen3.block_count': '36',
+              'qwen3.embedding_length': '2560',
+              'qwen3.feed_forward_length': '9728',
+              'qwen3.attention.head_count': '32',
+              'qwen3.attention.head_count_kv': '8',
+              'qwen3.attention.key_length': '128',
+              'qwen3.attention.value_length': '128',
+              'tokenizer.ggml.tokens.length': 151936,
+            }),
+          };
+          initLlamaMock.mockReset();
+          initLlamaMock.mockResolvedValue({
+            release: jest.fn(),
+          } as unknown as LlamaContext);
+          runInAction(() => {
+            modelStore.contextInitParams = {
+              ...modelStore.contextInitParams,
+              n_ctx: 4096,
+              flash_attn_type: undefined,
+            };
+            modelStore.largestSuccessfulLoad = undefined;
+            modelStore.availableMemoryCeiling = undefined;
+          });
+
+          await modelStore.initContext(model);
+
+          expect(modelStore.largestSuccessfulLoad).toBe(
+            getModelMemoryRequirement(model, undefined, {
+              ...modelStore.memoryEstimateSettings,
+              state_cache_budget_mb: 0,
+            }),
+          );
+          expect(
+            await jest
+              .requireActual('../../hooks/useMemoryCheck')
+              .hasEnoughMemory(model),
+          ).toBe(true);
+        } finally {
+          Object.defineProperty(Platform, 'OS', {
+            get: () => originalOS,
+            configurable: true,
+          });
+          runInAction(() => {
+            modelStore.contextInitParams = originalParams;
+            modelStore.largestSuccessfulLoad = largestSuccessfulLoad;
+            modelStore.availableMemoryCeiling = availableMemoryCeiling;
+          });
+        }
+      },
+    );
 
     it('keeps the loaded model estimate, with checkpoints, until release', async () => {
       const model = {
