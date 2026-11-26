@@ -23,7 +23,6 @@ const F32_BYTES = 4;
 // Process memory above llama.cpp's buffers at load: measured 170-451 B per
 // vocabulary token across 12 GGUFs, the same at every context size.
 const NON_BUFFER_BYTES_PER_VOCAB_TOKEN = 384;
-const PRE_PROBE_FIT_MARGIN = 1.0;
 const PROJECTOR_AND_DRAFT_OVERHEAD = 1.1;
 const Q8_0_BYTES_PER_WEIGHT = 34 / 32;
 const MAX_SAFE_BYTES = 2 ** 53;
@@ -544,10 +543,7 @@ function ggufNeed(
     ) +
     recurrentStateBytes(metadata) +
     computeBytes(metadata, settings, countsAttentionMatrix(flashAttn));
-  const headroom = Math.max(
-    metadata.n_vocab * NON_BUFFER_BYTES_PER_VOCAB_TOKEN,
-    buffers * (PRE_PROBE_FIT_MARGIN - 1),
-  );
+  const headroom = metadata.n_vocab * NON_BUFFER_BYTES_PER_VOCAB_TOKEN;
 
   // A paired draft runs with its own KV cache, sized by the target's n_ctx —
   // there is no separate draft n_ctx.
