@@ -75,4 +75,23 @@ describe('PalRepository.updatePal', () => {
       generationSettings: '{"temperature":0.5}',
     });
   });
+  it('clears a pinned voice when Follow app voice is saved', async () => {
+    const record = makeRecord();
+    record.ttsEngine = 'kokoro';
+    mockFind.mockResolvedValue(record);
+
+    await palRepository.updatePal('local-1', {ttsEngine: undefined});
+
+    expect(record.ttsEngine).toBeUndefined();
+  });
+
+  it('preserves a pinned voice on unrelated edits', async () => {
+    const record = makeRecord();
+    record.ttsEngine = 'kokoro';
+    mockFind.mockResolvedValue(record);
+
+    await palRepository.updatePal('local-1', {name: 'Renamed'});
+
+    expect(record.ttsEngine).toBe('kokoro');
+  });
 });

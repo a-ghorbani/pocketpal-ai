@@ -153,5 +153,20 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 9: Add voice fields to local_pals. Both optional:
+    // an absent voice_enabled reads as enabled, an absent tts_engine follows
+    // the app-wide voice.
+    {
+      toVersion: 9,
+      steps: [
+        addColumns({
+          table: 'local_pals',
+          columns: [
+            {name: 'voice_enabled', type: 'boolean', isOptional: true},
+            {name: 'tts_engine', type: 'string', isOptional: true},
+          ],
+        }),
+      ],
+    },
   ],
 });

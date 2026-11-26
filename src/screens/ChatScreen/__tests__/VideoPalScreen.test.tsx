@@ -7,10 +7,11 @@ import {
   render as baseRender,
   fireEvent,
   waitFor,
+  act,
 } from '../../../../jest/test-utils';
 
 import {VideoPalScreen} from '../VideoPalScreen';
-import {palStore, chatSessionStore, modelStore} from '../../../store';
+import {palStore, chatSessionStore, modelStore, ttsStore} from '../../../store';
 import type {Pal} from '../../../types/pal';
 import {LlamaContext} from 'llama.rn';
 import {ModelOrigin} from '../../../utils/types';
@@ -237,6 +238,54 @@ describe('VideoPalScreen', () => {
 
       expect(modelStore.abortActiveGeneration).toHaveBeenCalledTimes(1);
     });
+
+    it('closes the old camera session when switching Video Pals', async () => {
+      const {getByLabelText, getByTestId, queryByTestId, rerender} =
+        openCamera();
+      fireEvent.press(getByLabelText('Start video analysis'));
+      await waitFor(() => expect(getByTestId('close-button')).toBeTruthy());
+
+      rerender(
+        <VideoPalScreen activePal={makeVideoPal({id: 'another-video-pal'})} />,
+      );
+
+      await waitFor(() => expect(queryByTestId('close-button')).toBeNull());
+      expect(getByLabelText('Start video analysis')).toBeTruthy();
+      expect(modelStore.abortActiveGeneration).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['close', 'unmount'])(
+      'ignores late speech callbacks after %s',
+      async end => {
+        let callbacks: any;
+        (modelStore as any).startImageCompletion = jest.fn(async params => {
+          callbacks = params;
+        });
+        const {getByLabelText, getByTestId, UNSAFE_root, unmount} =
+          openCamera();
+        fireEvent.press(getByLabelText('Start video analysis'));
+        await waitFor(() => expect(getByTestId('close-button')).toBeTruthy());
+        const capture = UNSAFE_root.findAll(
+          node => typeof node.props.onCapture === 'function',
+        )[0].props.onCapture;
+        await act(async () => {
+          await capture('data:frame');
+        });
+        expect(callbacks).toBeDefined();
+        if (end === 'close') {
+          fireEvent.press(getByTestId('close-button'));
+        } else {
+          unmount();
+        }
+        jest.clearAllMocks();
+        act(() => {
+          callbacks.onToken('Late reply.');
+          callbacks.onComplete('Late reply.');
+        });
+        expect(ttsStore.onAssistantMessageStart).not.toHaveBeenCalled();
+        expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+      },
+    );
 
     it('drops a frame that arrives while a generation holds the lease', async () => {
       (modelStore as any).startImageCompletion = jest.fn();

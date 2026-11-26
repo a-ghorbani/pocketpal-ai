@@ -39,6 +39,8 @@ export default class LocalPal extends Model {
   @field('generation_settings') generationSettings?: string; // JSON stringified
   @field('pact') pact?: string; // JSON stringified { talents: TalentRef[] }
   @field('greeting') greeting?: string; // JSON stringified Pal['greeting']
+  @field('voice_enabled') voiceEnabled?: boolean;
+  @field('tts_engine') ttsEngine?: string; // PalTtsEngine, undefined = follow app voice
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
@@ -204,6 +206,8 @@ export default class LocalPal extends Model {
       completionSettings: this.completionSettingsObject,
       pact: this.pactObject,
       greeting: this.greetingObject,
+      voiceEnabled: this.voiceEnabled !== false,
+      ttsEngine: this.ttsEngine as Pal['ttsEngine'],
       created_at: this.createdAt.toISOString(),
       updated_at: this.updatedAt.toISOString(),
     };

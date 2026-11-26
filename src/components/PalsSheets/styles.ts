@@ -216,4 +216,9 @@ export const createStyles = (theme: Theme) =>
     talentDescription: {
       color: theme.colors.onSurfaceVariant,
     },
+    voiceEngineField: {
+      marginTop: 8,
+      gap: 8,
+      paddingHorizontal: theme.spacing.default,
+    },
   });

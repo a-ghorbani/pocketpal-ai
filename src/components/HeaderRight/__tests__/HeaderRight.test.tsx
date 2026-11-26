@@ -1,14 +1,21 @@
 import React from 'react';
 import {Alert} from 'react-native';
 
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render, fireEvent, act} from '../../../../jest/test-utils';
 
 import {HeaderRight} from '../HeaderRight';
 
-import {chatSessionStore, modelStore, uiStore} from '../../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../../store';
 import {defaultCompletionSettings} from '../../../store/ChatSessionStore';
 import {L10nContext} from '../../../utils';
 import {modelsList} from '../../../../jest/fixtures/models';
+import {mockLocalPal} from '../../../../jest/fixtures/pals';
 import {l10n} from '../../../locales';
 
 jest.mock('../../UsageStats', () => ({
@@ -42,6 +49,90 @@ describe('HeaderRight', () => {
     jest.clearAllMocks();
     chatSessionStore.sessions = [];
     chatSessionStore.activeSessionId = null;
+  });
+
+  describe('session speaker', () => {
+    let previousPals: typeof palStore.pals;
+    let previousSpeech: Pick<
+      typeof ttsStore,
+      | 'userTTSOverride'
+      | 'autoSpeakEnabled'
+      | 'sessionSpeakOn'
+      | 'currentVoice'
+      | 'palVoiceOverride'
+    >;
+    let activePal: jest.SpyInstance;
+
+    beforeEach(() => {
+      previousPals = palStore.pals;
+      previousSpeech = {
+        userTTSOverride: ttsStore.userTTSOverride,
+        autoSpeakEnabled: ttsStore.autoSpeakEnabled,
+        sessionSpeakOn: ttsStore.sessionSpeakOn,
+        currentVoice: ttsStore.currentVoice,
+        palVoiceOverride: ttsStore.palVoiceOverride,
+      };
+      activePal = jest
+        .spyOn(chatSessionStore, 'activePalId', 'get')
+        .mockReturnValue(mockLocalPal.id);
+      palStore.pals = [mockLocalPal];
+      ttsStore.userTTSOverride = true;
+      ttsStore.autoSpeakEnabled = false;
+      ttsStore.sessionSpeakOn = null;
+      ttsStore.currentVoice = {
+        id: 'system-test',
+        name: 'System',
+        engine: 'system',
+      };
+      ttsStore.palVoiceOverride = null;
+    });
+
+    afterEach(() => {
+      act(() => {
+        activePal.mockRestore();
+        palStore.pals = previousPals;
+        Object.assign(ttsStore, previousSpeech);
+      });
+    });
+
+    it('disables the session speaker for a speech-disabled Pal', () => {
+      palStore.pals = [{...mockLocalPal, voiceEnabled: false}];
+      const {getByTestId} = renderWithI18n(<HeaderRight />);
+      const speaker = getByTestId('session-speak-button');
+      expect(speaker).toBeDisabled();
+      fireEvent.press(speaker);
+      expect(ttsStore.setSessionSpeak).not.toHaveBeenCalled();
+    });
+
+    it('opens voice setup instead of silently enabling speech without a voice', () => {
+      ttsStore.currentVoice = null;
+      const {getByTestId} = renderWithI18n(<HeaderRight />);
+      fireEvent.press(getByTestId('session-speak-button'));
+      expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+      expect(ttsStore.setSessionSpeak).not.toHaveBeenCalled();
+    });
+
+    it('enables and mutes speech for this session without changing app auto-speak', () => {
+      const {getByLabelText} = renderWithI18n(<HeaderRight />);
+      fireEvent.press(getByLabelText(l10n.en.voiceAndSpeech.sessionSpeakLabel));
+      expect(ttsStore.setSessionSpeak).toHaveBeenLastCalledWith(true);
+      fireEvent.press(getByLabelText(l10n.en.voiceAndSpeech.sessionMuteLabel));
+      expect(ttsStore.setSessionSpeak).toHaveBeenLastCalledWith(false);
+      expect(ttsStore.autoSpeakEnabled).toBe(false);
+    });
+
+    it('uses a resolved Pal voice without requiring an app-wide voice', () => {
+      ttsStore.currentVoice = null;
+      ttsStore.palVoiceOverride = {
+        id: 'pal-test',
+        name: 'Pal voice',
+        engine: 'phonon',
+      };
+      const {getByTestId} = renderWithI18n(<HeaderRight />);
+      fireEvent.press(getByTestId('session-speak-button'));
+      expect(ttsStore.setSessionSpeak).toHaveBeenCalledWith(true);
+      expect(ttsStore.openSetupSheet).not.toHaveBeenCalled();
+    });
   });
 
   it('renders without UsageStats when displayMemUsage is false', () => {

@@ -811,6 +811,14 @@ export const useChatSession = (
       ? palStore.pals.find(p => p.id === activeSession.activePalId)
       : null;
 
+    // TTS is a downstream consumer of text. It should work regardless of
+    // whether the text was generated from text, image, or video input.
+    // Capability-neutral: every Pal speaks unless it explicitly opts out
+    // (voiceEnabled === false); a Pal-pinned engine (ttsEngine) overrides
+    // the app-wide voice for this run.
+    const palVoiceEnabled = pal ? pal.voiceEnabled !== false : true;
+    ttsStore.setPalVoiceOverride(await ttsStore.resolvePalVoice(pal));
+
     const systemMessages = resolveSystemMessages({
       pal,
       model: modelStore.activeModel,
@@ -851,7 +859,9 @@ export const useChatSession = (
     const tools =
       (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
     const tts: TtsRunState = {
-      enabled: ttsStore.streamsReplies,
+      // Per-Pal mute layered on the store's session-level gates
+      // (availability / auto-speak / header speaker toggle).
+      enabled: ttsStore.streamsReplies && palVoiceEnabled,
       started: false,
       mayEcho: tools.length > 0,
       prevContent: '',

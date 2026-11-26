@@ -59,4 +59,38 @@ describe('database schema and migrations agree', () => {
 
     expect(pinned).toEqual({name: 'pinned', type: 'boolean'});
   });
+
+  it('declares voice fields on local_pals and migrates them in v9', () => {
+    const localPals = (schema as any).tables.find(
+      (t: any) => t.name === 'local_pals',
+    );
+
+    // Optional on purpose: an absent voice_enabled reads as enabled and an
+    // absent tts_engine follows the app-wide voice, so existing rows keep
+    // speaking after the upgrade.
+    const expectedVoice = {
+      name: 'voice_enabled',
+      type: 'boolean',
+      isOptional: true,
+    };
+    const expectedEngine = {
+      name: 'tts_engine',
+      type: 'string',
+      isOptional: true,
+    };
+
+    expect(
+      localPals.columns.find((c: any) => c.name === 'voice_enabled'),
+    ).toEqual(expectedVoice);
+    expect(localPals.columns.find((c: any) => c.name === 'tts_engine')).toEqual(
+      expectedEngine,
+    );
+
+    const v9 = migrationList.find(m => m.toVersion === 9);
+    expect(v9).toBeDefined();
+    const addStep = v9.steps.find((s: any) => s.type === 'add_columns');
+    const {table, columns} = stepPayload(addStep);
+    expect(table).toBe('local_pals');
+    expect(columns).toEqual([expectedVoice, expectedEngine]);
+  });
 });

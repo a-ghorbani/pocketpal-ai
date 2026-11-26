@@ -193,6 +193,10 @@ class PalRepository {
               LocalPal.safeStringify(generationSettings);
             record.pact = LocalPal.safeStringify(palData.pact);
             record.greeting = LocalPal.safeStringify(palData.greeting);
+            // New Pals default to enabled; an absent engine follows the
+            // app-wide voice. Existing null flags read as enabled too.
+            record.voiceEnabled = palData.voiceEnabled === false ? false : true;
+            record.ttsEngine = palData.ttsEngine;
           });
       });
 
@@ -302,6 +306,12 @@ class PalRepository {
           }
           if (updates.greeting !== undefined) {
             record.greeting = LocalPal.safeStringify(updates.greeting);
+          }
+          if (updates.voiceEnabled !== undefined) {
+            record.voiceEnabled = updates.voiceEnabled;
+          }
+          if (Object.prototype.hasOwnProperty.call(updates, 'ttsEngine')) {
+            record.ttsEngine = updates.ttsEngine;
           }
         });
       });

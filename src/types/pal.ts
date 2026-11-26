@@ -17,6 +17,19 @@ export interface ParameterDefinition {
   description?: string;
 }
 
+/**
+ * TTS engines a Pal can pin for its spoken replies. When a Pal's `ttsEngine`
+ * is unset, the reply follows the app-wide voice selected in Settings.
+ * Mirrors `EngineId` in `services/tts/types` — declared here so the Pal model
+ * does not depend on the TTS service layer.
+ */
+export type PalTtsEngine =
+  | 'kitten'
+  | 'kokoro'
+  | 'supertonic'
+  | 'phonon'
+  | 'system';
+
 export interface PalCapabilities {
   video?: boolean; // Requires video/camera functionality
   multimodal?: boolean; // Can process images + text
@@ -92,6 +105,21 @@ export interface Pal {
   // ============================================================================
   /** Special capabilities this pal has (video, multimodal, etc.) */
   capabilities?: PalCapabilities;
+
+  // ============================================================================
+  // VOICE (text-to-speech)
+  // ============================================================================
+  /**
+   * Whether this Pal's text replies are spoken aloud. TTS is a downstream
+   * consumer of generated text — it applies to text, image and video input
+   * alike. Absent counts as enabled; only an explicit `false` mutes a Pal.
+   */
+  voiceEnabled?: boolean;
+  /**
+   * TTS engine override for this Pal's spoken replies. When unset, the
+   * reply follows the app-wide voice selected in Settings.
+   */
+  ttsEngine?: PalTtsEngine;
 
   // ============================================================================
   // DYNAMIC PARAMETERS

@@ -1,15 +1,22 @@
-import React, {useState, useCallback, useContext, useEffect} from 'react';
+import React, {
+  useState,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {observer} from 'mobx-react';
 import {ChatView, EmbeddedVideoView} from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 import {L10nContext, UserContext, safeAlert} from '../../utils';
-import {modelStore, palStore} from '../../store';
+import {modelStore, palStore, ttsStore} from '../../store';
 import {Pal} from '../../types/pal';
 import 'react-native-get-random-values';
 import {user as defaultUser} from '../../utils/chat';
 
 import {hasVideoCapability} from '../../utils/pal-capabilities';
+import {VideoPalTtsSession} from '../../utils/videoPalTts';
 
 interface VideoPalScreenProps {
   activePal: Pal;
@@ -28,6 +35,10 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
   const [lastAnalysisTime, setLastAnalysisTime] = useState(0);
   const [isStoppingCamera, setIsStoppingCamera] = useState(false);
 
+  // Refs invalidate callbacks synchronously when a camera run ends.
+  const cameraActiveRef = useRef(false);
+  const ttsSessionRef = useRef<VideoPalTtsSession | null>(null);
+
   // State for pal sheet
   const [isPalSheetVisible, setIsPalSheetVisible] = useState(false);
 
@@ -37,6 +48,21 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
     activePal && hasVideoCapability(activePal)
       ? activePal
       : palStore.pals.find(p => hasVideoCapability(p));
+
+  useEffect(() => {
+    // Switching Video Pals ends the previous camera session visibly too.
+    setIsCameraActive(false);
+    setResponseText('');
+    return () => {
+      const wasActive = cameraActiveRef.current;
+      cameraActiveRef.current = false;
+      ttsSessionRef.current?.onError();
+      ttsSessionRef.current = null;
+      if (wasActive) {
+        modelStore.abortActiveGeneration();
+      }
+    };
+  }, [activeVideoPal?.id]);
 
   // Initialize captureInterval from the active VideoPal
   useEffect(() => {
@@ -132,6 +158,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
         return;
       }
 
+      cameraActiveRef.current = true;
       setIsCameraActive(true);
     } catch (error) {
       console.error('Error checking multimodal capability:', error);
@@ -145,9 +172,18 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
 
   // Handle stopping the camera
   const handleStopCamera = useCallback(() => {
+    cameraActiveRef.current = false;
+    ttsSessionRef.current?.onError();
+    ttsSessionRef.current = null;
     setIsStoppingCamera(true);
 
     modelStore.abortActiveGeneration();
+
+    // Stop any in-flight TTS — the analysis run is aborted, so buffered
+    // audio should not keep playing.
+    ttsStore.stop('video_stopped').catch(err => {
+      console.warn('[VideoPalScreen] TTS stop on camera stop failed:', err);
+    });
 
     // Clear response text and stop camera
     setResponseText('');
@@ -187,7 +223,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
   const handleImageCapture = useCallback(
     async (imageBase64: string) => {
       // Don't process if we're stopping the camera
-      if (isStoppingCamera) {
+      if (!cameraActiveRef.current || isStoppingCamera) {
         return;
       }
 
@@ -209,6 +245,16 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
       // Get the system prompt from the active VideoPal
       const systemPrompt = activeVideoPal?.systemPrompt || '';
 
+      // TTS is a downstream consumer of text: the Video Pal speaks its
+      // generated reply the same way text Pals do (see VideoPalTtsSession).
+      const ttsSession = new VideoPalTtsSession(
+        activeVideoPal != null && activeVideoPal.voiceEnabled !== false,
+      );
+
+      ttsSessionRef.current = ttsSession;
+      const isCurrent = () =>
+        cameraActiveRef.current && ttsSessionRef.current === ttsSession;
+
       try {
         // Start the completion with the base64 image using the user-editable prompt
         await modelStore.startImageCompletion({
@@ -217,20 +263,30 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
           systemMessage: systemPrompt,
           onToken: token => {
             // Only update response text if we're not stopping the camera
-            if (!isStoppingCamera) {
+            if (isCurrent()) {
               setResponseText(prev => prev + token);
+              ttsSession.onToken(token);
             }
           },
-          onComplete: () => {
+          onComplete: text => {
             // This is called when the entire completion is done
             // We don't need to set the text again as we've been building it token by token
+            if (isCurrent()) {
+              ttsSession.onComplete(text);
+            }
           },
           onError: error => {
             console.error('Error processing image:', error);
+            if (isCurrent()) {
+              ttsSession.onError();
+            }
           },
         });
       } catch (error) {
         console.error('Error processing image:', error);
+        if (isCurrent()) {
+          ttsSession.onError();
+        }
       }
     },
     [
