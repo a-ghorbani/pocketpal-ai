@@ -59,7 +59,7 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **🎙️ Voice input** — dictate messages with on-device Whisper speech recognition (whisper.cpp).
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app purchase.
-- **✨ PocketPal Plus** — an optional one-time purchase in the App Store and Google Play builds that adds hands-free voice conversation and a local API server. Builds from source, and the APK on GitHub Releases from the release after v1.23.0, include every Plus feature with no purchase.
+- **✨ PocketPal Plus** — an optional one-time purchase in the App Store and Google Play builds that adds hands-free voice conversation and a local API server ([docs](docs/local-api-server.md)). Builds from source, and the APK on GitHub Releases from the release after v1.23.0, include every Plus feature with no purchase.
 - **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering, opt-in web search and page reading) inside a tool-use loop.
 - **📥 Hugging Face integration** — search and download GGUF models, including gated ones, directly from the HF Hub with your access token.
 - **📊 Benchmarking** — measure tokens/sec and memory, and optionally compare on the [AI Phone Leaderboard](https://pocketpal.dev/leaderboard).
